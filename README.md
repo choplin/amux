@@ -22,10 +22,13 @@ AgentCave provides isolated git worktree-based environments where AI agents can 
 git clone https://github.com/yourusername/agentcave.git
 cd agentcave
 
-# Build with just
+# Build with just (recommended)
 just build
 
 # Or with go directly
+go build -o bin/agentcave cmd/agentcave/main.go
+
+# Or with make (if you don't have just)
 go build -o bin/agentcave cmd/agentcave/main.go
 ```
 
