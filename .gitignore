@@ -3,6 +3,12 @@ bin/
 *.exe
 coverage.out
 
+# Node modules
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
 # Go workspace
 go.work
 go.work.sum
@@ -25,6 +31,9 @@ Thumbs.db
 # AgentCave
 .agentcave/
 .worktrees/
+
+# Lefthook
+.lefthook-local.yml
 
 # Test artifacts
 test-*-repo/

@@ -1,0 +1,19 @@
+{
+  "name": "agentcave",
+  "version": "0.1.0",
+  "description": "Private development caves for AI agents",
+  "private": true,
+  "scripts": {
+    "lint:md": "markdownlint '**/*.md' --ignore node_modules",
+    "lint:commit": "commitlint --from HEAD~1 --to HEAD",
+    "fix:md": "markdownlint '**/*.md' --ignore node_modules --fix"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.6.1",
+    "@commitlint/config-conventional": "^19.6.0",
+    "markdownlint-cli": "^0.45.0"
+  },
+  "commitlint": {
+    "extends": ["@commitlint/config-conventional"]
+  }
+}
