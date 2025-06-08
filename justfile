@@ -24,11 +24,11 @@ test-coverage:
 
 # Format code
 fmt:
-    goimports -w -local github.com/aki/agentcave .
+    go run -mod=readonly golang.org/x/tools/cmd/goimports -w -local github.com/aki/agentcave .
 
 # Lint code
 lint:
-    golangci-lint run
+    go run -mod=readonly github.com/golangci/golangci-lint/cmd/golangci-lint run
 
 # Check code (format + lint)
 check: fmt lint
