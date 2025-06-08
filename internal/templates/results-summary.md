@@ -13,10 +13,12 @@ _[AI Agent: Provide a concise summary of what was accomplished]_
 _[AI Agent: List the key changes and additions]_
 
 ### Files Modified
+
 - `path/to/file1.go` - Description of changes
 - `path/to/file2.go` - Description of changes
 
 ### Files Added
+
 - `path/to/newfile.go` - Purpose of the file
 
 ## Testing

@@ -2,7 +2,8 @@
 
 > Private development caves for AI agents
 
-AgentCave provides isolated git worktree-based environments where AI agents can work independently without context mixing. Built in Go for performance and easy deployment.
+AgentCave provides isolated git worktree-based environments where AI agents can work independently without
+context mixing. Built in Go for performance and easy deployment.
 
 ## 🚀 Features
 
@@ -47,6 +48,7 @@ agentcave init
 ```
 
 This creates:
+
 - `.agentcave/config.yaml` - Project configuration
 - `.agentcave/workspaces/` - Workspace metadata directory
 
@@ -90,7 +92,7 @@ agentcave serve --transport https --port 3000 --auth bearer --token secret123
 
 ## 📁 Project Structure
 
-```
+```text
 agentcave/
 ├── cmd/agentcave/      # CLI entry point
 ├── internal/

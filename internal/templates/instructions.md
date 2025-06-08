@@ -24,6 +24,7 @@ This workspace ({{.WorkspaceID}}) is your isolated development environment. You 
 ## Available Tools
 
 You have access to the following MCP tools:
+
 - `workspace_info` - Browse and read files in this workspace
 - `cave_activate` - Mark this workspace as active
 - `cave_deactivate` - Mark this workspace as idle when done
