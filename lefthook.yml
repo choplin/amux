@@ -21,7 +21,7 @@ pre-commit:
       glob: "go.mod"
       
     markdown-lint:
-      run: npx --no-install markdownlint-cli $(git diff --cached --name-only --diff-filter=ACM | grep '\.md$' || true)
+      run: npx --no-install markdownlint-cli2 $(git diff --cached --name-only --diff-filter=ACM | grep '\.md$' || true)
       glob: "*.md"
 
 pre-push:

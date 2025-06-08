@@ -4,14 +4,14 @@
   "description": "Private development caves for AI agents",
   "private": true,
   "scripts": {
-    "lint:md": "markdownlint '**/*.md' --ignore node_modules",
+    "lint:md": "markdownlint-cli2 '**/*.md' '#node_modules'",
     "lint:commit": "commitlint --from HEAD~1 --to HEAD",
-    "fix:md": "markdownlint '**/*.md' --ignore node_modules --fix"
+    "fix:md": "markdownlint-cli2 --fix '**/*.md' '#node_modules'"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.6.1",
     "@commitlint/config-conventional": "^19.6.0",
-    "markdownlint-cli": "^0.45.0"
+    "markdownlint-cli2": "^0.17.1"
   },
   "commitlint": {
     "extends": ["@commitlint/config-conventional"]
