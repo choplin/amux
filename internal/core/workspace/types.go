@@ -38,7 +38,7 @@ type ListOptions struct {
 }
 
 // CleanupOptions represents options for cleaning up old workspaces
-type CleanupOptions {
+type CleanupOptions struct {
 	Days   int
 	DryRun bool
 }

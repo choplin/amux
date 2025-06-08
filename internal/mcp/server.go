@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/aki/agentcave/internal/core/config"
 	"github.com/aki/agentcave/internal/core/git"
