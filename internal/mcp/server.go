@@ -481,7 +481,7 @@ func (s *Server) handleWorkspaceInfo(args json.RawMessage) *CallToolResult {
 	}
 
 	fullPath := filepath.Join(ws.Path, params.Path)
-	
+
 	// Check if path exists
 	info, err := os.Stat(fullPath)
 	if err != nil {
@@ -498,9 +498,9 @@ func (s *Server) handleWorkspaceInfo(args json.RawMessage) *CallToolResult {
 		var files []map[string]interface{}
 		for _, entry := range entries {
 			fileInfo := map[string]interface{}{
-				"name":  entry.Name(),
-				"type":  "file",
-				"size":  0,
+				"name": entry.Name(),
+				"type": "file",
+				"size": 0,
 			}
 
 			if entry.IsDir() {

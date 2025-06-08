@@ -26,13 +26,13 @@ type Manager struct {
 // NewManager creates a new workspace manager
 func NewManager(configManager *config.Manager) (*Manager, error) {
 	gitOps := git.NewOperations(configManager.GetProjectRoot())
-	
+
 	if !gitOps.IsGitRepository() {
 		return nil, fmt.Errorf("not a git repository")
 	}
 
 	workspacesDir := configManager.GetWorkspacesDir()
-	
+
 	return &Manager{
 		configManager: configManager,
 		gitOps:        gitOps,
@@ -44,7 +44,7 @@ func NewManager(configManager *config.Manager) (*Manager, error) {
 func (m *Manager) Create(opts CreateOptions) (*Workspace, error) {
 	// Generate workspace ID
 	id := generateWorkspaceID(opts.Name)
-	
+
 	// Determine base branch
 	baseBranch := opts.BaseBranch
 	if baseBranch == "" {
@@ -57,10 +57,10 @@ func (m *Manager) Create(opts CreateOptions) (*Workspace, error) {
 
 	// Create workspace directory path
 	workspacePath := filepath.Join(m.configManager.GetProjectRoot(), ".worktrees", id)
-	
+
 	// Create branch name
 	branch := fmt.Sprintf("agentcave/%s", id)
-	
+
 	// Create git worktree
 	if err := m.gitOps.CreateWorktree(workspacePath, branch, baseBranch); err != nil {
 		return nil, fmt.Errorf("failed to create worktree: %w", err)
@@ -111,7 +111,7 @@ func (m *Manager) Create(opts CreateOptions) (*Workspace, error) {
 // Get retrieves a workspace by ID
 func (m *Manager) Get(id string) (*Workspace, error) {
 	workspacePath := filepath.Join(m.workspacesDir, id+".yaml")
-	
+
 	data, err := os.ReadFile(workspacePath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -285,7 +285,7 @@ func (m *Manager) saveWorkspace(workspace *Workspace) error {
 	if err := os.MkdirAll(filepath.Dir(workspaceMetaPath), 0755); err != nil {
 		return fmt.Errorf("failed to create workspace .agentcave directory: %w", err)
 	}
-	
+
 	if err := os.WriteFile(workspaceMetaPath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write workspace metadata: %w", err)
 	}
@@ -299,7 +299,7 @@ func generateWorkspaceID(name string) string {
 	safeName := strings.ToLower(name)
 	safeName = strings.ReplaceAll(safeName, " ", "-")
 	safeName = strings.ReplaceAll(safeName, "_", "-")
-	
+
 	// Keep only alphanumeric and hyphens
 	var cleaned []rune
 	for _, r := range safeName {
@@ -308,15 +308,15 @@ func generateWorkspaceID(name string) string {
 		}
 	}
 	safeName = string(cleaned)
-	
+
 	// Limit length
 	if len(safeName) > 20 {
 		safeName = safeName[:20]
 	}
-	
+
 	// Generate unique suffix
 	timestamp := time.Now().Unix()
 	randomSuffix := uuid.New().String()[:8]
-	
+
 	return fmt.Sprintf("workspace-%s-%d-%s", safeName, timestamp, randomSuffix)
 }

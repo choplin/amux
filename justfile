@@ -24,8 +24,7 @@ test-coverage:
 
 # Format code
 fmt:
-    go fmt ./...
-    goimports -w .
+    goimports -w -local github.com/aki/agentcave .
 
 # Lint code
 lint:

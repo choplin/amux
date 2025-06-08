@@ -4,8 +4,8 @@
 pre-commit:
   parallel: true
   commands:
-    fmt:
-      run: go fmt ./...
+    goimports:
+      run: goimports -w -local github.com/aki/agentcave $(git diff --cached --name-only --diff-filter=ACM | grep '\.go$' || true)
       glob: "*.go"
       
     vet:

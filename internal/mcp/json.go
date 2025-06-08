@@ -15,10 +15,10 @@ type Request struct {
 }
 
 type Response struct {
-	Jsonrpc string          `json:"jsonrpc"`
-	Result  interface{}     `json:"result,omitempty"`
-	Error   *ErrorResponse  `json:"error,omitempty"`
-	ID      interface{}     `json:"id"`
+	Jsonrpc string         `json:"jsonrpc"`
+	Result  interface{}    `json:"result,omitempty"`
+	Error   *ErrorResponse `json:"error,omitempty"`
+	ID      interface{}    `json:"id"`
 }
 
 type ErrorResponse struct {
@@ -44,9 +44,9 @@ type ServerInfo struct {
 }
 
 type InitializeParams struct {
-	ProtocolVersion string     `json:"protocolVersion"`
+	ProtocolVersion string             `json:"protocolVersion"`
 	Capabilities    ClientCapabilities `json:"capabilities"`
-	ClientInfo      ClientInfo `json:"clientInfo"`
+	ClientInfo      ClientInfo         `json:"clientInfo"`
 }
 
 type ClientCapabilities struct {

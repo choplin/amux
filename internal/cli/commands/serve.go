@@ -48,7 +48,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 
 	// Create configuration manager
 	configManager := config.NewManager(projectRoot)
-	
+
 	// Load configuration
 	cfg, err := configManager.Load()
 	if err != nil {
@@ -71,14 +71,14 @@ func runServe(cmd *cobra.Command, args []string) error {
 		// Configure authentication
 		if serveAuthType != "" {
 			httpConfig.Auth.Type = serveAuthType
-			
+
 			switch serveAuthType {
 			case "bearer":
 				if serveAuthToken == "" {
 					return fmt.Errorf("bearer token required for bearer authentication")
 				}
 				httpConfig.Auth.Bearer = serveAuthToken
-				
+
 			case "basic":
 				if serveAuthUser == "" || serveAuthPass == "" {
 					return fmt.Errorf("username and password required for basic authentication")
@@ -113,7 +113,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 
 	// Start server
 	ui.Info("Starting MCP server with %s transport", transport)
-	
+
 	if transport == "stdio" {
 		ui.Info("Ready for AI agent connections via stdio")
 		ui.Info("Press Ctrl+C to stop")

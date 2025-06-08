@@ -54,7 +54,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 
 	// Create default configuration
 	cfg := config.DefaultConfig()
-	
+
 	// Set project name from directory
 	cfg.Project.Name = filepath.Base(cwd)
 	cfg.Project.Repository = repoInfo.RemoteURL
@@ -84,7 +84,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 
 func addToGitignore(projectRoot string) error {
 	gitignorePath := filepath.Join(projectRoot, ".gitignore")
-	
+
 	// Read existing .gitignore
 	content := ""
 	if data, err := os.ReadFile(gitignorePath); err == nil {
@@ -98,7 +98,7 @@ func addToGitignore(projectRoot string) error {
 
 	// Append .agentcave entries
 	entries := "\n# AgentCave\n.agentcave/\n.worktrees/\n"
-	
+
 	file, err := os.OpenFile(gitignorePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err

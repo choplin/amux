@@ -78,7 +78,7 @@ func (o *Operations) CreateWorktree(path, branch string, baseBranch string) erro
 	// Use git command for worktree operations (go-git doesn't fully support worktrees)
 	cmd := exec.Command("git", "worktree", "add", path, branch)
 	cmd.Dir = o.repoPath
-	
+
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to create worktree: %s", output)
@@ -91,7 +91,7 @@ func (o *Operations) CreateWorktree(path, branch string, baseBranch string) erro
 func (o *Operations) RemoveWorktree(path string) error {
 	cmd := exec.Command("git", "worktree", "remove", "--force", path)
 	cmd.Dir = o.repoPath
-	
+
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to remove worktree: %s", output)
@@ -104,7 +104,7 @@ func (o *Operations) RemoveWorktree(path string) error {
 func (o *Operations) CreateBranch(branch, baseBranch string) error {
 	cmd := exec.Command("git", "branch", branch, baseBranch)
 	cmd.Dir = o.repoPath
-	
+
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		// Check if branch already exists
@@ -121,7 +121,7 @@ func (o *Operations) CreateBranch(branch, baseBranch string) error {
 func (o *Operations) DeleteBranch(branch string) error {
 	cmd := exec.Command("git", "branch", "-D", branch)
 	cmd.Dir = o.repoPath
-	
+
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to delete branch: %s", output)
@@ -134,7 +134,7 @@ func (o *Operations) DeleteBranch(branch string) error {
 func (o *Operations) ListWorktrees() ([]*WorktreeInfo, error) {
 	cmd := exec.Command("git", "worktree", "list", "--porcelain")
 	cmd.Dir = o.repoPath
-	
+
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("failed to list worktrees: %w", err)
@@ -148,7 +148,7 @@ func (o *Operations) GetDefaultBranch() (string, error) {
 	// Try to get the default branch from remote
 	cmd := exec.Command("git", "symbolic-ref", "refs/remotes/origin/HEAD")
 	cmd.Dir = o.repoPath
-	
+
 	output, err := cmd.Output()
 	if err == nil {
 		branch := strings.TrimSpace(string(output))
@@ -175,7 +175,7 @@ func (o *Operations) GetDefaultBranch() (string, error) {
 func parseWorktreeList(output []byte) []*WorktreeInfo {
 	var worktrees []*WorktreeInfo
 	lines := bytes.Split(output, []byte("\n"))
-	
+
 	var current *WorktreeInfo
 	for _, line := range lines {
 		line = bytes.TrimSpace(line)

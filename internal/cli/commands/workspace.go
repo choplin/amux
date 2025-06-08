@@ -197,7 +197,7 @@ func runRemoveWorkspace(cmd *cobra.Command, args []string) error {
 	if !removeForce {
 		ui.Warning("This will remove workspace '%s' (%s) and its branch '%s'", ws.Name, ws.ID, ws.Branch)
 		fmt.Print("Are you sure? (y/N): ")
-		
+
 		var response string
 		fmt.Scanln(&response)
 		if response != "y" && response != "Y" {
@@ -257,7 +257,7 @@ func getWorkspaceManager() (*workspace.Manager, error) {
 
 	// Create configuration manager
 	configManager := config.NewManager(projectRoot)
-	
+
 	// Ensure initialized
 	if !configManager.IsInitialized() {
 		return nil, fmt.Errorf("AgentCave not initialized. Run 'agentcave init' first")
