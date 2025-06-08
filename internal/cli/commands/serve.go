@@ -92,8 +92,8 @@ func runServe(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Create MCP server
-	server, err := mcp.NewServer(configManager, transport, httpConfig)
+	// Create MCP server (using new mcp-go implementation)
+	server, err := mcp.NewServerV2(configManager, transport, httpConfig)
 	if err != nil {
 		return fmt.Errorf("failed to create MCP server: %w", err)
 	}
