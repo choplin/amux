@@ -22,16 +22,20 @@ test-coverage:
     go test -v -coverprofile=coverage.out ./...
     go tool cover -html=coverage.out -o coverage.html
 
-# Format code
+# Format Go code
 fmt:
     go run -mod=readonly golang.org/x/tools/cmd/goimports -w -local github.com/aki/agentcave .
+
+# Format YAML files
+fmt-yaml:
+    go run -mod=readonly github.com/google/yamlfmt/cmd/yamlfmt .
 
 # Lint code
 lint:
     go run -mod=readonly github.com/golangci/golangci-lint/cmd/golangci-lint run
 
 # Check code (format + lint)
-check: fmt lint
+check: fmt fmt-yaml lint
 
 # Install the binary to GOPATH/bin
 install: build
@@ -59,7 +63,7 @@ serve:
     just dev serve
 
 # Full development cycle - format, lint, test, build
-all: fmt lint test build
+all: fmt fmt-yaml lint test build
 
 # Watch for changes and rebuild
 watch:

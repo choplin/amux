@@ -1,35 +1,30 @@
 # markdownlint-cli2 configuration
 # https://github.com/DavidAnson/markdownlint-cli2
-
 # Define glob patterns
 globs:
   - "**/*.md"
-
 # Ignore patterns
 ignores:
   - "node_modules/**"
   - ".git/**"
   - "bin/**"
   - "coverage/**"
-
 # markdownlint configuration
 config:
   default: true
-  MD013:  # Line length
+  MD013: # Line length
     line_length: 120
     tables: false
     code_blocks: false
-  MD033:  # Inline HTML
+  MD033: # Inline HTML
     allowed_elements:
       - details
       - summary
       - br
-  MD041: false  # First line in file should be a top level heading
+  MD041: false # First line in file should be a top level heading
   no-hard-tabs: false
-
 # Fix mode settings
 fix: true
-
 # Custom rules (if any)
 customRules: []
 

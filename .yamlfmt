@@ -1,0 +1,24 @@
+# yamlfmt configuration
+# https://github.com/google/yamlfmt
+formatter:
+  # Basic formatting settings
+  indent: 2 # Use 2 spaces for indentation
+  line_width: 120 # Wrap lines at 120 characters
+  max_line_length: 120 # Maximum line length
+  retain_line_breaks: false # Don't retain arbitrary line breaks
+  include_document_start: false # Don't add --- at start
+  # Formatting behavior
+  scan_folded_as_literal: false
+  trim_trailing_whitespace: true
+  eof_newline: true # Ensure newline at end of file
+# Include patterns
+include:
+  - "**/*.yaml"
+  - "**/*.yml"
+  - ".golangci.yml"
+  - ".github/**/*.yml"
+# Exclude patterns
+exclude:
+  - "vendor/**"
+  - "node_modules/**"
+  - "**/testdata/**"

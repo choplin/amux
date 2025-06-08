@@ -130,7 +130,10 @@ just test
 # Lint code
 just lint
 
-# Run all checks
+# Format YAML files
+just fmt-yaml
+
+# Run all checks (format + lint)
 just check
 ```
 

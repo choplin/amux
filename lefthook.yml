@@ -1,38 +1,35 @@
 # Lefthook configuration for AgentCave
 # https://github.com/evilmartians/lefthook
-
 pre-commit:
   parallel: true
   commands:
     goimports:
-      run: go run -mod=readonly golang.org/x/tools/cmd/goimports -w -local github.com/aki/agentcave $(git diff --cached --name-only --diff-filter=ACM | grep '\.go$' || true)
+      run: go run -mod=readonly golang.org/x/tools/cmd/goimports -w -local github.com/aki/agentcave $(git diff --cached --name-only
+        --diff-filter=ACM | grep '\.go$' || true)
       glob: "*.go"
-      
     vet:
       run: go vet ./...
       glob: "*.go"
-      
     test:
       run: go test -short ./...
       glob: "*.go"
-      
     mod-tidy:
       run: go mod tidy && git add go.mod go.sum
       glob: "go.mod"
-      
     markdown-lint:
       run: npx --no-install markdownlint-cli2 $(git diff --cached --name-only --diff-filter=ACM | grep '\.md$' || true)
       glob: "*.md"
-
+    yamlfmt:
+      run: go run -mod=readonly github.com/google/yamlfmt/cmd/yamlfmt $(git diff --cached --name-only --diff-filter=ACM |
+        grep -E '\.(yaml|yml)$' || true)
+      glob: "*.{yaml,yml}"
 pre-push:
   parallel: true
   commands:
     test-full:
       run: go test ./...
-      
     build:
       run: go build -o bin/agentcave cmd/agentcave/main.go
-
 commit-msg:
   commands:
     commitlint:
