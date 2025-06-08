@@ -1,0 +1,31 @@
+# Go build artifacts
+bin/
+*.exe
+coverage.out
+
+# Go workspace
+go.work
+go.work.sum
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# AgentCave
+.agentcave/
+.worktrees/
+
+# Test artifacts
+test-*-repo/
+*.test

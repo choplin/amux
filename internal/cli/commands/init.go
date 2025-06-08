@@ -1,0 +1,110 @@
+package commands
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/spf13/cobra"
+
+	"github.com/aki/agentcave/internal/cli/ui"
+	"github.com/aki/agentcave/internal/core/config"
+	"github.com/aki/agentcave/internal/core/git"
+)
+
+var initCmd = &cobra.Command{
+	Use:   "init",
+	Short: "Initialize AgentCave in the current project",
+	Long:  "Initialize AgentCave configuration in the current project directory",
+	RunE:  runInit,
+}
+
+var forceInit bool
+
+func init() {
+	initCmd.Flags().BoolVarP(&forceInit, "force", "f", false, "Force initialization, overwriting existing configuration")
+}
+
+func runInit(cmd *cobra.Command, args []string) error {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get current directory: %w", err)
+	}
+
+	// Check if it's a git repository
+	gitOps := git.NewOperations(cwd)
+	if !gitOps.IsGitRepository() {
+		return fmt.Errorf("not a git repository. AgentCave requires a git repository")
+	}
+
+	// Get repository info
+	repoInfo, err := gitOps.GetRepositoryInfo()
+	if err != nil {
+		return fmt.Errorf("failed to get repository info: %w", err)
+	}
+
+	// Create configuration manager
+	configManager := config.NewManager(cwd)
+
+	// Check if already initialized
+	if configManager.IsInitialized() && !forceInit {
+		return fmt.Errorf("AgentCave already initialized. Use --force to reinitialize")
+	}
+
+	// Create default configuration
+	cfg := config.DefaultConfig()
+	
+	// Set project name from directory
+	cfg.Project.Name = filepath.Base(cwd)
+	cfg.Project.Repository = repoInfo.RemoteURL
+
+	// Save configuration
+	if err := configManager.Save(cfg); err != nil {
+		return fmt.Errorf("failed to save configuration: %w", err)
+	}
+
+	// Create workspaces directory
+	workspacesDir := configManager.GetWorkspacesDir()
+	if err := os.MkdirAll(workspacesDir, 0755); err != nil {
+		return fmt.Errorf("failed to create workspaces directory: %w", err)
+	}
+
+	// Add .agentcave to .gitignore if not already present
+	if err := addToGitignore(cwd); err != nil {
+		ui.Warning("Failed to update .gitignore: %v", err)
+	}
+
+	ui.Success("Initialized AgentCave in %s", cwd)
+	ui.Info("Configuration saved to %s", filepath.Join(config.AgentCaveDir, config.ConfigFile))
+	ui.Info("Run 'agentcave serve' to start the MCP server")
+
+	return nil
+}
+
+func addToGitignore(projectRoot string) error {
+	gitignorePath := filepath.Join(projectRoot, ".gitignore")
+	
+	// Read existing .gitignore
+	content := ""
+	if data, err := os.ReadFile(gitignorePath); err == nil {
+		content = string(data)
+	}
+
+	// Check if .agentcave is already ignored
+	if strings.Contains(content, ".agentcave") {
+		return nil
+	}
+
+	// Append .agentcave entries
+	entries := "\n# AgentCave\n.agentcave/\n.worktrees/\n"
+	
+	file, err := os.OpenFile(gitignorePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = file.WriteString(entries)
+	return err
+}
