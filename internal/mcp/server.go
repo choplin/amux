@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/aki/agentcave/internal/core/config"
 	"github.com/aki/agentcave/internal/core/git"
@@ -73,7 +74,9 @@ func (s *Server) startStdio(ctx context.Context) error {
 			var req Request
 			if err := json.Unmarshal([]byte(line), &req); err != nil {
 				resp := NewErrorResponse(nil, ParseError, "Parse error", err.Error())
-				s.writeResponse(writer, resp)
+				if werr := s.writeResponse(writer, resp); werr != nil {
+					return werr
+				}
 				continue
 			}
 
@@ -102,7 +105,11 @@ func (s *Server) startHTTP(ctx context.Context) error {
 
 	go func() {
 		<-ctx.Done()
-		server.Shutdown(context.Background())
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := server.Shutdown(shutdownCtx); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to shutdown server: %v\n", err)
+		}
 	}()
 
 	fmt.Printf("MCP server listening on http://localhost:%d\n", s.httpConfig.Port)
@@ -119,13 +126,17 @@ func (s *Server) handleHTTP(w http.ResponseWriter, r *http.Request) {
 	var req Request
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		resp := NewErrorResponse(nil, ParseError, "Parse error", err.Error())
-		json.NewEncoder(w).Encode(resp)
+		if encErr := json.NewEncoder(w).Encode(resp); encErr != nil {
+			fmt.Fprintf(os.Stderr, "Failed to encode error response: %v\n", encErr)
+		}
 		return
 	}
 
 	resp := s.handleRequest(&req)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to encode response: %v\n", err)
+	}
 }
 
 // corsMiddleware adds CORS headers
@@ -220,6 +231,7 @@ func (s *Server) handleListTools(req *Request) *Response {
 				"properties": {
 					"name": {"type": "string", "description": "Workspace name"},
 					"baseBranch": {"type": "string", "description": "Base branch (optional)"},
+						"branch": {"type": "string", "description": "Use existing branch (optional)"},
 					"agentId": {"type": "string", "description": "Agent ID (optional)"},
 					"description": {"type": "string", "description": "Description (optional)"}
 				},
@@ -334,6 +346,7 @@ func (s *Server) handleCaveCreate(args json.RawMessage) *CallToolResult {
 	var params struct {
 		Name        string `json:"name"`
 		BaseBranch  string `json:"baseBranch,omitempty"`
+		Branch      string `json:"branch,omitempty"`
 		AgentID     string `json:"agentId,omitempty"`
 		Description string `json:"description,omitempty"`
 	}
@@ -345,6 +358,7 @@ func (s *Server) handleCaveCreate(args json.RawMessage) *CallToolResult {
 	opts := workspace.CreateOptions{
 		Name:        params.Name,
 		BaseBranch:  params.BaseBranch,
+		Branch:      params.Branch,
 		AgentID:     params.AgentID,
 		Description: params.Description,
 	}

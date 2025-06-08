@@ -87,6 +87,20 @@ func (o *Operations) CreateWorktree(path, branch string, baseBranch string) erro
 	return nil
 }
 
+// CreateWorktreeFromExistingBranch creates a worktree from an existing branch
+func (o *Operations) CreateWorktreeFromExistingBranch(path, branch string) error {
+	// Use git command for worktree operations (go-git doesn't fully support worktrees)
+	cmd := exec.Command("git", "worktree", "add", path, branch)
+	cmd.Dir = o.repoPath
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to create worktree from existing branch %s: %s", branch, output)
+	}
+
+	return nil
+}
+
 // RemoveWorktree removes a git worktree
 func (o *Operations) RemoveWorktree(path string) error {
 	cmd := exec.Command("git", "worktree", "remove", "--force", path)

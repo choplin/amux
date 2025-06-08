@@ -55,8 +55,11 @@ This creates:
 ### Workspace Management
 
 ```bash
-# Create a new workspace
+# Create a new workspace with a new branch
 agentcave workspace create feature-auth --description "Implement authentication"
+
+# Create a workspace using an existing branch
+agentcave workspace create bugfix-ui --branch fix/ui-crash --description "Fix UI crash"
 
 # List all workspaces
 agentcave workspace list
@@ -83,7 +86,7 @@ agentcave serve --transport https --port 3000 --auth bearer --token secret123
 
 ## 🤖 MCP Tools for AI Agents
 
-- `workspace_create` - Create isolated workspace
+- `workspace_create` - Create isolated workspace (supports existing branches)
 - `workspace_list` - List workspaces with optional filtering  
 - `workspace_get` - Get specific workspace details
 - `workspace_activate`/`workspace_deactivate` - Manage workspace states

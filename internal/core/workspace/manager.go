@@ -58,12 +58,28 @@ func (m *Manager) Create(opts CreateOptions) (*Workspace, error) {
 	// Create workspace directory path
 	workspacePath := filepath.Join(m.configManager.GetProjectRoot(), ".worktrees", id)
 
-	// Create branch name
-	branch := fmt.Sprintf("agentcave/%s", id)
+	// Ensure the .worktrees directory exists
+	worktreesDir := filepath.Dir(workspacePath)
+	if err := os.MkdirAll(worktreesDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create worktrees directory: %w", err)
+	}
 
-	// Create git worktree
-	if err := m.gitOps.CreateWorktree(workspacePath, branch, baseBranch); err != nil {
-		return nil, fmt.Errorf("failed to create worktree: %w", err)
+	// Determine branch name
+	var branch string
+	if opts.Branch != "" {
+		// Use existing branch
+		branch = opts.Branch
+		// Create worktree from existing branch
+		if err := m.gitOps.CreateWorktreeFromExistingBranch(workspacePath, branch); err != nil {
+			return nil, fmt.Errorf("failed to create worktree from existing branch: %w", err)
+		}
+	} else {
+		// Create new branch
+		branch = fmt.Sprintf("agentcave/%s", id)
+		// Create worktree with new branch
+		if err := m.gitOps.CreateWorktree(workspacePath, branch, baseBranch); err != nil {
+			return nil, fmt.Errorf("failed to create worktree: %w", err)
+		}
 	}
 
 	// Create workspace metadata

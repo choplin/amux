@@ -28,6 +28,7 @@ type Workspace struct {
 type CreateOptions struct {
 	Name        string
 	BaseBranch  string
+	Branch      string // Specify existing branch to use
 	AgentID     string
 	Description string
 }

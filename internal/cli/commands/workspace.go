@@ -19,6 +19,7 @@ var workspaceCmd = &cobra.Command{
 var (
 	// Create flags
 	createBaseBranch  string
+	createBranch      string
 	createAgentID     string
 	createDescription string
 
@@ -44,6 +45,7 @@ func init() {
 
 	// Create command flags
 	createWorkspaceCmd.Flags().StringVarP(&createBaseBranch, "base-branch", "b", "", "Base branch to create workspace from")
+	createWorkspaceCmd.Flags().StringVar(&createBranch, "branch", "", "Use existing branch instead of creating new one")
 	createWorkspaceCmd.Flags().StringVarP(&createAgentID, "agent", "a", "", "Agent ID to assign to workspace")
 	createWorkspaceCmd.Flags().StringVarP(&createDescription, "description", "d", "", "Description of the workspace")
 
@@ -109,6 +111,7 @@ func runCreateWorkspace(cmd *cobra.Command, args []string) error {
 	opts := workspace.CreateOptions{
 		Name:        name,
 		BaseBranch:  createBaseBranch,
+		Branch:      createBranch,
 		AgentID:     createAgentID,
 		Description: createDescription,
 	}
@@ -199,7 +202,7 @@ func runRemoveWorkspace(cmd *cobra.Command, args []string) error {
 		fmt.Print("Are you sure? (y/N): ")
 
 		var response string
-		fmt.Scanln(&response)
+		_, _ = fmt.Scanln(&response)
 		if response != "y" && response != "Y" {
 			ui.Info("Removal cancelled")
 			return nil
