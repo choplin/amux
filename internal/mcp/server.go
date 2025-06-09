@@ -49,90 +49,65 @@ func NewServerV2(configManager *config.Manager, transport string, httpConfig *co
 	}
 
 	// Register all tools
-	s.registerTools()
+	if err := s.registerTools(); err != nil {
+		return nil, fmt.Errorf("failed to register tools: %w", err)
+	}
 
 	return s, nil
 }
 
 // registerTools registers all AgentCave tools
-func (s *ServerV2) registerTools() {
+func (s *ServerV2) registerTools() error {
 	// cave_create tool
-	s.mcpServer.AddTool(mcp.NewTool("cave_create",
-		mcp.WithDescription("Create a new isolated workspace"),
-		mcp.WithString("name",
-			mcp.Description("Workspace name"),
-			mcp.Required(),
-		),
-		mcp.WithString("baseBranch",
-			mcp.Description("Base branch (optional)"),
-		),
-		mcp.WithString("branch",
-			mcp.Description("Use existing branch (optional)"),
-		),
-		mcp.WithString("agentId",
-			mcp.Description("Agent ID (optional)"),
-		),
-		mcp.WithString("description",
-			mcp.Description("Description (optional)"),
-		),
-	), s.handleCaveCreate)
+	createOpts, err := WithStructOptions("Create a new isolated workspace", CaveCreateParams{})
+	if err != nil {
+		return fmt.Errorf("failed to create cave_create options: %w", err)
+	}
+	s.mcpServer.AddTool(mcp.NewTool("cave_create", createOpts...), s.handleCaveCreate)
 
 	// cave_list tool
-	s.mcpServer.AddTool(mcp.NewTool("cave_list",
-		mcp.WithDescription("List all workspaces"),
-		mcp.WithString("status",
-			mcp.Description("Filter by status (optional)"),
-			mcp.Enum("active", "idle"),
-		),
-	), s.handleCaveList)
+	listOpts, err := WithStructOptions("List all workspaces", CaveListParams{})
+	if err != nil {
+		return fmt.Errorf("failed to create cave_list options: %w", err)
+	}
+	s.mcpServer.AddTool(mcp.NewTool("cave_list", listOpts...), s.handleCaveList)
 
 	// cave_get tool
-	s.mcpServer.AddTool(mcp.NewTool("cave_get",
-		mcp.WithDescription("Get workspace details"),
-		mcp.WithString("cave_id",
-			mcp.Description("Workspace ID"),
-			mcp.Required(),
-		),
-	), s.handleCaveGet)
+	getOpts, err := WithStructOptions("Get workspace details", CaveIDParams{})
+	if err != nil {
+		return fmt.Errorf("failed to create cave_get options: %w", err)
+	}
+	s.mcpServer.AddTool(mcp.NewTool("cave_get", getOpts...), s.handleCaveGet)
 
 	// cave_activate tool
-	s.mcpServer.AddTool(mcp.NewTool("cave_activate",
-		mcp.WithDescription("Mark workspace as active"),
-		mcp.WithString("cave_id",
-			mcp.Description("Workspace ID"),
-			mcp.Required(),
-		),
-	), s.handleCaveActivate)
+	activateOpts, err := WithStructOptions("Mark workspace as active", CaveIDParams{})
+	if err != nil {
+		return fmt.Errorf("failed to create cave_activate options: %w", err)
+	}
+	s.mcpServer.AddTool(mcp.NewTool("cave_activate", activateOpts...), s.handleCaveActivate)
 
 	// cave_deactivate tool
-	s.mcpServer.AddTool(mcp.NewTool("cave_deactivate",
-		mcp.WithDescription("Mark workspace as idle"),
-		mcp.WithString("cave_id",
-			mcp.Description("Workspace ID"),
-			mcp.Required(),
-		),
-	), s.handleCaveDeactivate)
+	deactivateOpts, err := WithStructOptions("Mark workspace as idle", CaveIDParams{})
+	if err != nil {
+		return fmt.Errorf("failed to create cave_deactivate options: %w", err)
+	}
+	s.mcpServer.AddTool(mcp.NewTool("cave_deactivate", deactivateOpts...), s.handleCaveDeactivate)
 
 	// cave_remove tool
-	s.mcpServer.AddTool(mcp.NewTool("cave_remove",
-		mcp.WithDescription("Remove workspace"),
-		mcp.WithString("cave_id",
-			mcp.Description("Workspace ID"),
-			mcp.Required(),
-		),
-	), s.handleCaveRemove)
+	removeOpts, err := WithStructOptions("Remove workspace", CaveIDParams{})
+	if err != nil {
+		return fmt.Errorf("failed to create cave_remove options: %w", err)
+	}
+	s.mcpServer.AddTool(mcp.NewTool("cave_remove", removeOpts...), s.handleCaveRemove)
 
 	// workspace_info tool
-	s.mcpServer.AddTool(mcp.NewTool("workspace_info",
-		mcp.WithDescription("Browse workspace files and directories"),
-		mcp.WithString("cave_id",
-			mcp.Description("Workspace ID"),
-			mcp.Required(),
-		),
-		mcp.WithString("path",
-			mcp.Description("File or directory path (optional)"),
-		),
-	), s.handleWorkspaceInfo)
+	workspaceInfoOpts, err := WithStructOptions("Browse workspace files and directories", WorkspaceInfoParams{})
+	if err != nil {
+		return fmt.Errorf("failed to create workspace_info options: %w", err)
+	}
+	s.mcpServer.AddTool(mcp.NewTool("workspace_info", workspaceInfoOpts...), s.handleWorkspaceInfo)
+
+	return nil
 }
 
 // Tool handlers
@@ -294,31 +269,23 @@ func (s *ServerV2) handleCaveRemove(ctx context.Context, request mcp.CallToolReq
 }
 
 func (s *ServerV2) handleWorkspaceInfo(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	args := request.GetArguments()
-
-	caveID, ok := args["cave_id"].(string)
-	if !ok {
-		return nil, fmt.Errorf("invalid or missing cave_id argument")
+	var params WorkspaceInfoParams
+	if err := UnmarshalArgs(request, &params); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal arguments: %w", err)
 	}
 
 	// Get workspace
-	ws, err := s.workspaceManager.Get(caveID)
+	ws, err := s.workspaceManager.Get(params.CaveID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get workspace: %w", err)
 	}
 
-	// Get optional path
-	path := ""
-	if p, ok := args["path"].(string); ok {
-		path = p
-	}
-
 	// Validate path
-	if err := git.ValidateWorktreePath(ws.Path, path); err != nil {
+	if err := git.ValidateWorktreePath(ws.Path, params.Path); err != nil {
 		return nil, fmt.Errorf("invalid path: %w", err)
 	}
 
-	fullPath := filepath.Join(ws.Path, path)
+	fullPath := filepath.Join(ws.Path, params.Path)
 
 	// Check if path exists
 	info, err := os.Stat(fullPath)
@@ -354,7 +321,7 @@ func (s *ServerV2) handleWorkspaceInfo(ctx context.Context, request mcp.CallTool
 
 		result, _ := json.MarshalIndent(map[string]interface{}{
 			"type":  "directory",
-			"path":  path,
+			"path":  params.Path,
 			"files": files,
 		}, "", "  ")
 
@@ -383,7 +350,7 @@ func (s *ServerV2) handleWorkspaceInfo(ctx context.Context, request mcp.CallTool
 
 	result, _ := json.MarshalIndent(map[string]interface{}{
 		"type":    "file",
-		"path":    path,
+		"path":    params.Path,
 		"size":    info.Size(),
 		"content": string(content),
 	}, "", "  ")
