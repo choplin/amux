@@ -71,8 +71,8 @@ var listWorkspaceCmd = &cobra.Command{
 }
 
 var removeWorkspaceCmd = &cobra.Command{
-	Use:   "remove <workspace-id>",
-	Short: "Remove a workspace",
+	Use:   "remove <workspace-name-or-id>",
+	Short: "Remove a workspace by name or ID",
 	Args:  cobra.ExactArgs(1),
 	RunE:  runRemoveWorkspace,
 }
@@ -104,7 +104,8 @@ func runCreateWorkspace(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create workspace: %w", err)
 	}
 
-	ui.Success("Created workspace: %s", ws.ID)
+	ui.Success("Created workspace: %s", ws.Name)
+	ui.Info("ID: %s", ws.ID)
 	ui.Info("Branch: %s", ws.Branch)
 	ui.Info("Path: %s", ws.Path)
 	if ws.AgentID != "" {
@@ -130,17 +131,17 @@ func runListWorkspace(cmd *cobra.Command, args []string) error {
 }
 
 func runRemoveWorkspace(cmd *cobra.Command, args []string) error {
-	workspaceID := args[0]
+	identifier := args[0]
 
 	manager, err := getWorkspaceManager()
 	if err != nil {
 		return err
 	}
 
-	// Get workspace details for confirmation
-	ws, err := manager.Get(workspaceID)
+	// Resolve workspace by name or ID
+	ws, err := manager.ResolveWorkspace(identifier)
 	if err != nil {
-		return fmt.Errorf("failed to get workspace: %w", err)
+		return fmt.Errorf("failed to resolve workspace: %w", err)
 	}
 
 	if !removeForce {
@@ -155,11 +156,11 @@ func runRemoveWorkspace(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	if err := manager.Remove(workspaceID); err != nil {
+	if err := manager.Remove(ws.ID); err != nil {
 		return fmt.Errorf("failed to remove workspace: %w", err)
 	}
 
-	ui.Success("Removed workspace: %s", workspaceID)
+	ui.Success("Removed workspace: %s (%s)", ws.Name, ws.ID)
 	return nil
 }
 

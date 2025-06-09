@@ -223,6 +223,38 @@ func (m *Manager) getLastModified(workspacePath string) time.Time {
 	return lastMod
 }
 
+// ResolveWorkspace finds a workspace by ID or name
+func (m *Manager) ResolveWorkspace(identifier string) (*Workspace, error) {
+	// First, try to get by ID
+	ws, err := m.Get(identifier)
+	if err == nil {
+		return ws, nil
+	}
+
+	// If not found by ID, search by name
+	workspaces, err := m.List(ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list workspaces: %w", err)
+	}
+
+	var matches []*Workspace
+	for _, ws := range workspaces {
+		if ws.Name == identifier {
+			matches = append(matches, ws)
+		}
+	}
+
+	switch len(matches) {
+	case 0:
+		return nil, fmt.Errorf("workspace not found: %s", identifier)
+	case 1:
+		return matches[0], nil
+	default:
+		// Multiple workspaces with the same name
+		return nil, fmt.Errorf("multiple workspaces found with name '%s', please use ID instead", identifier)
+	}
+}
+
 // Remove deletes a workspace
 func (m *Manager) Remove(id string) error {
 	workspace, err := m.Get(id)
