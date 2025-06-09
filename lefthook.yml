@@ -3,10 +3,20 @@
 pre-commit:
   parallel: true
   commands:
+    remove-trailing-spaces:
+      run: perl -i -pe 's/[ \t]+$//' {staged_files}
+      glob: "*.{go,md,yml,yaml,txt,json,toml,mod,sum}"
+      stage_fixed: true
+      priority: 1
+    ensure-newline-eof:
+      run: perl -i -pe 'chomp if eof; $_ .= "\n"' {staged_files}
+      glob: "*.{go,md,yml,yaml,txt,json,toml,mod,sum}"
+      stage_fixed: true
+      priority: 2
     goimports:
-      run: go run -mod=readonly golang.org/x/tools/cmd/goimports -w -local github.com/aki/agentcave $(git diff --cached --name-only
-        --diff-filter=ACM | grep '\.go$' || true)
+      run: go run -mod=readonly golang.org/x/tools/cmd/goimports -w -local github.com/aki/agentcave {staged_files}
       glob: "*.go"
+      stage_fixed: true
     vet:
       run: go vet ./...
       glob: "*.go"
@@ -14,15 +24,16 @@ pre-commit:
       run: go test -short ./...
       glob: "*.go"
     mod-tidy:
-      run: go mod tidy && git add go.mod go.sum
+      run: go mod tidy
       glob: "go.mod"
+      stage_fixed: true
     markdown-lint:
-      run: npx --no-install markdownlint-cli2 $(git diff --cached --name-only --diff-filter=ACM | grep '\.md$' || true)
+      run: npx --no-install markdownlint-cli2 {staged_files}
       glob: "*.md"
     yamlfmt:
-      run: go run -mod=readonly github.com/google/yamlfmt/cmd/yamlfmt $(git diff --cached --name-only --diff-filter=ACM |
-        grep -E '\.(yaml|yml)$' || true)
+      run: go run -mod=readonly github.com/google/yamlfmt/cmd/yamlfmt {staged_files}
       glob: "*.{yaml,yml}"
+      stage_fixed: true
 pre-push:
   parallel: true
   commands:
