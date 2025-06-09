@@ -92,53 +92,53 @@ func NewServerV2(configManager *config.Manager, transport string, httpConfig *co
 
 func (s *ServerV2) registerTools() error {
 
-	// cave_create tool
+	// workspace_create tool
 
-	createOpts, err := WithStructOptions("Create a new isolated workspace", CaveCreateParams{})
-
-	if err != nil {
-
-		return fmt.Errorf("failed to create cave_create options: %w", err)
-
-	}
-
-	s.mcpServer.AddTool(mcp.NewTool("cave_create", createOpts...), s.handleCaveCreate)
-
-	// cave_list tool
-
-	listOpts, err := WithStructOptions("List all workspaces", CaveListParams{})
+	createOpts, err := WithStructOptions("Create a new isolated workspace", WorkspaceCreateParams{})
 
 	if err != nil {
 
-		return fmt.Errorf("failed to create cave_list options: %w", err)
+		return fmt.Errorf("failed to create workspace_create options: %w", err)
 
 	}
 
-	s.mcpServer.AddTool(mcp.NewTool("cave_list", listOpts...), s.handleCaveList)
+	s.mcpServer.AddTool(mcp.NewTool("workspace_create", createOpts...), s.handleWorkspaceCreate)
 
-	// cave_get tool
+	// workspace_list tool
 
-	getOpts, err := WithStructOptions("Get workspace details", CaveIDParams{})
+	listOpts, err := WithStructOptions("List all workspaces", WorkspaceListParams{})
 
 	if err != nil {
 
-		return fmt.Errorf("failed to create cave_get options: %w", err)
+		return fmt.Errorf("failed to create workspace_list options: %w", err)
 
 	}
 
-	s.mcpServer.AddTool(mcp.NewTool("cave_get", getOpts...), s.handleCaveGet)
+	s.mcpServer.AddTool(mcp.NewTool("workspace_list", listOpts...), s.handleWorkspaceList)
 
-	// cave_remove tool
+	// workspace_get tool
 
-	removeOpts, err := WithStructOptions("Remove workspace", CaveIDParams{})
+	getOpts, err := WithStructOptions("Get workspace details", WorkspaceIDParams{})
 
 	if err != nil {
 
-		return fmt.Errorf("failed to create cave_remove options: %w", err)
+		return fmt.Errorf("failed to create workspace_get options: %w", err)
 
 	}
 
-	s.mcpServer.AddTool(mcp.NewTool("cave_remove", removeOpts...), s.handleCaveRemove)
+	s.mcpServer.AddTool(mcp.NewTool("workspace_get", getOpts...), s.handleWorkspaceGet)
+
+	// workspace_remove tool
+
+	removeOpts, err := WithStructOptions("Remove workspace", WorkspaceIDParams{})
+
+	if err != nil {
+
+		return fmt.Errorf("failed to create workspace_remove options: %w", err)
+
+	}
+
+	s.mcpServer.AddTool(mcp.NewTool("workspace_remove", removeOpts...), s.handleWorkspaceRemove)
 
 	// workspace_info tool
 
@@ -158,7 +158,7 @@ func (s *ServerV2) registerTools() error {
 
 // Tool handlers
 
-func (s *ServerV2) handleCaveCreate(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *ServerV2) handleWorkspaceCreate(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 
 	args := request.GetArguments()
 
@@ -226,7 +226,7 @@ func (s *ServerV2) handleCaveCreate(ctx context.Context, request mcp.CallToolReq
 
 }
 
-func (s *ServerV2) handleCaveList(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *ServerV2) handleWorkspaceList(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 
 	// No parameters needed, just list all workspaces
 
@@ -255,19 +255,19 @@ func (s *ServerV2) handleCaveList(ctx context.Context, request mcp.CallToolReque
 
 }
 
-func (s *ServerV2) handleCaveGet(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *ServerV2) handleWorkspaceGet(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 
 	args := request.GetArguments()
 
-	caveID, ok := args["cave_id"].(string)
+	workspaceID, ok := args["workspace_id"].(string)
 
 	if !ok {
 
-		return nil, fmt.Errorf("invalid or missing cave_id argument")
+		return nil, fmt.Errorf("invalid or missing workspace_id argument")
 
 	}
 
-	ws, err := s.workspaceManager.ResolveWorkspace(caveID)
+	ws, err := s.workspaceManager.ResolveWorkspace(workspaceID)
 
 	if err != nil {
 
@@ -292,21 +292,21 @@ func (s *ServerV2) handleCaveGet(ctx context.Context, request mcp.CallToolReques
 
 }
 
-func (s *ServerV2) handleCaveRemove(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *ServerV2) handleWorkspaceRemove(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 
 	args := request.GetArguments()
 
-	caveID, ok := args["cave_id"].(string)
+	workspaceID, ok := args["workspace_id"].(string)
 
 	if !ok {
 
-		return nil, fmt.Errorf("invalid or missing cave_id argument")
+		return nil, fmt.Errorf("invalid or missing workspace_id argument")
 
 	}
 
 	// Resolve workspace to get name for better feedback
 
-	ws, err := s.workspaceManager.ResolveWorkspace(caveID)
+	ws, err := s.workspaceManager.ResolveWorkspace(workspaceID)
 
 	if err != nil {
 
@@ -347,7 +347,7 @@ func (s *ServerV2) handleWorkspaceInfo(ctx context.Context, request mcp.CallTool
 
 	// Resolve workspace by name or ID
 
-	ws, err := s.workspaceManager.ResolveWorkspace(params.CaveID)
+	ws, err := s.workspaceManager.ResolveWorkspace(params.WorkspaceID)
 
 	if err != nil {
 

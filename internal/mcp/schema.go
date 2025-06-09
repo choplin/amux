@@ -236,7 +236,7 @@ func UnmarshalArgs[T any](request mcp.CallToolRequest, target *T) error {
 
 // Example usage structures with proper tags
 
-type CaveCreateParams struct {
+type WorkspaceCreateParams struct {
 	Name string `json:"name" mcp:"required" description:"Workspace name"`
 
 	BaseBranch string `json:"baseBranch,omitempty" description:"Base branch (optional)"`
@@ -248,18 +248,18 @@ type CaveCreateParams struct {
 	Description string `json:"description,omitempty" description:"Description (optional)"`
 }
 
-type CaveListParams struct {
+type WorkspaceListParams struct {
 
 	// No parameters needed for listing workspaces
 
 }
 
-type CaveIDParams struct {
-	CaveID string `json:"cave_id" mcp:"required" description:"Workspace name or ID"`
+type WorkspaceIDParams struct {
+	WorkspaceID string `json:"workspace_id" mcp:"required" description:"Workspace name or ID"`
 }
 
 type WorkspaceInfoParams struct {
-	CaveID string `json:"cave_id" mcp:"required" description:"Workspace name or ID"`
+	WorkspaceID string `json:"workspace_id" mcp:"required" description:"Workspace name or ID"`
 
 	Path string `json:"path,omitempty" description:"File or directory path (optional)"`
 }
