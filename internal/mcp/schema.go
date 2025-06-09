@@ -152,7 +152,7 @@ type CaveCreateParams struct {
 }
 
 type CaveListParams struct {
-	Status string `json:"status,omitempty" description:"Filter by status (optional)" enum:"\"active\",\"idle\""`
+	// No parameters needed for listing workspaces
 }
 
 type CaveIDParams struct {

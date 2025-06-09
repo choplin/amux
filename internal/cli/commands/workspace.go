@@ -23,8 +23,7 @@ var (
 	createAgentID     string
 	createDescription string
 
-	// List flags
-	listStatus string
+	// List flags - removed status filtering
 
 	// Cleanup flags
 	cleanupDays   int
@@ -38,8 +37,6 @@ func init() {
 	// Add subcommands
 	workspaceCmd.AddCommand(createWorkspaceCmd)
 	workspaceCmd.AddCommand(listWorkspaceCmd)
-	workspaceCmd.AddCommand(activateWorkspaceCmd)
-	workspaceCmd.AddCommand(deactivateWorkspaceCmd)
 	workspaceCmd.AddCommand(removeWorkspaceCmd)
 	workspaceCmd.AddCommand(cleanupWorkspaceCmd)
 
@@ -50,7 +47,7 @@ func init() {
 	createWorkspaceCmd.Flags().StringVarP(&createDescription, "description", "d", "", "Description of the workspace")
 
 	// List command flags
-	listWorkspaceCmd.Flags().StringVarP(&listStatus, "status", "s", "", "Filter by status (active/idle)")
+	// Status filtering removed - workspaces are now filtered by last modified time
 
 	// Cleanup command flags
 	cleanupWorkspaceCmd.Flags().IntVarP(&cleanupDays, "days", "d", 7, "Remove workspaces idle for more than N days")
@@ -71,20 +68,6 @@ var listWorkspaceCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all workspaces",
 	RunE:  runListWorkspace,
-}
-
-var activateWorkspaceCmd = &cobra.Command{
-	Use:   "activate <workspace-id>",
-	Short: "Mark a workspace as active",
-	Args:  cobra.ExactArgs(1),
-	RunE:  runActivateWorkspace,
-}
-
-var deactivateWorkspaceCmd = &cobra.Command{
-	Use:   "deactivate <workspace-id>",
-	Short: "Mark a workspace as idle",
-	Args:  cobra.ExactArgs(1),
-	RunE:  runDeactivateWorkspace,
 }
 
 var removeWorkspaceCmd = &cobra.Command{
@@ -137,49 +120,12 @@ func runListWorkspace(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	opts := workspace.ListOptions{}
-	if listStatus != "" {
-		opts.Status = workspace.Status(listStatus)
-	}
-
-	workspaces, err := manager.List(opts)
+	workspaces, err := manager.List(workspace.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to list workspaces: %w", err)
 	}
 
 	ui.PrintWorkspaceList(workspaces)
-	return nil
-}
-
-func runActivateWorkspace(cmd *cobra.Command, args []string) error {
-	workspaceID := args[0]
-
-	manager, err := getWorkspaceManager()
-	if err != nil {
-		return err
-	}
-
-	if err := manager.Activate(workspaceID); err != nil {
-		return fmt.Errorf("failed to activate workspace: %w", err)
-	}
-
-	ui.Success("Activated workspace: %s", workspaceID)
-	return nil
-}
-
-func runDeactivateWorkspace(cmd *cobra.Command, args []string) error {
-	workspaceID := args[0]
-
-	manager, err := getWorkspaceManager()
-	if err != nil {
-		return err
-	}
-
-	if err := manager.Deactivate(workspaceID); err != nil {
-		return fmt.Errorf("failed to deactivate workspace: %w", err)
-	}
-
-	ui.Success("Deactivated workspace: %s", workspaceID)
 	return nil
 }
 

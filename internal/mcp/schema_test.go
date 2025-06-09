@@ -19,7 +19,7 @@ func TestStructToToolOptions(t *testing.T) {
 		{
 			name:        "CaveListParams",
 			structType:  CaveListParams{},
-			checkFields: []string{"status"},
+			checkFields: []string{}, // No fields in CaveListParams anymore
 		},
 		{
 			name:        "CaveIDParams",
@@ -46,14 +46,21 @@ func TestStructToToolOptions(t *testing.T) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
-			if opts == nil {
-				t.Fatal("expected options but got nil")
-			}
-
-			// We can't easily inspect the options without creating a tool
-			// So we just check that options were generated
-			if len(opts) == 0 {
-				t.Error("expected at least one option")
+			// Handle empty structs (like CaveListParams)
+			if len(tt.checkFields) == 0 {
+				// For empty structs, opts should be empty array or nil
+				if opts != nil && len(opts) > 0 {
+					t.Error("expected no options for empty struct")
+				}
+			} else {
+				if opts == nil {
+					t.Fatal("expected options but got nil")
+				}
+				// We can't easily inspect the options without creating a tool
+				// So we just check that options were generated
+				if len(opts) == 0 {
+					t.Error("expected at least one option")
+				}
 			}
 		})
 	}

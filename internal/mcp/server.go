@@ -79,20 +79,6 @@ func (s *ServerV2) registerTools() error {
 	}
 	s.mcpServer.AddTool(mcp.NewTool("cave_get", getOpts...), s.handleCaveGet)
 
-	// cave_activate tool
-	activateOpts, err := WithStructOptions("Mark workspace as active", CaveIDParams{})
-	if err != nil {
-		return fmt.Errorf("failed to create cave_activate options: %w", err)
-	}
-	s.mcpServer.AddTool(mcp.NewTool("cave_activate", activateOpts...), s.handleCaveActivate)
-
-	// cave_deactivate tool
-	deactivateOpts, err := WithStructOptions("Mark workspace as idle", CaveIDParams{})
-	if err != nil {
-		return fmt.Errorf("failed to create cave_deactivate options: %w", err)
-	}
-	s.mcpServer.AddTool(mcp.NewTool("cave_deactivate", deactivateOpts...), s.handleCaveDeactivate)
-
 	// cave_remove tool
 	removeOpts, err := WithStructOptions("Remove workspace", CaveIDParams{})
 	if err != nil {
@@ -155,14 +141,8 @@ func (s *ServerV2) handleCaveCreate(ctx context.Context, request mcp.CallToolReq
 }
 
 func (s *ServerV2) handleCaveList(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	args := request.GetArguments()
-
-	opts := workspace.ListOptions{}
-	if status, ok := args["status"].(string); ok {
-		opts.Status = workspace.Status(status)
-	}
-
-	workspaces, err := s.workspaceManager.List(opts)
+	// No parameters needed, just list all workspaces
+	workspaces, err := s.workspaceManager.List(workspace.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list workspaces: %w", err)
 	}
@@ -197,50 +177,6 @@ func (s *ServerV2) handleCaveGet(ctx context.Context, request mcp.CallToolReques
 			mcp.TextContent{
 				Type: "text",
 				Text: string(result),
-			},
-		},
-	}, nil
-}
-
-func (s *ServerV2) handleCaveActivate(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	args := request.GetArguments()
-
-	caveID, ok := args["cave_id"].(string)
-	if !ok {
-		return nil, fmt.Errorf("invalid or missing cave_id argument")
-	}
-
-	if err := s.workspaceManager.Activate(caveID); err != nil {
-		return nil, fmt.Errorf("failed to activate workspace: %w", err)
-	}
-
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: fmt.Sprintf("Workspace %s activated", caveID),
-			},
-		},
-	}, nil
-}
-
-func (s *ServerV2) handleCaveDeactivate(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	args := request.GetArguments()
-
-	caveID, ok := args["cave_id"].(string)
-	if !ok {
-		return nil, fmt.Errorf("invalid or missing cave_id argument")
-	}
-
-	if err := s.workspaceManager.Deactivate(caveID); err != nil {
-		return nil, fmt.Errorf("failed to deactivate workspace: %w", err)
-	}
-
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: fmt.Sprintf("Workspace %s deactivated", caveID),
 			},
 		},
 	}, nil

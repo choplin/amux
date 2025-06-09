@@ -86,14 +86,12 @@ func (m *Manager) Create(opts CreateOptions) (*Workspace, error) {
 	workspace := &Workspace{
 		ID:          id,
 		Name:        opts.Name,
-		Status:      StatusActive,
 		Branch:      branch,
 		BaseBranch:  baseBranch,
 		Path:        workspacePath,
 		AgentID:     opts.AgentID,
 		Description: opts.Description,
 		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
 	}
 
 	// Save workspace metadata
@@ -141,6 +139,9 @@ func (m *Manager) Get(id string) (*Workspace, error) {
 		return nil, fmt.Errorf("failed to parse workspace: %w", err)
 	}
 
+	// Get last modified time from filesystem
+	workspace.UpdatedAt = m.getLastModified(workspace.Path)
+
 	return &workspace, nil
 }
 
@@ -172,10 +173,8 @@ func (m *Manager) List(opts ListOptions) ([]*Workspace, error) {
 			continue
 		}
 
-		// Apply status filter if specified
-		if opts.Status != "" && workspace.Status != opts.Status {
-			continue
-		}
+		// Get last modified time from filesystem
+		workspace.UpdatedAt = m.getLastModified(workspace.Path)
 
 		workspaces = append(workspaces, &workspace)
 	}
@@ -188,30 +187,40 @@ func (m *Manager) List(opts ListOptions) ([]*Workspace, error) {
 	return workspaces, nil
 }
 
-// Activate marks a workspace as active
-func (m *Manager) Activate(id string) error {
-	workspace, err := m.Get(id)
-	if err != nil {
-		return err
+// getLastModified gets the last modified time of any file in the workspace
+func (m *Manager) getLastModified(workspacePath string) time.Time {
+	var lastMod time.Time
+
+	// Walk through the workspace directory
+	filepath.Walk(workspacePath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil // Continue walking even if there's an error
+		}
+
+		// Skip .git directory and .agentcave directory
+		if strings.Contains(path, "/.git/") || strings.Contains(path, "/.agentcave/") {
+			if info.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		// Update last modified time if this file is newer
+		if info.ModTime().After(lastMod) {
+			lastMod = info.ModTime()
+		}
+
+		return nil
+	})
+
+	// If no files found or error, use directory's own modified time
+	if lastMod.IsZero() {
+		if info, err := os.Stat(workspacePath); err == nil {
+			lastMod = info.ModTime()
+		}
 	}
 
-	workspace.Status = StatusActive
-	workspace.UpdatedAt = time.Now()
-
-	return m.saveWorkspace(workspace)
-}
-
-// Deactivate marks a workspace as idle
-func (m *Manager) Deactivate(id string) error {
-	workspace, err := m.Get(id)
-	if err != nil {
-		return err
-	}
-
-	workspace.Status = StatusIdle
-	workspace.UpdatedAt = time.Now()
-
-	return m.saveWorkspace(workspace)
+	return lastMod
 }
 
 // Remove deletes a workspace
@@ -253,9 +262,9 @@ func (m *Manager) Remove(id string) error {
 	return nil
 }
 
-// Cleanup removes old idle workspaces
+// Cleanup removes old workspaces based on last modified time
 func (m *Manager) Cleanup(opts CleanupOptions) ([]string, error) {
-	workspaces, err := m.List(ListOptions{Status: StatusIdle})
+	workspaces, err := m.List(ListOptions{})
 	if err != nil {
 		return nil, err
 	}
