@@ -23,7 +23,8 @@ var (
 	createAgentID     string
 	createDescription string
 
-	// List flags - removed status filtering
+	// List flags
+	listOneline bool
 
 	// Cleanup flags
 	cleanupDays   int
@@ -47,7 +48,7 @@ func init() {
 	createWorkspaceCmd.Flags().StringVarP(&createDescription, "description", "d", "", "Description of the workspace")
 
 	// List command flags
-	// Status filtering removed - workspaces are now filtered by last modified time
+	listWorkspaceCmd.Flags().BoolVar(&listOneline, "oneline", false, "Show one workspace per line (for use with fzf)")
 
 	// Cleanup command flags
 	cleanupWorkspaceCmd.Flags().IntVarP(&cleanupDays, "days", "d", 7, "Remove workspaces idle for more than N days")
@@ -67,7 +68,21 @@ var createWorkspaceCmd = &cobra.Command{
 var listWorkspaceCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all workspaces",
-	RunE:  runListWorkspace,
+	Long: `List all workspaces in the project.
+
+Examples:
+  # List workspaces with detailed view
+  agentcave workspace list
+
+  # List workspaces in oneline format for scripting
+  agentcave workspace list --oneline
+
+  # Use with fzf to select a workspace
+  agentcave workspace list --oneline | fzf | cut -f1
+
+  # Remove selected workspace with fzf
+  agentcave workspace remove $(agentcave workspace list --oneline | fzf | cut -f1)`,
+	RunE: runListWorkspace,
 }
 
 var removeWorkspaceCmd = &cobra.Command{
@@ -126,7 +141,19 @@ func runListWorkspace(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list workspaces: %w", err)
 	}
 
-	ui.PrintWorkspaceList(workspaces)
+	if listOneline {
+		// One line per workspace for fzf integration
+		for _, ws := range workspaces {
+			// Format: name<tab>id<tab>branch<tab>path<tab>description
+			description := ws.Description
+			if description == "" {
+				description = "-"
+			}
+			fmt.Printf("%s\t%s\t%s\t%s\t%s\n", ws.Name, ws.ID, ws.Branch, ws.Path, description)
+		}
+	} else {
+		ui.PrintWorkspaceList(workspaces)
+	}
 	return nil
 }
 
