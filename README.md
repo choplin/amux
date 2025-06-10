@@ -1,19 +1,20 @@
 # 🕳️ Amux
 
-> **Agent Multiplexer** - Run multiple AI agents in isolated workspaces
+> **Agent Multiplexer** - Unleash fleets of AI agents in parallel, sandboxed workspaces
 
 Amux provides isolated git worktree-based environments where AI agents can work independently without context mixing. With built-in session management, you can run multiple agents concurrently, attach to their sessions, and manage their lifecycle.
 
+> [!WARNING]
+> **🚧 Work in Progress**
+>
+> This project is actively being developed. Expect frequent updates and potential breaking changes.
+
 ## 🚀 Features
 
-- **Agent Multiplexing**: Run multiple AI agents concurrently in tmux sessions
-- **Isolated Workspaces**: Each workspace is a separate git worktree with its own branch
-- **Session Management**: Start, stop, attach to agent sessions with ease
-- **Working Context**: Structured markdown files help agents maintain context
-- **MCP Integration**: Full Model Context Protocol support for AI agent communication
-- **Agent Configuration**: Define agent commands and environment variables
-- **Secure File Access**: Path-validated workspace browsing for AI agents
-- **Single Binary**: Zero runtime dependencies, easy deployment
+- **Concurrent AI Agents**: Run multiple agents in parallel without interference
+- **Workspace Isolation**: Each agent works in its own directory and branch
+- **Persistent Sessions**: Attach and detach from agent sessions like tmux/screen
+- **Bring Your Own Environment**: Works with your existing tools - no containers needed
 
 ## 📦 Installation
 
