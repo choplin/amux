@@ -127,6 +127,8 @@ For each work session, maintain context in `.claude/context/{work_name}/`:
 5. **Single Binary**: No runtime dependencies for easy deployment
 6. **Git Commits**: NEVER commit without explicit user confirmation
 7. **Working Context**: Templates exist in `internal/templates/` but not yet integrated
+8. **ADRs are Immutable**: Never modify existing ADRs. To change a decision, create a new ADR that mentions
+   "This supersedes ADR-XXX" in the Context or Decision section
 
 ## Documentation Structure
 
