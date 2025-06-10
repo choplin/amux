@@ -13,11 +13,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/aki/agentcave/internal/cli/ui"
+	"github.com/aki/amux/internal/cli/ui"
 
-	"github.com/aki/agentcave/internal/core/config"
+	"github.com/aki/amux/internal/core/config"
 
-	"github.com/aki/agentcave/internal/mcp"
+	"github.com/aki/amux/internal/mcp"
 )
 
 var mcpCmd = &cobra.Command{

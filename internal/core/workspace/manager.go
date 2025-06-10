@@ -11,12 +11,12 @@ import (
 	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
 
-	"github.com/aki/agentcave/internal/core/config"
-	"github.com/aki/agentcave/internal/core/git"
-	"github.com/aki/agentcave/internal/templates"
+	"github.com/aki/amux/internal/core/config"
+	"github.com/aki/amux/internal/core/git"
+	"github.com/aki/amux/internal/templates"
 )
 
-// Manager manages AgentCave workspaces
+// Manager manages Amux workspaces
 type Manager struct {
 	configManager *config.Manager
 	gitOps        *git.Operations
@@ -75,7 +75,7 @@ func (m *Manager) Create(opts CreateOptions) (*Workspace, error) {
 		}
 	} else {
 		// Create new branch
-		branch = fmt.Sprintf("agentcave/%s", id)
+		branch = fmt.Sprintf("amux/%s", id)
 		// Create worktree with new branch
 		if err := m.gitOps.CreateWorktree(workspacePath, branch, baseBranch); err != nil {
 			return nil, fmt.Errorf("failed to create worktree: %w", err)
@@ -197,8 +197,8 @@ func (m *Manager) getLastModified(workspacePath string) time.Time {
 			return nil // Continue walking even if there's an error
 		}
 
-		// Skip .git directory and .agentcave directory
-		if strings.Contains(path, "/.git/") || strings.Contains(path, "/.agentcave/") {
+		// Skip .git directory and .amux directory
+		if strings.Contains(path, "/.git/") || strings.Contains(path, "/.amux/") {
 			if info.IsDir() {
 				return filepath.SkipDir
 			}
@@ -338,9 +338,9 @@ func (m *Manager) saveWorkspace(workspace *Workspace) error {
 	}
 
 	// Also save workspace metadata in the workspace itself
-	workspaceMetaPath := filepath.Join(workspace.Path, ".agentcave", "workspace.yaml")
+	workspaceMetaPath := filepath.Join(workspace.Path, ".amux", "workspace.yaml")
 	if err := os.MkdirAll(filepath.Dir(workspaceMetaPath), 0755); err != nil {
-		return fmt.Errorf("failed to create workspace .agentcave directory: %w", err)
+		return fmt.Errorf("failed to create workspace .amux directory: %w", err)
 	}
 
 	if err := os.WriteFile(workspaceMetaPath, data, 0644); err != nil {

@@ -7,7 +7,7 @@ import (
 
 	"time"
 
-	"github.com/aki/agentcave/internal/core/workspace"
+	"github.com/aki/amux/internal/core/workspace"
 )
 
 // Print functions for consistent output
@@ -125,6 +125,12 @@ func PrintWorkspaceList(workspaces []*workspace.Workspace) {
 
 	}
 
+}
+
+// PrintWorkspaceDetails displays detailed information about a single workspace
+func PrintWorkspaceDetails(w *workspace.Workspace) {
+	fmt.Printf("%s Workspace Details\n\n", CaveIcon)
+	PrintWorkspace(w)
 }
 
 // FormatTime formats a time for display

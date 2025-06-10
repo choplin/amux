@@ -28,8 +28,8 @@ go.work.sum
 .DS_Store
 Thumbs.db
 
-# AgentCave
-.agentcave/
+# Amux
+.amux/
 .worktrees/
 
 # Lefthook
@@ -42,5 +42,7 @@ test-*-repo/
 # AI agent working memory
 .claude/context/
 .claude/archive/*
+.claude/planning/*
 !.claude/archive/README.md
 !.claude/archive/TEMPLATE.md
+!.claude/planning/README.md

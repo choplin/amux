@@ -5,10 +5,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aki/agentcave/internal/core/config"
-	"github.com/aki/agentcave/internal/core/git"
-	"github.com/aki/agentcave/internal/core/workspace"
-	"github.com/aki/agentcave/internal/tests/helpers"
+	"github.com/aki/amux/internal/core/config"
+	"github.com/aki/amux/internal/core/git"
+	"github.com/aki/amux/internal/core/workspace"
+	"github.com/aki/amux/internal/tests/helpers"
 )
 
 func TestManager_CreateWithExistingBranch(t *testing.T) {
@@ -16,7 +16,7 @@ func TestManager_CreateWithExistingBranch(t *testing.T) {
 	repoDir := helpers.CreateTestRepo(t)
 	defer os.RemoveAll(repoDir)
 
-	// Initialize AgentCave
+	// Initialize Amux
 	configManager := config.NewManager(repoDir)
 	// Create default config and save it
 	cfg := config.DefaultConfig()
@@ -61,10 +61,10 @@ func TestManager_CreateWithExistingBranch(t *testing.T) {
 		t.Errorf("Workspace path does not exist: %s", ws.Path)
 	}
 
-	// Verify .agentcave directory was created
-	agentCaveDir := filepath.Join(ws.Path, ".agentcave")
-	if _, err := os.Stat(agentCaveDir); os.IsNotExist(err) {
-		t.Errorf("AgentCave directory not created in workspace")
+	// Verify .amux directory was created
+	amuxDir := filepath.Join(ws.Path, ".amux")
+	if _, err := os.Stat(amuxDir); os.IsNotExist(err) {
+		t.Errorf("Amux directory not created in workspace")
 	}
 
 	// Clean up
@@ -79,7 +79,7 @@ func TestManager_CreateWithNewBranch(t *testing.T) {
 	repoDir := helpers.CreateTestRepo(t)
 	defer os.RemoveAll(repoDir)
 
-	// Initialize AgentCave
+	// Initialize Amux
 	configManager := config.NewManager(repoDir)
 	// Create default config and save it
 	cfg := config.DefaultConfig()
@@ -107,7 +107,7 @@ func TestManager_CreateWithNewBranch(t *testing.T) {
 	}
 
 	// Verify workspace was created with new branch format
-	expectedPrefix := "agentcave/workspace-"
+	expectedPrefix := "amux/workspace-"
 	if ws.Branch[:len(expectedPrefix)] != expectedPrefix {
 		t.Errorf("Expected branch to start with %s, got %s", expectedPrefix, ws.Branch)
 	}

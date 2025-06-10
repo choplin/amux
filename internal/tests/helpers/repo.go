@@ -37,7 +37,7 @@ func CreateTestRepo(t *testing.T) string {
 	// Create temporary directory in system temp, not in current directory
 	// This ensures we're not inside any existing git repository
 	systemTmp := os.TempDir()
-	tmpDir, err := os.MkdirTemp(systemTmp, "agentcave-test-*")
+	tmpDir, err := os.MkdirTemp(systemTmp, "amux-test-*")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}

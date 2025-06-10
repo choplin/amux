@@ -1,4 +1,4 @@
-# AgentCave Justfile - Build automation
+# Amux Justfile - Build automation
 
 # Default recipe - show available commands
 default:
@@ -11,7 +11,7 @@ init:
 
 # Build the binary
 build:
-    go build -o bin/agentcave cmd/agentcave/main.go
+    go build -o bin/amux cmd/amux/main.go
 
 # Run tests
 test:
@@ -24,7 +24,7 @@ test-coverage:
 
 # Format Go code
 fmt:
-    go run -mod=readonly golang.org/x/tools/cmd/goimports -w -local github.com/aki/agentcave .
+    go run -mod=readonly golang.org/x/tools/cmd/goimports -w -local github.com/aki/amux .
 
 # Format YAML files
 fmt-yaml:
@@ -39,11 +39,11 @@ check: fmt fmt-yaml lint
 
 # Install the binary to GOPATH/bin
 install: build
-    go install cmd/agentcave/main.go
+    go install cmd/amux/main.go
 
 # Run the development version
 dev *args:
-    go run cmd/agentcave/main.go {{args}}
+    go run cmd/amux/main.go {{args}}
 
 # Clean build artifacts
 clean:

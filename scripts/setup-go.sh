@@ -1,9 +1,9 @@
 #!/bin/bash
-# Setup script for AgentCave Go implementation
+# Setup script for Amux Go implementation
 
 set -e
 
-echo "🕳️ Setting up AgentCave Go implementation..."
+echo "🕳️ Setting up Amux Go implementation..."
 
 # Check Go version
 if ! command -v go &> /dev/null; then
@@ -27,19 +27,19 @@ go mod download
 go mod tidy
 
 # Build the binary
-echo "🔨 Building AgentCave..."
+echo "🔨 Building Amux..."
 mkdir -p bin
-go build -o bin/agentcave cmd/agentcave/main.go
+go build -o bin/amux cmd/amux/main.go
 
-if [ -f "bin/agentcave" ]; then
+if [ -f "bin/amux" ]; then
     echo "✅ Build successful!"
     echo ""
-    echo "🚀 AgentCave is ready to use!"
+    echo "🚀 Amux is ready to use!"
     echo ""
     echo "Next steps:"
     echo "1. Add bin/ to your PATH or run: make install"
-    echo "2. Initialize in your project: agentcave init"
-    echo "3. Start the MCP server: agentcave serve"
+    echo "2. Initialize in your project: amux init"
+    echo "3. Start the MCP server: amux serve"
     echo ""
     echo "For more information, see README-go.md"
 else

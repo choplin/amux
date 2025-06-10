@@ -1,5 +1,5 @@
 #!/bin/bash
-# Test script for AgentCave MCP server
+# Test script for Amux MCP server
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -7,7 +7,7 @@ RED='\033[0;31m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}Testing AgentCave MCP Server${NC}"
+echo -e "${BLUE}Testing Amux MCP Server${NC}"
 echo "================================"
 
 # Function to send JSON-RPC request
@@ -16,7 +16,7 @@ send_request() {
     echo -e "\n${BLUE}Request:${NC}"
     echo "$request" | jq .
     echo -e "\n${BLUE}Response:${NC}"
-    echo "$request" | go run cmd/agentcave/main.go serve --transport stdio 2>/dev/null | jq .
+    echo "$request" | go run cmd/amux/main.go serve --transport stdio 2>/dev/null | jq .
 }
 
 # Test 1: Initialize

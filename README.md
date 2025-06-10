@@ -1,7 +1,7 @@
-# 🕳️ AgentCave
+# 🕳️ Amux
 >
 > Private development caves for AI agents
-AgentCave provides isolated git worktree-based environments where AI agents can work independently without
+Amux provides isolated git worktree-based environments where AI agents can work independently without
 context mixing. Built in Go for performance and easy deployment.
 
 ## 🚀 Features
@@ -19,65 +19,88 @@ context mixing. Built in Go for performance and easy deployment.
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/agentcave.git
-cd agentcave
+git clone https://github.com/yourusername/amux.git
+cd amux
 
 # Build with just (recommended)
 just build
 
 # Or with go directly
-go build -o bin/agentcave cmd/agentcave/main.go
+go build -o bin/amux cmd/amux/main.go
 
 # Or with make (if you don't have just)
-go build -o bin/agentcave cmd/agentcave/main.go
+go build -o bin/amux cmd/amux/main.go
 ```
 
 ### Binary Releases
 
-Download pre-built binaries from the [releases page](https://github.com/yourusername/agentcave/releases).
+Download pre-built binaries from the [releases page](https://github.com/yourusername/amux/releases).
 
 ## 🛠️ Usage
 
 ### Initialize a Project
 
 ```bash
-# Initialize AgentCave in your project
+# Initialize Amux in your project
 cd your-project
-agentcave init
+amux init
 ```
 
 This creates:
 
-- `.agentcave/config.yaml` - Project configuration
-- `.agentcave/workspaces/` - Workspace metadata directory
+- `.amux/config.yaml` - Project configuration
+- `.amux/workspaces/` - Workspace metadata directory
 
-### Workspace Management
+### Command Structure
+
+```bash
+# Workspace management
+amux workspace create <name>    # alias: amux ws create
+amux workspace list            # alias: amux ws list
+amux workspace get <id>        # alias: amux ws get
+amux workspace remove <id>     # alias: amux ws remove
+amux workspace prune           # alias: amux ws prune
+
+# Agent management (future)
+amux agent run <agent>         # alias: amux run
+amux agent list               # alias: amux ps
+amux agent attach <session>   # alias: amux attach
+amux agent stop <session>     # no alias
+
+# MCP server
+amux mcp [options]            # Start MCP server
+```
+
+### Workspace Management Examples
 
 ```bash
 # Create a new workspace with a new branch
-agentcave workspace create feature-auth --description "Implement authentication"
+amux ws create feature-auth --description "Implement authentication"
 
 # Create a workspace using an existing branch
-agentcave workspace create bugfix-ui --branch fix/ui-crash --description "Fix UI crash"
+amux ws create bugfix-ui --branch fix/ui-crash --description "Fix UI crash"
+
+# Get details about a specific workspace
+amux ws get workspace-abc123
 
 # List all workspaces
-agentcave workspace list
+amux ws list
 
 # Remove a workspace
-agentcave workspace remove workspace-abc123 --force
+amux ws remove workspace-abc123 --force
 
 # Clean up old workspaces
-agentcave workspace prune --days 7
+amux ws prune --days 7
 ```
 
 ### Start MCP Server
 
 ```bash
 # Start with stdio transport (default)
-agentcave mcp
+amux mcp
 
 # Start with HTTPS transport
-agentcave mcp --transport https --port 3000 --auth bearer --token secret123
+amux mcp --transport https --port 3000 --auth bearer --token secret123
 ```
 
 ## 🤖 MCP Tools for AI Agents
@@ -88,11 +111,22 @@ agentcave mcp --transport https --port 3000 --auth bearer --token secret123
 - `workspace_remove` - Remove workspace and cleanup
 - `workspace_info` - Browse workspace files securely
 
+## 🎯 Future: Agent Multiplexing
+
+Amux is designed to support running multiple AI agents concurrently:
+
+```bash
+# Future functionality
+amux run claude --workspace feature-auth    # Run Claude in a workspace
+amux ps                                    # List running agents
+amux attach claude-session-123             # Attach to agent session
+```
+
 ## 📁 Project Structure
 
 ```text
-agentcave/
-├── cmd/agentcave/      # CLI entry point
+amux/
+├── cmd/amux/      # CLI entry point
 ├── internal/
 │   ├── cli/           # CLI commands and UI
 │   ├── core/          # Core business logic

@@ -9,11 +9,11 @@ import (
 )
 
 const (
-	AgentCaveDir = ".agentcave"
-	ConfigFile   = "config.yaml"
+	AmuxDir    = ".amux"
+	ConfigFile = "config.yaml"
 )
 
-// Manager handles AgentCave configuration
+// Manager handles Amux configuration
 type Manager struct {
 	projectRoot string
 	configPath  string
@@ -23,7 +23,7 @@ type Manager struct {
 func NewManager(projectRoot string) *Manager {
 	return &Manager{
 		projectRoot: projectRoot,
-		configPath:  filepath.Join(projectRoot, AgentCaveDir, ConfigFile),
+		configPath:  filepath.Join(projectRoot, AmuxDir, ConfigFile),
 	}
 }
 
@@ -32,7 +32,7 @@ func (m *Manager) Load() (*Config, error) {
 	data, err := os.ReadFile(m.configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("AgentCave not initialized. Run 'agentcave init' first")
+			return nil, fmt.Errorf("Amux not initialized. Run 'amux init' first")
 		}
 		return nil, fmt.Errorf("failed to read config: %w", err)
 	}
@@ -47,7 +47,7 @@ func (m *Manager) Load() (*Config, error) {
 
 // Save writes the configuration to disk
 func (m *Manager) Save(config *Config) error {
-	// Ensure the .agentcave directory exists
+	// Ensure the .amux directory exists
 	if err := os.MkdirAll(filepath.Dir(m.configPath), 0755); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
@@ -64,7 +64,7 @@ func (m *Manager) Save(config *Config) error {
 	return nil
 }
 
-// IsInitialized checks if AgentCave has been initialized in the project
+// IsInitialized checks if Amux has been initialized in the project
 func (m *Manager) IsInitialized() bool {
 	_, err := os.Stat(m.configPath)
 	return err == nil
@@ -75,27 +75,27 @@ func (m *Manager) GetProjectRoot() string {
 	return m.projectRoot
 }
 
-// GetAgentCaveDir returns the .agentcave directory path
-func (m *Manager) GetAgentCaveDir() string {
-	return filepath.Join(m.projectRoot, AgentCaveDir)
+// GetAmuxDir returns the .amux directory path
+func (m *Manager) GetAmuxDir() string {
+	return filepath.Join(m.projectRoot, AmuxDir)
 }
 
 // GetWorkspacesDir returns the workspaces directory path
 func (m *Manager) GetWorkspacesDir() string {
-	return filepath.Join(m.projectRoot, AgentCaveDir, "workspaces")
+	return filepath.Join(m.projectRoot, AmuxDir, "workspaces")
 }
 
-// FindProjectRoot searches for the project root by looking for .agentcave directory
+// FindProjectRoot searches for the project root by looking for .amux directory
 func FindProjectRoot() (string, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return "", err
 	}
 
-	// Walk up the directory tree looking for .agentcave
+	// Walk up the directory tree looking for .amux
 	dir := cwd
 	for {
-		if _, err := os.Stat(filepath.Join(dir, AgentCaveDir, ConfigFile)); err == nil {
+		if _, err := os.Stat(filepath.Join(dir, AmuxDir, ConfigFile)); err == nil {
 			return dir, nil
 		}
 
@@ -107,5 +107,5 @@ func FindProjectRoot() (string, error) {
 		dir = parent
 	}
 
-	return "", fmt.Errorf("not in an AgentCave project (no .agentcave directory found)")
+	return "", fmt.Errorf("not in an Amux project (no .amux directory found)")
 }

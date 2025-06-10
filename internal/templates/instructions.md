@@ -4,7 +4,7 @@ This workspace ({{.WorkspaceID}}) is your isolated development environment. You 
 
 ## Workspace Guidelines
 
-1. **Context Files**: Update the context files in `.agentcave/context/` as you work:
+1. **Context Files**: Update the context files in `.amux/context/` as you work:
    - `background.md` - Document the task requirements at the start
    - `plan.md` - Outline your implementation approach before coding
    - `working-log.md` - Log progress and decisions as you work
@@ -33,4 +33,4 @@ You have access to the following MCP tools:
 
 - This workspace is isolated from other agent workspaces
 - Changes here do not affect other agents' work
-- The workspace path is managed by AgentCave - do not modify `.agentcave/` files directly
+- The workspace path is managed by Amux - do not modify `.amux/` files directly

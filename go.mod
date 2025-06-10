@@ -1,4 +1,4 @@
-module github.com/aki/agentcave
+module github.com/aki/amux
 
 go 1.24.4
 

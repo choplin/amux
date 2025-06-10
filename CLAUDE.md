@@ -1,8 +1,8 @@
-# AgentCave Project Memory
+# Amux Project Memory
 
 ## Project Overview
 
-**AgentCave** provides private development caves for AI agents. It's a workspace management tool that creates isolated
+**Amux** provides private development caves for AI agents. It's a workspace management tool that creates isolated
 git worktree-based environments where AI agents can work independently without context mixing.
 
 ## Cave Concept
@@ -39,6 +39,24 @@ The Working Context consists of four markdown files that guide AI agent work:
 
 These files ensure AI agents maintain context, make informed decisions, and produce reviewable work.
 
+## Project Status
+
+### Completed Features
+
+- ✅ **Renamed to Amux** (ADR-004) - Changed from AgentCave to Amux (Agent Multiplexer)
+- ✅ **Command Structure** (ADR-005) - Implemented subcommand structure with aliases
+  - Workspace commands: `amux ws create/list/get/remove/prune`
+  - Agent commands: `amux agent run/list/attach/stop` (structure only)
+  - Global aliases: `amux run/ps/attach`
+- ✅ **Core Functionality** - Workspace management, MCP server, git integration
+- ✅ **Single Binary** - Zero runtime dependencies
+
+### Pending Features
+
+- ⏳ **Agent Multiplexing** (ADR-003) - Running multiple AI agents concurrently
+- ⏳ **Working Context Management** - Automatic creation of context files in workspaces
+- ⏳ **Session Management** - Tmux-based agent session multiplexing
+
 ## Current Implementation (Go)
 
 ### Technology Stack
@@ -53,8 +71,8 @@ These files ensure AI agents maintain context, make informed decisions, and prod
 ### Architecture
 
 ```text
-agentcave/
-├── cmd/agentcave/        # Entry point
+amux/
+├── cmd/amux/        # Entry point
 ├── internal/
 │   ├── cli/              # CLI commands and UI
 │   ├── core/             # Core business logic
@@ -68,12 +86,15 @@ agentcave/
 
 ### Key Commands
 
-- `agentcave init` - Initialize project
-- `agentcave ws create <name>` - Create workspace
-- `agentcave ws ls` - List workspaces
-- `agentcave ws rm <name/id>` - Remove workspace
-- `agentcave ws prune` - Clean old workspaces
-- `agentcave mcp` - Start MCP server
+- `amux init` - Initialize project
+- `amux ws create <name>` - Create workspace
+- `amux ws list` - List workspaces (alias: `ls`)
+- `amux ws get <id>` - Get workspace details
+- `amux ws remove <id>` - Remove workspace (alias: `rm`)
+- `amux ws prune` - Clean old workspaces
+- `amux mcp` - Start MCP server
+- `amux agent <cmd>` - Agent management (future)
+- `amux run/ps/attach` - Agent shortcuts (future)
 
 ### MCP Tools
 
@@ -108,6 +129,9 @@ agentcave/
 
 - [README.md](README.md) - User guide
 - [DEVELOPMENT.md](DEVELOPMENT.md) - Developer documentation
+- [docs/adr/](docs/adr/) - Architecture Decision Records (immutable)
+- [.claude/planning/](.claude/planning/) - Implementation plans for AI agents
+- [.claude/archive/](.claude/archive/) - Historical context and migration notes
 
 ## Working Context Management
 
@@ -126,9 +150,10 @@ For each work session, maintain context in `.claude/context/{work_name}/`:
 4. **Path Security**: Workspace file access is path-validated
 5. **Single Binary**: No runtime dependencies for easy deployment
 6. **Git Commits**: NEVER commit without explicit user confirmation
-7. **Working Context**: Templates exist in `internal/templates/` but not yet integrated
-8. **ADRs are Immutable**: Never modify existing ADRs. To change a decision, create a new ADR that mentions
-   "This supersedes ADR-XXX" in the Context or Decision section
+7. **ADRs are Immutable**: Never modify existing ADRs. To change a decision, create a new ADR that mentions
+   "This supersedes ADR-XXX"
+8. **Implementation Plans**: Detailed plans go in `.claude/planning/`, not in ADRs
+9. **Working Context**: Templates exist in `internal/templates/` but not yet integrated
 
 ## Documentation Structure
 

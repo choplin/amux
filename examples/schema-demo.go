@@ -7,7 +7,7 @@ import (
 
 	mcpgo "github.com/mark3labs/mcp-go/mcp"
 
-	"github.com/aki/agentcave/internal/mcp"
+	"github.com/aki/amux/internal/mcp"
 )
 
 // Define your tool parameters as structs with proper tags

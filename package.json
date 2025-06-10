@@ -1,5 +1,5 @@
 {
-  "name": "agentcave",
+  "name": "amux",
   "version": "0.1.0",
   "description": "Private development caves for AI agents",
   "private": true,
@@ -16,4 +16,7 @@
   "commitlint": {
     "extends": ["@commitlint/config-conventional"]
   }
+
+
+
 }

@@ -1,8 +1,8 @@
-# AgentCave Development Guide
+# Amux Development Guide
 
 ## Architecture Overview
 
-AgentCave follows a clean architecture with clear separation of concerns:
+Amux follows a clean architecture with clear separation of concerns:
 
 ```text
 ┌─────────────────┬─────────────────┐
@@ -22,8 +22,8 @@ AgentCave follows a clean architecture with clear separation of concerns:
 ## Project Structure
 
 ```text
-agentcave/
-├── cmd/agentcave/          # Application entry point
+amux/
+├── cmd/amux/          # Application entry point
 │   └── main.go
 ├── internal/               # Private packages
 │   ├── cli/                # Command-line interface
@@ -78,7 +78,7 @@ Using mark3labs/mcp-go for Model Context Protocol:
 ### 4. Configuration Layers
 
 ```yaml
-# .agentcave/config.yaml
+# .amux/config.yaml
 project:
   name: my-project
 
@@ -97,8 +97,8 @@ mcp:
 
 ```bash
 # Clone repository
-git clone https://github.com/aki/agentcave
-cd agentcave
+git clone https://github.com/aki/amux
+cd amux
 
 # Install dependencies
 go mod download
@@ -235,11 +235,11 @@ func WithTimeout(d time.Duration) Option {
 
 ```bash
 # Test with direct JSON-RPC
-echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | agentcave mcp
+echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | amux mcp
 
 # Enable debug logging
 export DEBUG=1
-agentcave mcp
+amux mcp
 ```
 
 ### Workspace Issues
@@ -249,7 +249,7 @@ agentcave mcp
 git worktree list
 
 # Inspect workspace metadata
-cat .agentcave/workspaces/workspace-*.yaml
+cat .amux/workspaces/workspace-*.yaml
 ```
 
 ## Release Process

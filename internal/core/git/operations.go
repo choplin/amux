@@ -11,7 +11,7 @@ import (
 	git "github.com/go-git/go-git/v5"
 )
 
-// Operations provides git operations for AgentCave
+// Operations provides git operations for Amux
 type Operations struct {
 	repoPath string
 }

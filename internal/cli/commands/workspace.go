@@ -5,11 +5,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/aki/agentcave/internal/cli/ui"
+	"github.com/aki/amux/internal/cli/ui"
 
-	"github.com/aki/agentcave/internal/core/config"
+	"github.com/aki/amux/internal/core/config"
 
-	"github.com/aki/agentcave/internal/core/workspace"
+	"github.com/aki/amux/internal/core/workspace"
 )
 
 var workspaceCmd = &cobra.Command{
@@ -18,7 +18,7 @@ var workspaceCmd = &cobra.Command{
 
 	Aliases: []string{"ws"},
 
-	Short: "Manage AgentCave workspaces",
+	Short: "Manage Amux workspaces",
 
 	Long: "Create, list, and remove isolated development workspaces",
 }
@@ -57,6 +57,8 @@ func init() {
 	workspaceCmd.AddCommand(createWorkspaceCmd)
 
 	workspaceCmd.AddCommand(listWorkspaceCmd)
+
+	workspaceCmd.AddCommand(getWorkspaceCmd)
 
 	workspaceCmd.AddCommand(removeWorkspaceCmd)
 
@@ -115,27 +117,34 @@ Examples:
 
   # List workspaces with detailed view
 
-  agentcave ws ls
+  amux ws ls
 
 
 
   # List workspaces in oneline format for scripting
 
-  agentcave ws ls --oneline
+  amux ws ls --oneline
 
 
 
   # Use with fzf to select a workspace
 
-  agentcave ws ls --oneline | fzf | cut -f1
+  amux ws ls --oneline | fzf | cut -f1
 
 
 
   # Remove selected workspace with fzf
 
-  agentcave ws rm $(agentcave ws ls --oneline | fzf | cut -f1)`,
+  amux ws rm $(amux ws ls --oneline | fzf | cut -f1)`,
 
 	RunE: runListWorkspace,
+}
+
+var getWorkspaceCmd = &cobra.Command{
+	Use:   "get <workspace-name-or-id>",
+	Short: "Get detailed information about a workspace",
+	Args:  cobra.ExactArgs(1),
+	RunE:  runGetWorkspace,
 }
 
 var removeWorkspaceCmd = &cobra.Command{
@@ -257,6 +266,26 @@ func runListWorkspace(cmd *cobra.Command, args []string) error {
 
 	return nil
 
+}
+
+func runGetWorkspace(cmd *cobra.Command, args []string) error {
+	identifier := args[0]
+
+	manager, err := getWorkspaceManager()
+	if err != nil {
+		return err
+	}
+
+	// Resolve workspace by name or ID
+	ws, err := manager.ResolveWorkspace(identifier)
+	if err != nil {
+		return fmt.Errorf("failed to resolve workspace: %w", err)
+	}
+
+	// Print detailed workspace information
+	ui.PrintWorkspaceDetails(ws)
+
+	return nil
 }
 
 func runRemoveWorkspace(cmd *cobra.Command, args []string) error {
@@ -386,7 +415,7 @@ func getWorkspaceManager() (*workspace.Manager, error) {
 
 	if !configManager.IsInitialized() {
 
-		return nil, fmt.Errorf("AgentCave not initialized. Run 'agentcave init' first")
+		return nil, fmt.Errorf("Amux not initialized. Run 'amux init' first")
 
 	}
 

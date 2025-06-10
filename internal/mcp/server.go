@@ -19,11 +19,11 @@ import (
 
 	"github.com/mark3labs/mcp-go/server"
 
-	"github.com/aki/agentcave/internal/core/config"
+	"github.com/aki/amux/internal/core/config"
 
-	"github.com/aki/agentcave/internal/core/git"
+	"github.com/aki/amux/internal/core/git"
 
-	"github.com/aki/agentcave/internal/core/workspace"
+	"github.com/aki/amux/internal/core/workspace"
 )
 
 // ServerV2 implements the MCP server using mcp-go
@@ -56,7 +56,7 @@ func NewServerV2(configManager *config.Manager, transport string, httpConfig *co
 
 	mcpServer := server.NewMCPServer(
 
-		"agentcave",
+		"amux",
 
 		"1.0.0",
 
@@ -88,7 +88,7 @@ func NewServerV2(configManager *config.Manager, transport string, httpConfig *co
 
 }
 
-// registerTools registers all AgentCave tools
+// registerTools registers all Amux tools
 
 func (s *ServerV2) registerTools() error {
 

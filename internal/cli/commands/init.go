@@ -8,15 +8,15 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/aki/agentcave/internal/cli/ui"
-	"github.com/aki/agentcave/internal/core/config"
-	"github.com/aki/agentcave/internal/core/git"
+	"github.com/aki/amux/internal/cli/ui"
+	"github.com/aki/amux/internal/core/config"
+	"github.com/aki/amux/internal/core/git"
 )
 
 var initCmd = &cobra.Command{
 	Use:   "init",
-	Short: "Initialize AgentCave in the current project",
-	Long:  "Initialize AgentCave configuration in the current project directory",
+	Short: "Initialize Amux in the current project",
+	Long:  "Initialize Amux configuration in the current project directory",
 	RunE:  runInit,
 }
 
@@ -35,7 +35,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	// Check if it's a git repository
 	gitOps := git.NewOperations(cwd)
 	if !gitOps.IsGitRepository() {
-		return fmt.Errorf("not a git repository. AgentCave requires a git repository")
+		return fmt.Errorf("not a git repository. Amux requires a git repository")
 	}
 
 	// Get repository info
@@ -49,7 +49,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 
 	// Check if already initialized
 	if configManager.IsInitialized() && !forceInit {
-		return fmt.Errorf("AgentCave already initialized. Use --force to reinitialize")
+		return fmt.Errorf("Amux already initialized. Use --force to reinitialize")
 	}
 
 	// Create default configuration
@@ -70,14 +70,14 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create workspaces directory: %w", err)
 	}
 
-	// Add .agentcave to .gitignore if not already present
+	// Add .amux to .gitignore if not already present
 	if err := addToGitignore(cwd); err != nil {
 		ui.Warning("Failed to update .gitignore: %v", err)
 	}
 
-	ui.Success("Initialized AgentCave in %s", cwd)
-	ui.Info("Configuration saved to %s", filepath.Join(config.AgentCaveDir, config.ConfigFile))
-	ui.Info("Run 'agentcave serve' to start the MCP server")
+	ui.Success("Initialized Amux in %s", cwd)
+	ui.Info("Configuration saved to %s", filepath.Join(config.AmuxDir, config.ConfigFile))
+	ui.Info("Run 'amux mcp' to start the MCP server")
 
 	return nil
 }
@@ -91,13 +91,13 @@ func addToGitignore(projectRoot string) error {
 		content = string(data)
 	}
 
-	// Check if .agentcave is already ignored
-	if strings.Contains(content, ".agentcave") {
+	// Check if .amux is already ignored
+	if strings.Contains(content, ".amux") {
 		return nil
 	}
 
-	// Append .agentcave entries
-	entries := "\n# AgentCave\n.agentcave/\n.worktrees/\n"
+	// Append .amux entries
+	entries := "\n# Amux\n.amux/\n.worktrees/\n"
 
 	file, err := os.OpenFile(gitignorePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {

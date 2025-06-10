@@ -36,7 +36,7 @@ type TemplateData struct {
 
 // WriteContextFiles writes the working context files to a workspace
 func WriteContextFiles(workspacePath string, data TemplateData) error {
-	contextDir := filepath.Join(workspacePath, ".agentcave", "context")
+	contextDir := filepath.Join(workspacePath, ".amux", "context")
 	if err := os.MkdirAll(contextDir, 0755); err != nil {
 		return err
 	}
@@ -59,12 +59,12 @@ func WriteContextFiles(workspacePath string, data TemplateData) error {
 
 // WriteInstructions writes the instructions.md file to a workspace
 func WriteInstructions(workspacePath string, data TemplateData) error {
-	agentcaveDir := filepath.Join(workspacePath, ".agentcave")
-	if err := os.MkdirAll(agentcaveDir, 0755); err != nil {
+	amuxDir := filepath.Join(workspacePath, ".amux")
+	if err := os.MkdirAll(amuxDir, 0755); err != nil {
 		return err
 	}
 
-	return writeTemplate(filepath.Join(agentcaveDir, "instructions.md"), InstructionsTemplate, data)
+	return writeTemplate(filepath.Join(amuxDir, "instructions.md"), InstructionsTemplate, data)
 }
 
 func writeTemplate(path, templateContent string, data TemplateData) error {

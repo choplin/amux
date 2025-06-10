@@ -1,4 +1,4 @@
-# Lefthook configuration for AgentCave
+# Lefthook configuration for Amux
 # https://github.com/evilmartians/lefthook
 pre-commit:
   parallel: true
@@ -14,7 +14,7 @@ pre-commit:
       stage_fixed: true
       priority: 2
     goimports:
-      run: go run -mod=readonly golang.org/x/tools/cmd/goimports -w -local github.com/aki/agentcave {staged_files}
+      run: go run -mod=readonly golang.org/x/tools/cmd/goimports -w -local github.com/aki/amux {staged_files}
       glob: "*.go"
       stage_fixed: true
     vet:
@@ -40,7 +40,7 @@ pre-push:
     test-full:
       run: go test ./...
     build:
-      run: go build -o bin/agentcave cmd/agentcave/main.go
+      run: go build -o bin/amux cmd/amux/main.go
 commit-msg:
   commands:
     commitlint:

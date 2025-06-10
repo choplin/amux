@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/aki/agentcave/internal/cli/commands"
+	"github.com/aki/amux/internal/cli/commands"
 )
 
 func main() {

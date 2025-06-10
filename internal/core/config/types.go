@@ -1,6 +1,6 @@
 package config
 
-// Config represents the main AgentCave configuration
+// Config represents the main Amux configuration
 type Config struct {
 	Version string           `yaml:"version"`
 	Project ProjectConfig    `yaml:"project"`
@@ -49,12 +49,12 @@ type Agent struct {
 	Endpoint string `yaml:"endpoint,omitempty"`
 }
 
-// DefaultConfig returns the default AgentCave configuration
+// DefaultConfig returns the default Amux configuration
 func DefaultConfig() *Config {
 	return &Config{
 		Version: "1.0",
 		Project: ProjectConfig{
-			Name:         "agentcave-project",
+			Name:         "amux-project",
 			Repository:   "",
 			DefaultAgent: "claude",
 		},
