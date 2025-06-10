@@ -41,3 +41,6 @@ test-*-repo/
 
 # AI agent working memory
 .claude/context/
+.claude/archive/*
+!.claude/archive/README.md
+!.claude/archive/TEMPLATE.md

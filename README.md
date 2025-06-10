@@ -63,24 +63,21 @@ agentcave workspace create bugfix-ui --branch fix/ui-crash --description "Fix UI
 # List all workspaces
 agentcave workspace list
 
-# Activate a workspace
-agentcave workspace activate workspace-abc123
-
 # Remove a workspace
 agentcave workspace remove workspace-abc123 --force
 
 # Clean up old workspaces
-agentcave workspace cleanup --days 7
+agentcave workspace prune --days 7
 ```
 
 ### Start MCP Server
 
 ```bash
 # Start with stdio transport (default)
-agentcave serve
+agentcave mcp
 
 # Start with HTTPS transport
-agentcave serve --transport https --port 3000 --auth bearer --token secret123
+agentcave mcp --transport https --port 3000 --auth bearer --token secret123
 ```
 
 ## 🤖 MCP Tools for AI Agents
@@ -88,7 +85,6 @@ agentcave serve --transport https --port 3000 --auth bearer --token secret123
 - `workspace_create` - Create isolated workspace (supports existing branches)
 - `workspace_list` - List workspaces with optional filtering
 - `workspace_get` - Get specific workspace details
-- `workspace_activate`/`workspace_deactivate` - Manage workspace states
 - `workspace_remove` - Remove workspace and cleanup
 - `workspace_info` - Browse workspace files securely
 

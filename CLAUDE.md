@@ -5,6 +5,40 @@
 **AgentCave** provides private development caves for AI agents. It's a workspace management tool that creates isolated
 git worktree-based environments where AI agents can work independently without context mixing.
 
+## Cave Concept
+
+A **Cave** is an isolated development environment where AI agents work autonomously. While physically implemented as
+git worktree workspaces, a workspace becomes a "Cave" when it contains the Working Context files that enable AI agents
+to work effectively:
+
+### Working Context
+
+The Working Context consists of four markdown files that guide AI agent work:
+
+1. **background.md** - Project requirements and constraints
+   - Written at task start
+   - Contains requirements, issues, constraints, dependencies
+   - Source information from tickets, user interviews
+
+2. **plan.md** - Implementation approach and task breakdown
+   - Written before coding
+   - Technical decisions, risk assessment
+   - Concrete task breakdown
+
+3. **working-log.md** - Real-time progress and decision records
+   - Updated continuously during work
+   - Timestamped progress entries
+   - Key decisions and rationale
+   - Challenges and resolutions
+
+4. **results-summary.md** - Final outcomes for review/PR
+   - Written at completion
+   - Summary of implementation
+   - Key changes and impact
+   - Suitable for PR descriptions
+
+These files ensure AI agents maintain context, make informed decisions, and produce reviewable work.
+
 ## Current Implementation (Go)
 
 ### Technology Stack
@@ -75,7 +109,7 @@ agentcave/
 - [README.md](README.md) - User guide
 - [DEVELOPMENT.md](DEVELOPMENT.md) - Developer documentation
 
-## Working Context
+## Working Context Management
 
 For each work session, maintain context in `.claude/context/{work_name}/`:
 
@@ -83,20 +117,6 @@ For each work session, maintain context in `.claude/context/{work_name}/`:
 - `plan.md` - Implementation approach
 - `working-log.md` - Progress and decisions
 - `results-summary.md` - Summary of changes
-
-## Migration History
-
-### From TypeScript to Go (December 2024)
-
-- **Reason**: Go lacks official MCP SDK, TypeScript has official SDK
-- **Benefits**: Better performance, single binary, cross-platform
-- **Maintained**: All features, test coverage, code quality
-
-### Terminology Evolution
-
-- Originally "AiSquad" → renamed to "AgentCave"
-- "Cave" = Isolated Workspace with Working Context
-- Focus shifted from task management to workspace management
 
 ## Important Notes
 
@@ -106,3 +126,9 @@ For each work session, maintain context in `.claude/context/{work_name}/`:
 4. **Path Security**: Workspace file access is path-validated
 5. **Single Binary**: No runtime dependencies for easy deployment
 6. **Git Commits**: NEVER commit without explicit user confirmation
+7. **Working Context**: Templates exist in `internal/templates/` but not yet integrated
+
+## Documentation Structure
+
+- **Architecture Decision Records (ADRs)**: Located in `docs/adr/` for significant design decisions
+- **Archive Memories**: Located in `.claude/archive/` (gitignored) for historical context and past work sessions
