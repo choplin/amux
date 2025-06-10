@@ -76,6 +76,8 @@ Stop a running session:
 amux agent stop session-abc123
 ```
 
+**Important**: Sessions in Amux are one-shot. Once stopped, a session cannot be resumed or restarted. To continue work in the same workspace, start a new session with `amux run`. The workspace files and working context are preserved, allowing agents to pick up where they left off.
+
 ### Viewing Session Output
 
 View the current output of a session:

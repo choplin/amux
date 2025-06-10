@@ -39,10 +39,5 @@ Thumbs.db
 test-*-repo/
 *.test
 
-# AI agent working memory
-.claude/context/
-.claude/archive/*
-.claude/planning/*
-!.claude/archive/README.md
-!.claude/archive/TEMPLATE.md
-!.claude/planning/README.md
+# Development examples
+examples/
