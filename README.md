@@ -1,15 +1,17 @@
 # 🕳️ Amux
->
-> Private development caves for AI agents
-Amux provides isolated git worktree-based environments where AI agents can work independently without
-context mixing. Built in Go for performance and easy deployment.
+
+> **Agent Multiplexer** - Run multiple AI agents in isolated workspaces
+
+Amux provides isolated git worktree-based environments where AI agents can work independently without context mixing. With built-in session management, you can run multiple agents concurrently, attach to their sessions, and manage their lifecycle.
 
 ## 🚀 Features
 
-- **Isolated Workspaces**: Each "cave" is a separate git worktree with its own branch
+- **Agent Multiplexing**: Run multiple AI agents concurrently in tmux sessions
+- **Isolated Workspaces**: Each workspace is a separate git worktree with its own branch
+- **Session Management**: Start, stop, attach to agent sessions with ease
+- **Working Context**: Structured markdown files help agents maintain context
 - **MCP Integration**: Full Model Context Protocol support for AI agent communication
-- **Multi-Agent Support**: Multiple agents can work simultaneously in different caves
-- **Workspace Management**: Create, list, and clean up workspaces with ease
+- **Agent Configuration**: Define agent commands and environment variables
 - **Secure File Access**: Path-validated workspace browsing for AI agents
 - **Single Binary**: Zero runtime dependencies, easy deployment
 
@@ -51,6 +53,23 @@ This creates:
 - `.amux/config.yaml` - Project configuration
 - `.amux/workspaces/` - Workspace metadata directory
 
+### Quick Start
+
+```bash
+# Initialize project
+amux init
+
+# Create a workspace and run an agent
+amux ws create feature-auth --agent claude
+amux run claude
+
+# Check running sessions
+amux ps
+
+# Attach to a session
+amux attach session-abc123
+```
+
 ### Command Structure
 
 ```bash
@@ -61,11 +80,13 @@ amux workspace get <id>        # alias: amux ws get
 amux workspace remove <id>     # alias: amux ws remove
 amux workspace prune           # alias: amux ws prune
 
-# Agent management (future)
+# Agent management
 amux agent run <agent>         # alias: amux run
 amux agent list               # alias: amux ps
 amux agent attach <session>   # alias: amux attach
-amux agent stop <session>     # no alias
+amux agent stop <session>
+amux agent logs <session>
+amux agent config <subcommand>
 
 # MCP server
 amux mcp [options]            # Start MCP server
@@ -111,30 +132,57 @@ amux mcp --transport https --port 3000 --auth bearer --token secret123
 - `workspace_remove` - Remove workspace and cleanup
 - `workspace_info` - Browse workspace files securely
 
-## 🎯 Future: Agent Multiplexing
+## 🤖 Agent Multiplexing
 
-Amux is designed to support running multiple AI agents concurrently:
+Run multiple AI agents concurrently in isolated workspaces:
 
 ```bash
-# Future functionality
+# Run agents
 amux run claude --workspace feature-auth    # Run Claude in a workspace
+amux run gpt --workspace bugfix-api        # Run GPT in another workspace
+
+# Manage sessions
 amux ps                                    # List running agents
-amux attach claude-session-123             # Attach to agent session
+amux attach session-123                    # Attach to agent session
+amux agent stop session-123                # Stop a specific session
+amux agent logs session-123                # View session output
+
+# Configure agents
+amux agent config add gpt --name "GPT-4" --command "gpt-cli"
+amux agent config list                     # List configured agents
 ```
+
+### Working Context
+
+Each workspace includes context files to help AI agents:
+
+- `background.md` - Task requirements and constraints
+- `plan.md` - Implementation approach
+- `working-log.md` - Progress tracking
+- `results-summary.md` - Final outcomes
+
+Access context path via `$AMUX_CONTEXT_PATH` in agent sessions.
 
 ## 📁 Project Structure
 
 ```text
 amux/
-├── cmd/amux/      # CLI entry point
+├── cmd/amux/          # CLI entry point
 ├── internal/
+│   ├── adapters/      # External system adapters
+│   │   └── tmux/      # Tmux session management
 │   ├── cli/           # CLI commands and UI
+│   │   └── commands/  # Command implementations
 │   ├── core/          # Core business logic
+│   │   ├── agent/     # Agent configuration
 │   │   ├── config/    # Configuration management
+│   │   ├── context/   # Working context management
 │   │   ├── git/       # Git operations
+│   │   ├── session/   # Session management
 │   │   └── workspace/ # Workspace management
 │   ├── mcp/           # MCP server implementation
 │   └── templates/     # Markdown templates
+├── docs/              # Documentation
 ├── go.mod             # Go module definition
 ├── go.sum             # Dependency checksums
 └── justfile           # Build automation
@@ -145,6 +193,7 @@ amux/
 ### Prerequisites
 
 - Go 1.22 or later
+- tmux (optional, for agent multiplexing)
 - [Just](https://github.com/casey/just) (optional, for build automation)
 
 ### Building
@@ -181,7 +230,9 @@ go test ./internal/core/config
 
 ## 📚 Documentation
 
-- [Development Guide](DEVELOPMENT.md) - Architecture, setup, and contribution guidelines
+- [Agent Multiplexing Guide](docs/agent-multiplexing.md) - Complete guide to running multiple agents
+- [Architecture](docs/architecture.md) - System design and technical details
+- [Development Guide](DEVELOPMENT.md) - Setup and contribution guidelines
 - [Project Memory](CLAUDE.md) - AI agent context and project knowledge
 
 ## License

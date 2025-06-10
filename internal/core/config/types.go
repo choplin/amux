@@ -44,9 +44,12 @@ type AuthConfig struct {
 
 // Agent represents an AI agent configuration
 type Agent struct {
-	Name     string `yaml:"name"`
-	Type     string `yaml:"type"`
-	Endpoint string `yaml:"endpoint,omitempty"`
+	Name        string            `yaml:"name"`
+	Type        string            `yaml:"type"`
+	Endpoint    string            `yaml:"endpoint,omitempty"`
+	Command     string            `yaml:"command,omitempty"`
+	Environment map[string]string `yaml:"environment,omitempty"`
+	WorkingDir  string            `yaml:"workingDir,omitempty"`
 }
 
 // DefaultConfig returns the default Amux configuration
@@ -65,8 +68,9 @@ func DefaultConfig() *Config {
 		},
 		Agents: map[string]Agent{
 			"claude": {
-				Name: "Claude",
-				Type: "claude",
+				Name:    "Claude",
+				Type:    "claude",
+				Command: "claude",
 			},
 		},
 	}

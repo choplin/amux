@@ -32,23 +32,28 @@ func init() {
 	// These are shortcuts to agent subcommands
 
 	runCmd := &cobra.Command{
-		Use:   "run <agent> [options]",
+		Use:   "run <agent>",
 		Short: "Alias for 'agent run'",
-		Args:  cobra.MinimumNArgs(1),
-		RunE:  agentRunCmd.RunE,
+		Long:  agentRunCmd.Long,
+		Args:  cobra.ExactArgs(1),
+		RunE:  runAgent,
 	}
+	// Copy flags from agent run command
+	runCmd.Flags().StringVarP(&runWorkspace, "workspace", "w", "", "Workspace to run agent in (name or ID)")
+	runCmd.Flags().StringVarP(&runCommand, "command", "c", "", "Override agent command")
+	runCmd.Flags().StringSliceVarP(&runEnv, "env", "e", []string{}, "Environment variables (KEY=VALUE)")
 
 	psCmd := &cobra.Command{
 		Use:   "ps",
 		Short: "Alias for 'agent list'",
-		RunE:  agentListCmd.RunE,
+		RunE:  listAgents,
 	}
 
 	attachCmd := &cobra.Command{
 		Use:   "attach <session>",
 		Short: "Alias for 'agent attach'",
 		Args:  cobra.ExactArgs(1),
-		RunE:  agentAttachCmd.RunE,
+		RunE:  attachAgent,
 	}
 
 	rootCmd.AddCommand(runCmd)

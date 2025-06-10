@@ -51,11 +51,14 @@ These files ensure AI agents maintain context, make informed decisions, and prod
 - ✅ **Core Functionality** - Workspace management, MCP server, git integration
 - ✅ **Single Binary** - Zero runtime dependencies
 
-### Pending Features
+### Recently Completed
 
-- ⏳ **Agent Multiplexing** (ADR-003) - Running multiple AI agents concurrently
-- ⏳ **Working Context Management** - Automatic creation of context files in workspaces
-- ⏳ **Session Management** - Tmux-based agent session multiplexing
+- ✅ **Agent Multiplexing** (ADR-003) - Running multiple AI agents concurrently
+  - Session management with tmux backend
+  - Agent configuration system
+  - CLI commands for agent lifecycle
+  - Working context management
+  - Full test coverage with mock adapter
 
 ## Current Implementation (Go)
 
