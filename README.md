@@ -1,7 +1,6 @@
 # 🕳️ AgentCave
-
+>
 > Private development caves for AI agents
-
 AgentCave provides isolated git worktree-based environments where AI agents can work independently without
 context mixing. Built in Go for performance and easy deployment.
 
@@ -10,7 +9,7 @@ context mixing. Built in Go for performance and easy deployment.
 - **Isolated Workspaces**: Each "cave" is a separate git worktree with its own branch
 - **MCP Integration**: Full Model Context Protocol support for AI agent communication
 - **Multi-Agent Support**: Multiple agents can work simultaneously in different caves
-- **Workspace Management**: Create, list, activate, deactivate, and clean up workspaces
+- **Workspace Management**: Create, list, and clean up workspaces with ease
 - **Secure File Access**: Path-validated workspace browsing for AI agents
 - **Single Binary**: Zero runtime dependencies, easy deployment
 
@@ -87,7 +86,7 @@ agentcave serve --transport https --port 3000 --auth bearer --token secret123
 ## 🤖 MCP Tools for AI Agents
 
 - `workspace_create` - Create isolated workspace (supports existing branches)
-- `workspace_list` - List workspaces with optional filtering  
+- `workspace_list` - List workspaces with optional filtering
 - `workspace_get` - Get specific workspace details
 - `workspace_activate`/`workspace_deactivate` - Manage workspace states
 - `workspace_remove` - Remove workspace and cleanup
@@ -149,6 +148,11 @@ go test -cover ./...
 # Run specific package tests
 go test ./internal/core/config
 ```
+
+## 📚 Documentation
+
+- [Development Guide](DEVELOPMENT.md) - Architecture, setup, and contribution guidelines
+- [Project Memory](CLAUDE.md) - AI agent context and project knowledge
 
 ## License
 

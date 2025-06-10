@@ -9,7 +9,7 @@ pre-commit:
       stage_fixed: true
       priority: 1
     ensure-newline-eof:
-      run: perl -i -pe 'chomp if eof; $_ .= "\n"' {staged_files}
+      run: perl -i -pe 'eof && do{print "\n" unless /\n$/}' {staged_files}
       glob: "*.{go,md,yml,yaml,txt,json,toml,mod,sum}"
       stage_fixed: true
       priority: 2
