@@ -14,6 +14,7 @@ When implementing table formatting for list commands (Issue #8), we needed to ch
 2. **jedib0t/go-pretty** - A feature-rich formatting library with tables, progress bars, and more
 
 The decision impacts:
+
 - User experience when viewing lists of workspaces and sessions
 - Code complexity and maintainability
 - Binary size and dependencies
