@@ -118,6 +118,9 @@ func PrintWorkspaceList(workspaces []*workspace.Workspace) {
 	// Add rows
 	for _, w := range workspaces {
 		id := w.ID
+		if w.Index != "" {
+			id = w.Index
+		}
 		age := FormatDuration(time.Since(w.UpdatedAt))
 		description := w.Description
 		if description == "" {
