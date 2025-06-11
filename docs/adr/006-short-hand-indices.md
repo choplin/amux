@@ -35,7 +35,7 @@ We will implement a short-hand index system that provides sequential numeric ind
 
 - Indices are managed by a dedicated `IndexManager` in the `internal/core/index` package
 - The manager handles index allocation, reuse of released indices, and persistence
-- State is stored in `.amux/index-state.yaml` with support for multiple entity types
+- State is stored in `.amux/index/state.yaml` with support for multiple entity types
 - Commands accept both indices and full IDs for backwards compatibility
 - CLI output displays indices when available, falling back to full IDs
 

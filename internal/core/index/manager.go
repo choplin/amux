@@ -28,19 +28,20 @@ type Manager interface {
 
 // fileManager implements Manager with file-based persistence
 type fileManager struct {
-	mu        sync.Mutex // Protects flock access
-	flock     *flock.Flock
+	mu        sync.Mutex   // For goroutine synchronization within process
+	flock     *flock.Flock // For process synchronization across processes
 	stateFile string
 }
 
 // NewManager creates a new index manager
 func NewManager(amuxDir string) (Manager, error) {
-	stateFile := filepath.Join(amuxDir, "index-state.yaml")
+	indexDir := filepath.Join(amuxDir, "index")
+	stateFile := filepath.Join(indexDir, "state.yaml")
 	lockFile := stateFile + ".lock"
 
 	// Ensure directory exists
-	if err := os.MkdirAll(amuxDir, 0755); err != nil {
-		return nil, fmt.Errorf("failed to create directory: %w", err)
+	if err := os.MkdirAll(indexDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create index directory: %w", err)
 	}
 
 	m := &fileManager{
