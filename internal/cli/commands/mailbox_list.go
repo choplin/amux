@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -92,34 +93,42 @@ func listMailbox(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Count messages
+	// Get all messages
+	var allMessages []mailbox.Message
 	var inCount, outCount int
-	var inMessages, outMessages []mailbox.Message
 
-	// Get messages if we need to display them
+	// Get incoming messages
 	if listDirection == "" || listDirection == "in" {
 		opts := mailbox.Options{
 			SessionID: sess.ID(),
 			Direction: mailbox.DirectionIn,
-			Limit:     0, // Get all
+			Limit:     0,
 		}
-		inMessages, err = mailboxManager.ListMessages(opts)
+		inMessages, err := mailboxManager.ListMessages(opts)
 		if err == nil {
 			inCount = len(inMessages)
+			allMessages = append(allMessages, inMessages...)
 		}
 	}
 
+	// Get outgoing messages
 	if listDirection == "" || listDirection == "out" {
 		opts := mailbox.Options{
 			SessionID: sess.ID(),
 			Direction: mailbox.DirectionOut,
-			Limit:     0, // Get all
+			Limit:     0,
 		}
-		outMessages, err = mailboxManager.ListMessages(opts)
+		outMessages, err := mailboxManager.ListMessages(opts)
 		if err == nil {
 			outCount = len(outMessages)
+			allMessages = append(allMessages, outMessages...)
 		}
 	}
+
+	// Sort all messages by timestamp (newest first)
+	sort.Slice(allMessages, func(i, j int) bool {
+		return allMessages[i].Timestamp.After(allMessages[j].Timestamp)
+	})
 
 	// Display header
 	totalCount := inCount + outCount
@@ -129,22 +138,10 @@ func listMailbox(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Location: %s\n", mailboxPath)
 	fmt.Printf("Messages: %d total (%d incoming, %d outgoing)\n\n", totalCount, inCount, outCount)
 
-	// If filtering by direction, only show that section
-	if listDirection == "in" && len(inMessages) > 0 {
-		printMessageTable("📥 Incoming", inMessages)
-	} else if listDirection == "out" && len(outMessages) > 0 {
-		printMessageTable("📤 Outgoing", outMessages)
-	} else if listDirection == "" {
-		// Show both sections
-		if len(inMessages) > 0 {
-			printMessageTable("📥 Incoming", inMessages)
-			if len(outMessages) > 0 {
-				fmt.Println() // Add spacing between sections
-			}
-		}
-		if len(outMessages) > 0 {
-			printMessageTable("📤 Outgoing", outMessages)
-		}
+	// Display messages in a single table with global indices
+	if len(allMessages) > 0 {
+		printMessageTableWithIndex(allMessages)
+		fmt.Printf("\nUse 'amux mailbox show %s <#>' to read a specific message\n", sessionID)
 	}
 
 	if totalCount == 0 || (listDirection != "" && inCount == 0 && outCount == 0) {
@@ -154,14 +151,12 @@ func listMailbox(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func printMessageTable(title string, messages []mailbox.Message) {
-	fmt.Printf("%s (%d)\n\n", title, len(messages))
+func printMessageTableWithIndex(messages []mailbox.Message) {
+	// Create table with index column
+	tbl := ui.NewTable("#", "DIR", "TIMESTAMP", "NAME", "SIZE", "AGE")
 
-	// Create table
-	tbl := ui.NewTable("TIMESTAMP", "NAME", "SIZE", "AGE")
-
-	// Add rows
-	for _, msg := range messages {
+	// Add rows with indices
+	for i, msg := range messages {
 		// Get file info for size
 		fileInfo, err := os.Stat(msg.Path)
 		size := "-"
@@ -178,7 +173,14 @@ func printMessageTable(title string, messages []mailbox.Message) {
 		// Format age
 		age := ui.FormatTime(msg.Timestamp)
 
-		tbl.AddRow(timestamp, name, size, age)
+		// Direction indicator
+		dir := "→" // incoming
+		if msg.Direction == mailbox.DirectionOut {
+			dir = "←" // outgoing
+		}
+
+		// Index is 1-based for user friendliness
+		tbl.AddRow(i+1, dir, timestamp, name, size, age)
 	}
 
 	tbl.Print()

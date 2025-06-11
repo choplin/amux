@@ -17,6 +17,7 @@ Each session has a mailbox directory with incoming and outgoing messages.`,
 func init() {
 	// Add subcommands
 	mailboxCmd.AddCommand(mailboxListCmd)
-	mailboxCmd.AddCommand(mailboxTellCmd)
-	mailboxCmd.AddCommand(mailboxPeekCmd)
+	mailboxCmd.AddCommand(mailboxSendCmd)
+	mailboxCmd.AddCommand(mailboxRecvCmd)
+	mailboxCmd.AddCommand(mailboxShowCmd)
 }

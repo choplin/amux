@@ -106,9 +106,10 @@ amux/
 - `amux agent <cmd>` - Agent management
 - `amux run/ps/attach` - Agent shortcuts
 - `amux mailbox <cmd>` - Mailbox commands (alias: `mb`)
-  - `amux mailbox list <session>` - List mailbox files
-  - `amux mailbox tell <session> <msg>` - Send message to agent
-  - `amux mailbox peek <session>` - View agent mailbox
+  - `amux mailbox list <session>` - List mailbox files with indices
+  - `amux mailbox send <session> <msg>` - Send message to agent (stdin supported)
+  - `amux mailbox recv <session>` - Get latest message from agent
+  - `amux mailbox show <session> [index|latest]` - Show specific messages
 
 ### MCP Tools
 

@@ -175,24 +175,26 @@ Access context path via `$AMUX_CONTEXT_PATH` in agent sessions.
 Amux provides a mailbox system for asynchronous communication with running agents:
 
 ```bash
-# Send a message to an agent
-amux mailbox tell s1 "Please focus on the authentication module"
-amux mb tell s1 "Please focus on the authentication module"     # Short alias
+# Send messages to an agent
+amux mailbox send s1 "Please focus on the authentication module"
+amux mb send s1 "Fix the test failures"   # Short alias
+amux mailbox send s1 --file plan.md       # From file
+echo "urgent" | amux mb send s1           # From stdin
 
-# Send a message from a file
-amux mailbox tell s1 --file requirements.md
+# Receive latest message from agent
+amux mailbox recv s1                      # Show latest with metadata
+amux mb recv s1 -q                        # Just the content
 
-# List files in an agent's mailbox
-amux mailbox list s1                      # List all message files
+# List message files with indices
+amux mailbox list s1                      # Shows numbered list
 amux mb ls s1                             # Short alias
-amux mailbox list s1 --direction in       # List only incoming messages
 
-# View messages in an agent's mailbox
-amux mailbox peek s1                      # Show recent messages
-amux mb peek s1                           # Short alias
-amux mailbox peek s1 --direction in       # Show only incoming messages
-amux mailbox peek s1 --direction out      # Show only outgoing messages
-amux mailbox peek s1 --verbose            # Show full message content
+# Show specific messages
+amux mailbox show s1                      # Show all with previews
+amux mb show s1 3                         # Show message #3
+amux mb show s1 latest                    # Latest from agent
+amux mb show s1 latest --in               # Latest to agent
+amux mb show s1 --tail 5                  # Last 5 messages
 ```
 
 Each session has a mailbox directory at `.amux/mailbox/{session-id}/` with:

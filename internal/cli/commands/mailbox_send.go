@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -15,54 +16,57 @@ import (
 )
 
 var (
-	// Flags for tell command
-	tellFile string
+	// Flags for send command
+	sendFile string
 )
 
-var mailboxTellCmd = &cobra.Command{
-	Use:   "tell <session> <message>",
+var mailboxSendCmd = &cobra.Command{
+	Use:   "send <session> [message]",
 	Short: "Send a message to an agent session",
 	Long: `Send a message to an agent session's mailbox.
 
-The message can be provided as command arguments or from a file.
+The message can be provided as:
+- Command line arguments
+- From a file with -f/--file
+- From stdin (when no message argument is provided)
 
 Examples:
   # Send a simple message
-  amux mailbox tell s1 "Please focus on the authentication module"
-  amux mb tell s1 "Please focus on the authentication module"
+  amux mailbox send s1 "Please focus on the authentication module"
+  amux mb send s1 "Please focus on the authentication module"
 
-  # Send a message from a file
-  amux mailbox tell s1 --file requirements.md`,
+  # Send from a file
+  amux mailbox send s1 --file requirements.md
+  
+  # Send from stdin
+  echo "Update the tests" | amux mailbox send s1
+  amux mailbox send s1 < requirements.md`,
 	Args: cobra.MinimumNArgs(1),
-	RunE: tellSession,
+	RunE: sendToSession,
 }
 
 func init() {
 	// Add flags
-	mailboxTellCmd.Flags().StringVarP(&tellFile, "file", "f", "", "Read message from file")
+	mailboxSendCmd.Flags().StringVarP(&sendFile, "file", "f", "", "Read message from file")
 }
 
-func tellSession(cmd *cobra.Command, args []string) error {
+func sendToSession(cmd *cobra.Command, args []string) error {
 	sessionID := args[0]
 
 	// Determine message content
 	var content string
 	var name string
 
-	if tellFile != "" {
+	if sendFile != "" {
 		// Read from file
-		data, err := os.ReadFile(tellFile)
+		data, err := os.ReadFile(sendFile)
 		if err != nil {
 			return fmt.Errorf("failed to read file: %w", err)
 		}
 		content = string(data)
-		name = "file-" + tellFile
-	} else {
-		// Require message as argument
-		if len(args) < 2 {
-			return fmt.Errorf("message required when not using --file")
-		}
-		// Join all remaining arguments as the message
+		name = "file-" + sendFile
+	} else if len(args) > 1 {
+		// Message provided as arguments
 		content = strings.Join(args[1:], " ")
 		// Generate name from first few words
 		words := strings.Fields(content)
@@ -71,6 +75,24 @@ func tellSession(cmd *cobra.Command, args []string) error {
 		} else {
 			name = strings.Join(words, "-")
 		}
+	} else {
+		// Read from stdin
+		stat, err := os.Stdin.Stat()
+		if err != nil {
+			return fmt.Errorf("failed to stat stdin: %w", err)
+		}
+		
+		// Check if stdin is a pipe or redirect
+		if (stat.Mode() & os.ModeCharDevice) != 0 {
+			return fmt.Errorf("no message provided: use arguments, --file, or pipe input")
+		}
+		
+		data, err := io.ReadAll(os.Stdin)
+		if err != nil {
+			return fmt.Errorf("failed to read from stdin: %w", err)
+		}
+		content = string(data)
+		name = "stdin-message"
 	}
 
 	// Find project root
