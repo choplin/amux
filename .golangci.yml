@@ -10,7 +10,6 @@ formatters:
   settings:
     goimports:
       local-prefixes:
-        - github.com/aki/amux
         - github.com/choplin/amux
 linters:
   enable:
