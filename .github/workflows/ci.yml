@@ -33,9 +33,7 @@ jobs:
       - name: Download dependencies
         run: just init
       - name: Run tests
-        run: |
-          # Skip tmux-dependent tests in CI
-          go test -v -race -coverprofile=coverage.txt -covermode=atomic ./... -skip TestTmuxSession
+        run: go test -v -race "-coverprofile=coverage.txt" "-covermode=atomic" ./... -skip TestTmuxSession
       - name: Upload coverage
         if: matrix.os == 'ubuntu-latest'
         uses: codecov/codecov-action@v4
