@@ -4,6 +4,13 @@ version: '2'
 run:
   timeout: 5m
   tests: true
+formatters:
+  enable:
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/choplin/amux
 linters:
   enable:
     - govet
