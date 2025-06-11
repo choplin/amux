@@ -117,9 +117,10 @@ func (m *MockAdapter) SendKeys(sessionName, keys string) error {
 	session.output = append(session.output, keys)
 
 	// Simulate some common command outputs
-	if keys == "echo 'Hello from tmux'" {
+	switch keys {
+	case "echo 'Hello from tmux'":
 		session.output = append(session.output, "Hello from tmux")
-	} else if keys == "echo $TEST_VAR1" {
+	case "echo $TEST_VAR1":
 		if val, ok := session.environment["TEST_VAR1"]; ok {
 			session.output = append(session.output, val)
 		}

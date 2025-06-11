@@ -1,3 +1,4 @@
+// Package config provides configuration management for Amux projects.
 package config
 
 import (
@@ -9,7 +10,9 @@ import (
 )
 
 const (
-	AmuxDir    = ".amux"
+	// AmuxDir is the directory name for Amux metadata
+	AmuxDir = ".amux"
+	// ConfigFile is the filename for the Amux configuration
 	ConfigFile = "config.yaml"
 )
 
@@ -32,7 +35,7 @@ func (m *Manager) Load() (*Config, error) {
 	data, err := os.ReadFile(m.configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("Amux not initialized. Run 'amux init' first")
+			return nil, fmt.Errorf("amux not initialized. Run 'amux init' first")
 		}
 		return nil, fmt.Errorf("failed to read config: %w", err)
 	}

@@ -49,7 +49,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 
 	// Check if already initialized
 	if configManager.IsInitialized() && !forceInit {
-		return fmt.Errorf("Amux already initialized. Use --force to reinitialize")
+		return fmt.Errorf("amux already initialized. Use --force to reinitialize")
 	}
 
 	// Create default configuration
@@ -103,7 +103,11 @@ func addToGitignore(projectRoot string) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		if cerr := file.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
 
 	_, err = file.WriteString(entries)
 	return err

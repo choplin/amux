@@ -1,3 +1,4 @@
+// Package context provides working context management for AI agents.
 package context
 
 import (
@@ -8,13 +9,16 @@ import (
 )
 
 const (
-	// Context directory name within workspace
+	// ContextDir is the directory name for working context within workspace
 	ContextDir = ".amux/context"
 
-	// Context file names
-	BackgroundFile     = "background.md"
-	PlanFile           = "plan.md"
-	WorkingLogFile     = "working-log.md"
+	// BackgroundFile contains project requirements and constraints
+	BackgroundFile = "background.md"
+	// PlanFile contains implementation approach and task breakdown
+	PlanFile = "plan.md"
+	// WorkingLogFile contains real-time progress and decision records
+	WorkingLogFile = "working-log.md"
+	// ResultsSummaryFile contains final outcomes for review
 	ResultsSummaryFile = "results-summary.md"
 )
 
@@ -200,16 +204,20 @@ func (m *Manager) AppendToWorkingLog(entry string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open working log: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		if cerr := file.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("failed to close working log: %w", cerr)
+		}
+	}()
 
 	// Add timestamp and entry
 	timestamp := time.Now().Format("15:04:05")
 	content := fmt.Sprintf("\n### [%s] %s\n", timestamp, entry)
 
-	if _, err := file.WriteString(content); err != nil {
+	if _, err = file.WriteString(content); err != nil {
 		return fmt.Errorf("failed to write to working log: %w", err)
 	}
 
-	return nil
+	return err
 
 }

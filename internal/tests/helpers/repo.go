@@ -1,3 +1,4 @@
+// Package helpers provides test utilities for Amux tests.
 package helpers
 
 import (
@@ -17,20 +18,20 @@ func CreateTestRepo(t *testing.T) string {
 	origGitIndexFile := os.Getenv("GIT_INDEX_FILE")
 
 	// Clear git environment variables for test isolation
-	os.Unsetenv("GIT_DIR")
-	os.Unsetenv("GIT_WORK_TREE")
-	os.Unsetenv("GIT_INDEX_FILE")
+	_ = os.Unsetenv("GIT_DIR")
+	_ = os.Unsetenv("GIT_WORK_TREE")
+	_ = os.Unsetenv("GIT_INDEX_FILE")
 
 	// Restore original environment after test
 	t.Cleanup(func() {
 		if origGitDir != "" {
-			os.Setenv("GIT_DIR", origGitDir)
+			_ = os.Setenv("GIT_DIR", origGitDir)
 		}
 		if origGitWorkTree != "" {
-			os.Setenv("GIT_WORK_TREE", origGitWorkTree)
+			_ = os.Setenv("GIT_WORK_TREE", origGitWorkTree)
 		}
 		if origGitIndexFile != "" {
-			os.Setenv("GIT_INDEX_FILE", origGitIndexFile)
+			_ = os.Setenv("GIT_INDEX_FILE", origGitIndexFile)
 		}
 	})
 
@@ -51,7 +52,7 @@ func CreateTestRepo(t *testing.T) string {
 		cmd.Dir = tmpDir
 		output, err := cmd.CombinedOutput()
 		if err != nil {
-			os.RemoveAll(tmpDir)
+			_ = os.RemoveAll(tmpDir)
 			t.Fatalf("Failed to init git repo: %v, output: %s", err, output)
 		}
 	}
@@ -60,14 +61,14 @@ func CreateTestRepo(t *testing.T) string {
 	cmd = exec.Command("git", "config", "user.email", "test@example.com")
 	cmd.Dir = tmpDir
 	if err := cmd.Run(); err != nil {
-		os.RemoveAll(tmpDir)
+		_ = os.RemoveAll(tmpDir)
 		t.Fatalf("Failed to configure git email: %v", err)
 	}
 
 	cmd = exec.Command("git", "config", "user.name", "Test User")
 	cmd.Dir = tmpDir
 	if err := cmd.Run(); err != nil {
-		os.RemoveAll(tmpDir)
+		_ = os.RemoveAll(tmpDir)
 		t.Fatalf("Failed to configure git name: %v", err)
 	}
 
@@ -79,21 +80,21 @@ func CreateTestRepo(t *testing.T) string {
 	// Create initial commit
 	readmePath := filepath.Join(tmpDir, "README.md")
 	if err := os.WriteFile(readmePath, []byte("# Test Repository\n"), 0644); err != nil {
-		os.RemoveAll(tmpDir)
+		_ = os.RemoveAll(tmpDir)
 		t.Fatalf("Failed to create README: %v", err)
 	}
 
 	cmd = exec.Command("git", "add", "README.md")
 	cmd.Dir = tmpDir
 	if err := cmd.Run(); err != nil {
-		os.RemoveAll(tmpDir)
+		_ = os.RemoveAll(tmpDir)
 		t.Fatalf("Failed to add README: %v", err)
 	}
 
 	cmd = exec.Command("git", "commit", "-m", "Initial commit")
 	cmd.Dir = tmpDir
 	if err := cmd.Run(); err != nil {
-		os.RemoveAll(tmpDir)
+		_ = os.RemoveAll(tmpDir)
 		t.Fatalf("Failed to create initial commit: %v", err)
 	}
 
