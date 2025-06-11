@@ -28,7 +28,7 @@ test-coverage:
 
 # Format Go code
 fmt:
-    go run -mod=readonly golang.org/x/tools/cmd/goimports -w -local github.com/aki/amux .
+    go run -mod=readonly golang.org/x/tools/cmd/goimports -w -local github.com/choplin/amux .
 
 # Format YAML files
 fmt-yaml:
@@ -36,7 +36,7 @@ fmt-yaml:
 
 # Lint code
 lint:
-    go run -mod=readonly github.com/golangci/golangci-lint/cmd/golangci-lint run
+    go run -mod=readonly github.com/golangci/golangci-lint/v2/cmd/golangci-lint run
 
 # Check code (format + lint)
 check: fmt fmt-yaml lint

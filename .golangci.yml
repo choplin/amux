@@ -1,16 +1,14 @@
 # golangci-lint configuration
 # https://golangci-lint.run/usage/configuration/
+version: '2'
 run:
   timeout: 5m
   tests: true
 linters:
   enable:
-    - goimports
-    - gofmt
     - govet
     - errcheck
     - staticcheck
-    - gosimple
     - ineffassign
     - unused
     - misspell
@@ -20,11 +18,8 @@ linters:
     - noctx
     - revive
     - exhaustive
-    - copyloopvar
     - predeclared
 linters-settings:
-  goimports:
-    local-prefixes: github.com/aki/agentcave
   revive:
     rules:
       - name: blank-imports

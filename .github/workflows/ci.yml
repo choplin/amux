@@ -62,9 +62,9 @@ jobs:
             ${{ runner.os }}-go-1.24-
             ${{ runner.os }}-go-
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v8
         with:
-          version: v1.64.8
+          version: v2.1.6
           args: --timeout=5m
       - name: Check formatting
         run: |
