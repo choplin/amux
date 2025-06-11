@@ -17,7 +17,6 @@
     "extends": ["@commitlint/config-conventional"]
   },
   "markdownlint-cli2": {
-    "globs": ["**/*.md"],
     "ignores": [
       "node_modules/**",
       ".git/**",

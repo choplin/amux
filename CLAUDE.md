@@ -2,175 +2,333 @@
 
 ## Project Overview
 
-**Amux** provides private development caves for AI agents. It's a workspace management tool that creates isolated
-git worktree-based environments where AI agents can work independently without context mixing.
+**Amux** (Agent Multiplexer) is a workspace management tool that creates isolated git worktree-based environments
+where AI agents can work independently. It's now functionally complete and ready for dogfooding!
 
-## Cave Concept
+## 🚀 Dogfooding Workflow
 
-A **Cave** is an isolated development environment where AI agents work autonomously. While physically implemented as
-git worktree workspaces, a workspace becomes a "Cave" when it contains the Working Context files that enable AI agents
-to work effectively:
+### Initial Setup
 
-### Working Context
+1. **Initialize Project** (if not done)
 
-The Working Context consists of four markdown files that guide AI agent work:
+   ```bash
+   amux init
+   ```
 
-1. **background.md** - Project requirements and constraints
-   - Written at task start
-   - Contains requirements, issues, constraints, dependencies
-   - Source information from tickets, user interviews
+2. **Configure Claude Code MCP**
+   Add to your MCP settings:
 
-2. **plan.md** - Implementation approach and task breakdown
-   - Written before coding
-   - Technical decisions, risk assessment
-   - Concrete task breakdown
+   ```json
+   {
+     "mcpServers": {
+       "amux": {
+         "command": "/Users/aki/workspace/amux/bin/amux",
+         "args": ["mcp", "--root-dir", "/Users/aki/workspace/amux"],
+         "env": {}
+       }
+     }
+   }
+   ```
 
-3. **working-log.md** - Real-time progress and decision records
-   - Updated continuously during work
-   - Timestamped progress entries
-   - Key decisions and rationale
-   - Challenges and resolutions
+### Typical AI Agent Workflow
 
-4. **results-summary.md** - Final outcomes for review/PR
-   - Written at completion
-   - Summary of implementation
-   - Key changes and impact
-   - Suitable for PR descriptions
+When working on GitHub issues with AI agents (like Claude), follow this workflow:
 
-These files ensure AI agents maintain context, make informed decisions, and produce reviewable work.
+1. **User assigns issue** → "Work on issue #30" or "Pick an open issue to work on"
 
-## Project Status
+2. **AI creates workspace** via MCP:
 
-### Completed Features
+   ```typescript
+   workspace_create({
+     name: "fix-issue-30",
+     baseBranch: "main",  // Always specify base branch
+     description: "Standardize console output (#30)"
+   })
+   ```
 
-- ✅ **Renamed to Amux** (ADR-004) - Changed from AgentCave to Amux (Agent Multiplexer)
-- ✅ **Command Structure** (ADR-005) - Implemented subcommand structure with aliases
-  - Workspace commands: `amux ws create/list/get/remove/prune`
-  - Agent commands: `amux agent run/list/attach/stop` (structure only)
-  - Global aliases: `amux run/ps/attach`
-- ✅ **Core Functionality** - Workspace management, MCP server, git integration
-- ✅ **Single Binary** - Zero runtime dependencies
+3. **AI works in the workspace**:
+   - Uses `workspace_info` to browse files
+   - Makes changes within the workspace
+   - Tests changes in isolation
+   - Creates CLAUDE.local.md for task context if needed
 
-### Recently Completed
+4. **AI creates pull request**:
 
-- ✅ **Agent Multiplexing** (ADR-003) - Running multiple AI agents concurrently
-  - Session management with tmux backend
-  - Agent configuration system
-  - CLI commands for agent lifecycle
-  - Working context management
-  - Full test coverage with mock adapter
-- ✅ **Session Mailbox System** (Issue #4) - Agent communication
-  - File-based mailbox for asynchronous messaging
-  - `amux tell` command for sending messages
-  - `amux peek` command for viewing mailbox
-  - Automatic mailbox initialization on session creation
-  - Full test coverage
+   ```bash
+   # In the workspace directory
+   git add .
+   git commit -m "fix: standardize console output"
+   gh pr create --draft --base main --title "fix: standardize console output (#30)"
+   ```
 
-## Current Implementation (Go)
+5. **After PR is merged**, AI cleans up:
 
-### Technology Stack
+   ```typescript
+   workspace_remove({ workspace_id: "fix-issue-30" })
+   ```
 
-- **Language**: Go
-- **MCP Integration**: Official Go MCP SDK (mark3labs/mcp-go)
-- **Code Quality**: golangci-lint, yamlfmt
-- **Git Hooks**: Lefthook with commitlint
-- **Build Tool**: Just (justfile)
-- **Git Management**: go-git library
+### Available MCP Tools for AI Agents
 
-### Architecture
+When working in Claude Code, you can use these amux tools:
+
+1. **workspace_create** - Create isolated workspace
+
+   ```typescript
+   workspace_create({
+     name: "feature-auth",
+     description: "Implement authentication",
+     branch?: "existing-branch",  // optional
+     agentId?: "claude"          // optional
+   })
+   ```
+
+2. **workspace_list** - List all workspaces
+
+   ```typescript
+   workspace_list()  // Shows ID, name, branch, created time
+   ```
+
+3. **workspace_get** - Get workspace details
+
+   ```typescript
+   workspace_get({ workspace_id: "1" })  // Use name or ID
+   ```
+
+4. **workspace_info** - Browse workspace files
+
+   ```typescript
+   workspace_info({
+     workspace_id: "1",
+     path?: "src/"  // optional path within workspace
+   })
+   ```
+
+5. **workspace_remove** - Clean up workspace
+
+   ```typescript
+   workspace_remove({ workspace_id: "1" })
+   ```
+
+## Current Functional Features
+
+### ✅ Core Functionality
+
+- **Workspace Management**: Create, list, get, remove workspaces
+- **Git Integration**: Each workspace is a separate git worktree
+- **MCP Server**: Full integration with Claude Code
+- **Short IDs**: Simple numeric IDs (1, 2, 3) instead of UUIDs
+- **Session Mailbox**: Communication system for agents (CLI only for now)
+
+### ⚠️ Limitations
+
+- **Agent Commands**: Structure exists but not fully implemented
+  - `amux run/ps/attach` - Planned but not functional yet
+  - Use MCP tools through Claude Code instead
+- **Working Context**: Templates exist but not auto-created yet
+  - Manually create context files if needed
+- **Log Tailing**: Not implemented yet (issue #6)
+
+## Development Workflow
+
+### Workspace-Specific Context
+
+Each workspace can have its own `CLAUDE.local.md` file for workspace-specific instructions and context:
+
+```markdown
+# CLAUDE.local.md (in workspace root)
+- Task-specific requirements
+- Design decisions for this feature
+- TODO items for this workspace
+- Any workspace-specific instructions
+```
+
+This file is automatically loaded when AI agents work in the workspace, supplementing the global CLAUDE.md.
+
+### For Bug Fixes
+
+```bash
+# 1. Create workspace
+amux ws create fix-issue-30 --description "Standardize console output"
+
+# 2. (Optional) Add workspace-specific context
+cd .amux/workspaces/workspace-fix-issue-30-*
+echo "# Fix Issue #30\n\nReplace all fmt.Print* with ui.Output methods" > CLAUDE.local.md
+
+# 3. Work in Claude Code using MCP tools
+# 4. Test your changes
+just test
+
+# 5. Create PR when ready
+git add .
+git commit -m "fix: standardize console output"
+gh pr create --draft
+```
+
+### For New Features
+
+```bash
+# 1. Create feature workspace
+amux ws create feat-log-tail --description "Add log tailing command"
+
+# 2. (Optional) Create detailed workspace context
+cd .amux/workspaces/workspace-feat-log-tail-*
+cat > CLAUDE.local.md << 'EOF'
+# Log Tailing Feature
+
+## Requirements
+- Real-time log output from agent sessions
+- Support for `amux tail <session-id>`
+- Handle tmux output streaming
+
+## Design Notes
+- Use tmux capture-pane for reading output
+- Stream updates every 100ms
+- Support --follow flag for continuous tailing
+EOF
+
+# 3. Use Claude Code with amux MCP tools
+# 4. Run tests and checks
+just check
+```
+
+## Project Structure
 
 ```text
 amux/
-├── cmd/amux/        # Entry point
-├── internal/
-│   ├── cli/              # CLI commands and UI
-│   ├── core/             # Core business logic
-│   │   ├── config/       # Configuration management
-│   │   ├── git/          # Git operations
-│   │   ├── mailbox/      # Agent communication
-│   │   └── workspace/    # Workspace management
-│   ├── mcp/              # MCP server implementation
-│   └── templates/        # Workspace templates
-└── docs/                 # Documentation
+├── .amux/                         # Amux data directory
+│   ├── config.yaml               # Project configuration
+│   ├── workspaces/               # Workspace directories (git worktrees)
+│   │   └── workspace-{name}-*/   # Isolated workspace directories
+│   │       └── CLAUDE.local.md   # Workspace-specific context (optional)
+│   └── mailbox/                  # Agent mailboxes (when using CLI)
+├── cmd/amux/                     # CLI entry point
+├── internal/                     # Core implementation
+├── docs/                         # Documentation
+└── CLAUDE.md                     # Global project context
 ```
 
-### Key Commands
+## Development Standards
 
-- `amux init` - Initialize project
-- `amux ws create <name>` - Create workspace
-- `amux ws list` - List workspaces (alias: `ls`)
-- `amux ws get <id>` - Get workspace details
-- `amux ws remove <id>` - Remove workspace (alias: `rm`)
-- `amux ws prune` - Clean old workspaces
-- `amux mcp` - Start MCP server
-- `amux agent <cmd>` - Agent management
-- `amux run/ps/attach` - Agent shortcuts
-- `amux mailbox <cmd>` - Mailbox commands (alias: `mb`)
-  - `amux mailbox list <session>` - List mailbox files with indices
-  - `amux mailbox send <session> <msg>` - Send message to agent (stdin supported)
-  - `amux mailbox recv <session>` - Get latest message from agent
-  - `amux mailbox show <session> [index|latest]` - Show specific messages
+### Code Style Rules
 
-### MCP Tools
+1. **Go Code Formatting**: Use `goimports` followed by `gofumpt` for consistent formatting
+2. **Error Messages**: Start with lowercase, no punctuation at end
+3. **Commit Messages**: Follow conventional commits (fix:, feat:, chore:, etc.)
+4. **Line Length**: Keep lines under 120 characters when reasonable
+5. **Comments**: Exported functions must have comments starting with function name
 
-1. `workspace_create` - Create isolated workspace
-2. `workspace_list` - List all workspaces
-3. `workspace_get` - Get workspace details
-4. `workspace_remove` - Remove workspace
-5. `workspace_info` - Browse workspace files
+### Standard Development Tasks
 
-## Development Patterns
+```bash
+# Essential commands for development
+just build          # Build the binary
+just test           # Run all tests
+just test-coverage  # Run tests with coverage report
+just lint           # Run golangci-lint
+just fmt            # Format Go code with goimports
+just fmt-yaml       # Format YAML files
+just check          # Run all checks (fmt + lint)
 
-### Code Style
+# Full development cycle
+just check          # Run before committing
+just test           # Ensure tests pass
+git commit          # Triggers pre-commit hooks automatically
+```
 
-- Use Go interfaces for abstraction
-- Prefer composition over inheritance
-- Keep packages focused and cohesive
-- Use dependency injection
+### Pre-commit Hooks
 
-### Error Handling
+The project uses Lefthook for git hooks:
 
-- Wrap errors with context: `fmt.Errorf("failed to X: %w", err)`
-- Return early on errors
-- Use custom error types sparingly
+- **commitlint**: Enforces conventional commit messages
+- **markdown-lint**: Checks markdown files
+- **goimports**: Formats Go imports
+- **yamlfmt**: Formats YAML files
+- Tests and linting run automatically
 
-### Testing
+### Code Guidelines
 
-- Table-driven tests preferred
+#### When Contributing
+
+1. **Use Workspaces**: Always create a workspace for your changes
+2. **Follow Conventions**: Match existing code style and patterns
+3. **Test Changes**: Run `just test` before committing
+4. **Check Quality**: Run `just check` for linting and formatting
+5. **Update Tests**: Add/update tests for new functionality
+
+#### Error Handling
+
+```go
+// Wrap errors with context
+if err != nil {
+    return fmt.Errorf("failed to create workspace: %w", err)
+}
+
+// Use lowercase messages
+return fmt.Errorf("workspace not found")  // Good
+return fmt.Errorf("Workspace not found.")  // Bad
+```
+
+#### Testing
+
+- Write table-driven tests
 - Mock interfaces, not implementations
-- Test files alongside implementation
-
-## Key Documents
-
-- [README.md](README.md) - User guide
-- [DEVELOPMENT.md](DEVELOPMENT.md) - Developer documentation
-- [docs/adr/](docs/adr/) - Architecture Decision Records (immutable)
-- [.claude/planning/](.claude/planning/) - Implementation plans for AI agents
-- [.claude/archive/](.claude/archive/) - Historical context and migration notes
-
-## Working Context Management
-
-For each work session, maintain context in `.claude/context/{work_name}/`:
-
-- `background.md` - Requirements for current work
-- `plan.md` - Implementation approach
-- `working-log.md` - Progress and decisions
-- `results-summary.md` - Summary of changes
+- Keep test files next to implementation
+- Aim for >80% coverage on new code
 
 ## Important Notes
 
-1. **Workspace Isolation**: Each workspace is a separate git worktree
-2. **No Manual Status Tracking**: Use filesystem timestamps instead
-3. **Name Resolution**: All commands accept both workspace names and IDs
-4. **Path Security**: Workspace file access is path-validated
-5. **Single Binary**: No runtime dependencies for easy deployment
-6. **Git Commits**: NEVER commit without explicit user confirmation
-7. **ADRs are Immutable**: Never modify existing ADRs. To change a decision, create a new ADR that mentions
-   "This supersedes ADR-XXX"
-8. **Implementation Plans**: Detailed plans go in `.claude/planning/`, not in ADRs
-9. **Working Context**: Templates exist in `internal/templates/` but not yet integrated
+1. **MCP Connection**: Always use `--root-dir` flag when starting MCP server
+2. **Workspace Names**: Use descriptive names with prefixes (fix-, feat-, chore-)
+3. **IDs**: Both names and numeric IDs work for all commands
+4. **Git Integration**: Each workspace is a real git worktree - use git normally
+5. **No Auto-commit**: Amux never commits without explicit user action
+6. **Context Loading**: AI agents automatically load both CLAUDE.md (global) and CLAUDE.local.md
+   (workspace-specific) if present
 
-## Documentation Structure
+## Quick Reference
 
-- **Architecture Decision Records (ADRs)**: Located in `docs/adr/` for significant design decisions
-- **Archive Memories**: Located in `.claude/archive/` (gitignored) for historical context and past work sessions
+### Essential Commands
+
+```bash
+# Initialize project
+amux init
+
+# Workspace management
+amux ws create <name> [--description "..."] [--branch existing-branch]
+amux ws list
+amux ws get <id-or-name>
+amux ws remove <id-or-name>
+
+# Start MCP server
+amux mcp --root-dir /path/to/project
+
+# Check version
+amux version
+```
+
+### Coming Soon
+
+- Real-time session management (`amux run/ps/attach`)
+- Automatic working context creation
+- Log tailing (`amux tail`)
+- Session status tracking
+
+## Troubleshooting
+
+### MCP Connection Issues
+
+If Claude Code can't connect:
+
+1. Ensure `--root-dir` points to valid git repository
+2. Check amux binary path is absolute in MCP config
+3. Restart Claude Code after config changes
+
+### Workspace Issues
+
+- Can't create workspace? Check you're in initialized project (`amux init`)
+- Workspace not found? Use `amux ws list` to see all workspaces
+- Need to clean up? Use `amux ws prune --days 7`
+
+---
+
+**Ready to dogfood!** Create workspaces for all your amux development tasks and help us improve the tool by using it.
