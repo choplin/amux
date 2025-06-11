@@ -15,8 +15,29 @@
   },
   "commitlint": {
     "extends": ["@commitlint/config-conventional"]
+  },
+  "markdownlint-cli2": {
+    "globs": ["**/*.md"],
+    "ignores": [
+      "node_modules/**",
+      ".git/**",
+      "bin/**",
+      "coverage/**"
+    ],
+    "config": {
+      "default": true,
+      "MD013": {
+        "line_length": 120,
+        "tables": false,
+        "code_blocks": false
+      },
+      "MD033": {
+        "allowed_elements": ["details", "summary", "br"]
+      },
+      "MD041": false,
+      "no-hard-tabs": false
+    },
+    "fix": true,
+    "customRules": []
   }
-
-
-
 }
