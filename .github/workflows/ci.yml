@@ -89,17 +89,6 @@ jobs:
           yamlfmt -lint .
       - name: Check Markdown
         uses: DavidAnson/markdownlint-cli2-action@v18
-        with:
-          config: |
-            {
-              "default": true,
-              "MD013": false,
-              "MD033": false,
-              "MD041": false
-            }
-          globs: |
-            **/*.md
-            !node_modules/**
   build:
     name: Build
     runs-on: ${{ matrix.os }}
