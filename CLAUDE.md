@@ -105,8 +105,9 @@ amux/
 - `amux mcp` - Start MCP server
 - `amux agent <cmd>` - Agent management
 - `amux run/ps/attach` - Agent shortcuts
-- `amux tell <session> <msg>` - Send message to agent
-- `amux peek <session>` - View agent mailbox
+- `amux mailbox <cmd>` - Mailbox commands (alias: `mb`)
+  - `amux mailbox tell <session> <msg>` - Send message to agent
+  - `amux mailbox peek <session>` - View agent mailbox
 
 ### MCP Tools
 

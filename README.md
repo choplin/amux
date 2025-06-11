@@ -176,20 +176,21 @@ Amux provides a mailbox system for asynchronous communication with running agent
 
 ```bash
 # Send a message to an agent
-amux tell s1 "Please focus on the authentication module"
+amux mailbox tell s1 "Please focus on the authentication module"
+amux mb tell s1 "Please focus on the authentication module"     # Short alias
 
 # Send a message from a file
-amux tell s1 --file requirements.md
+amux mailbox tell s1 --file requirements.md
 
 # View messages in an agent's mailbox
-amux peek s1                              # Show recent messages
-amux peek s1 --direction in               # Show only incoming messages
-amux peek s1 --direction out              # Show only outgoing messages
-amux peek s1 --verbose                    # Show full message content
+amux mailbox peek s1                      # Show recent messages
+amux mb peek s1                           # Short alias
+amux mailbox peek s1 --direction in       # Show only incoming messages
+amux mailbox peek s1 --direction out      # Show only outgoing messages
+amux mailbox peek s1 --verbose            # Show full message content
 ```
 
 Each session has a mailbox directory at `.amux/mailbox/{session-id}/` with:
-
 
 - `in/` - Messages TO the agent
 - `out/` - Messages FROM the agent

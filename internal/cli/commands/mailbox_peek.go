@@ -20,7 +20,7 @@ var (
 	peekVerbose   bool
 )
 
-var peekCmd = &cobra.Command{
+var mailboxPeekCmd = &cobra.Command{
 	Use:   "peek <session>",
 	Short: "View messages in an agent session's mailbox",
 	Long: `View messages in an agent session's mailbox.
@@ -29,25 +29,26 @@ Shows messages in both directions (to and from the agent) by default.
 
 Examples:
   # View all messages
-  amux peek s1
+  amux mailbox peek s1
+  amux mb peek s1
 
   # View only incoming messages (to the agent)
-  amux peek s1 --direction in
+  amux mailbox peek s1 --direction in
 
   # View only outgoing messages (from the agent)
-  amux peek s1 --direction out
+  amux mailbox peek s1 --direction out
 
   # View last 5 messages with full content
-  amux peek s1 --limit 5 --verbose`,
+  amux mailbox peek s1 --limit 5 --verbose`,
 	Args: cobra.ExactArgs(1),
 	RunE: peekSession,
 }
 
 func init() {
 	// Add flags
-	peekCmd.Flags().StringVarP(&peekDirection, "direction", "d", "", "Filter by direction (in/out)")
-	peekCmd.Flags().IntVarP(&peekLimit, "limit", "l", 10, "Limit number of messages")
-	peekCmd.Flags().BoolVarP(&peekVerbose, "verbose", "v", false, "Show full message content")
+	mailboxPeekCmd.Flags().StringVarP(&peekDirection, "direction", "d", "", "Filter by direction (in/out)")
+	mailboxPeekCmd.Flags().IntVarP(&peekLimit, "limit", "l", 10, "Limit number of messages")
+	mailboxPeekCmd.Flags().BoolVarP(&peekVerbose, "verbose", "v", false, "Show full message content")
 }
 
 func peekSession(cmd *cobra.Command, args []string) error {

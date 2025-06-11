@@ -19,7 +19,7 @@ var (
 	tellFile string
 )
 
-var tellCmd = &cobra.Command{
+var mailboxTellCmd = &cobra.Command{
 	Use:   "tell <session> <message>",
 	Short: "Send a message to an agent session",
 	Long: `Send a message to an agent session's mailbox.
@@ -28,17 +28,18 @@ The message can be provided as command arguments or from a file.
 
 Examples:
   # Send a simple message
-  amux tell s1 "Please focus on the authentication module"
+  amux mailbox tell s1 "Please focus on the authentication module"
+  amux mb tell s1 "Please focus on the authentication module"
 
   # Send a message from a file
-  amux tell s1 --file requirements.md`,
+  amux mailbox tell s1 --file requirements.md`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: tellSession,
 }
 
 func init() {
 	// Add flags
-	tellCmd.Flags().StringVarP(&tellFile, "file", "f", "", "Read message from file")
+	mailboxTellCmd.Flags().StringVarP(&tellFile, "file", "f", "", "Read message from file")
 }
 
 func tellSession(cmd *cobra.Command, args []string) error {

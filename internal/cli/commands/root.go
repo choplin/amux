@@ -60,9 +60,8 @@ func init() {
 	rootCmd.AddCommand(psCmd)
 	rootCmd.AddCommand(attachCmd)
 
-	// Add communication commands
-	rootCmd.AddCommand(tellCmd)
-	rootCmd.AddCommand(peekCmd)
+	// Add mailbox command
+	rootCmd.AddCommand(mailboxCmd)
 
 }
 
