@@ -18,6 +18,8 @@ var (
 
 	BoldStyle = lipgloss.NewStyle().Bold(true)
 
+	HeaderStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFFFFF"))
+
 	// Icons
 
 	CaveIcon = "🕳️"

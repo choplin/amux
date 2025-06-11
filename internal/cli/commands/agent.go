@@ -265,11 +265,10 @@ func listAgents(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Print header
-	fmt.Printf("%-20s %-10s %-20s %-10s %-15s\n", "SESSION ID", "AGENT", "WORKSPACE", "STATUS", "RUNTIME")
-	fmt.Println(strings.Repeat("-", 80))
+	// Create table
+	tbl := ui.NewTable("SESSION", "AGENT", "WORKSPACE", "STATUS", "RUNTIME")
 
-	// Print sessions
+	// Add rows
 	for _, sess := range sessions {
 		info := sess.Info()
 
@@ -284,36 +283,27 @@ func listAgents(cmd *cobra.Command, args []string) error {
 		runtime := "-"
 		if info.StartedAt != nil {
 			if info.StoppedAt != nil {
-				runtime = formatDuration(info.StoppedAt.Sub(*info.StartedAt))
+				runtime = ui.FormatDuration(info.StoppedAt.Sub(*info.StartedAt))
 			} else if info.Status == session.StatusRunning {
-				runtime = formatDuration(time.Since(*info.StartedAt))
+				runtime = ui.FormatDuration(time.Since(*info.StartedAt))
 			}
 		}
 
-		// Format status
+		// Format status for display
 		statusStr := string(info.Status)
-		switch info.Status {
-		case session.StatusRunning:
-			statusStr = ui.SuccessStyle.Render(statusStr)
-		case session.StatusStopped:
-			statusStr = ui.DimStyle.Render(statusStr)
-		case session.StatusFailed:
-			statusStr = ui.ErrorStyle.Render(statusStr)
-		}
 
 		displayID := info.ID
 		if info.Index != "" {
 			displayID = info.Index
 		}
 
-		fmt.Printf("%-20s %-10s %-20s %-10s %-15s\n",
-			displayID,
-			info.AgentID,
-			wsName,
-			statusStr,
-			runtime,
-		)
+		tbl.AddRow(displayID, info.AgentID, wsName, statusStr, runtime)
 	}
+
+	// Print with header
+	ui.PrintSectionHeader("🤖", "Agent Sessions", len(sessions))
+	tbl.Print()
+	fmt.Println()
 
 	return nil
 }
@@ -459,17 +449,4 @@ func viewAgentLogs(cmd *cobra.Command, args []string) error {
 	// Print output
 	fmt.Print(string(output))
 	return nil
-}
-
-func formatDuration(d time.Duration) string {
-	if d < time.Minute {
-		return fmt.Sprintf("%ds", int(d.Seconds()))
-	} else if d < time.Hour {
-		return fmt.Sprintf("%dm%ds", int(d.Minutes()), int(d.Seconds())%60)
-	} else {
-		hours := int(d.Hours())
-		minutes := int(d.Minutes()) % 60
-		return fmt.Sprintf("%dh%dm", hours, minutes)
-	}
-
 }
