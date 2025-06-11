@@ -9,6 +9,8 @@ import (
 
 	"os/signal"
 
+	"path/filepath"
+
 	"syscall"
 
 	"github.com/spf13/cobra"
@@ -16,6 +18,8 @@ import (
 	"github.com/aki/amux/internal/cli/ui"
 
 	"github.com/aki/amux/internal/core/config"
+
+	"github.com/aki/amux/internal/core/git"
 
 	"github.com/aki/amux/internal/mcp"
 )
@@ -43,9 +47,13 @@ var (
 	serveAuthUser string
 
 	serveAuthPass string
+
+	rootDir string
 )
 
 func init() {
+
+	mcpCmd.Flags().StringVar(&rootDir, "root-dir", "", "Project root directory (required if not in amux project)")
 
 	mcpCmd.Flags().StringVarP(&serveTransport, "transport", "t", "", "Transport type (stdio, http, https)")
 
@@ -63,34 +71,29 @@ func init() {
 
 func runMCP(cmd *cobra.Command, args []string) error {
 
-	// Find project root - for MCP server, we'll use current directory if not in a project
-	projectRoot, err := config.FindProjectRoot()
+	// Determine project root
+	var projectRoot string
+	var err error
 
-	if err != nil {
-
-		// For MCP server, we can run without a project
-		// Just use the current directory
-		projectRoot, err = os.Getwd()
-
+	if rootDir != "" {
+		// Use explicitly provided root directory
+		absPath, err := filepath.Abs(rootDir)
 		if err != nil {
-
-			if serveTransport == "stdio" || serveTransport == "" {
-
-				fmt.Fprintf(os.Stderr, "Error getting current directory: %v\n", err)
-
-			}
-
-			return err
-
+			return fmt.Errorf("invalid root directory: %w", err)
 		}
+		projectRoot = absPath
 
-		// Log that we're running without a project
-		if serveTransport == "stdio" || serveTransport == "" {
-
-			fmt.Fprintf(os.Stderr, "Running MCP server without amux project (using current directory)\n")
-
+		// Validate it's a git repository
+		gitOps := git.NewOperations(projectRoot)
+		if !gitOps.IsGitRepository() {
+			return fmt.Errorf("--root-dir must be a git repository: %s", projectRoot)
 		}
-
+	} else {
+		// Try to find project root from current directory
+		projectRoot, err = config.FindProjectRoot()
+		if err != nil {
+			return fmt.Errorf("not in an amux project and --root-dir not specified")
+		}
 	}
 
 	// Create configuration manager
@@ -105,12 +108,6 @@ func runMCP(cmd *cobra.Command, args []string) error {
 
 		// If config doesn't exist, use defaults for MCP server
 		cfg = config.DefaultConfig()
-
-		if serveTransport == "stdio" || serveTransport == "" {
-
-			fmt.Fprintf(os.Stderr, "Using default configuration\n")
-
-		}
 
 	}
 
