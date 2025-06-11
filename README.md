@@ -28,7 +28,7 @@ their lifecycle.
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/amux.git
+git clone https://github.com/choplin/amux.git
 cd amux
 
 # Build with just (recommended)
@@ -43,7 +43,7 @@ go build -o bin/amux cmd/amux/main.go
 
 ### Binary Releases
 
-Download pre-built binaries from the [releases page](https://github.com/yourusername/amux/releases).
+Download pre-built binaries from the [releases page](https://github.com/choplin/amux/releases).
 
 ## 🛠️ Usage
 
