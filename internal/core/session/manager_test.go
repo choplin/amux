@@ -171,6 +171,13 @@ func TestManager_ListSessions(t *testing.T) {
 		if savedInfo.ID != session.ID() {
 			t.Errorf("Session %d ID mismatch: expected %s, got %s", i, session.ID(), savedInfo.ID)
 		}
+
+		// Debug: List sessions after each creation
+		currentSessions, _ := store.List()
+		t.Logf("After creating session %d: found %d sessions in store", i, len(currentSessions))
+
+		// Small delay to ensure file system operations complete on Windows
+		time.Sleep(10 * time.Millisecond)
 	}
 
 	// List sessions

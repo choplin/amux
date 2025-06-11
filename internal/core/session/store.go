@@ -43,6 +43,13 @@ func (s *FileStore) Save(info *Info) error {
 		return fmt.Errorf("failed to write session file: %w", err)
 	}
 
+	// Ensure file is synced to disk (important for Windows)
+	file, err := os.Open(path)
+	if err == nil {
+		_ = file.Sync()
+		_ = file.Close()
+	}
+
 	return nil
 }
 
