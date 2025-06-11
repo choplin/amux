@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/rodaine/table"
 )
 
@@ -10,11 +11,10 @@ import (
 func NewTable(headers ...interface{}) table.Table {
 	tbl := table.New(headers...)
 
-	// Apply consistent formatting
-	tbl.WithHeaderFormatter(func(format string, vals ...interface{}) string {
-		return HeaderStyle.Render(fmt.Sprintf(format, vals...))
-	})
+	// Don't use header formatter as it causes layout issues
+	// Instead, we'll style the headers when we create them
 
+	// Only format the first column (ID) with bold
 	tbl.WithFirstColumnFormatter(func(format string, vals ...interface{}) string {
 		return BoldStyle.Render(fmt.Sprintf(format, vals...))
 	})
@@ -22,11 +22,13 @@ func NewTable(headers ...interface{}) table.Table {
 	// Add some padding
 	tbl.WithPadding(2)
 
+	// Use lipgloss Width function to properly calculate string width with ANSI codes
+	tbl.WithWidthFunc(lipgloss.Width)
+
 	return tbl
 }
 
 // PrintSectionHeader prints a consistent section header
 func PrintSectionHeader(icon string, title string, count int) {
-	fmt.Printf("\n%s %s (%d)\n\n", icon, title, count)
-
+	fmt.Printf("\n%s %s (%d)\n", icon, title, count)
 }
