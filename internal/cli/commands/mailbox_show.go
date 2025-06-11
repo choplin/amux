@@ -108,14 +108,14 @@ func showMessages(cmd *cobra.Command, args []string) error {
 				direction = mailbox.DirectionIn
 			}
 			return showLatestMessage(sessionID, sess.ID(), mailboxManager, direction)
-		} else {
-			// Try to parse as index
-			index, err := strconv.Atoi(selector)
-			if err != nil {
-				return fmt.Errorf("invalid message selector: %s (expected number or 'latest')", selector)
-			}
-			return showMessageByIndex(sessionID, sess.ID(), mailboxManager, index)
 		}
+		
+		// Try to parse as index
+		index, err := strconv.Atoi(selector)
+		if err != nil {
+			return fmt.Errorf("invalid message selector: %s (expected number or 'latest')", selector)
+		}
+		return showMessageByIndex(sessionID, sess.ID(), mailboxManager, index)
 	}
 
 	// Default behavior - show all or tail
