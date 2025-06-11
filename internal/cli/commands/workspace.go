@@ -13,7 +13,6 @@ import (
 )
 
 var workspaceCmd = &cobra.Command{
-
 	Use: "workspace",
 
 	Aliases: []string{"ws"},
@@ -51,7 +50,6 @@ var (
 )
 
 func init() {
-
 	// Add subcommands
 
 	workspaceCmd.AddCommand(createWorkspaceCmd)
@@ -87,11 +85,9 @@ func init() {
 	// Remove command flags
 
 	removeWorkspaceCmd.Flags().BoolVarP(&removeForce, "force", "f", false, "Force removal without confirmation")
-
 }
 
 var createWorkspaceCmd = &cobra.Command{
-
 	Use: "create <name>",
 
 	Short: "Create a new workspace",
@@ -102,7 +98,6 @@ var createWorkspaceCmd = &cobra.Command{
 }
 
 var listWorkspaceCmd = &cobra.Command{
-
 	Use: "list",
 
 	Aliases: []string{"ls"},
@@ -148,7 +143,6 @@ var getWorkspaceCmd = &cobra.Command{
 }
 
 var removeWorkspaceCmd = &cobra.Command{
-
 	Use: "remove <workspace-name-or-id>",
 
 	Aliases: []string{"rm"},
@@ -161,7 +155,6 @@ var removeWorkspaceCmd = &cobra.Command{
 }
 
 var pruneWorkspaceCmd = &cobra.Command{
-
 	Use: "prune",
 
 	Short: "Remove old idle workspaces",
@@ -170,19 +163,14 @@ var pruneWorkspaceCmd = &cobra.Command{
 }
 
 func runCreateWorkspace(cmd *cobra.Command, args []string) error {
-
 	name := args[0]
 
 	manager, err := getWorkspaceManager()
-
 	if err != nil {
-
 		return err
-
 	}
 
 	opts := workspace.CreateOptions{
-
 		Name: name,
 
 		BaseBranch: createBaseBranch,
@@ -195,11 +183,8 @@ func runCreateWorkspace(cmd *cobra.Command, args []string) error {
 	}
 
 	ws, err := manager.Create(opts)
-
 	if err != nil {
-
 		return fmt.Errorf("failed to create workspace: %w", err)
-
 	}
 
 	ui.Success("Created workspace: %s", ws.Name)
@@ -215,35 +200,24 @@ func runCreateWorkspace(cmd *cobra.Command, args []string) error {
 	ui.Info("Path: %s", ws.Path)
 
 	if ws.AgentID != "" {
-
 		ui.Info("Assigned to agent: %s", ws.AgentID)
-
 	}
 
 	return nil
-
 }
 
 func runListWorkspace(cmd *cobra.Command, args []string) error {
-
 	manager, err := getWorkspaceManager()
-
 	if err != nil {
-
 		return err
-
 	}
 
 	workspaces, err := manager.List(workspace.ListOptions{})
-
 	if err != nil {
-
 		return fmt.Errorf("failed to list workspaces: %w", err)
-
 	}
 
 	if listOneline {
-
 		// One line per workspace for fzf integration
 
 		for _, ws := range workspaces {
@@ -253,9 +227,7 @@ func runListWorkspace(cmd *cobra.Command, args []string) error {
 			description := ws.Description
 
 			if description == "" {
-
 				description = "-"
-
 			}
 
 			id := ws.ID
@@ -265,15 +237,11 @@ func runListWorkspace(cmd *cobra.Command, args []string) error {
 			fmt.Printf("%s\t%s\t%s\t%s\t%s\n", ws.Name, id, ws.Branch, ws.Path, description)
 
 		}
-
 	} else {
-
 		ui.PrintWorkspaceList(workspaces)
-
 	}
 
 	return nil
-
 }
 
 func runGetWorkspace(cmd *cobra.Command, args []string) error {
@@ -297,25 +265,18 @@ func runGetWorkspace(cmd *cobra.Command, args []string) error {
 }
 
 func runRemoveWorkspace(cmd *cobra.Command, args []string) error {
-
 	identifier := args[0]
 
 	manager, err := getWorkspaceManager()
-
 	if err != nil {
-
 		return err
-
 	}
 
 	// Resolve workspace by name or ID
 
 	ws, err := manager.ResolveWorkspace(identifier)
-
 	if err != nil {
-
 		return fmt.Errorf("failed to resolve workspace: %w", err)
-
 	}
 
 	if !removeForce {
@@ -339,40 +300,29 @@ func runRemoveWorkspace(cmd *cobra.Command, args []string) error {
 	}
 
 	if err := manager.Remove(ws.ID); err != nil {
-
 		return fmt.Errorf("failed to remove workspace: %w", err)
-
 	}
 
 	ui.Success("Removed workspace: %s (%s)", ws.Name, ws.ID)
 
 	return nil
-
 }
 
 func runPruneWorkspace(cmd *cobra.Command, args []string) error {
-
 	manager, err := getWorkspaceManager()
-
 	if err != nil {
-
 		return err
-
 	}
 
 	opts := workspace.CleanupOptions{
-
 		Days: pruneDays,
 
 		DryRun: pruneDryRun,
 	}
 
 	removed, err := manager.Cleanup(opts)
-
 	if err != nil {
-
 		return fmt.Errorf("failed to prune workspaces: %w", err)
-
 	}
 
 	if len(removed) == 0 {
@@ -384,35 +334,24 @@ func runPruneWorkspace(cmd *cobra.Command, args []string) error {
 	}
 
 	if pruneDryRun {
-
 		ui.Info("Would remove %d workspace(s):", len(removed))
-
 	} else {
-
 		ui.Success("Removed %d workspace(s):", len(removed))
-
 	}
 
 	for _, id := range removed {
-
 		fmt.Printf("  - %s\n", id)
-
 	}
 
 	return nil
-
 }
 
 func getWorkspaceManager() (*workspace.Manager, error) {
-
 	// Find project root
 
 	projectRoot, err := config.FindProjectRoot()
-
 	if err != nil {
-
 		return nil, err
-
 	}
 
 	// Create configuration manager
@@ -422,13 +361,10 @@ func getWorkspaceManager() (*workspace.Manager, error) {
 	// Ensure initialized
 
 	if !configManager.IsInitialized() {
-
 		return nil, fmt.Errorf("amux not initialized. Run 'amux init' first")
-
 	}
 
 	// Create workspace manager
 
 	return workspace.NewManager(configManager)
-
 }

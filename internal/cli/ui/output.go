@@ -10,35 +10,26 @@ import (
 
 // Error prints an error message with formatting
 func Error(format string, args ...interface{}) {
-
 	fmt.Fprintf(os.Stderr, "%s %s\n", ErrorIcon, ErrorStyle.Render(fmt.Sprintf(format, args...)))
-
 }
 
 // Success prints a success message with formatting
 func Success(format string, args ...interface{}) {
-
 	fmt.Printf("%s %s\n", SuccessIcon, SuccessStyle.Render(fmt.Sprintf(format, args...)))
-
 }
 
 // Info prints an informational message with formatting
 func Info(format string, args ...interface{}) {
-
 	fmt.Printf("%s %s\n", InfoIcon, InfoStyle.Render(fmt.Sprintf(format, args...)))
-
 }
 
 // Warning prints a warning message with formatting
 func Warning(format string, args ...interface{}) {
-
 	fmt.Printf("%s %s\n", WarningIcon, WarningStyle.Render(fmt.Sprintf(format, args...)))
-
 }
 
 // PrintWorkspace displays a single workspace with formatting
 func PrintWorkspace(w *workspace.Workspace) {
-
 	// Calculate age from last modified time
 
 	age := time.Since(w.UpdatedAt)
@@ -62,9 +53,7 @@ func PrintWorkspace(w *workspace.Workspace) {
 	)
 
 	if w.Description != "" {
-
 		fmt.Printf("   %s\n", w.Description)
-
 	}
 
 	fmt.Printf("   %s %s\n", DimStyle.Render("Branch:"), w.Branch)
@@ -72,15 +61,12 @@ func PrintWorkspace(w *workspace.Workspace) {
 	fmt.Printf("   %s %s\n", DimStyle.Render("Path:"), w.Path)
 
 	if w.AgentID != "" {
-
 		fmt.Printf("   %s %s\n", DimStyle.Render("Agent:"), w.AgentID)
-
 	}
 
 	fmt.Printf("   %s %s\n", DimStyle.Render("Created:"), FormatTime(w.CreatedAt))
 
 	fmt.Printf("   %s %s\n", DimStyle.Render("Updated:"), FormatTime(w.UpdatedAt))
-
 }
 
 // FormatDuration formats a duration into a human-readable string
@@ -135,11 +121,8 @@ func PrintWorkspaceDetails(w *workspace.Workspace) {
 
 // FormatTime formats a time for display
 func FormatTime(t time.Time) string {
-
 	if t.IsZero() {
-
 		return "never"
-
 	}
 
 	now := time.Now()
@@ -157,9 +140,7 @@ func FormatTime(t time.Time) string {
 		minutes := int(diff.Minutes())
 
 		if minutes == 1 {
-
 			return "1 minute ago"
-
 		}
 
 		return fmt.Sprintf("%d minutes ago", minutes)
@@ -169,9 +150,7 @@ func FormatTime(t time.Time) string {
 		hours := int(diff.Hours())
 
 		if hours == 1 {
-
 			return "1 hour ago"
-
 		}
 
 		return fmt.Sprintf("%d hours ago", hours)
@@ -181,9 +160,7 @@ func FormatTime(t time.Time) string {
 		days := int(diff.Hours() / 24)
 
 		if days == 1 {
-
 			return "1 day ago"
-
 		}
 
 		return fmt.Sprintf("%d days ago", days)
@@ -193,7 +170,6 @@ func FormatTime(t time.Time) string {
 		return t.Format("2006-01-02 15:04")
 
 	}
-
 }
 
 // FormatSize formats a file size in bytes to a human-readable string

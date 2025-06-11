@@ -2,15 +2,10 @@ package commands
 
 import (
 	"context"
-
 	"fmt"
-
 	"os"
-
 	"os/signal"
-
 	"path/filepath"
-
 	"syscall"
 
 	"github.com/spf13/cobra"
@@ -25,7 +20,6 @@ import (
 )
 
 var mcpCmd = &cobra.Command{
-
 	Use: "mcp",
 
 	Short: "Start the MCP server",
@@ -52,7 +46,6 @@ var (
 )
 
 func init() {
-
 	mcpCmd.Flags().StringVar(&rootDir, "root-dir", "", "Project root directory (required if not in amux project)")
 
 	mcpCmd.Flags().StringVarP(&serveTransport, "transport", "t", "", "Transport type (stdio, http, https)")
@@ -66,11 +59,9 @@ func init() {
 	mcpCmd.Flags().StringVar(&serveAuthUser, "auth-user", "", "Username for basic authentication")
 
 	mcpCmd.Flags().StringVar(&serveAuthPass, "auth-pass", "", "Password for basic authentication")
-
 }
 
 func runMCP(cmd *cobra.Command, args []string) error {
-
 	// Determine project root
 	var projectRoot string
 	var err error
@@ -103,11 +94,8 @@ func runMCP(cmd *cobra.Command, args []string) error {
 	// Load configuration
 
 	cfg, err := configManager.Load()
-
 	if err != nil {
-
 		return fmt.Errorf("failed to load configuration: %w", err)
-
 	}
 
 	// Determine transport
@@ -115,9 +103,7 @@ func runMCP(cmd *cobra.Command, args []string) error {
 	transport := serveTransport
 
 	if transport == "" {
-
 		transport = cfg.MCP.Transport.Type
-
 	}
 
 	// Build HTTP config if needed
@@ -127,7 +113,6 @@ func runMCP(cmd *cobra.Command, args []string) error {
 	if transport == "http" || transport == "https" {
 
 		httpConfig = &config.HTTPConfig{
-
 			Port: servePort,
 		}
 
@@ -142,9 +127,7 @@ func runMCP(cmd *cobra.Command, args []string) error {
 			case "bearer":
 
 				if serveAuthToken == "" {
-
 					return fmt.Errorf("bearer token required for bearer authentication")
-
 				}
 
 				httpConfig.Auth.Bearer = serveAuthToken
@@ -152,9 +135,7 @@ func runMCP(cmd *cobra.Command, args []string) error {
 			case "basic":
 
 				if serveAuthUser == "" || serveAuthPass == "" {
-
 					return fmt.Errorf("username and password required for basic authentication")
-
 				}
 
 				httpConfig.Auth.Basic.Username = serveAuthUser
@@ -164,11 +145,9 @@ func runMCP(cmd *cobra.Command, args []string) error {
 			}
 
 		} else if cfg.MCP.Transport.HTTP.Port != 0 {
-
 			// Use config file settings
 
 			httpConfig = &cfg.MCP.Transport.HTTP
-
 		}
 
 	}
@@ -176,11 +155,8 @@ func runMCP(cmd *cobra.Command, args []string) error {
 	// Create MCP server (using new mcp-go implementation)
 
 	server, err := mcp.NewServerV2(configManager, transport, httpConfig)
-
 	if err != nil {
-
 		return fmt.Errorf("failed to create MCP server: %w", err)
-
 	}
 
 	// Setup context with signal handling
@@ -196,21 +172,15 @@ func runMCP(cmd *cobra.Command, args []string) error {
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
-
 		<-sigChan
 
 		if transport == "stdio" {
-
 			fmt.Fprintf(os.Stderr, "Shutting down MCP server...\n")
-
 		} else {
-
 			ui.Info("Shutting down MCP server...")
-
 		}
 
 		cancel()
-
 	}()
 
 	// Start server
@@ -226,9 +196,7 @@ func runMCP(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "Debug logs will appear here. Press Ctrl+C to stop\n")
 
 	} else {
-
 		ui.Info("Starting MCP server with %s transport", transport)
-
 	}
 
 	if err := server.Start(ctx); err != nil {
@@ -236,13 +204,9 @@ func runMCP(cmd *cobra.Command, args []string) error {
 		if err == context.Canceled {
 
 			if transport == "stdio" {
-
 				fmt.Fprintf(os.Stderr, "MCP server stopped\n")
-
 			} else {
-
 				ui.Success("MCP server stopped")
-
 			}
 
 			return nil
@@ -251,9 +215,7 @@ func runMCP(cmd *cobra.Command, args []string) error {
 
 		// For stdio, log errors to stderr
 		if transport == "stdio" {
-
 			fmt.Fprintf(os.Stderr, "Server error: %v\n", err)
-
 		}
 
 		return fmt.Errorf("server error: %w", err)
@@ -261,5 +223,4 @@ func runMCP(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
-
 }

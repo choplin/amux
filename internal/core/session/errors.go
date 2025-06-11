@@ -52,5 +52,4 @@ type ErrTmuxNotAvailable struct{}
 
 func (e ErrTmuxNotAvailable) Error() string {
 	return "tmux is not available on this system"
-
 }

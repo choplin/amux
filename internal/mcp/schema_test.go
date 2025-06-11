@@ -5,7 +5,6 @@ import (
 )
 
 func TestStructToToolOptions(t *testing.T) {
-
 	tests := []struct {
 		name string
 
@@ -15,9 +14,7 @@ func TestStructToToolOptions(t *testing.T) {
 
 		checkFields []string
 	}{
-
 		{
-
 			name: "WorkspaceCreateParams",
 
 			structType: WorkspaceCreateParams{},
@@ -26,7 +23,6 @@ func TestStructToToolOptions(t *testing.T) {
 		},
 
 		{
-
 			name: "WorkspaceListParams",
 
 			structType: WorkspaceListParams{},
@@ -36,7 +32,6 @@ func TestStructToToolOptions(t *testing.T) {
 		},
 
 		{
-
 			name: "WorkspaceIDParams",
 
 			structType: WorkspaceIDParams{},
@@ -45,7 +40,6 @@ func TestStructToToolOptions(t *testing.T) {
 		},
 
 		{
-
 			name: "WorkspaceInfoParams",
 
 			structType: WorkspaceInfoParams{},
@@ -55,17 +49,13 @@ func TestStructToToolOptions(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-
 		t.Run(tt.name, func(t *testing.T) {
-
 			opts, err := StructToToolOptions(tt.structType)
 
 			if tt.expectError {
 
 				if err == nil {
-
 					t.Errorf("expected error but got none")
-
 				}
 
 				return
@@ -73,29 +63,21 @@ func TestStructToToolOptions(t *testing.T) {
 			}
 
 			if err != nil {
-
 				t.Fatalf("unexpected error: %v", err)
-
 			}
 
 			// Handle empty structs (like CaveListParams)
 
 			if len(tt.checkFields) == 0 {
-
 				// For empty structs, opts should be empty array or nil
 
 				if len(opts) > 0 {
-
 					t.Error("expected no options for empty struct")
-
 				}
-
 			} else {
 
 				if opts == nil {
-
 					t.Fatal("expected options but got nil")
-
 				}
 
 				// We can't easily inspect the options without creating a tool
@@ -103,17 +85,12 @@ func TestStructToToolOptions(t *testing.T) {
 				// So we just check that options were generated
 
 				if len(opts) == 0 {
-
 					t.Error("expected at least one option")
-
 				}
 
 			}
-
 		})
-
 	}
-
 }
 
 // Note: UnmarshalArgs is tested indirectly through the actual tool handlers

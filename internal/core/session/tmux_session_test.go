@@ -82,5 +82,4 @@ func TestTmuxSession_StartStop(t *testing.T) {
 	if session.Status() != StatusStopped {
 		t.Errorf("Expected status %s, got %s", StatusStopped, session.Status())
 	}
-
 }

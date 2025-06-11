@@ -32,7 +32,7 @@ func (m *Manager) Initialize(sessionID string) error {
 	mailboxPath := m.GetMailboxPath(sessionID)
 
 	// Create mailbox directory
-	if err := os.MkdirAll(mailboxPath, 0755); err != nil {
+	if err := os.MkdirAll(mailboxPath, 0o755); err != nil {
 		return fmt.Errorf("failed to create mailbox directory: %w", err)
 	}
 
@@ -40,11 +40,11 @@ func (m *Manager) Initialize(sessionID string) error {
 	inPath := filepath.Join(mailboxPath, string(DirectionIn))
 	outPath := filepath.Join(mailboxPath, string(DirectionOut))
 
-	if err := os.MkdirAll(inPath, 0755); err != nil {
+	if err := os.MkdirAll(inPath, 0o755); err != nil {
 		return fmt.Errorf("failed to create in directory: %w", err)
 	}
 
-	if err := os.MkdirAll(outPath, 0755); err != nil {
+	if err := os.MkdirAll(outPath, 0o755); err != nil {
 		return fmt.Errorf("failed to create out directory: %w", err)
 	}
 
@@ -68,7 +68,7 @@ To send a message, create a file like:
 out/1704921050-status-update.md
 `, sessionID, time.Now().Format(time.RFC3339))
 
-	if err := os.WriteFile(contextPath, []byte(contextContent), 0644); err != nil {
+	if err := os.WriteFile(contextPath, []byte(contextContent), 0o644); err != nil {
 		return fmt.Errorf("failed to create context file: %w", err)
 	}
 
@@ -81,7 +81,7 @@ func (m *Manager) SendMessage(sessionID, name, content string) error {
 	inPath := filepath.Join(mailboxPath, string(DirectionIn))
 
 	// Ensure the directory exists
-	if err := os.MkdirAll(inPath, 0755); err != nil {
+	if err := os.MkdirAll(inPath, 0o755); err != nil {
 		return fmt.Errorf("failed to create in directory: %w", err)
 	}
 
@@ -91,7 +91,7 @@ func (m *Manager) SendMessage(sessionID, name, content string) error {
 	filePath := filepath.Join(inPath, filename)
 
 	// Write the message
-	if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(filePath, []byte(content), 0o644); err != nil {
 		return fmt.Errorf("failed to write message: %w", err)
 	}
 

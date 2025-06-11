@@ -46,5 +46,4 @@ func NewState() *State {
 		Active:   make(map[EntityType]map[int]string),
 		Released: make(map[EntityType][]int),
 	}
-
 }

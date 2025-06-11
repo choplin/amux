@@ -281,5 +281,4 @@ func TestSanitizeFilename(t *testing.T) {
 			}
 		})
 	}
-
 }

@@ -50,7 +50,7 @@ func TestManager_Initialize_NoOverwrite(t *testing.T) {
 	// Write custom content to a file
 	backgroundPath := manager.GetFilePath(BackgroundFile)
 	customContent := "Custom background content"
-	if err := os.WriteFile(backgroundPath, []byte(customContent), 0644); err != nil {
+	if err := os.WriteFile(backgroundPath, []byte(customContent), 0o644); err != nil {
 		t.Fatalf("Failed to write custom content: %v", err)
 	}
 
@@ -184,5 +184,4 @@ func TestManager_AppendToWorkingLog(t *testing.T) {
 	if !strings.Contains(content, "### [") {
 		t.Error("Working log entries should have timestamp prefix")
 	}
-
 }

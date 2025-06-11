@@ -87,5 +87,4 @@ func (m *IDMapper) RemoveWorkspace(fullID string) error {
 // RemoveSession removes a session ID mapping
 func (m *IDMapper) RemoveSession(fullID string) error {
 	return m.indexManager.Release(index.EntityTypeSession, fullID)
-
 }

@@ -211,7 +211,7 @@ amux/
 
 ### Code Style Rules
 
-1. **Go Code Formatting**: Use `goimports` followed by `gofumpt` for consistent formatting
+1. **Go Code Formatting**: Use `goimports` and `gofumpt` via golangci-lint for consistent formatting
 2. **Error Messages**: Start with lowercase, no punctuation at end
 3. **Commit Messages**: Follow conventional commits (fix:, feat:, chore:, etc.)
 4. **Line Length**: Keep lines under 120 characters when reasonable
@@ -225,7 +225,7 @@ just build          # Build the binary
 just test           # Run all tests
 just test-coverage  # Run tests with coverage report
 just lint           # Run golangci-lint
-just fmt            # Format Go code with goimports
+just fmt            # Format Go code with goimports and gofumpt
 just fmt-yaml       # Format YAML files
 just check          # Run all checks (fmt + lint)
 
@@ -241,7 +241,7 @@ The project uses Lefthook for git hooks:
 
 - **commitlint**: Enforces conventional commit messages
 - **markdown-lint**: Checks markdown files
-- **goimports**: Formats Go imports
+- **golangci-fmt**: Formats Go code with goimports and gofumpt
 - **yamlfmt**: Formats YAML files
 - Tests and linting run automatically
 

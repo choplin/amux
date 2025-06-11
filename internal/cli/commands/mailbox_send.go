@@ -15,10 +15,8 @@ import (
 	"github.com/aki/amux/internal/core/workspace"
 )
 
-var (
-	// Flags for send command
-	sendFile string
-)
+// Flags for send command
+var sendFile string
 
 var mailboxSendCmd = &cobra.Command{
 	Use:   "send <session> [message]",

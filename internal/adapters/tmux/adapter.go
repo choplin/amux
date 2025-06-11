@@ -176,5 +176,4 @@ func (a *RealAdapter) ResizeWindow(sessionName string, width, height int) error 
 		return nil //nolint:nilerr // Intentionally ignoring resize errors
 	}
 	return nil
-
 }

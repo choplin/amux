@@ -206,5 +206,4 @@ func TestManager_WithUnavailableTmux(t *testing.T) {
 	if _, ok := session.(*sessionImpl); !ok {
 		t.Error("Expected basic session when tmux unavailable")
 	}
-
 }

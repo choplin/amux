@@ -315,5 +315,4 @@ func TestFileStore_Operations(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error loading deleted session")
 	}
-
 }

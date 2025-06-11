@@ -5,7 +5,6 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-
 	Use: "amux",
 
 	Short: "Agent Multiplexer - Orchestrate AI agents in isolated workspaces",
@@ -17,7 +16,6 @@ across different workspaces.`,
 }
 
 func init() {
-
 	// Add subcommands
 
 	rootCmd.AddCommand(initCmd)
@@ -62,11 +60,9 @@ func init() {
 
 	// Add mailbox command
 	rootCmd.AddCommand(mailboxCmd)
-
 }
 
 // Execute runs the root command
 func Execute() error {
 	return rootCmd.Execute()
-
 }

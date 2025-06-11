@@ -51,7 +51,7 @@ func (m *Manager) Load() (*Config, error) {
 // Save writes the configuration to disk
 func (m *Manager) Save(config *Config) error {
 	// Ensure the .amux directory exists
-	if err := os.MkdirAll(filepath.Dir(m.configPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(m.configPath), 0o755); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
@@ -60,7 +60,7 @@ func (m *Manager) Save(config *Config) error {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	if err := os.WriteFile(m.configPath, data, 0644); err != nil {
+	if err := os.WriteFile(m.configPath, data, 0o644); err != nil {
 		return fmt.Errorf("failed to write config: %w", err)
 	}
 

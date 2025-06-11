@@ -13,10 +13,8 @@ import (
 	"github.com/aki/amux/internal/core/workspace"
 )
 
-var (
-	// Flags for recv command
-	recvQuiet bool
-)
+// Flags for recv command
+var recvQuiet bool
 
 var mailboxRecvCmd = &cobra.Command{
 	Use:   "recv <session>",

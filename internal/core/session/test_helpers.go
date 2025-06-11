@@ -29,5 +29,4 @@ func setupTestEnvironment(t *testing.T) (string, *workspace.Manager, *config.Man
 	}
 
 	return repoPath, wsManager, configManager
-
 }

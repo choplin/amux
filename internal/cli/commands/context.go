@@ -168,5 +168,4 @@ func initContext(cmd *cobra.Command, args []string) error {
 	ui.Info("Context directory: %s", contextManager.GetContextPath())
 
 	return nil
-
 }
