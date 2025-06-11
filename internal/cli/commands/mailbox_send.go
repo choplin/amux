@@ -37,7 +37,7 @@ Examples:
 
   # Send from a file
   amux mailbox send s1 --file requirements.md
-  
+
   # Send from stdin
   echo "Update the tests" | amux mailbox send s1
   amux mailbox send s1 < requirements.md`,
@@ -81,12 +81,12 @@ func sendToSession(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("failed to stat stdin: %w", err)
 		}
-		
+
 		// Check if stdin is a pipe or redirect
 		if (stat.Mode() & os.ModeCharDevice) != 0 {
 			return fmt.Errorf("no message provided: use arguments, --file, or pipe input")
 		}
-		
+
 		data, err := io.ReadAll(os.Stdin)
 		if err != nil {
 			return fmt.Errorf("failed to read from stdin: %w", err)

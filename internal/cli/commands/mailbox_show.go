@@ -35,16 +35,16 @@ Examples:
   amux mailbox show s1
   amux mailbox show s1 --all
   amux mb show s1
-  
+
   # Show specific message by index
   amux mailbox show s1 3
-  
+
   # Show latest outgoing message (from agent)
   amux mailbox show s1 latest
-  
+
   # Show latest incoming message (to agent)
   amux mailbox show s1 latest --in
-  
+
   # Show last 5 messages
   amux mailbox show s1 --tail 5`,
 	Args: cobra.RangeArgs(1, 2),
@@ -100,7 +100,7 @@ func showMessages(cmd *cobra.Command, args []string) error {
 	if len(args) > 1 {
 		// Specific message requested
 		selector := args[1]
-		
+
 		if selector == "latest" {
 			// Show latest message
 			direction := mailbox.DirectionOut
@@ -109,7 +109,7 @@ func showMessages(cmd *cobra.Command, args []string) error {
 			}
 			return showLatestMessage(sessionID, sess.ID(), mailboxManager, direction)
 		}
-		
+
 		// Try to parse as index
 		index, err := strconv.Atoi(selector)
 		if err != nil {
