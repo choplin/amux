@@ -9,7 +9,10 @@ permissions:
 jobs:
   test:
     name: Test
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -34,6 +37,7 @@ jobs:
           # Skip tmux-dependent tests in CI
           go test -v -race -coverprofile=coverage.txt -covermode=atomic ./... -skip TestTmuxSession
       - name: Upload coverage
+        if: matrix.os == 'ubuntu-latest'
         uses: codecov/codecov-action@v4
         with:
           file: ./coverage.txt
