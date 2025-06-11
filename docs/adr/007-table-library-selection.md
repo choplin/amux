@@ -8,7 +8,8 @@ Accepted
 
 ## Context
 
-When implementing table formatting for list commands (Issue #8), we needed to choose a Go library for rendering tabular data in the CLI. Two primary options were considered:
+When implementing table formatting for list commands (Issue #8), we needed to choose a Go library for rendering
+tabular data in the CLI. Two primary options were considered:
 
 1. **rodaine/table** - A simple, lightweight table formatting library
 2. **jedib0t/go-pretty** - A feature-rich formatting library with tables, progress bars, and more
@@ -47,7 +48,9 @@ We will use **rodaine/table** for table formatting in Amux.
 
 ## Alternative Considered: jedib0t/go-pretty
 
-While go-pretty offers more features (borders, multiple output formats, built-in styles, progress bars), these capabilities are not needed for Amux's focused use case. The additional complexity and larger dependency footprint don't provide sufficient value for a CLI tool that prioritizes simplicity.
+While go-pretty offers more features (borders, multiple output formats, built-in styles, progress bars), these
+capabilities are not needed for Amux's focused use case. The additional complexity and larger dependency footprint
+don't provide sufficient value for a CLI tool that prioritizes simplicity.
 
 ## Implementation
 

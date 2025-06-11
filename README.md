@@ -6,7 +6,9 @@
 
 > **Agent Multiplexer** - Unleash fleets of AI agents in parallel, sandboxed workspaces
 
-Amux provides isolated git worktree-based environments where AI agents can work independently without context mixing. With built-in session management, you can run multiple agents concurrently, attach to their sessions, and manage their lifecycle.
+Amux provides isolated git worktree-based environments where AI agents can work independently without context mixing.
+With built-in session management, you can run multiple agents concurrently, attach to their sessions, and manage
+their lifecycle.
 
 > [!WARNING]
 > **🚧 Work in Progress**

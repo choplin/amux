@@ -2,7 +2,8 @@
 
 ## Overview
 
-Amux (Agent Multiplexer) is designed to provide isolated development environments for AI agents with session management capabilities. The architecture follows clean architecture principles with clear separation of concerns.
+Amux (Agent Multiplexer) is designed to provide isolated development environments for AI agents with session
+management capabilities. The architecture follows clean architecture principles with clear separation of concerns.
 
 ## Core Components
 
