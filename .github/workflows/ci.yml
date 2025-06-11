@@ -1,0 +1,155 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  test:
+    name: Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        go-version: ['1.23', '1.24']
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-${{ matrix.go-version }}-
+            ${{ runner.os }}-go-
+      - name: Download dependencies
+        run: go mod download
+      - name: Run tests
+        run: |
+          # Skip tmux-dependent tests in CI
+          go test -v -race -coverprofile=coverage.txt -covermode=atomic ./... -skip TestTmuxSession
+      - name: Upload coverage
+        if: matrix.os == 'ubuntu-latest' && matrix.go-version == '1.24'
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.txt
+          flags: unittests
+          fail_ci_if_error: false
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-1.24-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-1.24-
+            ${{ runner.os }}-go-
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.64.8
+          args: --timeout=5m
+      - name: Install tools
+        run: |
+          go install github.com/google/yamlfmt/cmd/yamlfmt@latest
+          go install golang.org/x/tools/cmd/goimports@latest
+      - name: Check formatting
+        run: |
+          # Check Go formatting
+          if [ -n "$(gofmt -l .)" ]; then
+            echo "Go files are not formatted. Please run 'gofmt -w .'"
+            gofmt -d .
+            exit 1
+          fi
+
+          # Check Go imports
+          if [ -n "$(goimports -l .)" ]; then
+            echo "Go imports are not organized. Please run 'goimports -w .'"
+            goimports -d .
+            exit 1
+          fi
+      - name: Check YAML formatting
+        run: |
+          yamlfmt -lint .
+      - name: Check Markdown
+        uses: DavidAnson/markdownlint-cli2-action@v18
+        with:
+          config: |
+            {
+              "default": true,
+              "MD013": false,
+              "MD033": false,
+              "MD041": false
+            }
+          globs: |
+            **/*.md
+            !node_modules/**
+  build:
+    name: Build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        go-version: ['1.24']
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-${{ matrix.go-version }}-
+            ${{ runner.os }}-go-
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          go build -v -o amux${{ matrix.os == 'windows-latest' && '.exe' || '' }} ./cmd/amux
+      - name: Test binary (Unix)
+        if: matrix.os != 'windows-latest'
+        run: |
+          ./amux version || true
+          ./amux --help
+      - name: Test binary (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          .\amux.exe version
+          .\amux.exe --help
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: amux-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: amux${{ matrix.os == 'windows-latest' && '.exe' || '' }}

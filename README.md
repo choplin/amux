@@ -1,5 +1,9 @@
 # 🕳️ Amux
 
+[![CI](https://github.com/aki/amux/actions/workflows/ci.yml/badge.svg)](https://github.com/aki/amux/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/aki/amux)](https://goreportcard.com/report/github.com/aki/amux)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 > **Agent Multiplexer** - Unleash fleets of AI agents in parallel, sandboxed workspaces
 
 Amux provides isolated git worktree-based environments where AI agents can work independently without context mixing. With built-in session management, you can run multiple agents concurrently, attach to their sessions, and manage their lifecycle.

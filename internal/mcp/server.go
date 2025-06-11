@@ -555,11 +555,12 @@ func (s *ServerV2) startHTTPServer(ctx context.Context) error {
 
 		<-ctx.Done()
 
+		// Create new context for shutdown since parent is already cancelled
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 
 		defer cancel()
 
-		if err := httpServer.Shutdown(shutdownCtx); err != nil {
+		if err := httpServer.Shutdown(shutdownCtx); err != nil { //nolint:contextcheck
 
 			fmt.Fprintf(os.Stderr, "Failed to shutdown server: %v\n", err)
 

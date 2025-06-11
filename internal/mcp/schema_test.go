@@ -84,7 +84,7 @@ func TestStructToToolOptions(t *testing.T) {
 
 				// For empty structs, opts should be empty array or nil
 
-				if opts != nil && len(opts) > 0 {
+				if len(opts) > 0 {
 
 					t.Error("expected no options for empty struct")
 

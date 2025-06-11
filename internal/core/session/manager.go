@@ -187,7 +187,10 @@ func (m *Manager) CreateSession(opts SessionOptions) (Session, error) {
 		fmt.Printf("Warning: failed to initialize working context: %v\n", err)
 	} else {
 		// Add initial log entry
-		contextManager.AppendToWorkingLog(fmt.Sprintf("Session started for agent '%s'", opts.AgentID))
+		if err := contextManager.AppendToWorkingLog(fmt.Sprintf("Session started for agent '%s'", opts.AgentID)); err != nil {
+			// Log error but don't fail session creation
+			fmt.Printf("Warning: failed to append to working log: %v\n", err)
+		}
 	}
 
 	// Save to store
@@ -375,6 +378,7 @@ func (m *Manager) createSessionFromInfo(info *SessionInfo) (Session, error) {
 		ws, err := m.workspaceManager.ResolveWorkspace(info.WorkspaceID)
 		if err != nil {
 			// Workspace might be gone, fall back to basic session
+			//nolint:nilerr // Intentionally returning nil error to fall back gracefully
 			return &sessionImpl{
 				info:  info,
 				store: m.store,

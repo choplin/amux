@@ -8,13 +8,14 @@ import (
 // MockAdapter is a mock implementation of tmux operations for testing
 type MockAdapter struct {
 	mu            sync.RWMutex
-	sessions      map[string]*mockSession
+	sessions      map[string]*MockSession
 	available     bool
 	createError   error
 	sendKeysError error
 }
 
-type mockSession struct {
+// MockSession represents a mock tmux session for testing
+type MockSession struct {
 	name        string
 	workDir     string
 	environment map[string]string
@@ -25,7 +26,7 @@ type mockSession struct {
 // NewMockAdapter creates a new mock adapter
 func NewMockAdapter() *MockAdapter {
 	return &MockAdapter{
-		sessions:  make(map[string]*mockSession),
+		sessions:  make(map[string]*MockSession),
 		available: true,
 	}
 }
@@ -71,7 +72,7 @@ func (m *MockAdapter) CreateSession(sessionName, workDir string) error {
 		return fmt.Errorf("session already exists: %s", sessionName)
 	}
 
-	m.sessions[sessionName] = &mockSession{
+	m.sessions[sessionName] = &MockSession{
 		name:        sessionName,
 		workDir:     workDir,
 		environment: make(map[string]string),
@@ -216,12 +217,12 @@ func (m *MockAdapter) ResizeWindow(sessionName string, width, height int) error 
 }
 
 // GetSessions returns the internal sessions map for testing
-func (m *MockAdapter) GetSessions() map[string]*mockSession {
+func (m *MockAdapter) GetSessions() map[string]*MockSession {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	// Return a copy to prevent external modification
-	sessions := make(map[string]*mockSession)
+	sessions := make(map[string]*MockSession)
 	for k, v := range m.sessions {
 		sessions[k] = v
 	}

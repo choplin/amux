@@ -92,7 +92,7 @@ func StructToToolOptions(structType interface{}) ([]mcp.ToolOption, error) {
 
 		// Add field based on type
 
-		switch field.Type.Kind() {
+		switch field.Type.Kind() { //nolint:exhaustive // Only handling types we support
 
 		case reflect.String:
 
@@ -154,27 +154,9 @@ func StructToToolOptions(structType interface{}) ([]mcp.ToolOption, error) {
 			toolOptions = append(toolOptions, mcp.WithBoolean(fieldName, opts...))
 
 		case reflect.Slice:
-
-			if field.Type.Elem().Kind() == reflect.String {
-
-				opts := []mcp.PropertyOption{
-
-					mcp.Description(description),
-				}
-
-				if isRequired {
-
-					opts = append(opts, mcp.Required())
-
-				}
-
-				// mcp-go doesn't have WithStringArray, skip array types for now
-
-				// TODO: Add support for array types when available in mcp-go
-
-			}
-
-			// Add more slice types as needed
+			// TODO: Add support for array types when available in mcp-go
+			// Currently, array properties are not supported in mcp-go
+			_ = isRequired // Suppress unused variable warning
 
 		default:
 

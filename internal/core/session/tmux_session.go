@@ -91,12 +91,17 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 
 	if err := s.tmuxAdapter.SetEnvironment(tmuxSession, env); err != nil {
 		// Clean up on failure
-		s.tmuxAdapter.KillSession(tmuxSession)
+		if killErr := s.tmuxAdapter.KillSession(tmuxSession); killErr != nil {
+			fmt.Printf("Warning: failed to kill tmux session during cleanup: %v\n", killErr)
+		}
 		return fmt.Errorf("failed to set environment: %w", err)
 	}
 
 	// Resize to standard dimensions
-	s.tmuxAdapter.ResizeWindow(tmuxSession, 120, 40)
+	if err := s.tmuxAdapter.ResizeWindow(tmuxSession, 120, 40); err != nil {
+		// Log warning but don't fail - resize is not critical
+		fmt.Printf("Warning: failed to resize tmux window: %v\n", err)
+	}
 
 	// Get the command to run
 	command := s.info.Command
@@ -109,7 +114,9 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 	if command != "" {
 		if err := s.tmuxAdapter.SendKeys(tmuxSession, command); err != nil {
 			// Clean up on failure
-			s.tmuxAdapter.KillSession(tmuxSession)
+			if killErr := s.tmuxAdapter.KillSession(tmuxSession); killErr != nil {
+				fmt.Printf("Warning: failed to kill tmux session during cleanup: %v\n", killErr)
+			}
 			return fmt.Errorf("failed to start agent: %w", err)
 		}
 	}
@@ -126,7 +133,9 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 
 	if err := s.store.Save(s.info); err != nil {
 		// Clean up on failure
-		s.tmuxAdapter.KillSession(tmuxSession)
+		if killErr := s.tmuxAdapter.KillSession(tmuxSession); killErr != nil {
+			fmt.Printf("Warning: failed to kill tmux session during cleanup: %v\n", killErr)
+		}
 		return fmt.Errorf("failed to save session: %w", err)
 	}
 

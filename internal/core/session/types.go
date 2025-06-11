@@ -6,7 +6,7 @@ import (
 )
 
 // SessionStatus represents the current state of a session
-type SessionStatus string
+type SessionStatus string //nolint:revive // Established API
 
 const (
 	StatusCreated SessionStatus = "created"
@@ -16,7 +16,7 @@ const (
 )
 
 // SessionOptions contains options for creating a new session
-type SessionOptions struct {
+type SessionOptions struct { //nolint:revive // Established API
 	WorkspaceID string            // Required: workspace to run in
 	AgentID     string            // Required: agent to run
 	Command     string            // Optional: override agent command
@@ -24,7 +24,7 @@ type SessionOptions struct {
 }
 
 // SessionInfo contains metadata about a session
-type SessionInfo struct {
+type SessionInfo struct { //nolint:revive // Established API
 	ID          string            `yaml:"id"`
 	Index       string            `yaml:"-"` // Populated from ID mapper, not persisted
 	WorkspaceID string            `yaml:"workspace_id"`
@@ -74,7 +74,7 @@ type Session interface {
 }
 
 // SessionManager manages the lifecycle of agent sessions
-type SessionManager interface {
+type SessionManager interface { //nolint:revive // Established API
 	// CreateSession creates a new session
 	CreateSession(opts SessionOptions) (Session, error)
 

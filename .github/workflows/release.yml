@@ -1,0 +1,68 @@
+name: Release
+on:
+  push:
+    tags:
+      - 'v*'
+permissions:
+  contents: write
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+      - name: Run tests
+        run: go test -v ./... -skip TestTmuxSession
+      - name: Create release binaries
+        run: |
+          # Create bin directory
+          mkdir -p bin
+
+          # Build for multiple platforms
+          GOOS=linux GOARCH=amd64 go build -o bin/amux-linux-amd64 ./cmd/amux
+          GOOS=linux GOARCH=arm64 go build -o bin/amux-linux-arm64 ./cmd/amux
+          GOOS=darwin GOARCH=amd64 go build -o bin/amux-darwin-amd64 ./cmd/amux
+          GOOS=darwin GOARCH=arm64 go build -o bin/amux-darwin-arm64 ./cmd/amux
+          GOOS=windows GOARCH=amd64 go build -o bin/amux-windows-amd64.exe ./cmd/amux
+
+          # Create checksums
+          cd bin
+          sha256sum * > checksums.txt
+          cd ..
+      - name: Create changelog
+        id: changelog
+        run: |
+          # Extract version from tag
+          VERSION=${GITHUB_REF#refs/tags/}
+
+          # Generate changelog (simple version, can be enhanced)
+          echo "## What's Changed" > CHANGELOG_CURRENT.md
+          echo "" >> CHANGELOG_CURRENT.md
+
+          # Get commits since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -z "$LAST_TAG" ]; then
+            git log --pretty=format:"* %s by @%an" >> CHANGELOG_CURRENT.md
+          else
+            git log ${LAST_TAG}..HEAD --pretty=format:"* %s by @%an" >> CHANGELOG_CURRENT.md
+          fi
+
+          echo "" >> CHANGELOG_CURRENT.md
+          echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${LAST_TAG}...${VERSION}" >> CHANGELOG_CURRENT.md
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: CHANGELOG_CURRENT.md
+          files: |
+            bin/amux-*
+            bin/checksums.txt
+          draft: false
+          prerelease: ${{ contains(github.ref, '-') }}
+          generate_release_notes: true

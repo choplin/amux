@@ -109,7 +109,7 @@ func (m *Manager) GetDefaultCommand(agentID string) (string, error) {
 	agent, err := m.GetAgent(agentID)
 	if err != nil {
 		// If agent not found, use the agent ID as command
-		return agentID, nil
+		return agentID, nil //nolint:nilerr // Fallback to agent ID if not configured
 	}
 
 	if agent.Command != "" {
@@ -125,7 +125,7 @@ func (m *Manager) GetEnvironment(agentID string) (map[string]string, error) {
 	agent, err := m.GetAgent(agentID)
 	if err != nil {
 		// If agent not found, return empty environment
-		return nil, nil
+		return nil, nil //nolint:nilerr // Return empty env if agent not configured
 	}
 
 	return agent.Environment, nil
