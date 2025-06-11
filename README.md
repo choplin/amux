@@ -170,6 +170,29 @@ Each workspace includes context files to help AI agents:
 
 Access context path via `$AMUX_CONTEXT_PATH` in agent sessions.
 
+### Agent Communication
+
+Amux provides a mailbox system for asynchronous communication with running agents:
+
+```bash
+# Send a message to an agent
+amux tell s1 "Please focus on the authentication module"
+
+# Send a message from a file
+amux tell s1 --file requirements.md
+
+# View messages in an agent's mailbox
+amux peek s1                              # Show recent messages
+amux peek s1 --direction in               # Show only incoming messages
+amux peek s1 --direction out              # Show only outgoing messages
+amux peek s1 --verbose                    # Show full message content
+```
+
+Each session has a mailbox directory at `.amux/mailbox/{session-id}/` with:
+- `in/` - Messages TO the agent
+- `out/` - Messages FROM the agent
+- `context.md` - Mailbox instructions
+
 ## 📁 Project Structure
 
 ```text
@@ -185,6 +208,7 @@ amux/
 │   │   ├── config/    # Configuration management
 │   │   ├── context/   # Working context management
 │   │   ├── git/       # Git operations
+│   │   ├── mailbox/   # Agent communication
 │   │   ├── session/   # Session management
 │   │   └── workspace/ # Workspace management
 │   ├── mcp/           # MCP server implementation

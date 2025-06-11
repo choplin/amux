@@ -128,7 +128,7 @@ func TestManager_WithMockAdapter(t *testing.T) {
 		t.Fatalf("Failed to create store: %v", err)
 	}
 
-	manager := NewManager(store, wsManager, nil)
+	manager := NewManager(store, wsManager, nil, nil)
 
 	// Replace tmux adapter with mock
 	mockAdapter := tmux.NewMockAdapter()
@@ -184,7 +184,7 @@ func TestManager_WithUnavailableTmux(t *testing.T) {
 		t.Fatalf("Failed to create store: %v", err)
 	}
 
-	manager := NewManager(store, wsManager, nil)
+	manager := NewManager(store, wsManager, nil, nil)
 
 	// Replace with unavailable mock
 	mockAdapter := tmux.NewMockAdapter()

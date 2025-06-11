@@ -9,6 +9,7 @@ import (
 	"github.com/aki/amux/internal/adapters/tmux"
 	"github.com/aki/amux/internal/core/common"
 	contextmgr "github.com/aki/amux/internal/core/context"
+	"github.com/aki/amux/internal/core/mailbox"
 	"github.com/aki/amux/internal/core/workspace"
 )
 
@@ -128,6 +129,7 @@ func (s *sessionImpl) GetOutput() ([]byte, error) {
 type Manager struct {
 	store            Store
 	workspaceManager *workspace.Manager
+	mailboxManager   *mailbox.Manager
 	tmuxAdapter      tmux.Adapter
 	sessions         map[string]Session
 	idMapper         *common.IDMapper
@@ -135,13 +137,14 @@ type Manager struct {
 }
 
 // NewManager creates a new session manager
-func NewManager(store Store, workspaceManager *workspace.Manager, idMapper *common.IDMapper) *Manager {
+func NewManager(store Store, workspaceManager *workspace.Manager, mailboxManager *mailbox.Manager, idMapper *common.IDMapper) *Manager {
 	// Try to create tmux adapter, but don't fail if unavailable
 	tmuxAdapter, _ := tmux.NewAdapter()
 
 	return &Manager{
 		store:            store,
 		workspaceManager: workspaceManager,
+		mailboxManager:   mailboxManager,
 		idMapper:         idMapper,
 		tmuxAdapter:      tmuxAdapter,
 		sessions:         make(map[string]Session),
@@ -196,6 +199,14 @@ func (m *Manager) CreateSession(opts Options) (Session, error) {
 	// Save to store
 	if err := m.store.Save(info); err != nil {
 		return nil, fmt.Errorf("failed to save session: %w", err)
+	}
+
+	// Initialize mailbox for the session
+	if m.mailboxManager != nil {
+		if err := m.mailboxManager.Initialize(id); err != nil {
+			// Log error but don't fail session creation
+			fmt.Printf("Warning: failed to initialize mailbox: %v\n", err)
+		}
 	}
 
 	// Generate and assign index

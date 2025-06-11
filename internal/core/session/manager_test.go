@@ -29,8 +29,8 @@ func TestManager_CreateSession(t *testing.T) {
 		t.Fatalf("Failed to create session store: %v", err)
 	}
 
-	// Create session manager (nil ID mapper for tests)
-	manager := NewManager(store, wsManager, nil)
+	// Create session manager (nil ID mapper and mailbox manager for tests)
+	manager := NewManager(store, wsManager, nil, nil)
 
 	// Use mock adapter for consistent testing across platforms
 	mockAdapter := tmux.NewMockAdapter()
@@ -91,7 +91,7 @@ func TestManager_GetSession(t *testing.T) {
 		t.Fatalf("Failed to create store: %v", err)
 	}
 
-	manager := NewManager(store, wsManager, nil)
+	manager := NewManager(store, wsManager, nil, nil)
 
 	// Use mock adapter for consistent testing across platforms
 	mockAdapter := tmux.NewMockAdapter()
@@ -145,7 +145,7 @@ func TestManager_ListSessions(t *testing.T) {
 		t.Logf("Warning: Found %d existing sessions before test", len(existingSessions))
 	}
 
-	manager := NewManager(store, wsManager, nil)
+	manager := NewManager(store, wsManager, nil, nil)
 
 	// Use mock adapter for consistent testing across platforms
 	mockAdapter := tmux.NewMockAdapter()
@@ -223,7 +223,7 @@ func TestManager_RemoveSession(t *testing.T) {
 		t.Fatalf("Failed to create store: %v", err)
 	}
 
-	manager := NewManager(store, wsManager, nil)
+	manager := NewManager(store, wsManager, nil, nil)
 
 	// Use mock adapter for consistent testing across platforms
 	mockAdapter := tmux.NewMockAdapter()
