@@ -7,6 +7,8 @@ import (
 
 	"fmt"
 
+	"log"
+
 	"net/http"
 
 	"os"
@@ -495,7 +497,16 @@ func (s *ServerV2) Start(ctx context.Context) error {
 
 	case "stdio":
 
-		return server.ServeStdio(s.mcpServer)
+		// Create stdio server with custom error logging
+		stdioServer := server.NewStdioServer(s.mcpServer)
+
+		// Log to stderr to avoid interfering with stdio protocol
+		logger := log.New(os.Stderr, "[AMUX MCP] ", log.LstdFlags|log.Lshortfile)
+		stdioServer.SetErrorLogger(logger)
+
+		// Don't use ServeStdio as it sets up its own signal handling
+		// Use Listen directly with the provided context
+		return stdioServer.Listen(ctx, os.Stdin, os.Stdout)
 
 	case "https", "http":
 

@@ -63,13 +63,33 @@ func init() {
 
 func runMCP(cmd *cobra.Command, args []string) error {
 
-	// Find project root
-
+	// Find project root - for MCP server, we'll use current directory if not in a project
 	projectRoot, err := config.FindProjectRoot()
 
 	if err != nil {
 
-		return err
+		// For MCP server, we can run without a project
+		// Just use the current directory
+		projectRoot, err = os.Getwd()
+
+		if err != nil {
+
+			if serveTransport == "stdio" || serveTransport == "" {
+
+				fmt.Fprintf(os.Stderr, "Error getting current directory: %v\n", err)
+
+			}
+
+			return err
+
+		}
+
+		// Log that we're running without a project
+		if serveTransport == "stdio" || serveTransport == "" {
+
+			fmt.Fprintf(os.Stderr, "Running MCP server without amux project (using current directory)\n")
+
+		}
 
 	}
 
@@ -77,13 +97,20 @@ func runMCP(cmd *cobra.Command, args []string) error {
 
 	configManager := config.NewManager(projectRoot)
 
-	// Load configuration
+	// Load configuration or use defaults
 
 	cfg, err := configManager.Load()
 
 	if err != nil {
 
-		return err
+		// If config doesn't exist, use defaults for MCP server
+		cfg = config.DefaultConfig()
+
+		if serveTransport == "stdio" || serveTransport == "" {
+
+			fmt.Fprintf(os.Stderr, "Using default configuration\n")
+
+		}
 
 	}
 
@@ -176,7 +203,15 @@ func runMCP(cmd *cobra.Command, args []string) error {
 
 		<-sigChan
 
-		ui.Info("Shutting down MCP server...")
+		if transport == "stdio" {
+
+			fmt.Fprintf(os.Stderr, "Shutting down MCP server...\n")
+
+		} else {
+
+			ui.Info("Shutting down MCP server...")
+
+		}
 
 		cancel()
 
@@ -184,13 +219,19 @@ func runMCP(cmd *cobra.Command, args []string) error {
 
 	// Start server
 
-	ui.Info("Starting MCP server with %s transport", transport)
-
 	if transport == "stdio" {
 
-		ui.Info("Ready for AI agent connections via stdio")
+		// For stdio transport, all UI output must go to stderr
+		// to avoid interfering with the MCP protocol on stdout
+		fmt.Fprintf(os.Stderr, "Starting MCP server with stdio transport\n")
 
-		ui.Info("Press Ctrl+C to stop")
+		fmt.Fprintf(os.Stderr, "Ready for AI agent connections via stdio\n")
+
+		fmt.Fprintf(os.Stderr, "Debug logs will appear here. Press Ctrl+C to stop\n")
+
+	} else {
+
+		ui.Info("Starting MCP server with %s transport", transport)
 
 	}
 
@@ -198,9 +239,24 @@ func runMCP(cmd *cobra.Command, args []string) error {
 
 		if err == context.Canceled {
 
-			ui.Success("MCP server stopped")
+			if transport == "stdio" {
+
+				fmt.Fprintf(os.Stderr, "MCP server stopped\n")
+
+			} else {
+
+				ui.Success("MCP server stopped")
+
+			}
 
 			return nil
+
+		}
+
+		// For stdio, log errors to stderr
+		if transport == "stdio" {
+
+			fmt.Fprintf(os.Stderr, "Server error: %v\n", err)
 
 		}
 
