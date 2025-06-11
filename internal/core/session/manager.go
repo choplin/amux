@@ -14,8 +14,8 @@ import (
 
 // sessionImpl implements the Session interface
 type sessionImpl struct {
-	info  *SessionInfo
-	store SessionStore
+	info  *Info
+	store Store
 	mu    sync.RWMutex
 }
 
@@ -31,13 +31,13 @@ func (s *sessionImpl) AgentID() string {
 	return s.info.AgentID
 }
 
-func (s *sessionImpl) Status() SessionStatus {
+func (s *sessionImpl) Status() Status {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.info.Status
 }
 
-func (s *sessionImpl) Info() *SessionInfo {
+func (s *sessionImpl) Info() *Info {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -124,9 +124,9 @@ func (s *sessionImpl) GetOutput() ([]byte, error) {
 	return nil, fmt.Errorf("get output not yet implemented")
 }
 
-// Manager implements SessionManager interface
+// Manager implements Manager interface
 type Manager struct {
-	store            SessionStore
+	store            Store
 	workspaceManager *workspace.Manager
 	tmuxAdapter      tmux.Adapter
 	sessions         map[string]Session
@@ -135,7 +135,7 @@ type Manager struct {
 }
 
 // NewManager creates a new session manager
-func NewManager(store SessionStore, workspaceManager *workspace.Manager, idMapper *common.IDMapper) *Manager {
+func NewManager(store Store, workspaceManager *workspace.Manager, idMapper *common.IDMapper) *Manager {
 	// Try to create tmux adapter, but don't fail if unavailable
 	tmuxAdapter, _ := tmux.NewAdapter()
 
@@ -156,7 +156,7 @@ func (m *Manager) SetTmuxAdapter(adapter tmux.Adapter) {
 }
 
 // CreateSession creates a new session
-func (m *Manager) CreateSession(opts SessionOptions) (Session, error) {
+func (m *Manager) CreateSession(opts Options) (Session, error) {
 	// Validate workspace exists
 	ws, err := m.workspaceManager.ResolveWorkspace(opts.WorkspaceID)
 	if err != nil {
@@ -169,7 +169,7 @@ func (m *Manager) CreateSession(opts SessionOptions) (Session, error) {
 	id := fmt.Sprintf("session-%s-%d", generateID(), time.Now().Unix())
 
 	// Create session info
-	info := &SessionInfo{
+	info := &Info{
 		ID:          id,
 		WorkspaceID: ws.ID,
 		AgentID:     opts.AgentID,
@@ -369,7 +369,7 @@ func generateID() string {
 }
 
 // createSessionFromInfo creates the appropriate session implementation from stored info
-func (m *Manager) createSessionFromInfo(info *SessionInfo) (Session, error) {
+func (m *Manager) createSessionFromInfo(info *Info) (Session, error) {
 	// If we have tmux and the session was using tmux, create tmux session
 	if m.tmuxAdapter != nil && m.tmuxAdapter.IsAvailable() && info.TmuxSession != "" {
 		// Get workspace for tmux session

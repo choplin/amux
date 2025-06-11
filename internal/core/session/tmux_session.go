@@ -13,15 +13,15 @@ import (
 
 // tmuxSessionImpl implements Session interface with tmux backend
 type tmuxSessionImpl struct {
-	info        *SessionInfo
-	store       SessionStore
+	info        *Info
+	store       Store
 	tmuxAdapter tmux.Adapter
 	workspace   *workspace.Workspace
 	mu          sync.RWMutex
 }
 
 // NewTmuxSession creates a new tmux-backed session
-func NewTmuxSession(info *SessionInfo, store SessionStore, tmuxAdapter tmux.Adapter, workspace *workspace.Workspace) Session {
+func NewTmuxSession(info *Info, store Store, tmuxAdapter tmux.Adapter, workspace *workspace.Workspace) Session {
 	return &tmuxSessionImpl{
 		info:        info,
 		store:       store,
@@ -42,13 +42,13 @@ func (s *tmuxSessionImpl) AgentID() string {
 	return s.info.AgentID
 }
 
-func (s *tmuxSessionImpl) Status() SessionStatus {
+func (s *tmuxSessionImpl) Status() Status {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.info.Status
 }
 
-func (s *tmuxSessionImpl) Info() *SessionInfo {
+func (s *tmuxSessionImpl) Info() *Info {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 

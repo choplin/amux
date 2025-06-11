@@ -31,7 +31,7 @@ func TestManager_CreateSession(t *testing.T) {
 	manager := NewManager(store, wsManager, nil)
 
 	// Test creating a session
-	opts := SessionOptions{
+	opts := Options{
 		WorkspaceID: ws.ID,
 		AgentID:     "claude",
 		Command:     "claude code",
@@ -88,7 +88,7 @@ func TestManager_GetSession(t *testing.T) {
 	manager := NewManager(store, wsManager, nil)
 
 	// Create a session
-	session, err := manager.CreateSession(SessionOptions{
+	session, err := manager.CreateSession(Options{
 		WorkspaceID: ws.ID,
 		AgentID:     "claude",
 	})
@@ -134,7 +134,7 @@ func TestManager_ListSessions(t *testing.T) {
 	// Create multiple sessions
 	var sessionIDs []string
 	for i := 0; i < 3; i++ {
-		session, err := manager.CreateSession(SessionOptions{
+		session, err := manager.CreateSession(Options{
 			WorkspaceID: ws.ID,
 			AgentID:     "claude",
 		})
@@ -186,7 +186,7 @@ func TestManager_RemoveSession(t *testing.T) {
 	manager := NewManager(store, wsManager, nil)
 
 	// Create a session
-	session, err := manager.CreateSession(SessionOptions{
+	session, err := manager.CreateSession(Options{
 		WorkspaceID: ws.ID,
 		AgentID:     "claude",
 	})
@@ -230,7 +230,7 @@ func TestFileStore_Operations(t *testing.T) {
 	}
 
 	// Test Save and Load
-	info := &SessionInfo{
+	info := &Info{
 		ID:          "test-session",
 		WorkspaceID: "test-workspace",
 		AgentID:     "claude",

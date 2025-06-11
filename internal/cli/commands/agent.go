@@ -187,7 +187,7 @@ func runAgent(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create session
-	opts := session.SessionOptions{
+	opts := session.Options{
 		WorkspaceID: ws.ID,
 		AgentID:     agentID,
 		Command:     command,

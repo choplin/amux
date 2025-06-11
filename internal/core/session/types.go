@@ -5,31 +5,31 @@ import (
 	"time"
 )
 
-// SessionStatus represents the current state of a session
-type SessionStatus string //nolint:revive // Established API
+// Status represents the current state of a session
+type Status string
 
 const (
-	StatusCreated SessionStatus = "created"
-	StatusRunning SessionStatus = "running"
-	StatusStopped SessionStatus = "stopped"
-	StatusFailed  SessionStatus = "failed"
+	StatusCreated Status = "created"
+	StatusRunning Status = "running"
+	StatusStopped Status = "stopped"
+	StatusFailed  Status = "failed"
 )
 
-// SessionOptions contains options for creating a new session
-type SessionOptions struct { //nolint:revive // Established API
+// Options contains options for creating a new session
+type Options struct {
 	WorkspaceID string            // Required: workspace to run in
 	AgentID     string            // Required: agent to run
 	Command     string            // Optional: override agent command
 	Environment map[string]string // Optional: additional env vars
 }
 
-// SessionInfo contains metadata about a session
-type SessionInfo struct { //nolint:revive // Established API
+// Info contains metadata about a session
+type Info struct {
 	ID          string            `yaml:"id"`
 	Index       string            `yaml:"-"` // Populated from ID mapper, not persisted
 	WorkspaceID string            `yaml:"workspace_id"`
 	AgentID     string            `yaml:"agent_id"`
-	Status      SessionStatus     `yaml:"status"`
+	Status      Status            `yaml:"status"`
 	Command     string            `yaml:"command"`
 	Environment map[string]string `yaml:"environment,omitempty"`
 	PID         int               `yaml:"pid,omitempty"`
@@ -52,10 +52,10 @@ type Session interface {
 	AgentID() string
 
 	// Status returns the current session status
-	Status() SessionStatus
+	Status() Status
 
 	// Info returns the full session information
-	Info() *SessionInfo
+	Info() *Info
 
 	// Start starts the session
 	Start(ctx context.Context) error
@@ -73,34 +73,16 @@ type Session interface {
 	GetOutput() ([]byte, error)
 }
 
-// SessionManager manages the lifecycle of agent sessions
-type SessionManager interface { //nolint:revive // Established API
-	// CreateSession creates a new session
-	CreateSession(opts SessionOptions) (Session, error)
-
-	// GetSession retrieves a session by ID
-	GetSession(id string) (Session, error)
-
-	// ListSessions lists all sessions
-	ListSessions() ([]Session, error)
-
-	// RemoveSession removes a stopped session
-	RemoveSession(id string) error
-
-	// CleanupOrphaned cleans up orphaned sessions
-	CleanupOrphaned() error
-}
-
-// SessionStore persists session metadata
-type SessionStore interface { //nolint:revive // Established API
+// Store persists session metadata
+type Store interface {
 	// Save saves session info
-	Save(info *SessionInfo) error
+	Save(info *Info) error
 
 	// Load loads session info by ID
-	Load(id string) (*SessionInfo, error)
+	Load(id string) (*Info, error)
 
 	// List lists all session infos
-	List() ([]*SessionInfo, error)
+	List() ([]*Info, error)
 
 	// Delete deletes session info
 	Delete(id string) error

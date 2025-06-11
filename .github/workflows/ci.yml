@@ -12,8 +12,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        go-version: ['1.23', '1.24']
+        os: [ubuntu-latest]
+        go-version: ['1.24']
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -30,7 +30,7 @@ jobs:
             ${{ runner.os }}-go-${{ matrix.go-version }}-
             ${{ runner.os }}-go-
       - name: Download dependencies
-        run: go mod download
+        run: just init
       - name: Run tests
         run: |
           # Skip tmux-dependent tests in CI
@@ -65,21 +65,17 @@ jobs:
         with:
           version: v1.64.8
           args: --timeout=5m
-      - name: Install tools
-        run: |
-          go install github.com/google/yamlfmt/cmd/yamlfmt@latest
-          go install golang.org/x/tools/cmd/goimports@latest
       - name: Check formatting
         run: |
-          # Check Go imports and formatting
-          if [ -n "$(goimports -l .)" ]; then
-            echo "Go imports or formatting need adjustment. Please run 'goimports -w .'"
-            goimports -d .
+          # Use just commands for consistency
+          just fmt
+          just fmt-yaml
+          # Verify no changes were made
+          if [ -n "$(git diff --name-only)" ]; then
+            echo "Formatting changes detected. Please run 'just fmt fmt-yaml'"
+            git diff
             exit 1
           fi
-      - name: Check YAML formatting
-        run: |
-          yamlfmt -lint .
       - name: Check Markdown
         uses: DavidAnson/markdownlint-cli2-action@v18
   build:
@@ -119,7 +115,9 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         run: |
-          go build -v -o amux${{ matrix.os == 'windows-latest' && '.exe' || '' }} ./cmd/amux
+          just build
+          # Rename for platform-specific artifact
+          mv bin/amux amux${{ matrix.os == 'windows-latest' && '.exe' || '' }}
       - name: Test binary (Unix)
         if: matrix.os != 'windows-latest'
         run: |

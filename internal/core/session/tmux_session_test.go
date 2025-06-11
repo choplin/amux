@@ -34,7 +34,7 @@ func TestTmuxSession_StartStop(t *testing.T) {
 	}
 
 	// Create session info
-	info := &SessionInfo{
+	info := &Info{
 		ID:          "test-tmux-session",
 		WorkspaceID: ws.ID,
 		AgentID:     "test-agent",
