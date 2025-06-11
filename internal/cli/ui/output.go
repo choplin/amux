@@ -8,26 +8,28 @@ import (
 	"github.com/aki/amux/internal/core/workspace"
 )
 
-// Print functions for consistent output
-
+// Error prints an error message with formatting
 func Error(format string, args ...interface{}) {
 
 	fmt.Fprintf(os.Stderr, "%s %s\n", ErrorIcon, ErrorStyle.Render(fmt.Sprintf(format, args...)))
 
 }
 
+// Success prints a success message with formatting
 func Success(format string, args ...interface{}) {
 
 	fmt.Printf("%s %s\n", SuccessIcon, SuccessStyle.Render(fmt.Sprintf(format, args...)))
 
 }
 
+// Info prints an informational message with formatting
 func Info(format string, args ...interface{}) {
 
 	fmt.Printf("%s %s\n", InfoIcon, InfoStyle.Render(fmt.Sprintf(format, args...)))
 
 }
 
+// Warning prints a warning message with formatting
 func Warning(format string, args ...interface{}) {
 
 	fmt.Printf("%s %s\n", WarningIcon, WarningStyle.Render(fmt.Sprintf(format, args...)))
@@ -35,7 +37,6 @@ func Warning(format string, args ...interface{}) {
 }
 
 // PrintWorkspace displays a single workspace with formatting
-
 func PrintWorkspace(w *workspace.Workspace) {
 
 	// Calculate age from last modified time
@@ -134,7 +135,6 @@ func PrintWorkspaceDetails(w *workspace.Workspace) {
 }
 
 // FormatTime formats a time for display
-
 func FormatTime(t time.Time) string {
 
 	if t.IsZero() {

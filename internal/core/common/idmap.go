@@ -1,3 +1,4 @@
+// Package common provides shared utilities for Amux core functionality.
 package common
 
 import (

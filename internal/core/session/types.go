@@ -9,10 +9,14 @@ import (
 type Status string
 
 const (
+	// StatusCreated indicates a session has been created but not started
 	StatusCreated Status = "created"
+	// StatusRunning indicates a session is currently running
 	StatusRunning Status = "running"
+	// StatusStopped indicates a session has been stopped normally
 	StatusStopped Status = "stopped"
-	StatusFailed  Status = "failed"
+	// StatusFailed indicates a session has failed or crashed
+	StatusFailed Status = "failed"
 )
 
 // Options contains options for creating a new session

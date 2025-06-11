@@ -1,3 +1,4 @@
+// Package index provides short index management for entity identification.
 package index
 
 import (

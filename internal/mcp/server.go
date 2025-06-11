@@ -27,7 +27,6 @@ import (
 )
 
 // ServerV2 implements the MCP server using mcp-go
-
 type ServerV2 struct {
 	mcpServer *server.MCPServer
 
@@ -41,7 +40,6 @@ type ServerV2 struct {
 }
 
 // NewServerV2 creates a new MCP server using mcp-go
-
 func NewServerV2(configManager *config.Manager, transport string, httpConfig *config.HTTPConfig) (*ServerV2, error) {
 
 	workspaceManager, err := workspace.NewManager(configManager)
@@ -491,7 +489,6 @@ func (s *ServerV2) handleWorkspaceInfo(ctx context.Context, request mcp.CallTool
 }
 
 // Start starts the MCP server
-
 func (s *ServerV2) Start(ctx context.Context) error {
 
 	switch s.transport {

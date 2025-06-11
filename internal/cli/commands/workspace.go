@@ -423,7 +423,7 @@ func getWorkspaceManager() (*workspace.Manager, error) {
 
 	if !configManager.IsInitialized() {
 
-		return nil, fmt.Errorf("Amux not initialized. Run 'amux init' first")
+		return nil, fmt.Errorf("amux not initialized. Run 'amux init' first")
 
 	}
 

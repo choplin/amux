@@ -1,3 +1,4 @@
+// Package workspace provides management of isolated git worktree-based development environments.
 package workspace
 
 import (

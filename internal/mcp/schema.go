@@ -1,3 +1,4 @@
+// Package mcp provides Model Context Protocol server implementation for Amux.
 package mcp
 
 import (
@@ -12,8 +13,8 @@ import (
 
 // StructToToolOptions converts a Go struct to mcp-go tool options using reflection
 
+// StructToToolOptions converts a struct with tags into MCP tool options.
 // The struct should use tags like `json:"name" mcp:"required" description:"Workspace name"`
-
 func StructToToolOptions(structType interface{}) ([]mcp.ToolOption, error) {
 
 	t := reflect.TypeOf(structType)
@@ -173,7 +174,6 @@ func StructToToolOptions(structType interface{}) ([]mcp.ToolOption, error) {
 }
 
 // WithStructOptions is a helper that combines a description with struct-based options
-
 func WithStructOptions(description string, structType interface{}) ([]mcp.ToolOption, error) {
 
 	structOpts, err := StructToToolOptions(structType)
@@ -191,7 +191,6 @@ func WithStructOptions(description string, structType interface{}) ([]mcp.ToolOp
 }
 
 // UnmarshalArgs unmarshals CallToolRequest arguments into a struct
-
 func UnmarshalArgs[T any](request mcp.CallToolRequest, target *T) error {
 
 	args := request.GetArguments()
@@ -216,8 +215,7 @@ func UnmarshalArgs[T any](request mcp.CallToolRequest, target *T) error {
 
 }
 
-// Example usage structures with proper tags
-
+// WorkspaceCreateParams defines parameters for creating a workspace
 type WorkspaceCreateParams struct {
 	Name string `json:"name" mcp:"required" description:"Workspace name"`
 
@@ -230,16 +228,17 @@ type WorkspaceCreateParams struct {
 	Description string `json:"description,omitempty" description:"Description (optional)"`
 }
 
+// WorkspaceListParams defines parameters for listing workspaces
 type WorkspaceListParams struct {
-
 	// No parameters needed for listing workspaces
-
 }
 
+// WorkspaceIDParams defines parameters for workspace operations requiring an ID
 type WorkspaceIDParams struct {
 	WorkspaceID string `json:"workspace_id" mcp:"required" description:"Workspace name or ID"`
 }
 
+// WorkspaceInfoParams defines parameters for getting workspace file information
 type WorkspaceInfoParams struct {
 	WorkspaceID string `json:"workspace_id" mcp:"required" description:"Workspace name or ID"`
 

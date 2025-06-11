@@ -1,3 +1,4 @@
+// Package templates provides workspace template files for AI agent context.
 package templates
 
 import (
@@ -77,7 +78,12 @@ func writeTemplate(path, templateContent string, data TemplateData) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		if cerr := file.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
 
-	return tmpl.Execute(file, data)
+	err = tmpl.Execute(file, data)
+	return err
 }

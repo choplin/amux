@@ -1,3 +1,4 @@
+// Package agent provides AI agent configuration and management.
 package agent
 
 import (

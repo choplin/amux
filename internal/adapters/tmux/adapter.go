@@ -1,3 +1,4 @@
+// Package tmux provides a tmux adapter for terminal multiplexing.
 package tmux
 
 import (

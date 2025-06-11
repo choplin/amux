@@ -21,8 +21,10 @@ func (i Index) IsValid() bool {
 type EntityType string
 
 const (
+	// EntityTypeWorkspace represents a workspace entity
 	EntityTypeWorkspace EntityType = "workspace"
-	EntityTypeSession   EntityType = "session"
+	// EntityTypeSession represents a session entity
+	EntityTypeSession EntityType = "session"
 )
 
 // State represents the internal state of the index manager

@@ -1,3 +1,4 @@
+// Package git provides git repository operations for Amux.
 package git
 
 import (
