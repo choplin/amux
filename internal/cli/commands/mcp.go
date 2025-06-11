@@ -100,14 +100,13 @@ func runMCP(cmd *cobra.Command, args []string) error {
 
 	configManager := config.NewManager(projectRoot)
 
-	// Load configuration or use defaults
+	// Load configuration
 
 	cfg, err := configManager.Load()
 
 	if err != nil {
 
-		// If config doesn't exist, use defaults for MCP server
-		cfg = config.DefaultConfig()
+		return fmt.Errorf("failed to load configuration: %w", err)
 
 	}
 
