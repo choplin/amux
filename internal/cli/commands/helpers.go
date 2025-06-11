@@ -5,6 +5,7 @@ import (
 
 	"github.com/aki/amux/internal/core/common"
 	"github.com/aki/amux/internal/core/config"
+	"github.com/aki/amux/internal/core/mailbox"
 	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/workspace"
 )
@@ -16,5 +17,8 @@ func createSessionManager(configManager *config.Manager, wsManager *workspace.Ma
 		return nil, fmt.Errorf("failed to create session store: %w", err)
 	}
 
-	return session.NewManager(store, wsManager, idMapper), nil
+	// Create mailbox manager
+	mailboxManager := mailbox.NewManager(configManager.GetAmuxDir())
+
+	return session.NewManager(store, wsManager, mailboxManager, idMapper), nil
 }

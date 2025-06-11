@@ -60,6 +60,9 @@ func init() {
 	rootCmd.AddCommand(psCmd)
 	rootCmd.AddCommand(attachCmd)
 
+	// Add mailbox command
+	rootCmd.AddCommand(mailboxCmd)
+
 }
 
 // Execute runs the root command

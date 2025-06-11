@@ -1,6 +1,17 @@
 # Architecture Decision Records
 
-This directory contains Architecture Decision Records (ADRs) for the AgentCave project.
+This directory contains Architecture Decision Records (ADRs) for the Amux project.
+
+## Index
+
+1. [Record Architecture Decisions](001-record-architecture-decisions.md)
+2. [Cave Terminology](002-cave-terminology.md)
+3. [Agent Multiplexing Architecture](003-agent-multiplexing-architecture.md)
+4. [Rename to Amux](004-rename-to-amux.md)
+5. [Command Structure](005-command-structure.md)
+6. [Context Management Strategy](006-context-management-strategy.md)
+7. [Table Library Selection](007-table-library-selection.md)
+8. [Session Mailbox System](008-session-mailbox-system.md)
 
 ## What is an ADR?
 

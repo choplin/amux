@@ -59,6 +59,12 @@ These files ensure AI agents maintain context, make informed decisions, and prod
   - CLI commands for agent lifecycle
   - Working context management
   - Full test coverage with mock adapter
+- ✅ **Session Mailbox System** (Issue #4) - Agent communication
+  - File-based mailbox for asynchronous messaging
+  - `amux tell` command for sending messages
+  - `amux peek` command for viewing mailbox
+  - Automatic mailbox initialization on session creation
+  - Full test coverage
 
 ## Current Implementation (Go)
 
@@ -81,6 +87,7 @@ amux/
 │   ├── core/             # Core business logic
 │   │   ├── config/       # Configuration management
 │   │   ├── git/          # Git operations
+│   │   ├── mailbox/      # Agent communication
 │   │   └── workspace/    # Workspace management
 │   ├── mcp/              # MCP server implementation
 │   └── templates/        # Workspace templates
@@ -96,8 +103,13 @@ amux/
 - `amux ws remove <id>` - Remove workspace (alias: `rm`)
 - `amux ws prune` - Clean old workspaces
 - `amux mcp` - Start MCP server
-- `amux agent <cmd>` - Agent management (future)
-- `amux run/ps/attach` - Agent shortcuts (future)
+- `amux agent <cmd>` - Agent management
+- `amux run/ps/attach` - Agent shortcuts
+- `amux mailbox <cmd>` - Mailbox commands (alias: `mb`)
+  - `amux mailbox list <session>` - List mailbox files with indices
+  - `amux mailbox send <session> <msg>` - Send message to agent (stdin supported)
+  - `amux mailbox recv <session>` - Get latest message from agent
+  - `amux mailbox show <session> [index|latest]` - Show specific messages
 
 ### MCP Tools
 
