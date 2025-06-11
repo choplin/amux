@@ -9,6 +9,8 @@ import (
 
 	"os/signal"
 
+	"path/filepath"
+
 	"syscall"
 
 	"github.com/spf13/cobra"
@@ -16,6 +18,8 @@ import (
 	"github.com/aki/amux/internal/cli/ui"
 
 	"github.com/aki/amux/internal/core/config"
+
+	"github.com/aki/amux/internal/core/git"
 
 	"github.com/aki/amux/internal/mcp"
 )
@@ -43,9 +47,13 @@ var (
 	serveAuthUser string
 
 	serveAuthPass string
+
+	rootDir string
 )
 
 func init() {
+
+	mcpCmd.Flags().StringVar(&rootDir, "root-dir", "", "Project root directory (required if not in amux project)")
 
 	mcpCmd.Flags().StringVarP(&serveTransport, "transport", "t", "", "Transport type (stdio, http, https)")
 
@@ -63,14 +71,29 @@ func init() {
 
 func runMCP(cmd *cobra.Command, args []string) error {
 
-	// Find project root
+	// Determine project root
+	var projectRoot string
+	var err error
 
-	projectRoot, err := config.FindProjectRoot()
+	if rootDir != "" {
+		// Use explicitly provided root directory
+		absPath, err := filepath.Abs(rootDir)
+		if err != nil {
+			return fmt.Errorf("invalid root directory: %w", err)
+		}
+		projectRoot = absPath
 
-	if err != nil {
-
-		return err
-
+		// Validate it's a git repository
+		gitOps := git.NewOperations(projectRoot)
+		if !gitOps.IsGitRepository() {
+			return fmt.Errorf("--root-dir must be a git repository: %s", projectRoot)
+		}
+	} else {
+		// Try to find project root from current directory
+		projectRoot, err = config.FindProjectRoot()
+		if err != nil {
+			return fmt.Errorf("not in an amux project and --root-dir not specified")
+		}
 	}
 
 	// Create configuration manager
@@ -83,7 +106,7 @@ func runMCP(cmd *cobra.Command, args []string) error {
 
 	if err != nil {
 
-		return err
+		return fmt.Errorf("failed to load configuration: %w", err)
 
 	}
 
@@ -176,7 +199,15 @@ func runMCP(cmd *cobra.Command, args []string) error {
 
 		<-sigChan
 
-		ui.Info("Shutting down MCP server...")
+		if transport == "stdio" {
+
+			fmt.Fprintf(os.Stderr, "Shutting down MCP server...\n")
+
+		} else {
+
+			ui.Info("Shutting down MCP server...")
+
+		}
 
 		cancel()
 
@@ -184,13 +215,19 @@ func runMCP(cmd *cobra.Command, args []string) error {
 
 	// Start server
 
-	ui.Info("Starting MCP server with %s transport", transport)
-
 	if transport == "stdio" {
 
-		ui.Info("Ready for AI agent connections via stdio")
+		// For stdio transport, all UI output must go to stderr
+		// to avoid interfering with the MCP protocol on stdout
+		fmt.Fprintf(os.Stderr, "Starting MCP server with stdio transport\n")
 
-		ui.Info("Press Ctrl+C to stop")
+		fmt.Fprintf(os.Stderr, "Ready for AI agent connections via stdio\n")
+
+		fmt.Fprintf(os.Stderr, "Debug logs will appear here. Press Ctrl+C to stop\n")
+
+	} else {
+
+		ui.Info("Starting MCP server with %s transport", transport)
 
 	}
 
@@ -198,9 +235,24 @@ func runMCP(cmd *cobra.Command, args []string) error {
 
 		if err == context.Canceled {
 
-			ui.Success("MCP server stopped")
+			if transport == "stdio" {
+
+				fmt.Fprintf(os.Stderr, "MCP server stopped\n")
+
+			} else {
+
+				ui.Success("MCP server stopped")
+
+			}
 
 			return nil
+
+		}
+
+		// For stdio, log errors to stderr
+		if transport == "stdio" {
+
+			fmt.Fprintf(os.Stderr, "Server error: %v\n", err)
 
 		}
 
