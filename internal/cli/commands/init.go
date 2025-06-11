@@ -97,7 +97,7 @@ func addToGitignore(projectRoot string) error {
 	}
 
 	// Append .amux entries
-	entries := "\n# Amux\n.amux/\n.worktrees/\n"
+	entries := "\n# Amux\n.amux/\n"
 
 	file, err := os.OpenFile(gitignorePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
