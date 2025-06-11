@@ -150,18 +150,17 @@ project-root/
 │   ├── config.yaml            # Project configuration
 │   ├── sessions/              # Session metadata
 │   │   └── session-*.yaml     # Individual session files
-│   └── workspaces/            # Workspace metadata
-│       └── workspace-*.yaml   # Individual workspace files
-├── .worktrees/                # Git worktrees
-│   └── workspace-{id}/        # Isolated workspace
-│       ├── .amux/
-│       │   ├── workspace.yaml # Workspace metadata
-│       │   └── context/       # Working context
-│       │       ├── background.md
-│       │       ├── plan.md
-│       │       ├── working-log.md
-│       │       └── results-summary.md
-│       └── [project files]    # Actual code
+│   └── workspaces/            # Workspace storage
+│       ├── workspace-*.yaml   # Workspace metadata files
+│       └── workspace-{id}/    # Git worktrees (isolated workspaces)
+│           ├── .amux/
+│           │   ├── workspace.yaml # Workspace metadata
+│           │   └── context/       # Working context
+│           │       ├── background.md
+│           │       ├── plan.md
+│           │       ├── working-log.md
+│           │       └── results-summary.md
+│           └── [project files]    # Actual code
 └── [main project files]       # Original repository
 
 ```

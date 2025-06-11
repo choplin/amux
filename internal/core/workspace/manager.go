@@ -66,11 +66,10 @@ func (m *Manager) Create(opts CreateOptions) (*Workspace, error) {
 	}
 
 	// Create workspace directory path
-	workspacePath := filepath.Join(m.configManager.GetProjectRoot(), ".worktrees", id)
+	workspacePath := filepath.Join(m.workspacesDir, id)
 
-	// Ensure the .worktrees directory exists
-	worktreesDir := filepath.Dir(workspacePath)
-	if err := os.MkdirAll(worktreesDir, 0755); err != nil {
+	// Ensure the workspaces directory exists
+	if err := os.MkdirAll(m.workspacesDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create worktrees directory: %w", err)
 	}
 
