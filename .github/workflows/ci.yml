@@ -71,16 +71,9 @@ jobs:
           go install golang.org/x/tools/cmd/goimports@latest
       - name: Check formatting
         run: |
-          # Check Go formatting
-          if [ -n "$(gofmt -l .)" ]; then
-            echo "Go files are not formatted. Please run 'gofmt -w .'"
-            gofmt -d .
-            exit 1
-          fi
-
-          # Check Go imports
+          # Check Go imports and formatting
           if [ -n "$(goimports -l .)" ]; then
-            echo "Go imports are not organized. Please run 'goimports -w .'"
+            echo "Go imports or formatting need adjustment. Please run 'goimports -w .'"
             goimports -d .
             exit 1
           fi
