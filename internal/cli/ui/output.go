@@ -46,13 +46,18 @@ func PrintWorkspace(w *workspace.Workspace) {
 
 	ageStr := formatDuration(age)
 
+	id := w.ID
+	if w.Index != "" {
+		id = w.Index
+	}
+
 	fmt.Printf("%s %s %s %s\n",
 
 		"📁",
 
 		BoldStyle.Render(w.Name),
 
-		DimStyle.Render(fmt.Sprintf("(%s)", w.ID)),
+		DimStyle.Render(fmt.Sprintf("(%s)", id)),
 
 		DimStyle.Render(fmt.Sprintf("updated %s ago", ageStr)),
 	)

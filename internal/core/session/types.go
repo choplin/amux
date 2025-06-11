@@ -26,6 +26,7 @@ type SessionOptions struct {
 // SessionInfo contains metadata about a session
 type SessionInfo struct {
 	ID          string            `yaml:"id"`
+	Index       string            `yaml:"-"` // Populated from ID mapper, not persisted
 	WorkspaceID string            `yaml:"workspace_id"`
 	AgentID     string            `yaml:"agent_id"`
 	Status      SessionStatus     `yaml:"status"`

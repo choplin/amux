@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/aki/amux/internal/adapters/tmux"
+	"github.com/aki/amux/internal/core/common"
 	contextmgr "github.com/aki/amux/internal/core/context"
 	"github.com/aki/amux/internal/core/workspace"
 )
@@ -129,17 +130,19 @@ type Manager struct {
 	workspaceManager *workspace.Manager
 	tmuxAdapter      tmux.Adapter
 	sessions         map[string]Session
+	idMapper         *common.IDMapper
 	mu               sync.RWMutex
 }
 
 // NewManager creates a new session manager
-func NewManager(store SessionStore, workspaceManager *workspace.Manager) *Manager {
+func NewManager(store SessionStore, workspaceManager *workspace.Manager, idMapper *common.IDMapper) *Manager {
 	// Try to create tmux adapter, but don't fail if unavailable
 	tmuxAdapter, _ := tmux.NewAdapter()
 
 	return &Manager{
 		store:            store,
 		workspaceManager: workspaceManager,
+		idMapper:         idMapper,
 		tmuxAdapter:      tmuxAdapter,
 		sessions:         make(map[string]Session),
 	}
@@ -192,6 +195,17 @@ func (m *Manager) CreateSession(opts SessionOptions) (Session, error) {
 		return nil, fmt.Errorf("failed to save session: %w", err)
 	}
 
+	// Generate and assign index
+	if m.idMapper != nil {
+		index, err := m.idMapper.AddSession(info.ID)
+		if err != nil {
+			// Don't fail if index generation fails
+			info.Index = ""
+		} else {
+			info.Index = index
+		}
+	}
+
 	// Create session implementation
 	var session Session
 	if m.tmuxAdapter != nil && m.tmuxAdapter.IsAvailable() {
@@ -213,20 +227,35 @@ func (m *Manager) CreateSession(opts SessionOptions) (Session, error) {
 	return session, nil
 }
 
-// GetSession retrieves a session by ID
+// GetSession retrieves a session by ID (supports both short and full IDs)
 func (m *Manager) GetSession(id string) (Session, error) {
+	// Check if this is a short ID
+	fullID := id
+	if m.idMapper != nil {
+		if fullIDFromShort, exists := m.idMapper.GetSessionFull(id); exists {
+			fullID = fullIDFromShort
+		}
+	}
+
 	// Check memory cache first
 	m.mu.RLock()
-	if session, ok := m.sessions[id]; ok {
+	if session, ok := m.sessions[fullID]; ok {
 		m.mu.RUnlock()
 		return session, nil
 	}
 	m.mu.RUnlock()
 
 	// Load from store
-	info, err := m.store.Load(id)
+	info, err := m.store.Load(fullID)
 	if err != nil {
 		return nil, err
+	}
+
+	// Populate short ID
+	if m.idMapper != nil {
+		if index, exists := m.idMapper.GetSessionIndex(info.ID); exists {
+			info.Index = index
+		}
 	}
 
 	// Create session implementation
@@ -237,7 +266,7 @@ func (m *Manager) GetSession(id string) (Session, error) {
 
 	// Cache in memory
 	m.mu.Lock()
-	m.sessions[id] = session
+	m.sessions[info.ID] = session
 	m.mu.Unlock()
 
 	return session, nil
@@ -252,6 +281,17 @@ func (m *Manager) ListSessions() ([]Session, error) {
 
 	sessions := make([]Session, 0, len(infos))
 	for _, info := range infos {
+		// Populate short ID
+		if m.idMapper != nil {
+			if index, exists := m.idMapper.GetSessionIndex(info.ID); exists {
+				info.Index = index
+			} else {
+				// Generate index if it doesn't exist
+				index, _ := m.idMapper.AddSession(info.ID)
+				info.Index = index
+			}
+		}
+
 		// Check if already in cache
 		m.mu.RLock()
 		if session, ok := m.sessions[info.ID]; ok {
@@ -291,14 +331,23 @@ func (m *Manager) RemoveSession(id string) error {
 		return fmt.Errorf("cannot remove running session")
 	}
 
+	fullID := session.ID()
+
 	// Remove from store
-	if err := m.store.Delete(id); err != nil {
+	if err := m.store.Delete(fullID); err != nil {
 		return err
+	}
+
+	// Remove short ID mapping
+	if m.idMapper != nil {
+		if err := m.idMapper.RemoveSession(fullID); err != nil {
+			// Don't fail if mapping removal fails
+		}
 	}
 
 	// Remove from cache
 	m.mu.Lock()
-	delete(m.sessions, id)
+	delete(m.sessions, fullID)
 	m.mu.Unlock()
 
 	return nil

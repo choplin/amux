@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
 
+	"github.com/aki/amux/internal/core/common"
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/git"
 	"github.com/aki/amux/internal/templates"
@@ -21,6 +22,7 @@ type Manager struct {
 	configManager *config.Manager
 	gitOps        *git.Operations
 	workspacesDir string
+	idMapper      *common.IDMapper
 }
 
 // NewManager creates a new workspace manager
@@ -33,10 +35,17 @@ func NewManager(configManager *config.Manager) (*Manager, error) {
 
 	workspacesDir := configManager.GetWorkspacesDir()
 
+	// Initialize ID mapper
+	idMapper, err := common.NewIDMapper(configManager.GetAmuxDir())
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize ID mapper: %w", err)
+	}
+
 	return &Manager{
 		configManager: configManager,
 		gitOps:        gitOps,
 		workspacesDir: workspacesDir,
+		idMapper:      idMapper,
 	}, nil
 }
 
@@ -102,6 +111,16 @@ func (m *Manager) Create(opts CreateOptions) (*Workspace, error) {
 		return nil, fmt.Errorf("failed to save workspace metadata: %w", err)
 	}
 
+	// Generate and assign index
+	index, err := m.idMapper.AddWorkspace(workspace.ID)
+	if err != nil {
+		// Don't fail if index generation fails, just log it
+		// The workspace is already created successfully
+		workspace.Index = ""
+	} else {
+		workspace.Index = index
+	}
+
 	// Write template files
 	templateData := templates.TemplateData{
 		ProjectName: m.configManager.GetProjectRoot(),
@@ -124,7 +143,13 @@ func (m *Manager) Create(opts CreateOptions) (*Workspace, error) {
 
 // Get retrieves a workspace by ID
 func (m *Manager) Get(id string) (*Workspace, error) {
-	workspacePath := filepath.Join(m.workspacesDir, id+".yaml")
+	// Check if this is an index
+	fullID := id
+	if fullIDFromShort, exists := m.idMapper.GetWorkspaceFull(id); exists {
+		fullID = fullIDFromShort
+	}
+
+	workspacePath := filepath.Join(m.workspacesDir, fullID+".yaml")
 
 	data, err := os.ReadFile(workspacePath)
 	if err != nil {
@@ -141,6 +166,11 @@ func (m *Manager) Get(id string) (*Workspace, error) {
 
 	// Get last modified time from filesystem
 	workspace.UpdatedAt = m.getLastModified(workspace.Path)
+
+	// Populate index
+	if index, exists := m.idMapper.GetWorkspaceIndex(workspace.ID); exists {
+		workspace.Index = index
+	}
 
 	return &workspace, nil
 }
@@ -175,6 +205,15 @@ func (m *Manager) List(opts ListOptions) ([]*Workspace, error) {
 
 		// Get last modified time from filesystem
 		workspace.UpdatedAt = m.getLastModified(workspace.Path)
+
+		// Populate index
+		if index, exists := m.idMapper.GetWorkspaceIndex(workspace.ID); exists {
+			workspace.Index = index
+		} else {
+			// Generate index if it doesn't exist
+			index, _ := m.idMapper.AddWorkspace(workspace.ID)
+			workspace.Index = index
+		}
 
 		workspaces = append(workspaces, &workspace)
 	}
@@ -223,9 +262,9 @@ func (m *Manager) getLastModified(workspacePath string) time.Time {
 	return lastMod
 }
 
-// ResolveWorkspace finds a workspace by ID or name
+// ResolveWorkspace finds a workspace by index, full ID, or name
 func (m *Manager) ResolveWorkspace(identifier string) (*Workspace, error) {
-	// First, try to get by ID
+	// First, try to get by ID (supports both index and full IDs)
 	ws, err := m.Get(identifier)
 	if err == nil {
 		return ws, nil
@@ -278,10 +317,16 @@ func (m *Manager) Remove(id string) error {
 		}
 	}
 
-	// Remove workspace metadata
-	workspacePath := filepath.Join(m.workspacesDir, id+".yaml")
+	// Remove workspace metadata (use full ID for filename)
+	workspacePath := filepath.Join(m.workspacesDir, workspace.ID+".yaml")
 	if err := os.Remove(workspacePath); err != nil {
 		return fmt.Errorf("failed to remove workspace metadata: %w", err)
+	}
+
+	// Remove index mapping
+	if err := m.idMapper.RemoveWorkspace(workspace.ID); err != nil {
+		// Don't fail if mapping removal fails
+		// Just continue with the rest of the cleanup
 	}
 
 	// Clean up workspace directory if it exists
