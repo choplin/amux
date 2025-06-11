@@ -27,8 +27,8 @@ func TestManager_CreateSession(t *testing.T) {
 		t.Fatalf("Failed to create session store: %v", err)
 	}
 
-	// Create session manager
-	manager := NewManager(store, wsManager)
+	// Create session manager (nil ID mapper for tests)
+	manager := NewManager(store, wsManager, nil)
 
 	// Test creating a session
 	opts := SessionOptions{
@@ -85,7 +85,7 @@ func TestManager_GetSession(t *testing.T) {
 		t.Fatalf("Failed to create store: %v", err)
 	}
 
-	manager := NewManager(store, wsManager)
+	manager := NewManager(store, wsManager, nil)
 
 	// Create a session
 	session, err := manager.CreateSession(SessionOptions{
@@ -129,7 +129,7 @@ func TestManager_ListSessions(t *testing.T) {
 		t.Fatalf("Failed to create store: %v", err)
 	}
 
-	manager := NewManager(store, wsManager)
+	manager := NewManager(store, wsManager, nil)
 
 	// Create multiple sessions
 	var sessionIDs []string
@@ -183,7 +183,7 @@ func TestManager_RemoveSession(t *testing.T) {
 		t.Fatalf("Failed to create store: %v", err)
 	}
 
-	manager := NewManager(store, wsManager)
+	manager := NewManager(store, wsManager, nil)
 
 	// Create a session
 	session, err := manager.CreateSession(SessionOptions{

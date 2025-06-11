@@ -12,6 +12,7 @@ import (
 
 	"github.com/aki/amux/internal/cli/ui"
 	"github.com/aki/amux/internal/core/agent"
+	"github.com/aki/amux/internal/core/common"
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/workspace"
@@ -173,13 +174,17 @@ func runAgent(cmd *cobra.Command, args []string) error {
 		env[parts[0]] = parts[1]
 	}
 
-	// Create session store and manager
-	store, err := session.NewFileStore(configManager.GetAmuxDir())
+	// Get ID mapper (workspace manager already has it internally)
+	idMapper, err := common.NewIDMapper(configManager.GetAmuxDir())
 	if err != nil {
-		return fmt.Errorf("failed to create session store: %w", err)
+		return fmt.Errorf("failed to create ID mapper: %w", err)
 	}
 
-	sessionManager := session.NewManager(store, wsManager)
+	// Create session manager
+	sessionManager, err := createSessionManager(configManager, wsManager, idMapper)
+	if err != nil {
+		return err
+	}
 
 	// Create session
 	opts := session.SessionOptions{
@@ -194,7 +199,11 @@ func runAgent(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create session: %w", err)
 	}
 
-	ui.Info("Created session %s for agent '%s' in workspace '%s'", sess.ID(), agentID, ws.Name)
+	sessionID := sess.ID()
+	if info := sess.Info(); info.ShortID != "" {
+		sessionID = info.ShortID
+	}
+	ui.Info("Created session %s for agent '%s' in workspace '%s'", sessionID, agentID, ws.Name)
 
 	// Start session
 	ctx := context.Background()
@@ -209,7 +218,11 @@ func runAgent(cmd *cobra.Command, args []string) error {
 	if info.TmuxSession != "" {
 		ui.Info("To attach to this session, run:")
 		ui.Info("  tmux attach-session -t %s", info.TmuxSession)
-		ui.Info("  or: amux attach %s", sess.ID())
+		attachID := sess.ID()
+		if info.ShortID != "" {
+			attachID = info.ShortID
+		}
+		ui.Info("  or: amux attach %s", attachID)
 	}
 
 	return nil
@@ -229,12 +242,17 @@ func listAgents(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create workspace manager: %w", err)
 	}
 
-	store, err := session.NewFileStore(configManager.GetAmuxDir())
+	// Get ID mapper (workspace manager already has it internally)
+	idMapper, err := common.NewIDMapper(configManager.GetAmuxDir())
 	if err != nil {
-		return fmt.Errorf("failed to create session store: %w", err)
+		return fmt.Errorf("failed to create ID mapper: %w", err)
 	}
 
-	sessionManager := session.NewManager(store, wsManager)
+	// Create session manager
+	sessionManager, err := createSessionManager(configManager, wsManager, idMapper)
+	if err != nil {
+		return err
+	}
 
 	// List sessions
 	sessions, err := sessionManager.ListSessions()
@@ -283,8 +301,13 @@ func listAgents(cmd *cobra.Command, args []string) error {
 			statusStr = ui.ErrorStyle.Render(statusStr)
 		}
 
+		displayID := info.ID
+		if info.ShortID != "" {
+			displayID = info.ShortID
+		}
+
 		fmt.Printf("%-20s %-10s %-20s %-10s %-15s\n",
-			info.ID,
+			displayID,
 			info.AgentID,
 			wsName,
 			statusStr,
@@ -311,12 +334,17 @@ func attachAgent(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create workspace manager: %w", err)
 	}
 
-	store, err := session.NewFileStore(configManager.GetAmuxDir())
+	// Get ID mapper (workspace manager already has it internally)
+	idMapper, err := common.NewIDMapper(configManager.GetAmuxDir())
 	if err != nil {
-		return fmt.Errorf("failed to create session store: %w", err)
+		return fmt.Errorf("failed to create ID mapper: %w", err)
 	}
 
-	sessionManager := session.NewManager(store, wsManager)
+	// Create session manager
+	sessionManager, err := createSessionManager(configManager, wsManager, idMapper)
+	if err != nil {
+		return err
+	}
 
 	// Get session
 	sess, err := sessionManager.GetSession(sessionID)
@@ -361,12 +389,17 @@ func stopAgent(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create workspace manager: %w", err)
 	}
 
-	store, err := session.NewFileStore(configManager.GetAmuxDir())
+	// Get ID mapper (workspace manager already has it internally)
+	idMapper, err := common.NewIDMapper(configManager.GetAmuxDir())
 	if err != nil {
-		return fmt.Errorf("failed to create session store: %w", err)
+		return fmt.Errorf("failed to create ID mapper: %w", err)
 	}
 
-	sessionManager := session.NewManager(store, wsManager)
+	// Create session manager
+	sessionManager, err := createSessionManager(configManager, wsManager, idMapper)
+	if err != nil {
+		return err
+	}
 
 	// Get session
 	sess, err := sessionManager.GetSession(sessionID)
@@ -399,12 +432,17 @@ func viewAgentLogs(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create workspace manager: %w", err)
 	}
 
-	store, err := session.NewFileStore(configManager.GetAmuxDir())
+	// Get ID mapper (workspace manager already has it internally)
+	idMapper, err := common.NewIDMapper(configManager.GetAmuxDir())
 	if err != nil {
-		return fmt.Errorf("failed to create session store: %w", err)
+		return fmt.Errorf("failed to create ID mapper: %w", err)
 	}
 
-	sessionManager := session.NewManager(store, wsManager)
+	// Create session manager
+	sessionManager, err := createSessionManager(configManager, wsManager, idMapper)
+	if err != nil {
+		return err
+	}
 
 	// Get session
 	sess, err := sessionManager.GetSession(sessionID)
