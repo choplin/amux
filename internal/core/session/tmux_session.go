@@ -234,5 +234,4 @@ func (s *tmuxSessionImpl) getDefaultCommand() string {
 		// No default command for unknown agents
 		return ""
 	}
-
 }

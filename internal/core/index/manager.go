@@ -41,7 +41,7 @@ func NewManager(amuxDir string) (Manager, error) {
 	lockFile := stateFile + ".lock"
 
 	// Ensure directory exists
-	if err := os.MkdirAll(indexDir, 0755); err != nil {
+	if err := os.MkdirAll(indexDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create index directory: %w", err)
 	}
 
@@ -78,7 +78,7 @@ func (m *fileManager) saveState(state *State) error {
 		return err
 	}
 
-	return os.WriteFile(m.stateFile, data, 0644)
+	return os.WriteFile(m.stateFile, data, 0o644)
 }
 
 // Acquire gets the next available index

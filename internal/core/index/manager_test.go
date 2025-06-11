@@ -198,5 +198,4 @@ func TestManager_MultipleEntityTypes(t *testing.T) {
 	if sessID != "sess1" {
 		t.Errorf("Expected sess1, got %s", sessID)
 	}
-
 }

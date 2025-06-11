@@ -401,5 +401,4 @@ func (m *Manager) createSessionFromInfo(info *Info) (Session, error) {
 		info:  info,
 		store: m.store,
 	}, nil
-
 }

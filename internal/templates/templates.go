@@ -38,7 +38,7 @@ type TemplateData struct {
 // WriteContextFiles writes the working context files to a workspace
 func WriteContextFiles(workspacePath string, data TemplateData) error {
 	contextDir := filepath.Join(workspacePath, ".amux", "context")
-	if err := os.MkdirAll(contextDir, 0755); err != nil {
+	if err := os.MkdirAll(contextDir, 0o755); err != nil {
 		return err
 	}
 
@@ -61,7 +61,7 @@ func WriteContextFiles(workspacePath string, data TemplateData) error {
 // WriteInstructions writes the instructions.md file to a workspace
 func WriteInstructions(workspacePath string, data TemplateData) error {
 	amuxDir := filepath.Join(workspacePath, ".amux")
-	if err := os.MkdirAll(amuxDir, 0755); err != nil {
+	if err := os.MkdirAll(amuxDir, 0o755); err != nil {
 		return err
 	}
 

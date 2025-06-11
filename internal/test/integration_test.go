@@ -323,5 +323,4 @@ func TestIntegration_MultipleAgents(t *testing.T) {
 			t.Errorf("Session %s should be stopped, got %s", sess.ID(), sess.Status())
 		}
 	}
-
 }

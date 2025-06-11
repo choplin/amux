@@ -130,5 +130,4 @@ func (m *Manager) GetEnvironment(agentID string) (map[string]string, error) {
 	}
 
 	return agent.Environment, nil
-
 }

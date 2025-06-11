@@ -66,7 +66,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 
 	// Create workspaces directory
 	workspacesDir := configManager.GetWorkspacesDir()
-	if err := os.MkdirAll(workspacesDir, 0755); err != nil {
+	if err := os.MkdirAll(workspacesDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create workspaces directory: %w", err)
 	}
 
@@ -99,7 +99,7 @@ func addToGitignore(projectRoot string) error {
 	// Append .amux entries
 	entries := "\n# Amux\n.amux/\n"
 
-	file, err := os.OpenFile(gitignorePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(gitignorePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		return err
 	}

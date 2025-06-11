@@ -19,7 +19,7 @@ type FileStore struct {
 func NewFileStore(basePath string) (*FileStore, error) {
 	// Ensure sessions directory exists
 	sessionsDir := filepath.Join(basePath, "sessions")
-	if err := os.MkdirAll(sessionsDir, 0755); err != nil {
+	if err := os.MkdirAll(sessionsDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create sessions directory: %w", err)
 	}
 
@@ -39,7 +39,7 @@ func (s *FileStore) Save(info *Info) error {
 	}
 
 	path := s.sessionPath(info.ID)
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := os.WriteFile(path, data, 0o644); err != nil {
 		return fmt.Errorf("failed to write session file: %w", err)
 	}
 
@@ -129,5 +129,4 @@ func (s *FileStore) Delete(id string) error {
 // sessionPath returns the file path for a session
 func (s *FileStore) sessionPath(id string) string {
 	return filepath.Join(s.basePath, fmt.Sprintf("session-%s.yaml", id))
-
 }

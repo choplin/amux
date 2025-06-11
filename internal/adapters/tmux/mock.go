@@ -244,5 +244,4 @@ func (m *MockAdapter) GetSessionEnvironment(sessionName string) map[string]strin
 		return env
 	}
 	return nil
-
 }

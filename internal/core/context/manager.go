@@ -40,7 +40,7 @@ func NewManager(workspacePath string) *Manager {
 // Initialize creates the context directory and template files
 func (m *Manager) Initialize() error {
 	// Create context directory
-	if err := os.MkdirAll(m.contextPath, 0755); err != nil {
+	if err := os.MkdirAll(m.contextPath, 0o755); err != nil {
 		return fmt.Errorf("failed to create context directory: %w", err)
 	}
 
@@ -85,7 +85,7 @@ func (m *Manager) initializeBackground() error {
 <!-- How we'll know when the task is complete -->
 `
 
-	return os.WriteFile(filePath, []byte(content), 0644)
+	return os.WriteFile(filePath, []byte(content), 0o644)
 }
 
 // initializePlan creates the plan.md template
@@ -116,7 +116,7 @@ func (m *Manager) initializePlan() error {
 <!-- Potential issues and how to handle them -->
 `
 
-	return os.WriteFile(filePath, []byte(content), 0644)
+	return os.WriteFile(filePath, []byte(content), 0o644)
 }
 
 // initializeWorkingLog creates the working-log.md template
@@ -142,7 +142,7 @@ func (m *Manager) initializeWorkingLog() error {
 <!-- Track any problems and solutions -->
 `, time.Now().Format("2006-01-02 15:04:05"))
 
-	return os.WriteFile(filePath, []byte(content), 0644)
+	return os.WriteFile(filePath, []byte(content), 0o644)
 }
 
 // initializeResultsSummary creates the results-summary.md template
@@ -176,7 +176,7 @@ func (m *Manager) initializeResultsSummary() error {
 <!-- Important information for code review -->
 `
 
-	return os.WriteFile(filePath, []byte(content), 0644)
+	return os.WriteFile(filePath, []byte(content), 0o644)
 }
 
 // GetContextPath returns the full path to the context directory
@@ -200,7 +200,7 @@ func (m *Manager) AppendToWorkingLog(entry string) error {
 	filePath := filepath.Join(m.contextPath, WorkingLogFile)
 
 	// Open file in append mode
-	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to open working log: %w", err)
 	}
@@ -219,5 +219,4 @@ func (m *Manager) AppendToWorkingLog(entry string) error {
 	}
 
 	return err
-
 }

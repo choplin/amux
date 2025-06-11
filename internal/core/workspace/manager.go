@@ -69,7 +69,7 @@ func (m *Manager) Create(opts CreateOptions) (*Workspace, error) {
 	workspacePath := filepath.Join(m.workspacesDir, id)
 
 	// Ensure the workspaces directory exists
-	if err := os.MkdirAll(m.workspacesDir, 0755); err != nil {
+	if err := os.MkdirAll(m.workspacesDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create worktrees directory: %w", err)
 	}
 
@@ -178,7 +178,7 @@ func (m *Manager) Get(id string) (*Workspace, error) {
 // List returns all workspaces
 func (m *Manager) List(opts ListOptions) ([]*Workspace, error) {
 	// Ensure workspaces directory exists
-	if err := os.MkdirAll(m.workspacesDir, 0755); err != nil {
+	if err := os.MkdirAll(m.workspacesDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create workspaces directory: %w", err)
 	}
 
@@ -365,7 +365,7 @@ func (m *Manager) Cleanup(opts CleanupOptions) ([]string, error) {
 // saveWorkspace saves workspace metadata to disk
 func (m *Manager) saveWorkspace(workspace *Workspace) error {
 	// Ensure workspaces directory exists
-	if err := os.MkdirAll(m.workspacesDir, 0755); err != nil {
+	if err := os.MkdirAll(m.workspacesDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create workspaces directory: %w", err)
 	}
 
@@ -375,17 +375,17 @@ func (m *Manager) saveWorkspace(workspace *Workspace) error {
 	}
 
 	workspacePath := filepath.Join(m.workspacesDir, workspace.ID+".yaml")
-	if err := os.WriteFile(workspacePath, data, 0644); err != nil {
+	if err := os.WriteFile(workspacePath, data, 0o644); err != nil {
 		return fmt.Errorf("failed to write workspace: %w", err)
 	}
 
 	// Also save workspace metadata in the workspace itself
 	workspaceMetaPath := filepath.Join(workspace.Path, ".amux", "workspace.yaml")
-	if err := os.MkdirAll(filepath.Dir(workspaceMetaPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(workspaceMetaPath), 0o755); err != nil {
 		return fmt.Errorf("failed to create workspace .amux directory: %w", err)
 	}
 
-	if err := os.WriteFile(workspaceMetaPath, data, 0644); err != nil {
+	if err := os.WriteFile(workspaceMetaPath, data, 0o644); err != nil {
 		return fmt.Errorf("failed to write workspace metadata: %w", err)
 	}
 

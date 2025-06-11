@@ -11,7 +11,7 @@ import (
 func setupTestManager(t *testing.T) (*Manager, string) {
 	tmpDir := t.TempDir()
 	amuxDir := filepath.Join(tmpDir, ".amux")
-	if err := os.MkdirAll(amuxDir, 0755); err != nil {
+	if err := os.MkdirAll(amuxDir, 0o755); err != nil {
 		t.Fatalf("Failed to create amux dir: %v", err)
 	}
 
@@ -242,5 +242,4 @@ func TestManager_GetEnvironment(t *testing.T) {
 	if env != nil {
 		t.Error("Expected nil environment for non-existent agent")
 	}
-
 }

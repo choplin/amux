@@ -79,7 +79,7 @@ func CreateTestRepo(t *testing.T) string {
 
 	// Create initial commit
 	readmePath := filepath.Join(tmpDir, "README.md")
-	if err := os.WriteFile(readmePath, []byte("# Test Repository\n"), 0644); err != nil {
+	if err := os.WriteFile(readmePath, []byte("# Test Repository\n"), 0o644); err != nil {
 		_ = os.RemoveAll(tmpDir)
 		t.Fatalf("Failed to create README: %v", err)
 	}

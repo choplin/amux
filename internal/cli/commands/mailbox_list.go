@@ -15,10 +15,8 @@ import (
 	"github.com/aki/amux/internal/core/workspace"
 )
 
-var (
-	// Flags for list command
-	listDirection string
-)
+// Flags for list command
+var listDirection string
 
 var mailboxListCmd = &cobra.Command{
 	Use:   "list <session>",

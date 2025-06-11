@@ -3,9 +3,7 @@ package mcp
 
 import (
 	"encoding/json"
-
 	"fmt"
-
 	"reflect"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -16,19 +14,14 @@ import (
 // StructToToolOptions converts a struct with tags into MCP tool options.
 // The struct should use tags like `json:"name" mcp:"required" description:"Workspace name"`
 func StructToToolOptions(structType interface{}) ([]mcp.ToolOption, error) {
-
 	t := reflect.TypeOf(structType)
 
 	if t.Kind() == reflect.Ptr {
-
 		t = t.Elem()
-
 	}
 
 	if t.Kind() != reflect.Struct {
-
 		return nil, fmt.Errorf("expected struct type, got %v", t.Kind())
-
 	}
 
 	// Start building the tool options
@@ -46,9 +39,7 @@ func StructToToolOptions(structType interface{}) ([]mcp.ToolOption, error) {
 		jsonTag := field.Tag.Get("json")
 
 		if jsonTag == "" || jsonTag == "-" {
-
 			continue
-
 		}
 
 		// Extract field name from json tag (handle "name,omitempty")
@@ -56,9 +47,7 @@ func StructToToolOptions(structType interface{}) ([]mcp.ToolOption, error) {
 		fieldName := jsonTag
 
 		if idx := len(jsonTag); idx > 0 {
-
 			for j := 0; j < len(jsonTag); j++ {
-
 				if jsonTag[j] == ',' {
 
 					fieldName = jsonTag[:j]
@@ -66,9 +55,7 @@ func StructToToolOptions(structType interface{}) ([]mcp.ToolOption, error) {
 					break
 
 				}
-
 			}
-
 		}
 
 		// Get description from tag
@@ -76,9 +63,7 @@ func StructToToolOptions(structType interface{}) ([]mcp.ToolOption, error) {
 		description := field.Tag.Get("description")
 
 		if description == "" {
-
 			description = fmt.Sprintf("%s field", fieldName)
-
 		}
 
 		// Check if required
@@ -98,14 +83,11 @@ func StructToToolOptions(structType interface{}) ([]mcp.ToolOption, error) {
 		case reflect.String:
 
 			opts := []mcp.PropertyOption{
-
 				mcp.Description(description),
 			}
 
 			if isRequired {
-
 				opts = append(opts, mcp.Required())
-
 			}
 
 			if enumTag != "" {
@@ -115,9 +97,7 @@ func StructToToolOptions(structType interface{}) ([]mcp.ToolOption, error) {
 				var enumValues []string
 
 				if err := json.Unmarshal([]byte("["+enumTag+"]"), &enumValues); err == nil {
-
 					opts = append(opts, mcp.Enum(enumValues...))
-
 				}
 
 			}
@@ -127,14 +107,11 @@ func StructToToolOptions(structType interface{}) ([]mcp.ToolOption, error) {
 		case reflect.Int, reflect.Int64:
 
 			opts := []mcp.PropertyOption{
-
 				mcp.Description(description),
 			}
 
 			if isRequired {
-
 				opts = append(opts, mcp.Required())
-
 			}
 
 			toolOptions = append(toolOptions, mcp.WithNumber(fieldName, opts...))
@@ -142,14 +119,11 @@ func StructToToolOptions(structType interface{}) ([]mcp.ToolOption, error) {
 		case reflect.Bool:
 
 			opts := []mcp.PropertyOption{
-
 				mcp.Description(description),
 			}
 
 			if isRequired {
-
 				opts = append(opts, mcp.Required())
-
 			}
 
 			toolOptions = append(toolOptions, mcp.WithBoolean(fieldName, opts...))
@@ -170,49 +144,36 @@ func StructToToolOptions(structType interface{}) ([]mcp.ToolOption, error) {
 	}
 
 	return toolOptions, nil
-
 }
 
 // WithStructOptions is a helper that combines a description with struct-based options
 func WithStructOptions(description string, structType interface{}) ([]mcp.ToolOption, error) {
-
 	structOpts, err := StructToToolOptions(structType)
-
 	if err != nil {
-
 		return nil, err
-
 	}
 
 	// Prepend the description
 
 	return append([]mcp.ToolOption{mcp.WithDescription(description)}, structOpts...), nil
-
 }
 
 // UnmarshalArgs unmarshals CallToolRequest arguments into a struct
 func UnmarshalArgs[T any](request mcp.CallToolRequest, target *T) error {
-
 	args := request.GetArguments()
 
 	// Convert map to JSON then unmarshal to struct
 
 	jsonBytes, err := json.Marshal(args)
-
 	if err != nil {
-
 		return fmt.Errorf("failed to marshal arguments: %w", err)
-
 	}
 
 	if err := json.Unmarshal(jsonBytes, target); err != nil {
-
 		return fmt.Errorf("failed to unmarshal arguments to struct: %w", err)
-
 	}
 
 	return nil
-
 }
 
 // WorkspaceCreateParams defines parameters for creating a workspace

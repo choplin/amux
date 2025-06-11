@@ -221,5 +221,4 @@ func TestAdapter_GetSessionPID(t *testing.T) {
 	if pid <= 0 {
 		t.Errorf("Invalid PID: %d", pid)
 	}
-
 }
