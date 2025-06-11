@@ -7,6 +7,7 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/gofrs/flock"
 	"gopkg.in/yaml.v3"
 )
 
@@ -27,48 +28,50 @@ type Manager interface {
 
 // fileManager implements Manager with file-based persistence
 type fileManager struct {
-	mu        sync.RWMutex
+	mu        sync.Mutex // Protects flock access
+	flock     *flock.Flock
 	stateFile string
-	state     *State
 }
 
 // NewManager creates a new index manager
 func NewManager(amuxDir string) (Manager, error) {
 	stateFile := filepath.Join(amuxDir, "index-state.yaml")
-	m := &fileManager{
-		stateFile: stateFile,
-		state:     NewState(),
+	lockFile := stateFile + ".lock"
+
+	// Ensure directory exists
+	if err := os.MkdirAll(amuxDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	if err := m.load(); err != nil {
-		return nil, fmt.Errorf("failed to load index state: %w", err)
+	m := &fileManager{
+		stateFile: stateFile,
+		flock:     flock.New(lockFile),
 	}
 
 	return m, nil
 }
 
-// load loads the state from disk
-func (m *fileManager) load() error {
+// loadState loads the state from disk (must be called with lock held)
+func (m *fileManager) loadState() (*State, error) {
 	data, err := os.ReadFile(m.stateFile)
 	if err != nil {
 		if os.IsNotExist(err) {
-			// Initialize empty state
-			return m.save()
+			// Return empty state
+			return NewState(), nil
 		}
-		return err
+		return nil, err
 	}
 
-	return yaml.Unmarshal(data, m.state)
+	state := NewState()
+	if err := yaml.Unmarshal(data, state); err != nil {
+		return nil, err
+	}
+	return state, nil
 }
 
-// save persists the state to disk
-func (m *fileManager) save() error {
-	// Ensure directory exists
-	if err := os.MkdirAll(filepath.Dir(m.stateFile), 0755); err != nil {
-		return err
-	}
-
-	data, err := yaml.Marshal(m.state)
+// saveState persists the state to disk (must be called with lock held)
+func (m *fileManager) saveState(state *State) error {
+	data, err := yaml.Marshal(state)
 	if err != nil {
 		return err
 	}
@@ -81,26 +84,38 @@ func (m *fileManager) Acquire(entityType EntityType, entityID string) (Index, er
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	// Check if entity already has an index
-	if m.state.Active[entityType] == nil {
-		m.state.Active[entityType] = make(map[int]string)
+	// Acquire file lock
+	if err := m.flock.Lock(); err != nil {
+		return 0, fmt.Errorf("failed to acquire file lock: %w", err)
+	}
+	defer m.flock.Unlock()
+
+	// Load current state
+	state, err := m.loadState()
+	if err != nil {
+		return 0, err
 	}
 
-	for idx, id := range m.state.Active[entityType] {
+	// Check if entity already has an index
+	if state.Active[entityType] == nil {
+		state.Active[entityType] = make(map[int]string)
+	}
+
+	for idx, id := range state.Active[entityType] {
 		if id == entityID {
 			return Index(idx), nil
 		}
 	}
 
 	// Try to reuse a released index
-	if released := m.state.Released[entityType]; len(released) > 0 {
+	if released := state.Released[entityType]; len(released) > 0 {
 		// Sort to get the smallest available index
 		sort.Ints(released)
 		idx := released[0]
-		m.state.Released[entityType] = released[1:]
-		m.state.Active[entityType][idx] = entityID
+		state.Released[entityType] = released[1:]
+		state.Active[entityType][idx] = entityID
 
-		if err := m.save(); err != nil {
+		if err := m.saveState(state); err != nil {
 			return 0, err
 		}
 
@@ -108,11 +123,11 @@ func (m *fileManager) Acquire(entityType EntityType, entityID string) (Index, er
 	}
 
 	// Allocate new index
-	m.state.Counters[entityType]++
-	idx := m.state.Counters[entityType]
-	m.state.Active[entityType][idx] = entityID
+	state.Counters[entityType]++
+	idx := state.Counters[entityType]
+	state.Active[entityType][idx] = entityID
 
-	if err := m.save(); err != nil {
+	if err := m.saveState(state); err != nil {
 		return 0, err
 	}
 
@@ -124,14 +139,26 @@ func (m *fileManager) Release(entityType EntityType, entityID string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if m.state.Active[entityType] == nil {
+	// Acquire file lock
+	if err := m.flock.Lock(); err != nil {
+		return fmt.Errorf("failed to acquire file lock: %w", err)
+	}
+	defer m.flock.Unlock()
+
+	// Load current state
+	state, err := m.loadState()
+	if err != nil {
+		return err
+	}
+
+	if state.Active[entityType] == nil {
 		return nil // Nothing to release
 	}
 
 	// Find the index for this entity
 	var indexToRelease int
 	found := false
-	for idx, id := range m.state.Active[entityType] {
+	for idx, id := range state.Active[entityType] {
 		if id == entityID {
 			indexToRelease = idx
 			found = true
@@ -144,25 +171,37 @@ func (m *fileManager) Release(entityType EntityType, entityID string) error {
 	}
 
 	// Remove from active and add to released
-	delete(m.state.Active[entityType], indexToRelease)
-	if m.state.Released[entityType] == nil {
-		m.state.Released[entityType] = []int{}
+	delete(state.Active[entityType], indexToRelease)
+	if state.Released[entityType] == nil {
+		state.Released[entityType] = []int{}
 	}
-	m.state.Released[entityType] = append(m.state.Released[entityType], indexToRelease)
+	state.Released[entityType] = append(state.Released[entityType], indexToRelease)
 
-	return m.save()
+	return m.saveState(state)
 }
 
 // Get retrieves the index for a given entity
 func (m *fileManager) Get(entityType EntityType, entityID string) (Index, bool) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
-	if m.state.Active[entityType] == nil {
+	// Acquire file lock for reading
+	if err := m.flock.RLock(); err != nil {
+		return 0, false
+	}
+	defer m.flock.Unlock()
+
+	// Load current state
+	state, err := m.loadState()
+	if err != nil {
 		return 0, false
 	}
 
-	for idx, id := range m.state.Active[entityType] {
+	if state.Active[entityType] == nil {
+		return 0, false
+	}
+
+	for idx, id := range state.Active[entityType] {
 		if id == entityID {
 			return Index(idx), true
 		}
@@ -173,13 +212,25 @@ func (m *fileManager) Get(entityType EntityType, entityID string) (Index, bool) 
 
 // GetByIndex retrieves the entity ID for a given index
 func (m *fileManager) GetByIndex(entityType EntityType, index Index) (string, bool) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
-	if m.state.Active[entityType] == nil {
+	// Acquire file lock for reading
+	if err := m.flock.RLock(); err != nil {
+		return "", false
+	}
+	defer m.flock.Unlock()
+
+	// Load current state
+	state, err := m.loadState()
+	if err != nil {
 		return "", false
 	}
 
-	entityID, exists := m.state.Active[entityType][int(index)]
+	if state.Active[entityType] == nil {
+		return "", false
+	}
+
+	entityID, exists := state.Active[entityType][int(index)]
 	return entityID, exists
 }
