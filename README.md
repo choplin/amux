@@ -1,7 +1,7 @@
 # 🕳️ Amux
 
-[![CI](https://github.com/aki/amux/actions/workflows/ci.yml/badge.svg)](https://github.com/aki/amux/actions/workflows/ci.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/aki/amux)](https://goreportcard.com/report/github.com/aki/amux)
+[![CI](https://github.com/choplin/amux/actions/workflows/ci.yml/badge.svg)](https://github.com/choplin/amux/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/choplin/amux)](https://goreportcard.com/report/github.com/choplin/amux)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > **Agent Multiplexer** - Unleash fleets of AI agents in parallel, sandboxed workspaces
@@ -28,7 +28,7 @@ their lifecycle.
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/amux.git
+git clone https://github.com/choplin/amux.git
 cd amux
 
 # Build with just (recommended)
@@ -43,7 +43,7 @@ go build -o bin/amux cmd/amux/main.go
 
 ### Binary Releases
 
-Download pre-built binaries from the [releases page](https://github.com/yourusername/amux/releases).
+Download pre-built binaries from the [releases page](https://github.com/choplin/amux/releases).
 
 ## 🛠️ Usage
 
