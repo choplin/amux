@@ -2,9 +2,7 @@ package ui
 
 import (
 	"fmt"
-
 	"os"
-
 	"time"
 
 	"github.com/aki/amux/internal/core/workspace"
@@ -44,7 +42,7 @@ func PrintWorkspace(w *workspace.Workspace) {
 
 	age := time.Since(w.UpdatedAt)
 
-	ageStr := formatDuration(age)
+	ageStr := FormatDuration(age)
 
 	id := w.ID
 	if w.Index != "" {
@@ -84,9 +82,8 @@ func PrintWorkspace(w *workspace.Workspace) {
 
 }
 
-// formatDuration formats a duration into a human-readable string
-
-func formatDuration(d time.Duration) string {
+// FormatDuration formats a duration into a human-readable string
+func FormatDuration(d time.Duration) string {
 
 	if d < time.Minute {
 
@@ -108,28 +105,35 @@ func formatDuration(d time.Duration) string {
 
 }
 
-// PrintWorkspaceList displays a list of workspaces
-
+// PrintWorkspaceList displays a list of workspaces using a table
 func PrintWorkspaceList(workspaces []*workspace.Workspace) {
-
 	if len(workspaces) == 0 {
-
 		Info("No workspaces found")
-
 		return
-
 	}
 
-	fmt.Printf("%s Development Caves (%d):\n\n", CaveIcon, len(workspaces))
+	// Create table
+	tbl := NewTable("ID", "NAME", "BRANCH", "AGE", "DESCRIPTION")
 
+	// Add rows
 	for _, w := range workspaces {
+		id := w.ID
+		if w.Index != "" {
+			id = w.Index
+		}
+		age := FormatDuration(time.Since(w.UpdatedAt))
+		description := w.Description
+		if description == "" {
+			description = "-"
+		}
 
-		PrintWorkspace(w)
-
-		fmt.Println()
-
+		tbl.AddRow(id, w.Name, w.Branch, age, description)
 	}
 
+	// Print with header
+	PrintSectionHeader(CaveIcon, "Workspaces", len(workspaces))
+	tbl.Print()
+	fmt.Println()
 }
 
 // PrintWorkspaceDetails displays detailed information about a single workspace

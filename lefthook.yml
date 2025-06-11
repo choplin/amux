@@ -1,7 +1,7 @@
 # Lefthook configuration for Amux
 # https://github.com/evilmartians/lefthook
 pre-commit:
-  parallel: true
+  parallel: false
   commands:
     remove-trailing-spaces:
       run: perl -i -pe 's/[ \t]+$//' {staged_files}

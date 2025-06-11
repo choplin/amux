@@ -8,6 +8,7 @@ require (
 	github.com/gofrs/flock v0.12.1
 	github.com/google/uuid v1.6.0
 	github.com/mark3labs/mcp-go v0.31.0
+	github.com/rodaine/table v1.3.0
 	github.com/spf13/cobra v1.9.1
 	gopkg.in/yaml.v3 v3.0.1
 )
