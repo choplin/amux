@@ -125,7 +125,6 @@ func PrintWorkspaceList(workspaces []*workspace.Workspace) {
 	// Print with header
 	PrintSectionHeader(CaveIcon, "Workspaces", len(workspaces))
 	tbl.Print()
-	fmt.Println()
 }
 
 // PrintWorkspaceDetails displays detailed information about a single workspace
