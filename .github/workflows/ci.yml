@@ -78,4 +78,4 @@ jobs:
             exit 1
           fi
       - name: Check Markdown
-        uses: DavidAnson/markdownlint-cli2-action@v18
+        uses: DavidAnson/markdownlint-cli2-action@v20
