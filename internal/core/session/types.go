@@ -92,7 +92,7 @@ type SessionManager interface { //nolint:revive // Established API
 }
 
 // SessionStore persists session metadata
-type SessionStore interface {
+type SessionStore interface { //nolint:revive // Established API
 	// Save saves session info
 	Save(info *SessionInfo) error
 

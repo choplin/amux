@@ -343,9 +343,7 @@ func (m *Manager) RemoveSession(id string) error {
 
 	// Remove short ID mapping
 	if m.idMapper != nil {
-		if err := m.idMapper.RemoveSession(fullID); err != nil {
-			// Don't fail if mapping removal fails
-		}
+		_ = m.idMapper.RemoveSession(fullID)
 	}
 
 	// Remove from cache

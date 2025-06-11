@@ -89,7 +89,9 @@ func (m *fileManager) Acquire(entityType EntityType, entityID string) (Index, er
 	if err := m.flock.Lock(); err != nil {
 		return 0, fmt.Errorf("failed to acquire file lock: %w", err)
 	}
-	defer m.flock.Unlock()
+	defer func() {
+		_ = m.flock.Unlock()
+	}()
 
 	// Load current state
 	state, err := m.loadState()
@@ -144,7 +146,9 @@ func (m *fileManager) Release(entityType EntityType, entityID string) error {
 	if err := m.flock.Lock(); err != nil {
 		return fmt.Errorf("failed to acquire file lock: %w", err)
 	}
-	defer m.flock.Unlock()
+	defer func() {
+		_ = m.flock.Unlock()
+	}()
 
 	// Load current state
 	state, err := m.loadState()
@@ -190,7 +194,9 @@ func (m *fileManager) Get(entityType EntityType, entityID string) (Index, bool) 
 	if err := m.flock.RLock(); err != nil {
 		return 0, false
 	}
-	defer m.flock.Unlock()
+	defer func() {
+		_ = m.flock.Unlock()
+	}()
 
 	// Load current state
 	state, err := m.loadState()
@@ -220,7 +226,9 @@ func (m *fileManager) GetByIndex(entityType EntityType, index Index) (string, bo
 	if err := m.flock.RLock(); err != nil {
 		return "", false
 	}
-	defer m.flock.Unlock()
+	defer func() {
+		_ = m.flock.Unlock()
+	}()
 
 	// Load current state
 	state, err := m.loadState()

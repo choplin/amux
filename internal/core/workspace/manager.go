@@ -324,10 +324,7 @@ func (m *Manager) Remove(id string) error {
 	}
 
 	// Remove index mapping
-	if err := m.idMapper.RemoveWorkspace(workspace.ID); err != nil {
-		// Don't fail if mapping removal fails
-		// Just continue with the rest of the cleanup
-	}
+	_ = m.idMapper.RemoveWorkspace(workspace.ID)
 
 	// Clean up workspace directory if it exists
 	if _, err := os.Stat(workspace.Path); err == nil {
