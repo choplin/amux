@@ -5,7 +5,7 @@ import "time"
 // Workspace represents an isolated development environment
 type Workspace struct {
 	ID          string    `yaml:"id" json:"id"`
-	ShortID     string    `yaml:"-" json:"shortId"` // Populated from ID mapper, not persisted
+	Index       string    `yaml:"-" json:"index"` // Populated from ID mapper, not persisted
 	Name        string    `yaml:"name" json:"name"`
 	Branch      string    `yaml:"branch" json:"branch"`
 	BaseBranch  string    `yaml:"baseBranch" json:"baseBranch"`

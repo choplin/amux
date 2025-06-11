@@ -195,14 +195,14 @@ func (m *Manager) CreateSession(opts SessionOptions) (Session, error) {
 		return nil, fmt.Errorf("failed to save session: %w", err)
 	}
 
-	// Generate and assign short ID
+	// Generate and assign index
 	if m.idMapper != nil {
-		shortID, err := m.idMapper.AddSession(info.ID)
+		index, err := m.idMapper.AddSession(info.ID)
 		if err != nil {
-			// Don't fail if short ID generation fails
-			info.ShortID = ""
+			// Don't fail if index generation fails
+			info.Index = ""
 		} else {
-			info.ShortID = shortID
+			info.Index = index
 		}
 	}
 
@@ -253,8 +253,8 @@ func (m *Manager) GetSession(id string) (Session, error) {
 
 	// Populate short ID
 	if m.idMapper != nil {
-		if shortID, exists := m.idMapper.GetSessionShort(info.ID); exists {
-			info.ShortID = shortID
+		if index, exists := m.idMapper.GetSessionIndex(info.ID); exists {
+			info.Index = index
 		}
 	}
 
@@ -283,12 +283,12 @@ func (m *Manager) ListSessions() ([]Session, error) {
 	for _, info := range infos {
 		// Populate short ID
 		if m.idMapper != nil {
-			if shortID, exists := m.idMapper.GetSessionShort(info.ID); exists {
-				info.ShortID = shortID
+			if index, exists := m.idMapper.GetSessionIndex(info.ID); exists {
+				info.Index = index
 			} else {
-				// Generate short ID if it doesn't exist
-				shortID, _ := m.idMapper.AddSession(info.ID)
-				info.ShortID = shortID
+				// Generate index if it doesn't exist
+				index, _ := m.idMapper.AddSession(info.ID)
+				info.Index = index
 			}
 		}
 

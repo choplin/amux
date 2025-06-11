@@ -111,14 +111,14 @@ func (m *Manager) Create(opts CreateOptions) (*Workspace, error) {
 		return nil, fmt.Errorf("failed to save workspace metadata: %w", err)
 	}
 
-	// Generate and assign short ID
-	shortID, err := m.idMapper.AddWorkspace(workspace.ID)
+	// Generate and assign index
+	index, err := m.idMapper.AddWorkspace(workspace.ID)
 	if err != nil {
-		// Don't fail if short ID generation fails, just log it
+		// Don't fail if index generation fails, just log it
 		// The workspace is already created successfully
-		workspace.ShortID = ""
+		workspace.Index = ""
 	} else {
-		workspace.ShortID = shortID
+		workspace.Index = index
 	}
 
 	// Write template files
@@ -143,7 +143,7 @@ func (m *Manager) Create(opts CreateOptions) (*Workspace, error) {
 
 // Get retrieves a workspace by ID
 func (m *Manager) Get(id string) (*Workspace, error) {
-	// Check if this is a short ID
+	// Check if this is an index
 	fullID := id
 	if fullIDFromShort, exists := m.idMapper.GetWorkspaceFull(id); exists {
 		fullID = fullIDFromShort
@@ -167,9 +167,9 @@ func (m *Manager) Get(id string) (*Workspace, error) {
 	// Get last modified time from filesystem
 	workspace.UpdatedAt = m.getLastModified(workspace.Path)
 
-	// Populate short ID
-	if shortID, exists := m.idMapper.GetWorkspaceShort(workspace.ID); exists {
-		workspace.ShortID = shortID
+	// Populate index
+	if index, exists := m.idMapper.GetWorkspaceIndex(workspace.ID); exists {
+		workspace.Index = index
 	}
 
 	return &workspace, nil
@@ -206,13 +206,13 @@ func (m *Manager) List(opts ListOptions) ([]*Workspace, error) {
 		// Get last modified time from filesystem
 		workspace.UpdatedAt = m.getLastModified(workspace.Path)
 
-		// Populate short ID
-		if shortID, exists := m.idMapper.GetWorkspaceShort(workspace.ID); exists {
-			workspace.ShortID = shortID
+		// Populate index
+		if index, exists := m.idMapper.GetWorkspaceIndex(workspace.ID); exists {
+			workspace.Index = index
 		} else {
-			// Generate short ID if it doesn't exist
-			shortID, _ := m.idMapper.AddWorkspace(workspace.ID)
-			workspace.ShortID = shortID
+			// Generate index if it doesn't exist
+			index, _ := m.idMapper.AddWorkspace(workspace.ID)
+			workspace.Index = index
 		}
 
 		workspaces = append(workspaces, &workspace)
@@ -262,9 +262,9 @@ func (m *Manager) getLastModified(workspacePath string) time.Time {
 	return lastMod
 }
 
-// ResolveWorkspace finds a workspace by short ID, full ID, or name
+// ResolveWorkspace finds a workspace by index, full ID, or name
 func (m *Manager) ResolveWorkspace(identifier string) (*Workspace, error) {
-	// First, try to get by ID (supports both short and full IDs)
+	// First, try to get by ID (supports both index and full IDs)
 	ws, err := m.Get(identifier)
 	if err == nil {
 		return ws, nil
@@ -323,7 +323,7 @@ func (m *Manager) Remove(id string) error {
 		return fmt.Errorf("failed to remove workspace metadata: %w", err)
 	}
 
-	// Remove short ID mapping
+	// Remove index mapping
 	if err := m.idMapper.RemoveWorkspace(workspace.ID); err != nil {
 		// Don't fail if mapping removal fails
 		// Just continue with the rest of the cleanup

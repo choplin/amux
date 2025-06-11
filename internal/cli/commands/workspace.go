@@ -204,8 +204,8 @@ func runCreateWorkspace(cmd *cobra.Command, args []string) error {
 
 	ui.Success("Created workspace: %s", ws.Name)
 
-	if ws.ShortID != "" {
-		ui.Info("ID: %s", ws.ShortID)
+	if ws.Index != "" {
+		ui.Info("ID: %s", ws.Index)
 	} else {
 		ui.Info("ID: %s", ws.ID)
 	}
@@ -259,8 +259,8 @@ func runListWorkspace(cmd *cobra.Command, args []string) error {
 			}
 
 			id := ws.ID
-			if ws.ShortID != "" {
-				id = ws.ShortID
+			if ws.Index != "" {
+				id = ws.Index
 			}
 			fmt.Printf("%s\t%s\t%s\t%s\t%s\n", ws.Name, id, ws.Branch, ws.Path, description)
 

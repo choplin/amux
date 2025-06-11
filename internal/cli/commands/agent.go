@@ -200,8 +200,8 @@ func runAgent(cmd *cobra.Command, args []string) error {
 	}
 
 	sessionID := sess.ID()
-	if info := sess.Info(); info.ShortID != "" {
-		sessionID = info.ShortID
+	if info := sess.Info(); info.Index != "" {
+		sessionID = info.Index
 	}
 	ui.Info("Created session %s for agent '%s' in workspace '%s'", sessionID, agentID, ws.Name)
 
@@ -219,8 +219,8 @@ func runAgent(cmd *cobra.Command, args []string) error {
 		ui.Info("To attach to this session, run:")
 		ui.Info("  tmux attach-session -t %s", info.TmuxSession)
 		attachID := sess.ID()
-		if info.ShortID != "" {
-			attachID = info.ShortID
+		if info.Index != "" {
+			attachID = info.Index
 		}
 		ui.Info("  or: amux attach %s", attachID)
 	}
@@ -302,8 +302,8 @@ func listAgents(cmd *cobra.Command, args []string) error {
 		}
 
 		displayID := info.ID
-		if info.ShortID != "" {
-			displayID = info.ShortID
+		if info.Index != "" {
+			displayID = info.Index
 		}
 
 		fmt.Printf("%-20s %-10s %-20s %-10s %-15s\n",

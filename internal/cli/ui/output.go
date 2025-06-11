@@ -47,8 +47,8 @@ func PrintWorkspace(w *workspace.Workspace) {
 	ageStr := formatDuration(age)
 
 	id := w.ID
-	if w.ShortID != "" {
-		id = w.ShortID
+	if w.Index != "" {
+		id = w.Index
 	}
 
 	fmt.Printf("%s %s %s %s\n",
