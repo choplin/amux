@@ -70,6 +70,16 @@ func NewServerV2(configManager *config.Manager, transport string, httpConfig *co
 		return nil, fmt.Errorf("failed to register tools: %w", err)
 	}
 
+	// Register all resources
+	if err := s.registerResources(); err != nil {
+		return nil, fmt.Errorf("failed to register resources: %w", err)
+	}
+
+	// Register resource templates
+	if err := s.registerResourceTemplates(); err != nil {
+		return nil, fmt.Errorf("failed to register resource templates: %w", err)
+	}
+
 	return s, nil
 }
 
