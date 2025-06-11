@@ -231,9 +231,9 @@ func (m *Manager) getLastModified(workspacePath string) time.Time {
 	var lastMod time.Time
 
 	// Walk through the workspace directory
-	filepath.Walk(workspacePath, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(workspacePath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return nil // Continue walking even if there's an error
+			return nil //nolint:nilerr // Continue walking even if there's an error
 		}
 
 		// Skip .git directory and .amux directory
@@ -253,7 +253,7 @@ func (m *Manager) getLastModified(workspacePath string) time.Time {
 	})
 
 	// If no files found or error, use directory's own modified time
-	if lastMod.IsZero() {
+	if err != nil || lastMod.IsZero() {
 		if info, err := os.Stat(workspacePath); err == nil {
 			lastMod = info.ModTime()
 		}
@@ -324,10 +324,7 @@ func (m *Manager) Remove(id string) error {
 	}
 
 	// Remove index mapping
-	if err := m.idMapper.RemoveWorkspace(workspace.ID); err != nil {
-		// Don't fail if mapping removal fails
-		// Just continue with the rest of the cleanup
-	}
+	_ = m.idMapper.RemoveWorkspace(workspace.ID)
 
 	// Clean up workspace directory if it exists
 	if _, err := os.Stat(workspace.Path); err == nil {

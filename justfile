@@ -11,7 +11,11 @@ init:
 
 # Build the binary
 build:
-    go build -o bin/amux cmd/amux/main.go
+    #!/usr/bin/env bash
+    VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
+    COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+    DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    go build -ldflags "-X github.com/aki/amux/internal/cli/commands.Version=$VERSION -X github.com/aki/amux/internal/cli/commands.GitCommit=$COMMIT -X github.com/aki/amux/internal/cli/commands.BuildDate=$DATE" -o bin/amux cmd/amux/main.go
 
 # Run tests
 test:
@@ -40,6 +44,10 @@ check: fmt fmt-yaml lint
 # Install the binary to GOPATH/bin
 install: build
     go install cmd/amux/main.go
+
+# Show current version
+version:
+    @git describe --tags --always --dirty 2>/dev/null || echo "dev"
 
 # Run the development version
 dev *args:

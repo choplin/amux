@@ -9,7 +9,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// FileStore implements SessionStore using YAML files
+// FileStore implements Store using YAML files
 type FileStore struct {
 	basePath string
 	mu       sync.RWMutex
@@ -29,7 +29,7 @@ func NewFileStore(basePath string) (*FileStore, error) {
 }
 
 // Save saves session info to a YAML file
-func (s *FileStore) Save(info *SessionInfo) error {
+func (s *FileStore) Save(info *Info) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -43,11 +43,18 @@ func (s *FileStore) Save(info *SessionInfo) error {
 		return fmt.Errorf("failed to write session file: %w", err)
 	}
 
+	// Ensure file is synced to disk (important for Windows)
+	file, err := os.Open(path)
+	if err == nil {
+		_ = file.Sync()
+		_ = file.Close()
+	}
+
 	return nil
 }
 
 // Load loads session info from a YAML file
-func (s *FileStore) Load(id string) (*SessionInfo, error) {
+func (s *FileStore) Load(id string) (*Info, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -60,7 +67,7 @@ func (s *FileStore) Load(id string) (*SessionInfo, error) {
 		return nil, fmt.Errorf("failed to read session file: %w", err)
 	}
 
-	var info SessionInfo
+	var info Info
 	if err := yaml.Unmarshal(data, &info); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal session info: %w", err)
 	}
@@ -69,7 +76,7 @@ func (s *FileStore) Load(id string) (*SessionInfo, error) {
 }
 
 // List lists all session infos
-func (s *FileStore) List() ([]*SessionInfo, error) {
+func (s *FileStore) List() ([]*Info, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -78,7 +85,7 @@ func (s *FileStore) List() ([]*SessionInfo, error) {
 		return nil, fmt.Errorf("failed to read sessions directory: %w", err)
 	}
 
-	var sessions []*SessionInfo
+	var sessions []*Info
 	for _, entry := range entries {
 		if entry.IsDir() || filepath.Ext(entry.Name()) != ".yaml" {
 			continue

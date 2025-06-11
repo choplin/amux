@@ -172,7 +172,7 @@ func (a *RealAdapter) ResizeWindow(sessionName string, width, height int) error 
 	if err := cmd.Run(); err != nil {
 		// Ignore resize errors as they're not critical
 		// Some terminals might not support exact sizes
-		return nil
+		return nil //nolint:nilerr // Intentionally ignoring resize errors
 	}
 	return nil
 

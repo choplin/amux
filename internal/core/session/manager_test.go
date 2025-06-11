@@ -2,9 +2,11 @@ package session
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
+	"github.com/aki/amux/internal/adapters/tmux"
 	"github.com/aki/amux/internal/core/workspace"
 )
 
@@ -30,8 +32,12 @@ func TestManager_CreateSession(t *testing.T) {
 	// Create session manager (nil ID mapper for tests)
 	manager := NewManager(store, wsManager, nil)
 
+	// Use mock adapter for consistent testing across platforms
+	mockAdapter := tmux.NewMockAdapter()
+	manager.SetTmuxAdapter(mockAdapter)
+
 	// Test creating a session
-	opts := SessionOptions{
+	opts := Options{
 		WorkspaceID: ws.ID,
 		AgentID:     "claude",
 		Command:     "claude code",
@@ -87,8 +93,12 @@ func TestManager_GetSession(t *testing.T) {
 
 	manager := NewManager(store, wsManager, nil)
 
+	// Use mock adapter for consistent testing across platforms
+	mockAdapter := tmux.NewMockAdapter()
+	manager.SetTmuxAdapter(mockAdapter)
+
 	// Create a session
-	session, err := manager.CreateSession(SessionOptions{
+	session, err := manager.CreateSession(Options{
 		WorkspaceID: ws.ID,
 		AgentID:     "claude",
 	})
@@ -129,19 +139,45 @@ func TestManager_ListSessions(t *testing.T) {
 		t.Fatalf("Failed to create store: %v", err)
 	}
 
+	// Ensure we start with a clean slate - list existing sessions
+	existingSessions, _ := store.List()
+	if len(existingSessions) > 0 {
+		t.Logf("Warning: Found %d existing sessions before test", len(existingSessions))
+	}
+
 	manager := NewManager(store, wsManager, nil)
+
+	// Use mock adapter for consistent testing across platforms
+	mockAdapter := tmux.NewMockAdapter()
+	manager.SetTmuxAdapter(mockAdapter)
 
 	// Create multiple sessions
 	var sessionIDs []string
 	for i := 0; i < 3; i++ {
-		session, err := manager.CreateSession(SessionOptions{
+		session, err := manager.CreateSession(Options{
 			WorkspaceID: ws.ID,
-			AgentID:     "claude",
+			AgentID:     fmt.Sprintf("agent-%d", i),
 		})
 		if err != nil {
 			t.Fatalf("Failed to create session %d: %v", i, err)
 		}
 		sessionIDs = append(sessionIDs, session.ID())
+
+		// Verify session was saved
+		savedInfo, err := store.Load(session.ID())
+		if err != nil {
+			t.Fatalf("Failed to load session %d after creation: %v", i, err)
+		}
+		if savedInfo.ID != session.ID() {
+			t.Errorf("Session %d ID mismatch: expected %s, got %s", i, session.ID(), savedInfo.ID)
+		}
+
+		// Debug: List sessions after each creation
+		currentSessions, _ := store.List()
+		t.Logf("After creating session %d: found %d sessions in store", i, len(currentSessions))
+
+		// Small delay to ensure file system operations complete on Windows
+		time.Sleep(10 * time.Millisecond)
 	}
 
 	// List sessions
@@ -152,6 +188,10 @@ func TestManager_ListSessions(t *testing.T) {
 
 	if len(sessions) != 3 {
 		t.Errorf("Expected 3 sessions, got %d", len(sessions))
+		// Log what we actually got
+		for i, s := range sessions {
+			t.Logf("Session %d: ID=%s, AgentID=%s", i, s.ID(), s.AgentID())
+		}
 	}
 
 	// Verify all sessions are in the list
@@ -185,8 +225,12 @@ func TestManager_RemoveSession(t *testing.T) {
 
 	manager := NewManager(store, wsManager, nil)
 
+	// Use mock adapter for consistent testing across platforms
+	mockAdapter := tmux.NewMockAdapter()
+	manager.SetTmuxAdapter(mockAdapter)
+
 	// Create a session
-	session, err := manager.CreateSession(SessionOptions{
+	session, err := manager.CreateSession(Options{
 		WorkspaceID: ws.ID,
 		AgentID:     "claude",
 	})
@@ -230,7 +274,7 @@ func TestFileStore_Operations(t *testing.T) {
 	}
 
 	// Test Save and Load
-	info := &SessionInfo{
+	info := &Info{
 		ID:          "test-session",
 		WorkspaceID: "test-workspace",
 		AgentID:     "claude",

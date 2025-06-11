@@ -118,7 +118,7 @@ func TestIntegration_FullWorkflow(t *testing.T) {
 	env, _ := agentManager.GetEnvironment("test-agent")
 
 	// Create a session with agent configuration
-	opts := session.SessionOptions{
+	opts := session.Options{
 		WorkspaceID: ws.ID,
 		AgentID:     "test-agent",
 		Command:     command,
@@ -266,7 +266,7 @@ func TestIntegration_MultipleAgents(t *testing.T) {
 		}
 
 		// Create session
-		sess, err := sessionManager.CreateSession(session.SessionOptions{
+		sess, err := sessionManager.CreateSession(session.Options{
 			WorkspaceID: ws.ID,
 			AgentID:     agentID,
 		})

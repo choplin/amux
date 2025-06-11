@@ -8,7 +8,8 @@ Accepted
 
 ## Context
 
-Users need to interact with workspaces and sessions frequently through the CLI. The current full IDs are long and cumbersome to type:
+Users need to interact with workspaces and sessions frequently through the CLI. The current full IDs are long and
+cumbersome to type:
 
 - Workspace ID: `workspace-test-1234567890-abcd1234`
 - Session ID: `session-agent-test-1234567890-efgh5678`
@@ -21,7 +22,8 @@ This creates friction in the user experience, especially for commands that are r
 
 ## Decision
 
-We will implement a short-hand index system that provides sequential numeric indices (1, 2, 3...) for convenient reference to workspaces and sessions.
+We will implement a short-hand index system that provides sequential numeric indices (1, 2, 3...) for convenient
+reference to workspaces and sessions.
 
 ### Key Properties of Indices
 
@@ -43,7 +45,7 @@ We will implement a short-hand index system that provides sequential numeric ind
 
 The index system uses a clean, extensible architecture:
 
-```
+```text
 internal/core/index/
 ├── manager.go      # IndexManager interface & implementation
 ├── types.go        # Core types (Index, EntityType, State)

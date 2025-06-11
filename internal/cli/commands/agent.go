@@ -187,7 +187,7 @@ func runAgent(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create session
-	opts := session.SessionOptions{
+	opts := session.Options{
 		WorkspaceID: ws.ID,
 		AgentID:     agentID,
 		Command:     command,
@@ -291,6 +291,16 @@ func listAgents(cmd *cobra.Command, args []string) error {
 
 		// Format status for display
 		statusStr := string(info.Status)
+		switch info.Status {
+		case session.StatusCreated:
+			// StatusCreated uses default styling (no color)
+		case session.StatusRunning:
+			statusStr = ui.SuccessStyle.Render(statusStr)
+		case session.StatusStopped:
+			statusStr = ui.DimStyle.Render(statusStr)
+		case session.StatusFailed:
+			statusStr = ui.ErrorStyle.Render(statusStr)
+		}
 
 		displayID := info.ID
 		if info.Index != "" {

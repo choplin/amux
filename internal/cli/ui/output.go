@@ -84,25 +84,16 @@ func PrintWorkspace(w *workspace.Workspace) {
 
 // FormatDuration formats a duration into a human-readable string
 func FormatDuration(d time.Duration) string {
-
 	if d < time.Minute {
-
 		return "< 1m"
-
-	} else if d < time.Hour {
-
-		return fmt.Sprintf("%dm", int(d.Minutes()))
-
-	} else if d < 24*time.Hour {
-
-		return fmt.Sprintf("%dh", int(d.Hours()))
-
-	} else {
-
-		return fmt.Sprintf("%dd", int(d.Hours()/24))
-
 	}
-
+	if d < time.Hour {
+		return fmt.Sprintf("%dm", int(d.Minutes()))
+	}
+	if d < 24*time.Hour {
+		return fmt.Sprintf("%dh", int(d.Hours()))
+	}
+	return fmt.Sprintf("%dd", int(d.Hours()/24))
 }
 
 // PrintWorkspaceList displays a list of workspaces using a table

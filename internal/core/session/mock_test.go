@@ -36,7 +36,7 @@ func TestTmuxSession_WithMock(t *testing.T) {
 	mockAdapter := tmux.NewMockAdapter()
 
 	// Create session info
-	info := &SessionInfo{
+	info := &Info{
 		ID:          "test-mock-session",
 		WorkspaceID: ws.ID,
 		AgentID:     "test-agent",
@@ -135,7 +135,7 @@ func TestManager_WithMockAdapter(t *testing.T) {
 	manager.tmuxAdapter = mockAdapter
 
 	// Create session
-	opts := SessionOptions{
+	opts := Options{
 		WorkspaceID: ws.ID,
 		AgentID:     "test-agent",
 		Command:     "test command",
@@ -192,7 +192,7 @@ func TestManager_WithUnavailableTmux(t *testing.T) {
 	manager.tmuxAdapter = mockAdapter
 
 	// Create session
-	opts := SessionOptions{
+	opts := Options{
 		WorkspaceID: ws.ID,
 		AgentID:     "test-agent",
 	}
