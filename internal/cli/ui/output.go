@@ -196,3 +196,23 @@ func FormatTime(t time.Time) string {
 	}
 
 }
+
+// FormatSize formats a file size in bytes to a human-readable string
+func FormatSize(bytes int64) string {
+	const (
+		KB = 1024
+		MB = KB * 1024
+		GB = MB * 1024
+	)
+
+	switch {
+	case bytes < KB:
+		return fmt.Sprintf("%dB", bytes)
+	case bytes < MB:
+		return fmt.Sprintf("%.1fKB", float64(bytes)/KB)
+	case bytes < GB:
+		return fmt.Sprintf("%.1fMB", float64(bytes)/MB)
+	default:
+		return fmt.Sprintf("%.1fGB", float64(bytes)/GB)
+	}
+}

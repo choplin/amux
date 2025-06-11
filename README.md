@@ -182,6 +182,11 @@ amux mb tell s1 "Please focus on the authentication module"     # Short alias
 # Send a message from a file
 amux mailbox tell s1 --file requirements.md
 
+# List files in an agent's mailbox
+amux mailbox list s1                      # List all message files
+amux mb ls s1                             # Short alias
+amux mailbox list s1 --direction in       # List only incoming messages
+
 # View messages in an agent's mailbox
 amux mailbox peek s1                      # Show recent messages
 amux mb peek s1                           # Short alias

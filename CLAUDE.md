@@ -106,6 +106,7 @@ amux/
 - `amux agent <cmd>` - Agent management
 - `amux run/ps/attach` - Agent shortcuts
 - `amux mailbox <cmd>` - Mailbox commands (alias: `mb`)
+  - `amux mailbox list <session>` - List mailbox files
   - `amux mailbox tell <session> <msg>` - Send message to agent
   - `amux mailbox peek <session>` - View agent mailbox
 
