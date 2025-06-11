@@ -189,6 +189,8 @@ amux peek s1 --verbose                    # Show full message content
 ```
 
 Each session has a mailbox directory at `.amux/mailbox/{session-id}/` with:
+
+
 - `in/` - Messages TO the agent
 - `out/` - Messages FROM the agent
 - `context.md` - Mailbox instructions
