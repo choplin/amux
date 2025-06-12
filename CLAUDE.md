@@ -116,7 +116,7 @@ return fmt.Errorf("Workspace not found.")  // Bad
 - **Always create draft PRs** using `gh pr create --draft`
 - **Never push directly to main branch**
 - **Create feature branches** in workspaces using amux
-- **Include issue references** in PR titles and descriptions
+- **Include issue references** in PR descriptions (NOT in titles)
 - **Run all checks** before creating PR (`just check && just test`)
 
 ## Important Notes
