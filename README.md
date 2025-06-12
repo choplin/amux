@@ -350,9 +350,11 @@ go test ./internal/core/config
 
 ## 📚 Documentation
 
+- [Documentation Guide](docs/README.md) - Overview of our documentation structure
 - [MCP Integration](docs/mcp.md) - Model Context Protocol resources, tools, and prompts
 - [Agent Multiplexing Guide](docs/agent-multiplexing.md) - Complete guide to running multiple agents
 - [Architecture](docs/architecture.md) - System design and technical details
+- [Architecture Decision Records](docs/adr/) - Design decisions and rationale
 - [Development Guide](DEVELOPMENT.md) - Setup and contribution guidelines
 - [Project Memory](CLAUDE.md) - AI agent context and project knowledge
 

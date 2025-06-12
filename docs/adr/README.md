@@ -12,6 +12,12 @@ This directory contains Architecture Decision Records (ADRs) for the Amux projec
 6. [Context Management Strategy](006-context-management-strategy.md)
 7. [Table Library Selection](007-table-library-selection.md)
 8. [Session Mailbox System](008-session-mailbox-system.md)
+9. [MCP Resources and Prompts](009-mcp-resources-and-prompts.md)
+10. [Documentation Structure Strategy](010-documentation-structure.md)
+11. [Git Worktrees for Workspace Isolation](011-git-worktrees-for-workspace-isolation.md)
+12. [Tmux for Session Management](012-tmux-for-session-management.md)
+13. [YAML for Configuration](013-yaml-for-configuration.md)
+14. [File-based Session Store](014-file-based-session-store.md)
 
 ## What is an ADR?
 
