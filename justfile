@@ -33,15 +33,6 @@ init:
     go run -mod=readonly github.com/google/yamlfmt/cmd/yamlfmt -version > /dev/null 2>&1
     echo "✅ yamlfmt ready"
 
-    echo "📦 Checking required tools..."
-    if ! command -v fd &> /dev/null; then
-        echo "❗ fd not found. Please install fd for better file operations"
-        echo "   macOS: brew install fd"
-        echo "   Linux: See https://github.com/sharkdp/fd#installation"
-    else
-        echo "✅ fd found"
-    fi
-
     echo "📦 Installing npm dependencies..."
     if command -v npm &> /dev/null; then
         npm install
@@ -134,17 +125,14 @@ fmt-md *files:
 fmt-whitespace *files:
     #!/usr/bin/env bash
     if [ -z "{{files}}" ]; then
-        # Format all matching files
-        fd -t f -e go -e md -e yml -e yaml -e txt -e json -e toml -e mod -e sum \
-            -E vendor -E .git -E bin -x sh -c '
-                perl -i -pe "s/[ \t]+$//" "$1"
-                [ "$(tail -c1 "$1")" != "" ] && echo >> "$1" || true
-            ' _ {}
-        # Handle the single justfile at root
-        if [ -f justfile ]; then
-            perl -i -pe 's/[ \t]+$//' justfile
-            [ "$(tail -c1 justfile)" != "" ] && echo >> justfile || true
-        fi
+        # Remove trailing spaces
+        find . -type f \( -name "*.go" -o -name "*.md" -o -name "*.yml" -o -name "*.yaml" -o -name "*.txt" -o -name "*.json" -o -name "*.toml" -o -name "*.mod" -o -name "*.sum" -o -name "justfile" \) \
+            -not -path "./vendor/*" -not -path "./.git/*" -not -path "./bin/*" \
+            -exec perl -i -pe 's/[ \t]+$//' {} \;
+        # Ensure newline at EOF
+        find . -type f \( -name "*.go" -o -name "*.md" -o -name "*.yml" -o -name "*.yaml" -o -name "*.txt" -o -name "*.json" -o -name "*.toml" -o -name "*.mod" -o -name "*.sum" -o -name "justfile" \) \
+            -not -path "./vendor/*" -not -path "./.git/*" -not -path "./bin/*" \
+            -exec sh -c '[ "$(tail -c1 "$1")" != "" ] && echo >> "$1" || true' _ {} \;
     else
         # Process specific files
         for file in {{files}}; do
