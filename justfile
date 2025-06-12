@@ -77,7 +77,7 @@ test-coverage:
 # === Formatting ===
 
 # Format Go code
-fmt:
+fmt-go:
     go run -mod=readonly github.com/golangci/golangci-lint/v2/cmd/golangci-lint fmt ./...
 
 # Format YAML files
@@ -85,11 +85,11 @@ fmt-yaml:
     go run -mod=readonly github.com/google/yamlfmt/cmd/yamlfmt .
 
 # Fix markdown files
-fix-md:
+fmt-md:
     npm run fix:md
 
 # Fix trailing spaces and ensure newline at EOF
-fix-whitespace:
+fmt-whitespace:
     #!/usr/bin/env bash
     # Remove trailing spaces
     find . -type f \( -name "*.go" -o -name "*.md" -o -name "*.yml" -o -name "*.yaml" -o -name "*.txt" -o -name "*.json" -o -name "*.toml" -o -name "*.mod" -o -name "*.sum" \) \
@@ -100,23 +100,29 @@ fix-whitespace:
         -not -path "./vendor/*" -not -path "./.git/*" -not -path "./bin/*" \
         -exec perl -i -pe 'eof && do{print "\n" unless /\n$/}' {} \;
 
+# Format all code
+fmt: fmt-whitespace fmt-go fmt-yaml fmt-md
+
 # === Linting ===
 
 # Lint Go code
-lint:
+lint-go:
     go run -mod=readonly github.com/golangci/golangci-lint/v2/cmd/golangci-lint run
 
 # Lint markdown files
 lint-md:
     npm run lint:md
 
+# Lint all code
+lint: lint-go lint-md
+
 # === Combined Commands ===
 
 # Check code (format + lint) - matches pre-commit hooks
-check: fix-whitespace fmt fmt-yaml fix-md lint lint-md
+check: fmt lint
 
 # Quick check without fixing (for CI)
-check-ci: lint lint-md
+check-ci: lint
     #!/usr/bin/env bash
     # Check for formatting changes
     go run -mod=readonly github.com/golangci/golangci-lint/v2/cmd/golangci-lint fmt ./... --diff
@@ -137,11 +143,11 @@ dev *args:
     go run cmd/amux/main.go {{args}}
 
 # Create a new workspace (development helper)
-workspace name:
+workspace-create name:
     just dev workspace create {{name}}
 
 # List workspaces (development helper)
-list:
+workspace-list:
     just dev workspace list
 
 # Start MCP server
