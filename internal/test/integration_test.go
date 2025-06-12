@@ -9,7 +9,6 @@ import (
 	"github.com/aki/amux/internal/adapters/tmux"
 	"github.com/aki/amux/internal/core/agent"
 	"github.com/aki/amux/internal/core/config"
-	contextmgr "github.com/aki/amux/internal/core/context"
 	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/workspace"
 	"github.com/aki/amux/internal/tests/helpers"
@@ -71,30 +70,6 @@ func TestIntegration_FullWorkflow(t *testing.T) {
 		t.Errorf("Workspace path does not exist: %v", err)
 	}
 
-	// Verify context was initialized
-	contextManager := contextmgr.NewManager(ws.Path)
-	if !contextManager.Exists() {
-		// Initialize it manually if not exists
-		if err := contextManager.Initialize(); err != nil {
-			t.Errorf("Failed to initialize context: %v", err)
-		}
-	}
-
-	// Verify context files exist
-	contextFiles := []string{
-		contextmgr.BackgroundFile,
-		contextmgr.PlanFile,
-		contextmgr.WorkingLogFile,
-		contextmgr.ResultsSummaryFile,
-	}
-
-	for _, file := range contextFiles {
-		path := contextManager.GetFilePath(file)
-		if _, err := os.Stat(path); err != nil {
-			t.Errorf("Context file %s does not exist: %v", file, err)
-		}
-	}
-
 	// Create session manager with mock adapter
 	store, err := session.NewFileStore(configManager.GetAmuxDir())
 	if err != nil {
@@ -152,9 +127,6 @@ func TestIntegration_FullWorkflow(t *testing.T) {
 		} else {
 			if env["TEST_ENV"] != "integration" {
 				t.Errorf("Expected TEST_ENV=integration in session environment, got %v", env)
-			}
-			if env["AMUX_CONTEXT_PATH"] == "" {
-				t.Errorf("Expected AMUX_CONTEXT_PATH to be set")
 			}
 		}
 	}

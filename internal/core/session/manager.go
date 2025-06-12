@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/aki/amux/internal/adapters/tmux"
-	contextmgr "github.com/aki/amux/internal/core/context"
 	"github.com/aki/amux/internal/core/idmap"
 	"github.com/aki/amux/internal/core/mailbox"
 	"github.com/aki/amux/internal/core/workspace"
@@ -180,20 +179,6 @@ func (m *Manager) CreateSession(opts Options) (Session, error) {
 		Command:     opts.Command,
 		Environment: opts.Environment,
 		CreatedAt:   time.Now(),
-	}
-
-	// Initialize working context for the workspace
-	contextManager := contextmgr.NewManager(ws.Path)
-	if err := contextManager.Initialize(); err != nil {
-		// Log error but don't fail session creation
-		// Context is helpful but not critical
-		fmt.Printf("Warning: failed to initialize working context: %v\n", err)
-	} else {
-		// Add initial log entry
-		if err := contextManager.AppendToWorkingLog(fmt.Sprintf("Session started for agent '%s'", opts.AgentID)); err != nil {
-			// Log error but don't fail session creation
-			fmt.Printf("Warning: failed to append to working log: %v\n", err)
-		}
 	}
 
 	// Save to store

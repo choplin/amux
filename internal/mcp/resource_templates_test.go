@@ -212,6 +212,10 @@ func TestHandleWorkspaceContextResource(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("no context file", func(t *testing.T) {
+		// Remove the CLAUDE.workspace.md file if it exists
+		contextPath := filepath.Join(ws.Path, "CLAUDE.workspace.md")
+		_ = os.Remove(contextPath)
+
 		ctx := context.Background()
 		request := mcp.ReadResourceRequest{
 			Params: mcp.ReadResourceParams{
@@ -226,13 +230,13 @@ func TestHandleWorkspaceContextResource(t *testing.T) {
 		textContent, ok := contents[0].(*mcp.TextResourceContents)
 		require.True(t, ok)
 		assert.Equal(t, "text/markdown", textContent.MIMEType)
-		assert.Contains(t, textContent.Text, "No context.md file found")
+		assert.Contains(t, textContent.Text, "No CLAUDE.workspace.md file found")
 	})
 
 	t.Run("with context file", func(t *testing.T) {
-		// Create context.md
+		// Create CLAUDE.workspace.md
 		contextContent := "# Test Context\n\nThis is a test context file."
-		contextPath := filepath.Join(ws.Path, "context.md")
+		contextPath := filepath.Join(ws.Path, "CLAUDE.workspace.md")
 		err = os.WriteFile(contextPath, []byte(contextContent), 0o644)
 		require.NoError(t, err)
 

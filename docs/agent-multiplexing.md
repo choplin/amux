@@ -137,16 +137,15 @@ agents:
 
 ## Working Context
 
-Each workspace automatically gets working context files to help AI agents maintain context:
+Each workspace automatically gets a `CLAUDE.workspace.md` file for workspace-specific context.
+AI agents can use this file to:
 
-### Context Files
+- Document task requirements and constraints
+- Outline implementation plans
+- Track progress and decisions
+- Note important information for review
 
-Located in `.amux/context/` within each workspace:
-
-- **background.md** - Task requirements and constraints
-- **plan.md** - Implementation approach and breakdown
-- **working-log.md** - Progress tracking with timestamps
-- **results-summary.md** - Final outcomes for review
+The file is created empty and agents can organize it as needed for their specific task.
 
 ### Managing Context
 
@@ -156,15 +155,6 @@ amux ws context show [workspace]
 
 # Initialize context files manually
 amux ws context init [workspace]
-```
-
-### Environment Variable
-
-The context path is automatically available in agent sessions:
-
-```bash
-echo $AMUX_CONTEXT_PATH
-# Output: /path/to/workspace/.amux/context
 ```
 
 ## Advanced Usage
@@ -194,7 +184,6 @@ Each session automatically includes:
 - `AMUX_WORKSPACE_PATH` - Full path to workspace
 - `AMUX_SESSION_ID` - Unique session identifier
 - `AMUX_AGENT_ID` - Agent identifier
-- `AMUX_CONTEXT_PATH` - Path to working context files
 - Plus any agent-specific environment variables
 
 ### Workflow Example
@@ -212,10 +201,9 @@ Each session automatically includes:
    ```
 
 3. **Agent works autonomously**:
-   - Reads task from `background.md`
-   - Plans approach in `plan.md`
-   - Updates progress in `working-log.md`
-   - Summarizes results in `results-summary.md`
+   - Works on the assigned tasks
+   - Can create CLAUDE.workspace.md for context if needed
+   - Uses standard git workflow
 
 4. **Monitor progress**:
 
@@ -236,8 +224,8 @@ Each session automatically includes:
    # Stop session when done
    amux agent stop session-abc123
 
-   # Review results
-   cat .amux/context/results-summary.md
+   # Review code changes
+   git diff
    ```
 
 ## Troubleshooting

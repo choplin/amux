@@ -87,7 +87,6 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 	env["AMUX_WORKSPACE_PATH"] = s.workspace.Path
 	env["AMUX_SESSION_ID"] = s.info.ID
 	env["AMUX_AGENT_ID"] = s.info.AgentID
-	env["AMUX_CONTEXT_PATH"] = fmt.Sprintf("%s/.amux/context", s.workspace.Path)
 
 	if err := s.tmuxAdapter.SetEnvironment(tmuxSession, env); err != nil {
 		// Clean up on failure

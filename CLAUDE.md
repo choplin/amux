@@ -141,18 +141,15 @@ When working in Claude Code, you can use these amux tools:
 
 ### Workspace-Specific Context
 
-Each workspace can have its own `CLAUDE.local.md` file for workspace-specific instructions and context:
-
-```markdown
-# CLAUDE.local.md (in workspace root)
+Each workspace can optionally have a `CLAUDE.workspace.md` file for workspace-specific instructions and context.
+AI agents can create this file when needed to document:
 
 - Task-specific requirements
 - Design decisions for this feature
 - TODO items for this workspace
 - Any workspace-specific instructions
-```
 
-This file is automatically loaded when AI agents work in the workspace, supplementing the global CLAUDE.md.
+This file is loaded when AI agents work in the workspace, supplementing the global CLAUDE.md.
 
 ### For Bug Fixes
 
@@ -162,7 +159,7 @@ amux ws create fix-issue-30 --description "Standardize console output"
 
 # 2. (Optional) Add workspace-specific context
 cd .amux/workspaces/workspace-fix-issue-30-*
-echo "# Fix Issue #30\n\nReplace all fmt.Print* with ui.Output methods" > CLAUDE.local.md
+echo "# Fix Issue #30\n\nReplace all fmt.Print* with ui.Output methods" > CLAUDE.workspace.md
 
 # 3. Work in Claude Code using MCP tools
 # 4. Test your changes
@@ -180,9 +177,9 @@ gh pr create --draft
 # 1. Create feature workspace
 amux ws create feat-log-tail --description "Add log tailing command"
 
-# 2. (Optional) Create detailed workspace context
+# 2. (Optional) Update workspace context with detailed requirements
 cd .amux/workspaces/workspace-feat-log-tail-*
-cat > CLAUDE.local.md << 'EOF'
+cat > CLAUDE.workspace.md << 'EOF'
 # Log Tailing Feature
 
 ## Requirements
@@ -209,7 +206,6 @@ amux/
 │   ├── config.yaml               # Project configuration
 │   ├── workspaces/               # Workspace directories (git worktrees)
 │   │   └── workspace-{name}-*/   # Isolated workspace directories
-│   │       └── CLAUDE.local.md   # Workspace-specific context (optional)
 │   └── mailbox/                  # Agent mailboxes (when using CLI)
 ├── cmd/amux/                     # CLI entry point
 ├── internal/                     # Core implementation
@@ -292,7 +288,7 @@ return fmt.Errorf("Workspace not found.")  // Bad
 3. **IDs**: Both names and numeric IDs work for all commands
 4. **Git Integration**: Each workspace is a real git worktree - use git normally
 5. **No Auto-commit**: Amux never commits without explicit user action
-6. **Context Loading**: AI agents automatically load both CLAUDE.md (global) and CLAUDE.local.md
+6. **Context Loading**: AI agents automatically load both CLAUDE.md (global) and CLAUDE.workspace.md
    (workspace-specific) if present
 
 ## Workspace Management Safety

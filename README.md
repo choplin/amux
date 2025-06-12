@@ -240,14 +240,9 @@ amux agent config list                     # List configured agents
 
 ### Working Context
 
-Each workspace includes context files to help AI agents:
-
-- `background.md` - Task requirements and constraints
-- `plan.md` - Implementation approach
-- `working-log.md` - Progress tracking
-- `results-summary.md` - Final outcomes
-
-Access context path via `$AMUX_CONTEXT_PATH` in agent sessions.
+Each workspace includes a `CLAUDE.workspace.md` file for workspace-specific context.
+AI agents can use this file to document task requirements, track progress,
+and maintain important information about their work.
 
 ### Agent Communication
 

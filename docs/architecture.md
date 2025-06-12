@@ -135,9 +135,7 @@ Workspace Manager
     ↓
 Git Worktree Create → New branch
     ↓
-Initialize Metadata → .amux/workspace.yaml
-    ↓
-Create Context → Template files
+Save Metadata → .amux/workspaces/{id}.yaml
     ↓
 Return Workspace Info
 ```
@@ -152,14 +150,7 @@ project-root/
 │   │   └── session-*.yaml     # Individual session files
 │   └── workspaces/            # Workspace storage
 │       ├── workspace-*.yaml   # Workspace metadata files
-│       └── workspace-{id}/    # Git worktrees (isolated workspaces)
-│           ├── .amux/
-│           │   ├── workspace.yaml # Workspace metadata
-│           │   └── context/       # Working context
-│           │       ├── background.md
-│           │       ├── plan.md
-│           │       ├── working-log.md
-│           │       └── results-summary.md
+│       └── workspace-{id}/    # Git worktrees (clean workspaces)
 │           └── [project files]    # Actual code
 └── [main project files]       # Original repository
 

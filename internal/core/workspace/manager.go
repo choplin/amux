@@ -15,7 +15,6 @@ import (
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/git"
 	"github.com/aki/amux/internal/core/idmap"
-	"github.com/aki/amux/internal/templates"
 )
 
 // Manager manages Amux workspaces
@@ -121,22 +120,7 @@ func (m *Manager) Create(opts CreateOptions) (*Workspace, error) {
 		workspace.Index = index
 	}
 
-	// Write template files
-	templateData := templates.TemplateData{
-		ProjectName: m.configManager.GetProjectRoot(),
-		WorkspaceID: id,
-		Branch:      branch,
-		AgentID:     opts.AgentID,
-		Timestamp:   time.Now().Format(time.RFC3339),
-	}
-
-	if err := templates.WriteInstructions(workspacePath, templateData); err != nil {
-		return nil, fmt.Errorf("failed to write instructions: %w", err)
-	}
-
-	if err := templates.WriteContextFiles(workspacePath, templateData); err != nil {
-		return nil, fmt.Errorf("failed to write context files: %w", err)
-	}
+	// No template files needed - workspaces are clean git worktrees
 
 	return workspace, nil
 }
@@ -471,15 +455,7 @@ func (m *Manager) saveWorkspace(workspace *Workspace) error {
 		return fmt.Errorf("failed to write workspace: %w", err)
 	}
 
-	// Also save workspace metadata in the workspace itself
-	workspaceMetaPath := filepath.Join(workspace.Path, ".amux", "workspace.yaml")
-	if err := os.MkdirAll(filepath.Dir(workspaceMetaPath), 0o755); err != nil {
-		return fmt.Errorf("failed to create workspace .amux directory: %w", err)
-	}
-
-	if err := os.WriteFile(workspaceMetaPath, data, 0o644); err != nil {
-		return fmt.Errorf("failed to write workspace metadata: %w", err)
-	}
+	// Don't save workspace metadata in the workspace itself - keep workspaces clean
 
 	return nil
 }

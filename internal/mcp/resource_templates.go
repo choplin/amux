@@ -35,7 +35,7 @@ func (s *ServerV2) registerResourceTemplates() error {
 	workspaceContextTemplate := mcp.NewResourceTemplate(
 		"amux://workspace/{id}/context",
 		"Workspace Context",
-		mcp.WithTemplateDescription("Read the context.md file for a workspace"),
+		mcp.WithTemplateDescription("Read the CLAUDE.workspace.md file for a workspace"),
 		mcp.WithTemplateMIMEType("text/markdown"),
 	)
 	s.mcpServer.AddResourceTemplate(workspaceContextTemplate, s.handleWorkspaceContextResource)
@@ -234,7 +234,7 @@ func (s *ServerV2) handleWorkspaceFilesResource(ctx context.Context, request mcp
 	}, nil
 }
 
-// handleWorkspaceContextResource returns the context.md file for a workspace
+// handleWorkspaceContextResource returns the CLAUDE.workspace.md file for a workspace
 func (s *ServerV2) handleWorkspaceContextResource(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
 	workspaceID, _, err := parseWorkspaceURI(request.Params.URI)
 	if err != nil {
@@ -246,26 +246,24 @@ func (s *ServerV2) handleWorkspaceContextResource(ctx context.Context, request m
 		return nil, fmt.Errorf("failed to get workspace: %w", err)
 	}
 
-	// In the new structure, context.md will be at:
-	// .amux/workspaces/{workspace-id}/context.md
-	// But for now, it might be in the worktree
-	contextPath := filepath.Join(ws.Path, "context.md")
+	// Look for CLAUDE.workspace.md in the workspace root
+	contextPath := filepath.Join(ws.Path, "CLAUDE.workspace.md")
 
-	// Check if context.md exists
+	// Check if CLAUDE.workspace.md exists
 	if _, err := os.Stat(contextPath); os.IsNotExist(err) {
 		// Return empty content with explanation
 		return []mcp.ResourceContents{
 			&mcp.TextResourceContents{
 				URI:      request.Params.URI,
 				MIMEType: "text/markdown",
-				Text:     "# Workspace Context\n\nNo context.md file found in this workspace.\n",
+				Text:     "# Workspace Context\n\nNo CLAUDE.workspace.md file found in this workspace.\n",
 			},
 		}, nil
 	}
 
 	content, err := os.ReadFile(contextPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read context.md: %w", err)
+		return nil, fmt.Errorf("failed to read CLAUDE.workspace.md: %w", err)
 	}
 
 	return []mcp.ResourceContents{

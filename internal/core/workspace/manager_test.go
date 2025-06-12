@@ -62,12 +62,6 @@ func TestManager_CreateWithExistingBranch(t *testing.T) {
 		t.Errorf("Workspace path does not exist: %s", ws.Path)
 	}
 
-	// Verify .amux directory was created
-	amuxDir := filepath.Join(ws.Path, ".amux")
-	if _, err := os.Stat(amuxDir); os.IsNotExist(err) {
-		t.Errorf("Amux directory not created in workspace")
-	}
-
 	// Clean up
 	err = manager.Remove(ws.ID)
 	if err != nil {
