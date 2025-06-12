@@ -17,43 +17,33 @@ default:
 
 # === Setup & Dependencies ===
 
-# Initialize go modules and download dependencies
+# Initialize project dependencies
 init:
+    #!/usr/bin/env bash
+    echo "📦 Initializing Go modules..."
     go mod download
     go mod tidy
-
-# Check if required tools are available
-check-tools:
-    #!/usr/bin/env bash
-    echo "Checking required tools..."
     
-    # Check for npm/npx
-    if ! command -v npx &> /dev/null; then
-        echo "❌ npx not found. Please install Node.js/npm"
+    echo "📦 Installing Go tools..."
+    # Download golangci-lint
+    go run -mod=readonly github.com/golangci/golangci-lint/v2/cmd/golangci-lint version > /dev/null 2>&1
+    echo "✅ golangci-lint ready"
+    
+    # Download yamlfmt
+    go run -mod=readonly github.com/google/yamlfmt/cmd/yamlfmt -version > /dev/null 2>&1
+    echo "✅ yamlfmt ready"
+    
+    echo "📦 Installing npm dependencies..."
+    if command -v npm &> /dev/null; then
+        npm install
+        echo "✅ npm packages installed"
+    else
+        echo "⚠️  npm not found. Install Node.js to use markdown linting"
         echo "   Visit: https://nodejs.org/"
-        exit 1
-    else
-        echo "✅ npx found"
-    fi
-    
-    # Check for markdownlint-cli2
-    if ! npx --no-install markdownlint-cli2 --version &> /dev/null 2>&1; then
-        echo "❌ markdownlint-cli2 not found"
-        echo "   Install with: npm install -g markdownlint-cli2"
-    else
-        echo "✅ markdownlint-cli2 found"
-    fi
-    
-    # Check for commitlint
-    if ! npx --no-install commitlint --version &> /dev/null 2>&1; then
-        echo "❌ commitlint not found"
-        echo "   Install with: npm install -g @commitlint/cli @commitlint/config-conventional"
-    else
-        echo "✅ commitlint found"
     fi
     
     echo ""
-    echo "All required tools are available!"
+    echo "✅ All dependencies initialized!"
 
 # === Build & Install ===
 
