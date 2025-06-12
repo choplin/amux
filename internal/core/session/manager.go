@@ -12,6 +12,7 @@ import (
 	"github.com/aki/amux/internal/core/mailbox"
 	"github.com/aki/amux/internal/core/workspace"
 )
+
 // Manager implements Manager interface
 type Manager struct {
 	store            Store
@@ -69,20 +70,25 @@ func (m *Manager) CreateSession(opts Options) (Session, error) {
 	// Validate workspace exists
 	ws, err := m.workspaceManager.ResolveWorkspace(opts.WorkspaceID)
 	if err != nil {
-		return nil, ErrInvalidWorkspace{WorkspaceID: opts.WorkspaceID}
+		return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 	}
 
-	// TODO: Validate agent exists when we have agent configuration
-
-	// Use provided ID or generate a new one
-	var sessionID string
-	if !opts.ID.IsEmpty() {
-		sessionID = opts.ID.String()
-	} else {
-		sessionID = GenerateID().String()
+	// Check if tmux is available
+	if m.tmuxAdapter == nil || !m.tmuxAdapter.IsAvailable() {
+		return nil, ErrTmuxNotAvailable{}
 	}
 
-	// Create session info
+	// Generate unique session ID
+	sessionID := generateSessionID()
+
+	// Set defaults
+	if opts.Command == "" {
+		opts.Command = "bash"
+	}
+	if opts.AgentID == "" {
+		opts.AgentID = "default"
+	}
+
 	now := time.Now()
 	info := &Info{
 		ID:              sessionID,
@@ -96,174 +102,137 @@ func (m *Manager) CreateSession(opts Options) (Session, error) {
 		StatusChangedAt: now,
 	}
 
-	// Initialize working context for the workspace
-	contextManager := contextmgr.NewManager(ws.Path)
-	if err := contextManager.Initialize(); err != nil {
-		// Log error but don't fail session creation
-		// Context is helpful but not critical
-		m.logger.Warn("failed to initialize working context", "error", err, "workspace", ws.ID)
-	} else {
-		// Add initial log entry
-		if err := contextManager.AppendToWorkingLog(fmt.Sprintf("Session started for agent '%s'", opts.AgentID)); err != nil {
-			// Log error but don't fail session creation
-			m.logger.Warn("failed to append to working log", "error", err, "workspace", ws.ID)
-		}
-	}
-
-	// Save to store
+	// Save session info to store
 	if err := m.store.Save(info); err != nil {
 		return nil, fmt.Errorf("failed to save session: %w", err)
 	}
 
-	// Initialize mailbox for the session
-	if m.mailboxManager != nil {
-		if err := m.mailboxManager.Initialize(sessionID); err != nil {
-			// Log error but don't fail session creation
-			m.logger.Warn("failed to initialize mailbox", "error", err, "session", sessionID)
+	// Register the session ID for short ID mapping
+	if err := m.idMapper.Register(sessionID); err != nil {
+		// Log warning but don't fail
+		m.logger.WithField("session_id", sessionID).Warn("Failed to register session ID")
+	}
+
+	// Update index after registration
+	if index, err := m.idMapper.Resolve(sessionID); err == nil {
+		info.Index = index.Index
+		// Update the stored info with index
+		if err := m.store.Save(info); err != nil {
+			m.logger.WithField("session_id", sessionID).Warn("Failed to update session with index")
 		}
 	}
 
-	// Generate and assign index
-	if m.idMapper != nil {
-		index, err := m.idMapper.AddSession(info.ID)
-		if err != nil {
-			// Don't fail if index generation fails
-			info.Index = ""
-		} else {
-			info.Index = index
+	// Create context in working directory if template exists
+	if opts.CreateContext {
+		// Create context manager
+		contextManager := contextmgr.NewManager(
+			contextmgr.WithWorkspaceID(ws.ID),
+			contextmgr.WithSessionID(sessionID),
+			contextmgr.WithAgentID(opts.AgentID),
+		)
+
+		// Try to create context
+		if _, err := contextManager.CreateContext(ws.Path); err != nil {
+			// Log warning but don't fail session creation
+			m.logger.WithField("error", err).Warn("Failed to create working context")
 		}
 	}
 
-	// Check if tmux is available
-	if m.tmuxAdapter == nil || !m.tmuxAdapter.IsAvailable() {
-		return nil, ErrTmuxNotAvailable{}
-	}
-
-	// Create tmux-backed session
-	session := NewTmuxSession(info, m.store, m.tmuxAdapter, ws, WithTmuxLogger(m.logger))
-
-	// Cache in memory
+	// Create and cache session
+	sess := NewTmuxSession(info, m.store, m.tmuxAdapter, ws)
 	m.mu.Lock()
-	m.sessions[sessionID] = session
+	m.sessions[sessionID] = sess
 	m.mu.Unlock()
 
-	return session, nil
+	return sess, nil
 }
 
-// GetSession retrieves a session by ID (supports both short and full IDs)
-func (m *Manager) GetSession(id string) (Session, error) {
-	// Check if this is a short ID
-	fullID := id
-	if m.idMapper != nil {
-		if fullIDFromShort, exists := m.idMapper.GetSessionFull(id); exists {
-			fullID = fullIDFromShort
-		}
+// GetSession retrieves a session by ID
+func (m *Manager) GetSession(idOrIndex string) (Session, error) {
+	// Resolve to full ID
+	fullID, err := m.resolveSessionID(idOrIndex)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve session ID: %w", err)
 	}
 
-	// Check memory cache first
+	// Check cache
 	m.mu.RLock()
-	if session, ok := m.sessions[fullID]; ok {
+	if sess, ok := m.sessions[fullID]; ok {
 		m.mu.RUnlock()
-		return session, nil
+		return sess, nil
 	}
 	m.mu.RUnlock()
 
 	// Load from store
 	info, err := m.store.Load(fullID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to load session: %w", err)
 	}
 
-	// Populate short ID
-	if m.idMapper != nil {
-		if index, exists := m.idMapper.GetSessionIndex(info.ID); exists {
-			info.Index = index
-		}
-	}
-
-	// Create session implementation
-	session, err := m.createSessionFromInfo(info)
+	// Create session from info
+	sess, err := m.createSessionFromInfo(info)
 	if err != nil {
 		return nil, err
 	}
 
-	// Cache in memory
+	// Cache and return
 	m.mu.Lock()
-	m.sessions[info.ID] = session
+	m.sessions[fullID] = sess
 	m.mu.Unlock()
 
-	return session, nil
+	return sess, nil
 }
 
-// ListSessions lists all sessions
+// ListSessions returns all sessions
 func (m *Manager) ListSessions() ([]Session, error) {
-	infos, err := m.store.List()
+	// Get all session IDs from store
+	ids, err := m.store.List()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list sessions: %w", err)
 	}
 
-	sessions := make([]Session, 0, len(infos))
-	for _, info := range infos {
-		// Populate short ID
-		if m.idMapper != nil {
-			if index, exists := m.idMapper.GetSessionIndex(info.ID); exists {
-				info.Index = index
-			} else {
-				// Generate index if it doesn't exist
-				index, _ := m.idMapper.AddSession(info.ID)
-				info.Index = index
-			}
-		}
-
-		// Check if already in cache
-		m.mu.RLock()
-		if session, ok := m.sessions[info.ID]; ok {
-			sessions = append(sessions, session)
-			m.mu.RUnlock()
-			continue
-		}
-		m.mu.RUnlock()
-
-		// Create new session implementation
-		session, err := m.createSessionFromInfo(info)
+	sessions := make([]Session, 0, len(ids))
+	for _, id := range ids {
+		sess, err := m.GetSession(id)
 		if err != nil {
-			// Skip sessions that can't be created
+			// Log warning but continue
+			m.logger.WithField("session_id", id).WithField("error", err).Warn("Failed to load session")
 			continue
 		}
-
-		// Cache it
-		m.mu.Lock()
-		m.sessions[info.ID] = session
-		m.mu.Unlock()
-
-		sessions = append(sessions, session)
+		sessions = append(sessions, sess)
 	}
 
 	return sessions, nil
 }
 
-// RemoveSession removes a stopped session
-func (m *Manager) RemoveSession(id string) error {
-	session, err := m.GetSession(id)
+// RemoveSession removes a session
+func (m *Manager) RemoveSession(idOrIndex string) error {
+	// Resolve to full ID
+	fullID, err := m.resolveSessionID(idOrIndex)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to resolve session ID: %w", err)
 	}
 
-	// Check if session is stopped
-	if session.Status().IsRunning() {
+	// Get session to check status
+	sess, err := m.GetSession(fullID)
+	if err != nil {
+		return fmt.Errorf("failed to get session: %w", err)
+	}
+
+	// Check if session is running
+	if sess.Status().IsRunning() {
 		return fmt.Errorf("cannot remove running session")
 	}
 
-	fullID := session.ID()
-
 	// Remove from store
 	if err := m.store.Delete(fullID); err != nil {
-		return err
+		return fmt.Errorf("failed to delete session: %w", err)
 	}
 
-	// Remove short ID mapping
-	if m.idMapper != nil {
-		_ = m.idMapper.RemoveSession(fullID)
+	// Unregister the ID mapping
+	if err := m.idMapper.Unregister(fullID); err != nil {
+		// Log warning but don't fail
+		m.logger.WithField("session_id", fullID).Warn("Failed to unregister session ID")
 	}
 
 	// Remove from cache
@@ -295,4 +264,15 @@ func (m *Manager) createSessionFromInfo(info *Info) (Session, error) {
 	}
 
 	return NewTmuxSession(info, m.store, m.tmuxAdapter, ws), nil
+}
+
+// resolveSessionID resolves a short index or ID to full session ID
+func (m *Manager) resolveSessionID(idOrIndex string) (string, error) {
+	// Try to resolve as index first
+	if resolvedID, err := m.idMapper.Resolve(idOrIndex); err == nil {
+		return resolvedID.ID, nil
+	}
+
+	// Otherwise, assume it's already a full ID
+	return idOrIndex, nil
 }

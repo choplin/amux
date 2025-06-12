@@ -281,7 +281,6 @@ func (s *tmuxSessionImpl) GetOutput(maxLines int) ([]byte, error) {
 		// Check if we should transition to idle
 		s.updateStatus()
 	}
-
 	return []byte(output), nil
 }
 

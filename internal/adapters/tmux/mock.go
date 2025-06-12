@@ -232,7 +232,6 @@ func (m *MockAdapter) GetSessionEnvironment(sessionName string) map[string]strin
 	}
 	return nil
 }
-
 // AppendSessionOutput appends output to a specific session (for testing streaming)
 func (m *MockAdapter) AppendSessionOutput(sessionName string, output string) error {
 	m.mu.Lock()
