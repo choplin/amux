@@ -140,8 +140,8 @@ func TestTmuxSession_WithInitialPrompt(t *testing.T) {
 		t.Errorf("Expected status %s, got %s", StatusRunning, session.Status())
 	}
 
-	// Wait for initial prompt to be sent (2 seconds + buffer)
-	time.Sleep(3 * time.Second)
+	// Wait for initial prompt to be sent and processed
+	time.Sleep(500 * time.Millisecond)
 
 	// Get output
 	output, err := session.GetOutput()
