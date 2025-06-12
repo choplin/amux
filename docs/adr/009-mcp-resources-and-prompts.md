@@ -31,9 +31,8 @@ We will implement a proper MCP architecture with clear separation of concerns:
 Implement resources for browsing and reading amux data:
 
 ```text
-amux://conventions                      # Amux structure and patterns
 amux://workspace                        # List all workspaces
-amux://workspace/{id}                   # Get workspace details
+amux://workspace/{id}                   # Get workspace details with paths
 amux://workspace/{id}/files[/{path}]   # Browse workspace files
 amux://workspace/{id}/context           # Read workspace context
 ```
@@ -137,10 +136,24 @@ The `amux://conventions` resource will return:
 - Decided git CLI is better used directly
 - Keep amux focused on workspace management
 
+## Updates
+
+### 2025-06-12: Removed Conventions Resource
+
+After implementation review, we removed the `amux://conventions` resource because:
+- Conventions (paths, naming patterns) are implementation details
+- AI agents only need actual paths, not patterns to construct them
+- Each workspace now includes its actual paths in the detail response
+- This simplifies the API and makes it more practical
+
+Workspace details now include:
+- `paths.worktree` - Actual path to the git worktree
+- `paths.context` - Path to context.md file
+- `resources.*` - URIs to related resources
+
 ## References
 
 - [MCP Resources Documentation](https://modelcontextprotocol.io/docs/concepts/resources)
 - [MCP Prompts Documentation](https://modelcontextprotocol.io/docs/concepts/prompts)
 - [MCP Tools Documentation](https://modelcontextprotocol.io/docs/concepts/tools)
-
 - Issue #44: Implement MCP Resources and Prompts architecture

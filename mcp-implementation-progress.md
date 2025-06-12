@@ -38,11 +38,13 @@
 ### Phase 2: MCP Prompts ✅
 
 #### Infrastructure Setup ✅
+
 - Created `internal/mcp/prompts.go`
 - Implemented prompt registration system
 - Created prompt handlers with proper mcp-go SDK integration
 
 #### Core Prompts ✅
+
 - **`start-issue-work`** - Guides through issue workflow with emphasis on requirements clarification
   - Takes issue number, optional title and URL
   - Provides structured workflow with concrete steps

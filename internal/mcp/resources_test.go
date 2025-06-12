@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -11,40 +12,6 @@ import (
 
 	"github.com/aki/amux/internal/core/workspace"
 )
-
-func TestHandleConventionsResource(t *testing.T) {
-	s := setupTestServer(t)
-
-	ctx := context.Background()
-	request := mcp.ReadResourceRequest{
-		Params: mcp.ReadResourceParams{
-			URI: "amux://conventions",
-		},
-	}
-
-	contents, err := s.handleConventionsResource(ctx, request)
-	require.NoError(t, err)
-	require.Len(t, contents, 1)
-
-	textContent, ok := contents[0].(*mcp.TextResourceContents)
-	require.True(t, ok)
-	assert.Equal(t, "amux://conventions", textContent.URI)
-	assert.Equal(t, "application/json", textContent.MIMEType)
-
-	// Parse the JSON to verify structure
-	var conventions ConventionsData
-	err = json.Unmarshal([]byte(textContent.Text), &conventions)
-	require.NoError(t, err)
-
-	// Verify paths
-	assert.Equal(t, ".amux/workspaces/{workspace-id}/worktree/", conventions.Paths.WorkspaceRoot)
-	assert.Equal(t, ".amux/workspaces/{workspace-id}/context.md", conventions.Paths.WorkspaceContext)
-	assert.Equal(t, ".amux/mailbox/{session-id}/", conventions.Paths.SessionMailbox)
-
-	// Verify patterns
-	assert.Equal(t, "amux/workspace-{name}-{timestamp}-{hash}", conventions.Patterns.BranchName)
-	assert.Equal(t, "workspace-{name}-{timestamp}-{hash}", conventions.Patterns.WorkspaceID)
-}
 
 func TestHandleWorkspaceListResource(t *testing.T) {
 	s := setupTestServer(t)
@@ -85,6 +52,13 @@ func TestHandleWorkspaceListResource(t *testing.T) {
 			found = true
 			assert.Equal(t, "test-workspace", w["name"])
 			assert.Equal(t, "Test workspace for resource testing", w["description"])
+
+			// Check resources are included
+			resources, ok := w["resources"].(map[string]interface{})
+			require.True(t, ok, "resources field should be present")
+			assert.Equal(t, fmt.Sprintf("amux://workspace/%s", ws.ID), resources["detail"])
+			assert.Equal(t, fmt.Sprintf("amux://workspace/%s/files", ws.ID), resources["files"])
+			assert.Equal(t, fmt.Sprintf("amux://workspace/%s/context", ws.ID), resources["context"])
 			break
 		}
 	}
@@ -98,24 +72,14 @@ func TestRegisterResources(t *testing.T) {
 	// Since MCPServer doesn't expose ListResources method,
 	// we'll test by attempting to read the resources
 
-	// Test conventions resource
-	ctx := context.Background()
-	conventionsReq := mcp.ReadResourceRequest{
-		Params: mcp.ReadResourceParams{
-			URI: "amux://conventions",
-		},
-	}
-	contents, err := s.handleConventionsResource(ctx, conventionsReq)
-	require.NoError(t, err)
-	assert.NotEmpty(t, contents)
-
 	// Test workspace list resource
+	ctx := context.Background()
 	workspaceReq := mcp.ReadResourceRequest{
 		Params: mcp.ReadResourceParams{
 			URI: "amux://workspace",
 		},
 	}
-	contents, err = s.handleWorkspaceListResource(ctx, workspaceReq)
+	contents, err := s.handleWorkspaceListResource(ctx, workspaceReq)
 	require.NoError(t, err)
 	assert.NotEmpty(t, contents)
 

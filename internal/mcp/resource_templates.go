@@ -43,6 +43,19 @@ func (s *ServerV2) registerResourceTemplates() error {
 	return nil
 }
 
+// workspacePaths contains the actual filesystem paths for a workspace
+type workspacePaths struct {
+	Worktree string `json:"worktree"`
+	Context  string `json:"context"`
+	Mailbox  string `json:"mailbox,omitempty"`
+}
+
+// workspaceResources contains the MCP resource URIs for a workspace
+type workspaceResources struct {
+	Files   string `json:"files"`
+	Context string `json:"context"`
+}
+
 // parseWorkspaceURI extracts the workspace ID from a URI like amux://workspace/{id}
 func parseWorkspaceURI(uri string) (string, string, error) {
 	// Remove the scheme
@@ -80,18 +93,23 @@ func (s *ServerV2) handleWorkspaceDetailResource(ctx context.Context, request mc
 		return nil, fmt.Errorf("failed to get workspace: %w", err)
 	}
 
-	// Convert to JSON-friendly format
+	// Convert to JSON-friendly format with useful paths
 	type workspaceDetail struct {
-		ID          string `json:"id"`
-		Index       string `json:"index"`
-		Name        string `json:"name"`
-		Branch      string `json:"branch"`
-		BaseBranch  string `json:"baseBranch"`
-		Path        string `json:"path"`
-		Description string `json:"description,omitempty"`
-		CreatedAt   string `json:"createdAt"`
-		UpdatedAt   string `json:"updatedAt"`
+		ID          string             `json:"id"`
+		Index       string             `json:"index"`
+		Name        string             `json:"name"`
+		Branch      string             `json:"branch"`
+		BaseBranch  string             `json:"baseBranch"`
+		Path        string             `json:"path"`
+		Description string             `json:"description,omitempty"`
+		CreatedAt   string             `json:"createdAt"`
+		UpdatedAt   string             `json:"updatedAt"`
+		Paths       workspacePaths     `json:"paths"`
+		Resources   workspaceResources `json:"resources"`
 	}
+
+	// Get workspace root directory (parent of worktree)
+	workspaceRoot := filepath.Dir(ws.Path)
 
 	detail := workspaceDetail{
 		ID:          ws.ID,
@@ -103,6 +121,14 @@ func (s *ServerV2) handleWorkspaceDetailResource(ctx context.Context, request mc
 		Description: ws.Description,
 		CreatedAt:   ws.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		UpdatedAt:   ws.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		Paths: workspacePaths{
+			Worktree: ws.Path,
+			Context:  filepath.Join(workspaceRoot, "context.md"),
+		},
+		Resources: workspaceResources{
+			Files:   fmt.Sprintf("amux://workspace/%s/files", ws.ID),
+			Context: fmt.Sprintf("amux://workspace/%s/context", ws.ID),
+		},
 	}
 
 	jsonData, err := json.MarshalIndent(detail, "", "  ")

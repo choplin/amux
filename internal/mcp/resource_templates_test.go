@@ -109,6 +109,18 @@ func TestHandleWorkspaceDetailResource(t *testing.T) {
 	assert.Equal(t, "test-detail", detail["name"])
 	assert.Equal(t, "Test workspace for detail resource", detail["description"])
 	assert.Equal(t, "main", detail["baseBranch"])
+
+	// Check paths are included
+	paths, ok := detail["paths"].(map[string]interface{})
+	require.True(t, ok, "paths field should be present")
+	assert.NotEmpty(t, paths["worktree"])
+	assert.NotEmpty(t, paths["context"])
+
+	// Check resources are included
+	resources, ok := detail["resources"].(map[string]interface{})
+	require.True(t, ok, "resources field should be present")
+	assert.Equal(t, fmt.Sprintf("amux://workspace/%s/files", ws.ID), resources["files"])
+	assert.Equal(t, fmt.Sprintf("amux://workspace/%s/context", ws.ID), resources["context"])
 }
 
 func TestHandleWorkspaceFilesResource(t *testing.T) {
