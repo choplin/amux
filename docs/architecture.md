@@ -99,10 +99,13 @@ agents:
 **Available Tools**:
 
 - `workspace_create` - Create new workspace
-- `workspace_list` - List workspaces
-- `workspace_get` - Get workspace details
 - `workspace_remove` - Remove workspace
-- `workspace_info` - Browse workspace files
+
+**Bridge Tools** (for clients without resource support):
+
+- `resource_workspace_list` - List all workspaces
+- `resource_workspace_show` - Get workspace details
+- `resource_workspace_browse` - Browse workspace files
 
 ## Data Flow
 
@@ -165,61 +168,22 @@ project-root/
 
 ```
 
-## Design Decisions
+## Design Philosophy
 
-### 1. Git Worktrees for Isolation
+Amux follows these architectural principles:
 
-**Rationale**:
+- **Simplicity over features** - Start simple, extend when needed
+- **No external services** - Everything runs locally
+- **Git-native workflows** - Leverage git's power
+- **File-based storage** - Easy debugging and inspection
+- **Clean interfaces** - Enable future extensibility
 
-- True filesystem isolation between agents
-- Parallel development without conflicts
-- Standard git workflows for merging
+For detailed design decisions and rationale, see:
 
-**Trade-offs**:
-
-- Disk space usage (full copy per workspace)
-- Complexity of worktree management
-
-### 2. Tmux for Session Management
-
-**Rationale**:
-
-- Persistent terminal sessions
-- Attach/detach capability
-- Standard tool in development environments
-
-**Trade-offs**:
-
-- Dependency on external tool
-- Platform-specific behavior
-- Fallback to basic sessions without tmux
-
-### 3. YAML for Configuration
-
-**Rationale**:
-
-- Human-readable and editable
-- Good for structured configuration
-- Standard in DevOps tools
-
-**Trade-offs**:
-
-- Parsing overhead
-- Schema validation complexity
-
-### 4. File-based Session Store
-
-**Rationale**:
-
-- Simple and portable
-- No database dependencies
-- Easy debugging and inspection
-
-**Trade-offs**:
-
-- Potential race conditions
-- Limited query capabilities
-- File system performance
+- [ADR-011: Git Worktrees for Workspace Isolation](adr/011-git-worktrees-for-workspace-isolation.md)
+- [ADR-012: Tmux for Session Management](adr/012-tmux-for-session-management.md)
+- [ADR-013: YAML for Configuration](adr/013-yaml-for-configuration.md)
+- [ADR-014: File-based Session Store](adr/014-file-based-session-store.md)
 
 ## Extension Points
 
