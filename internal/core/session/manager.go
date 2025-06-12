@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/aki/amux/internal/adapters/tmux"
-	"github.com/aki/amux/internal/core/common"
 	contextmgr "github.com/aki/amux/internal/core/context"
+	"github.com/aki/amux/internal/core/idmap"
 	"github.com/aki/amux/internal/core/mailbox"
 	"github.com/aki/amux/internal/core/workspace"
 )
@@ -132,12 +132,12 @@ type Manager struct {
 	mailboxManager   *mailbox.Manager
 	tmuxAdapter      tmux.Adapter
 	sessions         map[string]Session
-	idMapper         *common.IDMapper
+	idMapper         *idmap.IDMapper
 	mu               sync.RWMutex
 }
 
 // NewManager creates a new session manager
-func NewManager(store Store, workspaceManager *workspace.Manager, mailboxManager *mailbox.Manager, idMapper *common.IDMapper) *Manager {
+func NewManager(store Store, workspaceManager *workspace.Manager, mailboxManager *mailbox.Manager, idMapper *idmap.IDMapper) *Manager {
 	// Try to create tmux adapter, but don't fail if unavailable
 	tmuxAdapter, _ := tmux.NewAdapter()
 

@@ -12,9 +12,9 @@ import (
 	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
 
-	"github.com/aki/amux/internal/core/common"
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/git"
+	"github.com/aki/amux/internal/core/idmap"
 	"github.com/aki/amux/internal/templates"
 )
 
@@ -23,7 +23,7 @@ type Manager struct {
 	configManager *config.Manager
 	gitOps        *git.Operations
 	workspacesDir string
-	idMapper      *common.IDMapper
+	idMapper      *idmap.IDMapper
 }
 
 // NewManager creates a new workspace manager
@@ -37,7 +37,7 @@ func NewManager(configManager *config.Manager) (*Manager, error) {
 	workspacesDir := configManager.GetWorkspacesDir()
 
 	// Initialize ID mapper
-	idMapper, err := common.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize ID mapper: %w", err)
 	}

@@ -13,8 +13,8 @@ import (
 
 	"github.com/aki/amux/internal/cli/ui"
 	"github.com/aki/amux/internal/core/agent"
-	"github.com/aki/amux/internal/core/common"
 	"github.com/aki/amux/internal/core/config"
+	"github.com/aki/amux/internal/core/idmap"
 	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/workspace"
 )
@@ -176,7 +176,7 @@ func runAgent(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get ID mapper (workspace manager already has it internally)
-	idMapper, err := common.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		return fmt.Errorf("failed to create ID mapper: %w", err)
 	}
@@ -244,7 +244,7 @@ func listAgents(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get ID mapper (workspace manager already has it internally)
-	idMapper, err := common.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		return fmt.Errorf("failed to create ID mapper: %w", err)
 	}
@@ -336,7 +336,7 @@ func attachAgent(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get ID mapper (workspace manager already has it internally)
-	idMapper, err := common.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		return fmt.Errorf("failed to create ID mapper: %w", err)
 	}
@@ -391,7 +391,7 @@ func stopAgent(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get ID mapper (workspace manager already has it internally)
-	idMapper, err := common.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		return fmt.Errorf("failed to create ID mapper: %w", err)
 	}
@@ -434,7 +434,7 @@ func viewAgentLogs(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get ID mapper (workspace manager already has it internally)
-	idMapper, err := common.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		return fmt.Errorf("failed to create ID mapper: %w", err)
 	}
