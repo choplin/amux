@@ -2,22 +2,8 @@
 
 This directory contains Architecture Decision Records (ADRs) for the Amux project.
 
-## Index
-
-1. [Record Architecture Decisions](001-record-architecture-decisions.md)
-2. [Cave Terminology](002-cave-terminology.md)
-3. [Agent Multiplexing Architecture](003-agent-multiplexing-architecture.md)
-4. [Rename to Amux](004-rename-to-amux.md)
-5. [Command Structure](005-command-structure.md)
-6. [Context Management Strategy](006-context-management-strategy.md)
-7. [Table Library Selection](007-table-library-selection.md)
-8. [Session Mailbox System](008-session-mailbox-system.md)
-9. [MCP Resources and Prompts](009-mcp-resources-and-prompts.md)
-10. [Documentation Structure Strategy](010-documentation-structure.md)
-11. [Git Worktrees for Workspace Isolation](011-git-worktrees-for-workspace-isolation.md)
-12. [Tmux for Session Management](012-tmux-for-session-management.md)
-13. [YAML for Configuration](013-yaml-for-configuration.md)
-14. [File-based Session Store](014-file-based-session-store.md)
+ADRs are numbered sequentially (e.g., `001-record-architecture-decisions.md`) and can be viewed
+by browsing the files in this directory.
 
 ## What is an ADR?
 

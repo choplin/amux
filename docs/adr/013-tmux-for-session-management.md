@@ -1,4 +1,4 @@
-# ADR-012: Tmux for Session Management
+# ADR-013: Tmux for Session Management
 
 Date: 2025-06-12
 
