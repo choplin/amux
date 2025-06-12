@@ -1,9 +1,9 @@
 package commands
 
 import (
-	"fmt"
 	"runtime"
 
+	"github.com/aki/amux/internal/cli/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -19,11 +19,11 @@ var versionCmd = &cobra.Command{
 	Short: "Show version information",
 	Long:  "Display detailed version information about amux",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("amux version %s\n", Version)
-		fmt.Printf("  Git commit: %s\n", GitCommit)
-		fmt.Printf("  Build date: %s\n", BuildDate)
-		fmt.Printf("  Go version: %s\n", runtime.Version())
-		fmt.Printf("  OS/Arch:    %s/%s\n", runtime.GOOS, runtime.GOARCH)
+		ui.OutputLine("amux version %s", Version)
+		ui.OutputLine("  Git commit: %s", GitCommit)
+		ui.OutputLine("  Build date: %s", BuildDate)
+		ui.OutputLine("  Go version: %s", runtime.Version())
+		ui.OutputLine("  OS/Arch:    %s/%s", runtime.GOOS, runtime.GOARCH)
 	},
 }
 

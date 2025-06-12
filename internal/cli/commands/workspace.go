@@ -234,7 +234,7 @@ func runListWorkspace(cmd *cobra.Command, args []string) error {
 			if ws.Index != "" {
 				id = ws.Index
 			}
-			fmt.Printf("%s\t%s\t%s\t%s\t%s\t%s\n", ws.Name, id, ws.Branch, ws.Status.String(), ws.Path, description)
+			ui.PrintTSV([][]string{{ws.Name, id, ws.Branch, ws.Status.String(), ws.Path, description}})
 
 		}
 	} else {
@@ -283,18 +283,11 @@ func runRemoveWorkspace(cmd *cobra.Command, args []string) error {
 
 		ui.Warning("This will remove workspace '%s' (%s) and its branch '%s'", ws.Name, ws.ID, ws.Branch)
 
-		fmt.Print("Are you sure? (y/N): ")
-
-		var response string
-
-		_, _ = fmt.Scanln(&response)
+		response := ui.Prompt("Are you sure? (y/N): ")
 
 		if response != "y" && response != "Y" {
-
 			ui.Info("Removal cancelled")
-
 			return nil
-
 		}
 
 	}
@@ -340,7 +333,7 @@ func runPruneWorkspace(cmd *cobra.Command, args []string) error {
 	}
 
 	for _, id := range removed {
-		fmt.Printf("  - %s\n", id)
+		ui.OutputLine("  - %s", id)
 	}
 
 	return nil

@@ -314,7 +314,7 @@ func listAgents(cmd *cobra.Command, args []string) error {
 	// Print with header
 	ui.PrintSectionHeader("🤖", "Agent Sessions", len(sessions))
 	tbl.Print()
-	fmt.Println()
+	ui.OutputLine("")
 
 	return nil
 }
@@ -458,6 +458,6 @@ func viewAgentLogs(cmd *cobra.Command, args []string) error {
 	}
 
 	// Print output
-	fmt.Print(string(output))
+	ui.Raw(string(output))
 	return nil
 }

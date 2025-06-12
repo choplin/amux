@@ -133,13 +133,13 @@ func listMailbox(cmd *cobra.Command, args []string) error {
 	ui.PrintSectionHeader("📬", fmt.Sprintf("Mailbox for session %s", sessionID), totalCount)
 
 	// Display summary
-	fmt.Printf("Location: %s\n", mailboxPath)
-	fmt.Printf("Messages: %d total (%d incoming, %d outgoing)\n\n", totalCount, inCount, outCount)
+	ui.PrintKeyValue("Location", mailboxPath)
+	ui.OutputLine("Messages: %d total (%d incoming, %d outgoing)\n", totalCount, inCount, outCount)
 
 	// Display messages in a single table with global indices
 	if len(allMessages) > 0 {
 		printMessageTableWithIndex(allMessages)
-		fmt.Printf("\nUse 'amux mailbox show %s <#>' to read a specific message\n", sessionID)
+		ui.OutputLine("\nUse 'amux mailbox show %s <#>' to read a specific message", sessionID)
 	}
 
 	if totalCount == 0 || (listDirection != "" && inCount == 0 && outCount == 0) {
