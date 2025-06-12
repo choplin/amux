@@ -82,6 +82,11 @@ func NewServerV2(configManager *config.Manager, transport string, httpConfig *co
 		return nil, fmt.Errorf("failed to register resource templates: %w", err)
 	}
 
+	// Register session resources
+	if err := s.registerSessionResources(); err != nil {
+		return nil, fmt.Errorf("failed to register session resources: %w", err)
+	}
+
 	// Register all prompts
 	if err := s.registerPrompts(); err != nil {
 		return nil, fmt.Errorf("failed to register prompts: %w", err)
@@ -110,6 +115,11 @@ func (s *ServerV2) registerTools() error {
 	}
 
 	s.mcpServer.AddTool(mcp.NewTool("workspace_remove", removeOpts...), s.handleWorkspaceRemove)
+
+	// Register session tools
+	if err := s.registerSessionTools(); err != nil {
+		return fmt.Errorf("failed to register session tools: %w", err)
+	}
 
 	return nil
 }

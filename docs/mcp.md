@@ -47,6 +47,32 @@ Resources provide structured read-only access to workspace information without m
 - **Description**: Read the workspace's context.md file
 - **Returns**: Markdown content or placeholder if not found
 
+#### Session List
+
+- **URI**: `amux://session`
+- **Description**: List all active sessions with metadata
+- **Returns**: JSON array of sessions with resource URIs
+
+#### Session Details
+
+- **URI**: `amux://session/{id}`
+- **Description**: Get complete session information
+- **Returns**: JSON object with session metadata, status, and resource URIs
+- **Note**: Accepts both session ID and short ID
+
+#### Session Output
+
+- **URI**: `amux://session/{id}/output`
+- **Description**: Read current session output/logs from tmux
+- **Returns**: Plain text output from the session
+- **Note**: Only available for running sessions
+
+#### Session Mailbox
+
+- **URI**: `amux://session/{id}/mailbox`
+- **Description**: Access session mailbox state and messages
+- **Returns**: JSON object with mailbox path and message list
+
 ## MCP Tools (Actions)
 
 Tools perform state-changing operations on workspaces.
@@ -71,6 +97,36 @@ Tools perform state-changing operations on workspaces.
   - `workspace_id` (required): Workspace ID or name
 - **Returns**: Confirmation message
 - **Warning**: This operation is permanent and cannot be undone
+
+### Session Management Tools
+
+#### session_run
+
+- **Description**: Run an AI agent session in a workspace (creates and starts)
+- **Parameters**:
+  - `workspace_id` (required): Workspace ID or name to run in
+  - `agent_id` (required): Agent ID to run (e.g., 'claude', 'gpt')
+  - `command` (optional): Override the agent's default command
+  - `environment` (optional): Additional environment variables
+- **Returns**: Session details including ID, status, and attach commands
+- **Note**: Equivalent to CLI's `amux agent run`
+
+#### session_stop
+
+- **Description**: Stop a running agent session gracefully
+- **Parameters**:
+  - `session_id` (required): Session ID or short ID
+- **Returns**: Confirmation message
+- **Note**: Equivalent to CLI's `amux agent stop`
+
+#### session_send_input
+
+- **Description**: Send input text to a running agent session's stdin
+- **Parameters**:
+  - `session_id` (required): Session ID or short ID
+  - `input` (required): Input text to send to stdin
+- **Returns**: Confirmation message
+- **Note**: Session must be running to receive input
 
 ### Bridge Tools (Resource Access)
 
@@ -99,6 +155,37 @@ counterparts.
   - `workspace_id` (required): Workspace ID or name
   - `path` (optional): Path within workspace to browse
 - **Returns**: Directory listing or file contents (same as resource)
+
+### Bridge Tools (Session Access)
+
+Session resources can also be accessed through bridge tools:
+
+#### resource_session_list
+
+- **Description**: List all active sessions (bridge to `amux://session` resource)
+- **Parameters**: None
+- **Returns**: JSON array of sessions (same as resource)
+
+#### resource_session_show
+
+- **Description**: Get session details (bridge to `amux://session/{id}` resource)
+- **Parameters**:
+  - `session_id` (required): Session ID or short ID
+- **Returns**: JSON object with session details (same as resource)
+
+#### resource_session_output
+
+- **Description**: Read session output (bridge to `amux://session/{id}/output` resource)
+- **Parameters**:
+  - `session_id` (required): Session ID or short ID
+- **Returns**: Plain text output from the session
+
+#### resource_session_mailbox
+
+- **Description**: Access session mailbox (bridge to `amux://session/{id}/mailbox` resource)
+- **Parameters**:
+  - `session_id` (required): Session ID or short ID
+- **Returns**: JSON object with mailbox information
 
 ### Bridge Tools (Prompt Access)
 
@@ -223,6 +310,45 @@ Prompts provide structured guidance for common AI agent workflows.
     "name": "workspace_remove",
     "arguments": {
       "workspace_id": "ws-123"
+    }
+  }
+}
+
+// Run an agent session
+{
+  "method": "tools/call",
+  "params": {
+    "name": "session_run",
+    "arguments": {
+      "workspace_id": "feature-auth",
+      "agent_id": "claude",
+      "command": "claude-code --model opus",
+      "environment": {
+        "ANTHROPIC_API_KEY": "sk-..."
+      }
+    }
+  }
+}
+
+// Stop a session
+{
+  "method": "tools/call",
+  "params": {
+    "name": "session_stop",
+    "arguments": {
+      "session_id": "3"
+    }
+  }
+}
+
+// Send input to a session
+{
+  "method": "tools/call",
+  "params": {
+    "name": "session_send_input",
+    "arguments": {
+      "session_id": "3",
+      "input": "Please implement the login endpoint"
     }
   }
 }
@@ -364,6 +490,38 @@ Bridge tools provide the same data as resources but through the tools interface:
    { "method": "prompts/get", "params": { "name": "prepare-pr", "arguments": { "workspace_id": "ws-123" } } }
    ```
 
+### AI Agent Collaboration Workflow
+
+1. **Run an AI agent** in a workspace:
+
+   ```json
+   { "method": "tools/call", "params": { "name": "session_run", "arguments": { "workspace_id": "feature-auth", "agent_id": "claude" } } }
+   ```
+
+2. **Monitor session status** via resources:
+
+   ```json
+   { "method": "resources/read", "params": { "uri": "amux://session/3" } }
+   ```
+
+3. **Send instructions** to the agent:
+
+   ```json
+   { "method": "tools/call", "params": { "name": "session_send_input", "arguments": { "session_id": "3", "input": "Please add tests for the auth module" } } }
+   ```
+
+4. **View agent output**:
+
+   ```json
+   { "method": "resources/read", "params": { "uri": "amux://session/3/output" } }
+   ```
+
+5. **Stop the session** when done:
+
+   ```json
+   { "method": "tools/call", "params": { "name": "session_stop", "arguments": { "session_id": "3" } } }
+   ```
+
 ## Implementation Details
 
 ### Resource Implementation
@@ -416,6 +574,7 @@ Prompts are implemented in `internal/mcp/prompts.go` with:
 
 Planned MCP extensions tracked in GitHub issues:
 
-- [#53](https://github.com/choplin/amux/issues/53): MCP Resources for session management
-
 - [#54](https://github.com/choplin/amux/issues/54): MCP Resources and Tools for mailbox system
+- Additional session management tools (start, stop, send input)
+- Enhanced mailbox tools for sending/receiving messages
+- Session status change notifications via MCP events

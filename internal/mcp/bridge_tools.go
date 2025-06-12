@@ -1,80 +1,38 @@
 package mcp
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
-
-	"github.com/mark3labs/mcp-go/mcp"
 
 	"github.com/aki/amux/internal/core/workspace"
+	"github.com/mark3labs/mcp-go/mcp"
 )
 
 // Bridge tools provide tool-based access to MCP resources
 // for clients that don't support native resource reading.
 // These tools return the same data as their resource counterparts.
 
+// promptInfo contains basic prompt information
+type promptInfo struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
 // registerBridgeTools registers all bridge tools that provide access to resources
 func (s *ServerV2) registerBridgeTools() error {
-	// resource_workspace_list - Bridge to amux://workspace
-	listOpts, err := WithStructOptions(
-		"List all workspaces (bridge to amux://workspace resource). Returns the same data as the workspace resource.",
-		struct{}{},
-	)
-	if err != nil {
-		return fmt.Errorf("failed to create resource_workspace_list options: %w", err)
+	// Register workspace bridge tools
+	if err := s.registerWorkspaceBridgeTools(); err != nil {
+		return fmt.Errorf("failed to register workspace bridge tools: %w", err)
 	}
-	s.mcpServer.AddTool(mcp.NewTool("resource_workspace_list", listOpts...), s.handleResourceWorkspaceList)
 
-	// resource_workspace_show - Bridge to amux://workspace/{id}
-	showOpts, err := WithStructOptions(
-		"Get details of a specific workspace (bridge to amux://workspace/{id} resource). Returns the same data as the workspace detail resource.",
-		WorkspaceIDParams{},
-	)
-	if err != nil {
-		return fmt.Errorf("failed to create resource_workspace_show options: %w", err)
+	// Register prompt bridge tools
+	if err := s.registerPromptBridgeTools(); err != nil {
+		return fmt.Errorf("failed to register prompt bridge tools: %w", err)
 	}
-	s.mcpServer.AddTool(mcp.NewTool("resource_workspace_show", showOpts...), s.handleResourceWorkspaceShow)
 
-	// resource_workspace_browse - Bridge to amux://workspace/{id}/files
-	type WorkspaceBrowseParams struct {
-		WorkspaceID string `json:"workspace_id" jsonschema:"required,description=Workspace name or ID"`
-		Path        string `json:"path,omitempty" jsonschema:"description=Path within the workspace to browse (optional)"`
+	// Register session bridge tools
+	if err := s.registerSessionBridgeTools(); err != nil {
+		return fmt.Errorf("failed to register session bridge tools: %w", err)
 	}
-	browseOpts, err := WithStructOptions(
-		"Browse files in a workspace (bridge to amux://workspace/{id}/files resource). Returns directory listings or file contents.",
-		WorkspaceBrowseParams{},
-	)
-	if err != nil {
-		return fmt.Errorf("failed to create resource_workspace_browse options: %w", err)
-	}
-	s.mcpServer.AddTool(mcp.NewTool("resource_workspace_browse", browseOpts...), s.handleResourceWorkspaceBrowse)
-
-	// prompt_list - List available prompts
-	promptListOpts, err := WithStructOptions(
-		"List all available prompts. Returns prompt names and descriptions.",
-		struct{}{},
-	)
-	if err != nil {
-		return fmt.Errorf("failed to create prompt_list options: %w", err)
-	}
-	s.mcpServer.AddTool(mcp.NewTool("prompt_list", promptListOpts...), s.handlePromptList)
-
-	// prompt_get - Get a specific prompt
-	type PromptGetParams struct {
-		Name string `json:"name" jsonschema:"required,description=Name of the prompt to retrieve"`
-	}
-	promptGetOpts, err := WithStructOptions(
-		"Get a specific prompt by name. Returns the prompt definition including description and arguments.",
-		PromptGetParams{},
-	)
-	if err != nil {
-		return fmt.Errorf("failed to create prompt_get options: %w", err)
-	}
-	s.mcpServer.AddTool(mcp.NewTool("prompt_get", promptGetOpts...), s.handlePromptGet)
 
 	return nil
 }
@@ -121,258 +79,120 @@ func (s *ServerV2) getWorkspaceDetail(workspaceID string) (*workspaceDetail, err
 		Name:        ws.Name,
 		Branch:      ws.Branch,
 		BaseBranch:  ws.BaseBranch,
-		Path:        ws.Path,
 		Description: ws.Description,
+		Path:        ws.Path,
 		CreatedAt:   ws.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		UpdatedAt:   ws.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
-		Paths: workspacePaths{
-			Worktree: ws.Path,
-			Context:  ws.ContextPath,
-		},
-		Resources: workspaceResources{
-			Files:   fmt.Sprintf("amux://workspace/%s/files", ws.ID),
-			Context: fmt.Sprintf("amux://workspace/%s/context", ws.ID),
-		},
 	}
+
+	// Add paths
+	detail.Paths.Worktree = ws.Path
+	detail.Paths.Context = ws.ContextPath
+
+	// Add resource URIs
+	detail.Resources.Files = fmt.Sprintf("amux://workspace/%s/files", ws.ID)
+	detail.Resources.Context = fmt.Sprintf("amux://workspace/%s/context", ws.ID)
 
 	return detail, nil
 }
 
-// Bridge tool handlers
-
-func (s *ServerV2) handleResourceWorkspaceList(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	workspaceList, err := s.getWorkspaceList()
-	if err != nil {
-		return nil, err
-	}
-
-	jsonData, err := json.MarshalIndent(workspaceList, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal workspace list: %w", err)
-	}
-
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: string(jsonData),
-			},
-		},
-	}, nil
-}
-
-func (s *ServerV2) handleResourceWorkspaceShow(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	args := request.GetArguments()
-	workspaceID, ok := args["workspace_id"].(string)
-	if !ok {
-		return nil, fmt.Errorf("invalid or missing workspace_id argument")
-	}
-
-	detail, err := s.getWorkspaceDetail(workspaceID)
-	if err != nil {
-		return nil, err
-	}
-
-	jsonData, err := json.MarshalIndent(detail, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal workspace detail: %w", err)
-	}
-
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: string(jsonData),
-			},
-		},
-	}, nil
-}
-
-func (s *ServerV2) handleResourceWorkspaceBrowse(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	args := request.GetArguments()
-
-	workspaceID, ok := args["workspace_id"].(string)
-	if !ok {
-		return nil, fmt.Errorf("invalid or missing workspace_id argument")
-	}
-
-	subPath := ""
-	if p, ok := args["path"].(string); ok {
-		subPath = p
-	}
-
-	ws, err := s.workspaceManager.Get(workspaceID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get workspace: %w", err)
-	}
-
-	// Construct the full path
-	fullPath := ws.Path
-	if subPath != "" {
-		fullPath = filepath.Join(ws.Path, subPath)
-	}
-
-	// Security check: ensure path is within workspace
-	if !strings.HasPrefix(fullPath, ws.Path) {
-		return nil, fmt.Errorf("access denied: path outside workspace")
-	}
-
-	// Check if path exists and is a directory
-	info, err := os.Stat(fullPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to stat path: %w", err)
-	}
-
-	if !info.IsDir() {
-		// If it's a file, return its contents
-		content, err := os.ReadFile(fullPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read file: %w", err)
-		}
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: string(content),
+// getRegisteredPrompts returns the list of registered prompts
+func (s *ServerV2) getRegisteredPrompts() []mcp.Prompt {
+	// Hard-coded list of our registered prompts
+	// In the future, we might want to store these when registering
+	return []mcp.Prompt{
+		{
+			Name:        "start-issue-work",
+			Description: "Guide through starting work on a GitHub issue. Helps AI agents properly understand requirements before starting implementation",
+			Arguments: []mcp.PromptArgument{
+				{
+					Name:        "issue_number",
+					Description: "GitHub issue number to work on",
+					Required:    true,
+				},
+				{
+					Name:        "issue_title",
+					Description: "Title of the GitHub issue",
+					Required:    false,
+				},
+				{
+					Name:        "issue_url",
+					Description: "Full URL to the GitHub issue",
+					Required:    false,
 				},
 			},
-		}, nil
+		},
+		{
+			Name:        "prepare-pr",
+			Description: "Guide through preparing a pull request. Helps ensure all tests pass and code is properly formatted before creating a PR",
+			Arguments: []mcp.PromptArgument{
+				{
+					Name:        "workspace_id",
+					Description: "Workspace ID or name to prepare PR from",
+					Required:    true,
+				},
+				{
+					Name:        "pr_title",
+					Description: "Proposed PR title",
+					Required:    false,
+				},
+				{
+					Name:        "pr_description",
+					Description: "Proposed PR description",
+					Required:    false,
+				},
+			},
+		},
+		{
+			Name:        "review-workspace",
+			Description: "Analyze workspace state and suggest next steps. Helps AI agents understand what work remains to be done",
+			Arguments: []mcp.PromptArgument{
+				{
+					Name:        "workspace_id",
+					Description: "Workspace ID or name to review",
+					Required:    true,
+				},
+			},
+		},
 	}
+}
 
-	// List directory contents
-	entries, err := os.ReadDir(fullPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read directory: %w", err)
-	}
+// Shared logic for getting prompt list
+func (s *ServerV2) getPromptList() ([]promptInfo, error) {
+	// Get registered prompts
+	prompts := s.getRegisteredPrompts()
 
-	type fileInfo struct {
-		Name string `json:"name"`
-		Type string `json:"type"`
-		Size int64  `json:"size"`
-	}
-
-	files := make([]fileInfo, 0, len(entries))
-	for _, entry := range entries {
-		// Skip hidden files
-		if strings.HasPrefix(entry.Name(), ".") {
-			continue
-		}
-
-		info, err := entry.Info()
-		if err != nil {
-			continue
-		}
-
-		fileType := "file"
-		if entry.IsDir() {
-			fileType = "directory"
-		}
-
-		files = append(files, fileInfo{
-			Name: entry.Name(),
-			Type: fileType,
-			Size: info.Size(),
+	promptList := make([]promptInfo, 0, len(prompts))
+	for _, prompt := range prompts {
+		promptList = append(promptList, promptInfo{
+			Name:        prompt.Name,
+			Description: prompt.Description,
 		})
 	}
 
-	jsonData, err := json.MarshalIndent(files, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal file list: %w", err)
-	}
-
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: string(jsonData),
-			},
-		},
-	}, nil
+	return promptList, nil
 }
 
-func (s *ServerV2) handlePromptList(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Get the list of prompts from the registered prompts
-	// For now, we'll return a hardcoded list based on what we know exists
-	prompts := []struct {
-		Name        string `json:"name"`
-		Description string `json:"description"`
-	}{
-		{
-			Name:        "workspace_planning",
-			Description: "Generate a plan for implementing a feature or fixing an issue in a workspace",
-		},
-	}
+// Shared logic for getting prompt detail
+func (s *ServerV2) getPromptDetail(name string) (map[string]interface{}, error) {
+	// Get registered prompts
+	prompts := s.getRegisteredPrompts()
 
-	jsonData, err := json.MarshalIndent(prompts, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal prompt list: %w", err)
-	}
+	for _, prompt := range prompts {
+		if prompt.Name == name {
+			detail := map[string]interface{}{
+				"name":        prompt.Name,
+				"description": prompt.Description,
+			}
 
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: string(jsonData),
-			},
-		},
-	}, nil
-}
+			// Add arguments if any
+			if len(prompt.Arguments) > 0 {
+				detail["arguments"] = prompt.Arguments
+			}
 
-func (s *ServerV2) handlePromptGet(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	args := request.GetArguments()
-
-	promptName, ok := args["name"].(string)
-	if !ok {
-		return nil, fmt.Errorf("invalid or missing name argument")
-	}
-
-	// For now, return the workspace planning prompt if requested
-	if promptName == "workspace_planning" {
-		prompt := struct {
-			Name        string                 `json:"name"`
-			Description string                 `json:"description"`
-			Arguments   map[string]interface{} `json:"arguments"`
-			Template    string                 `json:"template"`
-		}{
-			Name:        "workspace_planning",
-			Description: "Generate a plan for implementing a feature or fixing an issue in a workspace",
-			Arguments: map[string]interface{}{
-				"issueNumber": map[string]string{
-					"type":        "string",
-					"description": "GitHub issue number",
-					"required":    "false",
-				},
-				"issueTitle": map[string]string{
-					"type":        "string",
-					"description": "Title or description of the issue",
-					"required":    "true",
-				},
-			},
-			Template: `You are helping plan the implementation for: {{issueTitle}}{{#if issueNumber}} (Issue #{{issueNumber}}){{/if}}
-
-Please create a detailed implementation plan that includes:
-1. Understanding the requirements
-2. Identifying affected components
-3. Proposing the solution approach
-4. Breaking down into specific tasks
-5. Identifying potential risks or considerations`,
+			return detail, nil
 		}
-
-		jsonData, err := json.MarshalIndent(prompt, "", "  ")
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal prompt: %w", err)
-		}
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: string(jsonData),
-				},
-			},
-		}, nil
 	}
 
-	return nil, fmt.Errorf("prompt not found: %s", promptName)
+	return nil, fmt.Errorf("prompt not found: %s", name)
 }
