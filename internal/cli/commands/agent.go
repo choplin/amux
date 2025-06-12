@@ -40,8 +40,11 @@ var agentRunCmd = &cobra.Command{
 	Short: "Run an AI agent in a workspace",
 	Long: `Run an AI agent in a workspace.
 
+If no workspace is specified, a new workspace will be automatically created
+with an auto-generated name (auto-1, auto-2, etc.).
+
 Examples:
-  # Run Claude in the latest workspace
+  # Run Claude with auto-created workspace
   amux agent run claude
 
   # Run Claude in a specific workspace
@@ -132,15 +135,12 @@ func runAgent(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to resolve workspace: %w", err)
 		}
 	} else {
-		// Get the most recent workspace
-		workspaces, err := wsManager.List(workspace.ListOptions{})
+		// Auto-create a new workspace
+		ws, err = createAutoWorkspace(wsManager)
 		if err != nil {
-			return fmt.Errorf("failed to list workspaces: %w", err)
+			return fmt.Errorf("failed to create auto-workspace: %w", err)
 		}
-		if len(workspaces) == 0 {
-			return fmt.Errorf("no workspaces available. Create one with 'amux ws create'")
-		}
-		ws = workspaces[0] // List returns sorted by UpdatedAt desc
+		ui.Success("Created workspace: %s", ws.Index)
 	}
 
 	// Create agent manager
@@ -205,7 +205,14 @@ func runAgent(cmd *cobra.Command, args []string) error {
 	if info := sess.Info(); info.Index != "" {
 		sessionID = info.Index
 	}
-	ui.Info("Created session %s for agent '%s' in workspace '%s'", sessionID, agentID, ws.Name)
+
+	// Show session creation info with workspace ID for auto-created workspaces
+	if runWorkspace == "" {
+		// Auto-created workspace - show workspace ID
+		ui.Success("Started session: %s in workspace %s", sessionID, ws.Index)
+	} else {
+		ui.Info("Created session %s for agent '%s' in workspace '%s'", sessionID, agentID, ws.Name)
+	}
 
 	// Start session
 	ctx := context.Background()
@@ -465,4 +472,46 @@ func viewAgentLogs(cmd *cobra.Command, args []string) error {
 	// Print output
 	ui.Raw(string(output))
 	return nil
+}
+
+// createAutoWorkspace creates a new workspace with an auto-generated name
+func createAutoWorkspace(wsManager *workspace.Manager) (*workspace.Workspace, error) {
+	// Generate auto workspace name
+	// Try auto-1, auto-2, etc. until we find an available name
+	baseName := "auto"
+	var name string
+	var counter int
+
+	for {
+		counter++
+		name = fmt.Sprintf("%s-%d", baseName, counter)
+
+		// Check if this name already exists
+		_, err := wsManager.ResolveWorkspace(name)
+		if err != nil {
+			// Name doesn't exist, we can use it
+			break
+		}
+
+		// Safety check to prevent infinite loop
+		if counter > 100 {
+			// Fall back to timestamp-based name
+			name = fmt.Sprintf("%s-%d", baseName, time.Now().Unix())
+			break
+		}
+	}
+
+	// Create the workspace
+	opts := workspace.CreateOptions{
+		Name:        name,
+		Description: "Auto-created workspace",
+		BaseBranch:  "main",
+	}
+
+	ws, err := wsManager.Create(opts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create workspace: %w", err)
+	}
+
+	return ws, nil
 }
