@@ -129,18 +129,16 @@ fmt-whitespace *files:
         find . -type f \( -name "*.go" -o -name "*.md" -o -name "*.yml" -o -name "*.yaml" -o -name "*.txt" -o -name "*.json" -o -name "*.toml" -o -name "*.mod" -o -name "*.sum" -o -name "justfile" \) \
             -not -path "./vendor/*" -not -path "./.git/*" -not -path "./bin/*" \
             -exec perl -i -pe 's/[ \t]+$//' {} \;
-        # Ensure newline at EOF (using sh -c to check file properly)
+        # Ensure newline at EOF
         find . -type f \( -name "*.go" -o -name "*.md" -o -name "*.yml" -o -name "*.yaml" -o -name "*.txt" -o -name "*.json" -o -name "*.toml" -o -name "*.mod" -o -name "*.sum" -o -name "justfile" \) \
             -not -path "./vendor/*" -not -path "./.git/*" -not -path "./bin/*" \
-            -exec sh -c 'if [ -n "$(tail -c1 "$1")" ]; then echo >> "$1"; fi' _ {} \;
+            -exec sh -c '[ "$(tail -c1 "$1")" != "" ] && echo >> "$1" || true' _ {} \;
     else
         # Process specific files
         for file in {{files}}; do
             perl -i -pe 's/[ \t]+$//' "$file"
             # Add newline at EOF only if missing
-            if [ -n "$(tail -c1 "$file")" ]; then
-                echo >> "$file"
-            fi
+            [ "$(tail -c1 "$file")" != "" ] && echo >> "$file" || true
         done
     fi
 
