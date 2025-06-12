@@ -188,12 +188,17 @@ func (m *Manager) CreateSession(opts Options) (Session, error) {
 
 	// TODO: Validate agent exists when we have agent configuration
 
-	// Generate session ID
-	id := fmt.Sprintf("session-%s-%d", generateID(), time.Now().Unix())
+	// Use provided ID or generate a new one
+	var sessionID string
+	if !opts.ID.IsEmpty() {
+		sessionID = opts.ID.String()
+	} else {
+		sessionID = GenerateID().String()
+	}
 
 	// Create session info
 	info := &Info{
-		ID:          id,
+		ID:          sessionID,
 		WorkspaceID: ws.ID,
 		AgentID:     opts.AgentID,
 		Status:      StatusCreated,
@@ -223,9 +228,9 @@ func (m *Manager) CreateSession(opts Options) (Session, error) {
 
 	// Initialize mailbox for the session
 	if m.mailboxManager != nil {
-		if err := m.mailboxManager.Initialize(id); err != nil {
+		if err := m.mailboxManager.Initialize(sessionID); err != nil {
 			// Log error but don't fail session creation
-			m.logger.Warn("failed to initialize mailbox", "error", err, "session", id)
+			m.logger.Warn("failed to initialize mailbox", "error", err, "session", sessionID)
 		}
 	}
 
@@ -255,7 +260,7 @@ func (m *Manager) CreateSession(opts Options) (Session, error) {
 
 	// Cache in memory
 	m.mu.Lock()
-	m.sessions[id] = session
+	m.sessions[sessionID] = session
 	m.mu.Unlock()
 
 	return session, nil
@@ -390,13 +395,6 @@ func (m *Manager) CleanupOrphaned() error {
 	// TODO: Implement orphaned session cleanup
 	// This will check for tmux sessions without corresponding metadata
 	return nil
-}
-
-// generateID generates a short random ID
-func generateID() string {
-	// Simple ID generation for now
-	// TODO: Use a proper ID generation library
-	return fmt.Sprintf("%x", time.Now().UnixNano()%1000000)
 }
 
 // createSessionFromInfo creates the appropriate session implementation from stored info
