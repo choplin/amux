@@ -83,7 +83,7 @@ amux attach session-abc123
 # Workspace management
 amux workspace create <name>    # alias: amux ws create
 amux workspace list            # alias: amux ws list
-amux workspace get <id>        # alias: amux ws get
+amux workspace show <id>       # alias: amux ws show
 amux workspace remove <id>     # alias: amux ws remove
 amux workspace prune           # alias: amux ws prune
 
@@ -108,8 +108,8 @@ amux ws create feature-auth --description "Implement authentication"
 # Create a workspace using an existing branch
 amux ws create bugfix-ui --branch fix/ui-crash --description "Fix UI crash"
 
-# Get details about a specific workspace
-amux ws get workspace-abc123
+# Show details about a specific workspace
+amux ws show workspace-abc123
 
 # List all workspaces
 amux ws list
