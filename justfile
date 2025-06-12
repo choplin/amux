@@ -1,4 +1,15 @@
 # Amux Justfile - Build automation
+#
+# This justfile provides a single source of truth for linting and formatting commands.
+# All formatting/linting tasks accept optional file arguments:
+#   - No args: process all files (development workflow)
+#   - With args: process specific files (used by git hooks)
+#
+# Examples:
+#   just fmt-go                    # Format all Go files
+#   just fmt-go file1.go file2.go  # Format specific files
+#   just lint                      # Run all linters
+#   just check                     # Format and lint everything
 
 # Default recipe - show available commands
 default:
@@ -76,42 +87,73 @@ test-coverage:
 
 # === Formatting ===
 
-# Format Go code
-fmt-go:
-    go run -mod=readonly github.com/golangci/golangci-lint/v2/cmd/golangci-lint fmt ./...
-
-# Format YAML files
-fmt-yaml:
-    go run -mod=readonly github.com/google/yamlfmt/cmd/yamlfmt .
-
-# Fix markdown files
-fmt-md:
-    npm run fix:md
-
-# Fix trailing spaces and ensure newline at EOF
-fmt-whitespace:
+# Format Go code (accepts file list or defaults to all)
+fmt-go *files:
     #!/usr/bin/env bash
-    # Remove trailing spaces
-    find . -type f \( -name "*.go" -o -name "*.md" -o -name "*.yml" -o -name "*.yaml" -o -name "*.txt" -o -name "*.json" -o -name "*.toml" -o -name "*.mod" -o -name "*.sum" \) \
-        -not -path "./vendor/*" -not -path "./.git/*" -not -path "./bin/*" \
-        -exec perl -i -pe 's/[ \t]+$//' {} \;
-    # Ensure newline at EOF
-    find . -type f \( -name "*.go" -o -name "*.md" -o -name "*.yml" -o -name "*.yaml" -o -name "*.txt" -o -name "*.json" -o -name "*.toml" -o -name "*.mod" -o -name "*.sum" \) \
-        -not -path "./vendor/*" -not -path "./.git/*" -not -path "./bin/*" \
-        -exec perl -i -pe 'eof && do{print "\n" unless /\n$/}' {} \;
+    if [ -z "{{files}}" ]; then
+        go run -mod=readonly github.com/golangci/golangci-lint/v2/cmd/golangci-lint fmt ./...
+    else
+        go run -mod=readonly github.com/golangci/golangci-lint/v2/cmd/golangci-lint fmt {{files}}
+    fi
+
+# Format YAML files (accepts file list or defaults to all)
+fmt-yaml *files:
+    #!/usr/bin/env bash
+    if [ -z "{{files}}" ]; then
+        go run -mod=readonly github.com/google/yamlfmt/cmd/yamlfmt .
+    else
+        go run -mod=readonly github.com/google/yamlfmt/cmd/yamlfmt {{files}}
+    fi
+
+# Fix markdown files (accepts file list or defaults to all)
+fmt-md *files:
+    #!/usr/bin/env bash
+    if [ -z "{{files}}" ]; then
+        npm run fix:md
+    else
+        npx --no-install markdownlint-cli2 --fix {{files}}
+    fi
+
+# Fix trailing spaces and ensure newline at EOF (accepts file list or defaults to all)
+fmt-whitespace *files:
+    #!/usr/bin/env bash
+    if [ -z "{{files}}" ]; then
+        # Remove trailing spaces
+        find . -type f \( -name "*.go" -o -name "*.md" -o -name "*.yml" -o -name "*.yaml" -o -name "*.txt" -o -name "*.json" -o -name "*.toml" -o -name "*.mod" -o -name "*.sum" \) \
+            -not -path "./vendor/*" -not -path "./.git/*" -not -path "./bin/*" \
+            -exec perl -i -pe 's/[ \t]+$//' {} \;
+        # Ensure newline at EOF
+        find . -type f \( -name "*.go" -o -name "*.md" -o -name "*.yml" -o -name "*.yaml" -o -name "*.txt" -o -name "*.json" -o -name "*.toml" -o -name "*.mod" -o -name "*.sum" \) \
+            -not -path "./vendor/*" -not -path "./.git/*" -not -path "./bin/*" \
+            -exec perl -i -pe 'eof && do{print "\n" unless /\n$/}' {} \;
+    else
+        # Process specific files
+        perl -i -pe 's/[ \t]+$//' {{files}}
+        perl -i -pe 'eof && do{print "\n" unless /\n$/}' {{files}}
+    fi
 
 # Format all code
 fmt: fmt-whitespace fmt-go fmt-yaml fmt-md
 
 # === Linting ===
 
-# Lint Go code
-lint-go:
-    go run -mod=readonly github.com/golangci/golangci-lint/v2/cmd/golangci-lint run
+# Lint Go code (accepts file list or defaults to all)
+lint-go *files:
+    #!/usr/bin/env bash
+    if [ -z "{{files}}" ]; then
+        go run -mod=readonly github.com/golangci/golangci-lint/v2/cmd/golangci-lint run
+    else
+        go run -mod=readonly github.com/golangci/golangci-lint/v2/cmd/golangci-lint run {{files}}
+    fi
 
-# Lint markdown files
-lint-md:
-    npm run lint:md
+# Lint markdown files (accepts file list or defaults to all)
+lint-md *files:
+    #!/usr/bin/env bash
+    if [ -z "{{files}}" ]; then
+        npm run lint:md
+    else
+        npx --no-install markdownlint-cli2 {{files}}
+    fi
 
 # Lint all code
 lint: lint-go lint-md
@@ -121,13 +163,25 @@ lint: lint-go lint-md
 # Check code (format + lint) - matches pre-commit hooks
 check: fmt lint
 
-# Quick check without fixing (for CI)
-check-ci: lint
+# Check formatting without fixing (for CI)
+check-fmt:
     #!/usr/bin/env bash
-    # Check for formatting changes
-    go run -mod=readonly github.com/golangci/golangci-lint/v2/cmd/golangci-lint fmt ./... --diff
-    # Check for yaml formatting
-    go run -mod=readonly github.com/google/yamlfmt/cmd/yamlfmt -dry .
+    # Check Go formatting
+    if ! go run -mod=readonly github.com/golangci/golangci-lint/v2/cmd/golangci-lint fmt ./... --dry-run; then
+        echo "Go formatting issues found. Run 'just fmt-go'"
+        exit 1
+    fi
+    # Check YAML formatting
+    if ! go run -mod=readonly github.com/google/yamlfmt/cmd/yamlfmt -dry .; then
+        echo "YAML formatting issues found. Run 'just fmt-yaml'"
+        exit 1
+    fi
+    # Check markdown formatting
+    if ! npx --no-install markdownlint-cli2 '**/*.md' '#node_modules'; then
+        echo "Markdown formatting issues found. Run 'just fmt-md'"
+        exit 1
+    fi
+    echo "All formatting checks passed!"
 
 # Full development cycle - format, lint, test, build
 all: check test build

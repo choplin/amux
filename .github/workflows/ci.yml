@@ -61,21 +61,17 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-1.24-
             ${{ runner.os }}-go-
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v8
-        with:
-          version: v2.1.6
-          args: --timeout=5m
+      - name: Install npm dependencies
+        run: npm install
+      - name: Run linting
+        run: just lint
       - name: Check formatting
-        run: |
-          # Use just commands for consistency
+        run: |-
+          # Run all formatters
           just fmt
-          just fmt-yaml
           # Verify no changes were made
           if [ -n "$(git diff --name-only)" ]; then
-            echo "Formatting changes detected. Please run 'just fmt fmt-yaml'"
+            echo "Formatting changes detected. Please run 'just fmt'"
             git diff
             exit 1
           fi
-      - name: Check Markdown
-        uses: DavidAnson/markdownlint-cli2-action@v20

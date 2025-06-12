@@ -3,37 +3,41 @@
 pre-commit:
   parallel: false
   commands:
-    remove-trailing-spaces:
-      run: perl -i -pe 's/[ \t]+$//' {staged_files}
+    # Format whitespace (trailing spaces, EOF newlines)
+    fmt-whitespace:
+      run: just fmt-whitespace {staged_files}
       glob: "*.{go,md,yml,yaml,txt,json,toml,mod,sum}"
       stage_fixed: true
       priority: 1
-    ensure-newline-eof:
-      run: perl -i -pe 'eof && do{print "\n" unless /\n$/}' {staged_files}
-      glob: "*.{go,md,yml,yaml,txt,json,toml,mod,sum}"
-      stage_fixed: true
-      priority: 2
-    golangci-fmt:
-      run: go run -mod=readonly github.com/golangci/golangci-lint/v2/cmd/golangci-lint fmt {staged_files}
+    # Format Go code using golangci-lint
+    fmt-go:
+      run: just fmt-go {staged_files}
       glob: "*.go"
       stage_fixed: true
+      priority: 2
+    # Format YAML files
+    fmt-yaml:
+      run: just fmt-yaml {staged_files}
+      glob: "*.{yaml,yml}"
+      stage_fixed: true
+      priority: 3
+    # Vet Go code
     vet:
       run: go vet ./...
       glob: "*.go"
+    # Run short tests
     test:
       run: go test -short ./...
       glob: "*.go"
+    # Tidy go modules
     mod-tidy:
       run: go mod tidy
       glob: "go.mod"
       stage_fixed: true
-    markdown-lint:
-      run: npx --no-install markdownlint-cli2 {staged_files}
+    # Lint markdown files
+    lint-md:
+      run: just lint-md {staged_files}
       glob: "*.md"
-    yamlfmt:
-      run: go run -mod=readonly github.com/google/yamlfmt/cmd/yamlfmt {staged_files}
-      glob: "*.{yaml,yml}"
-      stage_fixed: true
 pre-push:
   parallel: true
   commands:
