@@ -116,6 +116,11 @@ func (s *ServerV2) registerTools() error {
 
 	s.mcpServer.AddTool(mcp.NewTool("workspace_remove", removeOpts...), s.handleWorkspaceRemove)
 
+	// Register session tools
+	if err := s.registerSessionTools(); err != nil {
+		return fmt.Errorf("failed to register session tools: %w", err)
+	}
+
 	return nil
 }
 

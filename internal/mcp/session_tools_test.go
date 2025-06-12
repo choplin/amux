@@ -1,0 +1,305 @@
+package mcp
+
+import (
+	"context"
+	"encoding/json"
+	"strings"
+	"testing"
+
+	"github.com/mark3labs/mcp-go/mcp"
+
+	"github.com/aki/amux/internal/core/session"
+	"github.com/aki/amux/internal/core/workspace"
+)
+
+func TestSessionRun(t *testing.T) {
+	testServer := setupTestServer(t)
+
+	// Create a workspace first
+	wsOpts := workspace.CreateOptions{
+		Name:        "test-workspace",
+		Description: "Test workspace for session",
+	}
+	ws, err := testServer.workspaceManager.Create(wsOpts)
+	if err != nil {
+		t.Fatalf("failed to create workspace: %v", err)
+	}
+
+	t.Run("creates and starts session successfully", func(t *testing.T) {
+		req := mcp.CallToolRequest{
+			Params: mcp.CallToolParams{
+				Name: "session_run",
+				Arguments: map[string]interface{}{
+					"workspace_id": ws.ID,
+					"agent_id":     "test-agent",
+					"command":      "echo 'test'",
+					"environment": map[string]interface{}{
+						"TEST_VAR": "test_value",
+					},
+				},
+			},
+		}
+
+		result, err := testServer.handleSessionRun(context.Background(), req)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		if len(result.Content) != 1 {
+			t.Fatalf("expected 1 content, got %d", len(result.Content))
+		}
+
+		// Check response contains success message
+		textContent, ok := result.Content[0].(mcp.TextContent)
+		if !ok {
+			t.Fatalf("expected TextContent, got %T", result.Content[0])
+		}
+
+		if !contains(textContent.Text, "Session started successfully") {
+			t.Errorf("expected success message in response, got: %s", textContent.Text)
+		}
+
+		// Parse JSON response
+		jsonStart := findJSONStart(textContent.Text)
+		if jsonStart == -1 {
+			t.Fatalf("no JSON found in response: %s", textContent.Text)
+		}
+
+		var response map[string]interface{}
+		if err := json.Unmarshal([]byte(textContent.Text[jsonStart:]), &response); err != nil {
+			t.Fatalf("failed to parse response JSON: %v", err)
+		}
+
+		// Verify response fields
+		if response["workspace_id"] != ws.ID {
+			t.Errorf("expected workspace_id %s, got %v", ws.ID, response["workspace_id"])
+		}
+		if response["agent_id"] != "test-agent" {
+			t.Errorf("expected agent_id test-agent, got %v", response["agent_id"])
+		}
+		if response["status"] != string(session.StatusRunning) {
+			t.Errorf("expected status running, got %v", response["status"])
+		}
+	})
+
+	t.Run("fails with invalid workspace", func(t *testing.T) {
+		req := mcp.CallToolRequest{
+			Params: mcp.CallToolParams{
+				Name: "session_run",
+				Arguments: map[string]interface{}{
+					"workspace_id": "non-existent",
+					"agent_id":     "test-agent",
+				},
+			},
+		}
+
+		_, err := testServer.handleSessionRun(context.Background(), req)
+		if err == nil {
+			t.Error("expected error for non-existent workspace, got nil")
+		}
+	})
+
+	t.Run("fails with missing required parameters", func(t *testing.T) {
+		req := mcp.CallToolRequest{
+			Params: mcp.CallToolParams{
+				Name: "session_run",
+				Arguments: map[string]interface{}{
+					"workspace_id": ws.ID,
+					// missing agent_id
+				},
+			},
+		}
+
+		_, err := testServer.handleSessionRun(context.Background(), req)
+		if err == nil {
+			t.Error("expected error for missing agent_id, got nil")
+		}
+	})
+}
+
+func TestSessionStop(t *testing.T) {
+	testServer := setupTestServer(t)
+
+	// Create workspace and session
+	wsOpts := workspace.CreateOptions{
+		Name: "test-workspace",
+	}
+	ws, err := testServer.workspaceManager.Create(wsOpts)
+	if err != nil {
+		t.Fatalf("failed to create workspace: %v", err)
+	}
+
+	// Create session manager and start a session
+	sessionManager, err := testServer.createSessionManager()
+	if err != nil {
+		t.Fatalf("failed to create session manager: %v", err)
+	}
+
+	sess, err := sessionManager.CreateSession(session.Options{
+		WorkspaceID: ws.ID,
+		AgentID:     "test-agent",
+	})
+	if err != nil {
+		t.Fatalf("failed to create session: %v", err)
+	}
+
+	if err := sess.Start(context.Background()); err != nil {
+		t.Fatalf("failed to start session: %v", err)
+	}
+
+	t.Run("stops running session successfully", func(t *testing.T) {
+		req := mcp.CallToolRequest{
+			Params: mcp.CallToolParams{
+				Name: "session_stop",
+				Arguments: map[string]interface{}{
+					"session_id": sess.ID(),
+				},
+			},
+		}
+
+		result, err := testServer.handleSessionStop(context.Background(), req)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		if len(result.Content) != 1 {
+			t.Fatalf("expected 1 content, got %d", len(result.Content))
+		}
+
+		textContent, ok := result.Content[0].(mcp.TextContent)
+		if !ok {
+			t.Fatalf("expected TextContent, got %T", result.Content[0])
+		}
+
+		if !contains(textContent.Text, "stopped successfully") {
+			t.Errorf("expected success message in response, got: %s", textContent.Text)
+		}
+	})
+
+	t.Run("fails with non-existent session", func(t *testing.T) {
+		req := mcp.CallToolRequest{
+			Params: mcp.CallToolParams{
+				Name: "session_stop",
+				Arguments: map[string]interface{}{
+					"session_id": "non-existent",
+				},
+			},
+		}
+
+		_, err := testServer.handleSessionStop(context.Background(), req)
+		if err == nil {
+			t.Error("expected error for non-existent session, got nil")
+		}
+	})
+}
+
+func TestSessionSend(t *testing.T) {
+	testServer := setupTestServer(t)
+
+	// Create workspace and session
+	wsOpts := workspace.CreateOptions{
+		Name: "test-workspace",
+	}
+	ws, err := testServer.workspaceManager.Create(wsOpts)
+	if err != nil {
+		t.Fatalf("failed to create workspace: %v", err)
+	}
+
+	// Create session manager and start a session
+	sessionManager, err := testServer.createSessionManager()
+	if err != nil {
+		t.Fatalf("failed to create session manager: %v", err)
+	}
+
+	sess, err := sessionManager.CreateSession(session.Options{
+		WorkspaceID: ws.ID,
+		AgentID:     "test-agent",
+	})
+	if err != nil {
+		t.Fatalf("failed to create session: %v", err)
+	}
+
+	if err := sess.Start(context.Background()); err != nil {
+		t.Fatalf("failed to start session: %v", err)
+	}
+
+	t.Run("sends input to running session", func(t *testing.T) {
+		req := mcp.CallToolRequest{
+			Params: mcp.CallToolParams{
+				Name: "session_send",
+				Arguments: map[string]interface{}{
+					"session_id": sess.ID(),
+					"input":      "test input",
+				},
+			},
+		}
+
+		result, err := testServer.handleSessionSend(context.Background(), req)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		if len(result.Content) != 1 {
+			t.Fatalf("expected 1 content, got %d", len(result.Content))
+		}
+
+		textContent, ok := result.Content[0].(mcp.TextContent)
+		if !ok {
+			t.Fatalf("expected TextContent, got %T", result.Content[0])
+		}
+
+		if !contains(textContent.Text, "Input sent to session") {
+			t.Errorf("expected success message in response, got: %s", textContent.Text)
+		}
+	})
+
+	t.Run("fails with stopped session", func(t *testing.T) {
+		// Stop the session first
+		if err := sess.Stop(); err != nil {
+			t.Fatalf("failed to stop session: %v", err)
+		}
+
+		req := mcp.CallToolRequest{
+			Params: mcp.CallToolParams{
+				Name: "session_send",
+				Arguments: map[string]interface{}{
+					"session_id": sess.ID(),
+					"input":      "test input",
+				},
+			},
+		}
+
+		_, err := testServer.handleSessionSend(context.Background(), req)
+		if err == nil {
+			t.Error("expected error for stopped session, got nil")
+		}
+		if !contains(err.Error(), "not running") {
+			t.Errorf("expected 'not running' error, got: %v", err)
+		}
+	})
+}
+
+func TestSessionToolsRegistration(t *testing.T) {
+	testServer := setupTestServer(t)
+
+	// Test that tools can be registered without error
+	err := testServer.registerSessionTools()
+	if err != nil {
+		t.Fatalf("failed to register session tools: %v", err)
+	}
+}
+
+// Helper function to check if string contains substring
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > 0 && strings.Contains(s, substr))
+}
+
+// Helper function to find where JSON starts in response
+func findJSONStart(s string) int {
+	for i, ch := range s {
+		if ch == '{' || ch == '[' {
+			return i
+		}
+	}
+	return -1
+}

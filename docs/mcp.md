@@ -98,6 +98,36 @@ Tools perform state-changing operations on workspaces.
 - **Returns**: Confirmation message
 - **Warning**: This operation is permanent and cannot be undone
 
+### Session Management Tools
+
+#### session_run
+
+- **Description**: Run an AI agent session in a workspace (creates and starts)
+- **Parameters**:
+  - `workspace_id` (required): Workspace ID or name to run in
+  - `agent_id` (required): Agent ID to run (e.g., 'claude', 'gpt')
+  - `command` (optional): Override the agent's default command
+  - `environment` (optional): Additional environment variables
+- **Returns**: Session details including ID, status, and attach commands
+- **Note**: Equivalent to CLI's `amux agent run`
+
+#### session_stop
+
+- **Description**: Stop a running agent session gracefully
+- **Parameters**:
+  - `session_id` (required): Session ID or short ID
+- **Returns**: Confirmation message
+- **Note**: Equivalent to CLI's `amux agent stop`
+
+#### session_send
+
+- **Description**: Send input text to a running agent session
+- **Parameters**:
+  - `session_id` (required): Session ID or short ID
+  - `input` (required): Input text to send
+- **Returns**: Confirmation message
+- **Note**: Session must be running to receive input
+
 ### Bridge Tools (Resource Access)
 
 Many MCP clients have limited or no support for reading resources directly. To ensure compatibility, Amux provides
@@ -283,6 +313,45 @@ Prompts provide structured guidance for common AI agent workflows.
     }
   }
 }
+
+// Run an agent session
+{
+  "method": "tools/call",
+  "params": {
+    "name": "session_run",
+    "arguments": {
+      "workspace_id": "feature-auth",
+      "agent_id": "claude",
+      "command": "claude-code --model opus",
+      "environment": {
+        "ANTHROPIC_API_KEY": "sk-..."
+      }
+    }
+  }
+}
+
+// Stop a session
+{
+  "method": "tools/call",
+  "params": {
+    "name": "session_stop",
+    "arguments": {
+      "session_id": "3"
+    }
+  }
+}
+
+// Send input to a session
+{
+  "method": "tools/call",
+  "params": {
+    "name": "session_send",
+    "arguments": {
+      "session_id": "3",
+      "input": "Please implement the login endpoint"
+    }
+  }
+}
 ```
 
 ### Using Bridge Tools
@@ -419,6 +488,38 @@ Bridge tools provide the same data as resources but through the tools interface:
 
    ```json
    { "method": "prompts/get", "params": { "name": "prepare-pr", "arguments": { "workspace_id": "ws-123" } } }
+   ```
+
+### AI Agent Collaboration Workflow
+
+1. **Run an AI agent** in a workspace:
+
+   ```json
+   { "method": "tools/call", "params": { "name": "session_run", "arguments": { "workspace_id": "feature-auth", "agent_id": "claude" } } }
+   ```
+
+2. **Monitor session status** via resources:
+
+   ```json
+   { "method": "resources/read", "params": { "uri": "amux://session/3" } }
+   ```
+
+3. **Send instructions** to the agent:
+
+   ```json
+   { "method": "tools/call", "params": { "name": "session_send", "arguments": { "session_id": "3", "input": "Please add tests for the auth module" } } }
+   ```
+
+4. **View agent output**:
+
+   ```json
+   { "method": "resources/read", "params": { "uri": "amux://session/3/output" } }
+   ```
+
+5. **Stop the session** when done:
+
+   ```json
+   { "method": "tools/call", "params": { "name": "session_stop", "arguments": { "session_id": "3" } } }
    ```
 
 ## Implementation Details
