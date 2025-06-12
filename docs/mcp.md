@@ -85,7 +85,7 @@ counterparts.
 - **Returns**: JSON array of workspaces (same as resource)
 - **Note**: Use this if your MCP client cannot read resources directly
 
-#### resource_workspace_get
+#### resource_workspace_show
 
 - **Description**: Get workspace details (bridge to `amux://workspace/{id}` resource)
 - **Parameters**:
@@ -246,7 +246,7 @@ Bridge tools provide the same data as resources but through the tools interface:
 {
   "method": "tools/call",
   "params": {
-    "name": "resource_workspace_get",
+    "name": "resource_workspace_show",
     "arguments": {
       "workspace_id": "ws-123"
     }
