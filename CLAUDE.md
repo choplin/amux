@@ -64,8 +64,16 @@ When working on GitHub issues with AI agents (like Claude), follow this workflow
 
 5. **After PR is merged**, AI cleans up:
 
-   ```typescript
+   ```bash
+   # First, change to main repository directory
+   cd /Users/aki/workspace/amux
+
+   # Remove the workspace
    workspace_remove({ workspace_id: "fix-issue-30" });
+
+   # Update main branch
+   git checkout main
+   git pull origin main
    ```
 
 ### Available MCP Tools for AI Agents
