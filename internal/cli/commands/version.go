@@ -19,6 +19,23 @@ var versionCmd = &cobra.Command{
 	Short: "Show version information",
 	Long:  "Display detailed version information about amux",
 	Run: func(cmd *cobra.Command, args []string) {
+		// Handle JSON output
+		if ui.GlobalFormatter.IsJSON() {
+			versionInfo := map[string]string{
+				"version":   Version,
+				"gitCommit": GitCommit,
+				"buildDate": BuildDate,
+				"goVersion": runtime.Version(),
+				"os":        runtime.GOOS,
+				"arch":      runtime.GOARCH,
+			}
+			if err := ui.GlobalFormatter.Output(versionInfo); err != nil {
+				return
+			}
+			return
+		}
+
+		// Pretty output
 		ui.OutputLine("amux version %s", Version)
 		ui.OutputLine("  Git commit: %s", GitCommit)
 		ui.OutputLine("  Build date: %s", BuildDate)

@@ -220,6 +220,12 @@ func runListWorkspace(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list workspaces: %w", err)
 	}
 
+	// Handle JSON output
+	if ui.GlobalFormatter.IsJSON() {
+		return ui.GlobalFormatter.Output(workspaces)
+	}
+
+	// Handle pretty output
 	if listOneline {
 		// One line per workspace for fzf integration
 
@@ -259,6 +265,11 @@ func runShowWorkspace(cmd *cobra.Command, args []string) error {
 	ws, err := manager.ResolveWorkspace(identifier)
 	if err != nil {
 		return fmt.Errorf("failed to resolve workspace: %w", err)
+	}
+
+	// Handle JSON output
+	if ui.GlobalFormatter.IsJSON() {
+		return ui.GlobalFormatter.Output(ws)
 	}
 
 	// Print detailed workspace information
