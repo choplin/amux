@@ -27,7 +27,6 @@ Examples:
   # Get latest message from agent
   amux mailbox recv s1
   amux mb recv s1
-
   # Get just the content (no metadata)
   amux mailbox recv s1 --quiet
   amux mb recv s1 -q`,

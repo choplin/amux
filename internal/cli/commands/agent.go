@@ -43,13 +43,10 @@ var agentRunCmd = &cobra.Command{
 Examples:
   # Run Claude in the latest workspace
   amux agent run claude
-
   # Run Claude in a specific workspace
   amux agent run claude --workspace feature-auth
-
   # Run with custom command
   amux agent run claude --command "claude code --model opus"
-
   # Run with environment variables
   amux agent run claude --env ANTHROPIC_API_KEY=sk-...`,
 	Args: cobra.ExactArgs(1),

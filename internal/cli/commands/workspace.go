@@ -109,30 +109,17 @@ var listWorkspaceCmd = &cobra.Command{
 
 	Long: `List all workspaces in the project.
 
-
-
 Examples:
-
   # List workspaces with detailed view
-
   amux ws ls
 
-
-
   # List workspaces in oneline format for scripting
-
   amux ws ls --oneline
 
-
-
   # Use with fzf to select a workspace
-
   amux ws ls --oneline | fzf | cut -f1
 
-
-
   # Remove selected workspace with fzf
-
   amux ws rm $(amux ws ls --oneline | fzf | cut -f1)`,
 
 	RunE: runListWorkspace,
