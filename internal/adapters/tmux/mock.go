@@ -245,3 +245,17 @@ func (m *MockAdapter) GetSessionEnvironment(sessionName string) map[string]strin
 	}
 	return nil
 }
+
+// AppendSessionOutput appends output to a specific session (for testing streaming)
+func (m *MockAdapter) AppendSessionOutput(sessionName string, output string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	session, exists := m.sessions[sessionName]
+	if !exists {
+		return fmt.Errorf("session does not exist: %s", sessionName)
+	}
+
+	session.output = append(session.output, output)
+	return nil
+}

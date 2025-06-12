@@ -72,9 +72,18 @@ func init() {
 		RunE:  attachAgent,
 	}
 
+	tailCmd := &cobra.Command{
+		Use:   "tail <session>",
+		Short: "Follow agent session logs in real-time",
+		Long:  "Continuously stream output from an agent session. Similar to 'agent logs -f'.",
+		Args:  cobra.ExactArgs(1),
+		RunE:  tailAgentLogs,
+	}
+
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(psCmd)
 	rootCmd.AddCommand(attachCmd)
+	rootCmd.AddCommand(tailCmd)
 
 	// Add mailbox command
 	rootCmd.AddCommand(mailboxCmd)
