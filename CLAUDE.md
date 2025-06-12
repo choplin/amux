@@ -41,12 +41,13 @@ When working on GitHub issues with AI agents (like Claude), follow this workflow
    ```typescript
    workspace_create({
      name: "fix-issue-30",
-     baseBranch: "main",  // Always specify base branch
-     description: "Standardize console output (#30)"
-   })
+     baseBranch: "main", // Always specify base branch
+     description: "Standardize console output (#30)",
+   });
    ```
 
 3. **AI works in the workspace**:
+
    - Uses `workspace_info` to browse files
    - Makes changes within the workspace
    - Tests changes in isolation
@@ -64,7 +65,7 @@ When working on GitHub issues with AI agents (like Claude), follow this workflow
 5. **After PR is merged**, AI cleans up:
 
    ```typescript
-   workspace_remove({ workspace_id: "fix-issue-30" })
+   workspace_remove({ workspace_id: "fix-issue-30" });
    ```
 
 ### Available MCP Tools for AI Agents
@@ -85,13 +86,13 @@ When working in Claude Code, you can use these amux tools:
 2. **workspace_list** - List all workspaces
 
    ```typescript
-   workspace_list()  // Shows ID, name, branch, created time
+   workspace_list(); // Shows ID, name, branch, created time
    ```
 
 3. **workspace_get** - Get workspace details
 
    ```typescript
-   workspace_get({ workspace_id: "1" })  // Use name or ID
+   workspace_get({ workspace_id: "1" }); // Use name or ID
    ```
 
 4. **workspace_info** - Browse workspace files
@@ -106,7 +107,7 @@ When working in Claude Code, you can use these amux tools:
 5. **workspace_remove** - Clean up workspace
 
    ```typescript
-   workspace_remove({ workspace_id: "1" })
+   workspace_remove({ workspace_id: "1" });
    ```
 
 ## Current Functional Features
@@ -136,6 +137,7 @@ Each workspace can have its own `CLAUDE.local.md` file for workspace-specific in
 
 ```markdown
 # CLAUDE.local.md (in workspace root)
+
 - Task-specific requirements
 - Design decisions for this feature
 - TODO items for this workspace
@@ -284,6 +286,16 @@ return fmt.Errorf("Workspace not found.")  // Bad
 5. **No Auto-commit**: Amux never commits without explicit user action
 6. **Context Loading**: AI agents automatically load both CLAUDE.md (global) and CLAUDE.local.md
    (workspace-specific) if present
+
+## Workspace Management Safety
+
+When working in amux workspaces:
+
+- NEVER remove a workspace while your current directory is inside it
+- Always `cd` out of the workspace directory before running `workspace_remove`
+- If you need to clean up a workspace after completing work:
+  1. First change directory to the main repository: `cd /Users/aki/workspace/amux`
+  2. Then remove the workspace: `workspace_remove({ workspace_id: "..." })`
 
 ## Quick Reference
 
