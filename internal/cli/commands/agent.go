@@ -127,21 +127,17 @@ func runAgent(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create workspace manager: %w", err)
 	}
 
+	// Generate session ID upfront
+	sessionID := session.GenerateID()
+
 	// Get or select workspace
 	var ws *workspace.Workspace
-	var sessionID session.ID
-
 	if runWorkspace != "" {
 		ws, err = wsManager.ResolveWorkspace(runWorkspace)
 		if err != nil {
 			return fmt.Errorf("failed to resolve workspace: %w", err)
 		}
-		// Generate session ID for specified workspace
-		sessionID = session.GenerateID()
 	} else {
-		// Generate session ID first for auto-created workspace
-		sessionID = session.GenerateID()
-
 		// Auto-create a new workspace using session ID
 		ws, err = createAutoWorkspace(wsManager, sessionID)
 		if err != nil {
