@@ -38,7 +38,7 @@ init:
         npm install
         echo "✅ npm packages installed"
     else
-        echo "⚠️  npm not found. Install Node.js to use markdown linting"
+        echo "❗ npm not found. Install Node.js to use markdown linting"
         echo "   Visit: https://nodejs.org/"
     fi
     
