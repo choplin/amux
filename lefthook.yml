@@ -6,7 +6,17 @@ pre-commit:
     # Format whitespace (trailing spaces, EOF newlines)
     fmt-whitespace:
       run: just fmt-whitespace {staged_files}
-      glob: "*.{go,md,yml,yaml,txt,json,toml,mod,sum}"
+      glob:
+        - "*.go"
+        - "*.md"
+        - "*.yml"
+        - "*.yaml"
+        - "*.txt"
+        - "*.json"
+        - "*.toml"
+        - "*.mod"
+        - "*.sum"
+        - "justfile"
       stage_fixed: true
       priority: 1
     # Format Go code using golangci-lint

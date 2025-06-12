@@ -23,16 +23,16 @@ init:
     echo "📦 Initializing Go modules..."
     go mod download
     go mod tidy
-    
+
     echo "📦 Installing Go tools..."
     # Download golangci-lint
     go run -mod=readonly github.com/golangci/golangci-lint/v2/cmd/golangci-lint version > /dev/null 2>&1
     echo "✅ golangci-lint ready"
-    
+
     # Download yamlfmt
     go run -mod=readonly github.com/google/yamlfmt/cmd/yamlfmt -version > /dev/null 2>&1
     echo "✅ yamlfmt ready"
-    
+
     echo "📦 Installing npm dependencies..."
     if command -v npm &> /dev/null; then
         npm install
@@ -41,7 +41,7 @@ init:
         echo "❗ npm not found. Install Node.js to use markdown linting"
         echo "   Visit: https://nodejs.org/"
     fi
-    
+
     echo ""
     echo "✅ All dependencies initialized!"
 
@@ -126,11 +126,11 @@ fmt-whitespace *files:
     #!/usr/bin/env bash
     if [ -z "{{files}}" ]; then
         # Remove trailing spaces
-        find . -type f \( -name "*.go" -o -name "*.md" -o -name "*.yml" -o -name "*.yaml" -o -name "*.txt" -o -name "*.json" -o -name "*.toml" -o -name "*.mod" -o -name "*.sum" \) \
+        find . -type f \( -name "*.go" -o -name "*.md" -o -name "*.yml" -o -name "*.yaml" -o -name "*.txt" -o -name "*.json" -o -name "*.toml" -o -name "*.mod" -o -name "*.sum" -o -name "justfile" \) \
             -not -path "./vendor/*" -not -path "./.git/*" -not -path "./bin/*" \
             -exec perl -i -pe 's/[ \t]+$//' {} \;
         # Ensure newline at EOF
-        find . -type f \( -name "*.go" -o -name "*.md" -o -name "*.yml" -o -name "*.yaml" -o -name "*.txt" -o -name "*.json" -o -name "*.toml" -o -name "*.mod" -o -name "*.sum" \) \
+        find . -type f \( -name "*.go" -o -name "*.md" -o -name "*.yml" -o -name "*.yaml" -o -name "*.txt" -o -name "*.json" -o -name "*.toml" -o -name "*.mod" -o -name "*.sum" -o -name "justfile" \) \
             -not -path "./vendor/*" -not -path "./.git/*" -not -path "./bin/*" \
             -exec perl -i -pe 'eof && do{print "\n" unless /\n$/}' {} \;
     else
