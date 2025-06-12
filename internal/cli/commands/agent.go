@@ -182,7 +182,8 @@ func runAgent(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create session manager
-	sessionManager, err := createSessionManager(configManager, wsManager, idMapper)
+	log := CreateLogger()
+	sessionManager, err := createSessionManager(configManager, wsManager, idMapper, log)
 	if err != nil {
 		return err
 	}
@@ -250,7 +251,8 @@ func listAgents(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create session manager
-	sessionManager, err := createSessionManager(configManager, wsManager, idMapper)
+	log := CreateLogger()
+	sessionManager, err := createSessionManager(configManager, wsManager, idMapper, log)
 	if err != nil {
 		return err
 	}
@@ -342,7 +344,8 @@ func attachAgent(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create session manager
-	sessionManager, err := createSessionManager(configManager, wsManager, idMapper)
+	log := CreateLogger()
+	sessionManager, err := createSessionManager(configManager, wsManager, idMapper, log)
 	if err != nil {
 		return err
 	}
@@ -397,7 +400,8 @@ func stopAgent(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create session manager
-	sessionManager, err := createSessionManager(configManager, wsManager, idMapper)
+	log := CreateLogger()
+	sessionManager, err := createSessionManager(configManager, wsManager, idMapper, log)
 	if err != nil {
 		return err
 	}
@@ -440,7 +444,8 @@ func viewAgentLogs(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create session manager
-	sessionManager, err := createSessionManager(configManager, wsManager, idMapper)
+	log := CreateLogger()
+	sessionManager, err := createSessionManager(configManager, wsManager, idMapper, log)
 	if err != nil {
 		return err
 	}

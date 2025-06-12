@@ -82,7 +82,8 @@ func showMessages(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create session manager
-	sessionManager, err := createSessionManager(configManager, wsManager, idMapper)
+	log := CreateLogger()
+	sessionManager, err := createSessionManager(configManager, wsManager, idMapper, log)
 	if err != nil {
 		return err
 	}
