@@ -5,6 +5,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/aki/amux/internal/cli/commands/agent"
+	"github.com/aki/amux/internal/cli/commands/session"
 	"github.com/aki/amux/internal/cli/ui"
 )
 
@@ -43,19 +44,21 @@ func init() {
 
 	rootCmd.AddCommand(workspaceCmd)
 
+	rootCmd.AddCommand(session.Command())
+
 	rootCmd.AddCommand(agent.Command())
 
 	rootCmd.AddCommand(mcpCmd)
 
-	// Add global aliases for common agent operations
-	// These are shortcuts to agent subcommands
+	// Add global aliases for common session operations
+	// These are shortcuts to session subcommands
 
-	// Get the agent commands to create aliases
-	agentCmd := agent.Command()
+	// Get the session commands to create aliases
+	sessionCmd := session.Command()
 
 	// Find the subcommands to create aliases
 	var runSubCmd, listSubCmd, attachSubCmd *cobra.Command
-	for _, cmd := range agentCmd.Commands() {
+	for _, cmd := range sessionCmd.Commands() {
 		switch cmd.Use {
 		case "run <agent>":
 			runSubCmd = cmd
@@ -70,7 +73,7 @@ func init() {
 	if runSubCmd != nil {
 		runCmd := &cobra.Command{
 			Use:   "run <agent>",
-			Short: "Alias for 'agent run'",
+			Short: "Alias for 'session run'",
 			Long:  runSubCmd.Long,
 			Args:  runSubCmd.Args,
 			RunE:  runSubCmd.RunE,
@@ -85,7 +88,7 @@ func init() {
 	if listSubCmd != nil {
 		psCmd := &cobra.Command{
 			Use:   "ps",
-			Short: "Alias for 'agent list'",
+			Short: "Alias for 'session list'",
 			RunE:  listSubCmd.RunE,
 		}
 		rootCmd.AddCommand(psCmd)
@@ -94,7 +97,7 @@ func init() {
 	if attachSubCmd != nil {
 		attachCmd := &cobra.Command{
 			Use:   "attach <session>",
-			Short: "Alias for 'agent attach'",
+			Short: "Alias for 'session attach'",
 			Args:  attachSubCmd.Args,
 			RunE:  attachSubCmd.RunE,
 		}
@@ -102,7 +105,7 @@ func init() {
 	}
 
 	// Add tail command alias
-	rootCmd.AddCommand(agent.TailCommand())
+	rootCmd.AddCommand(session.TailCommand())
 
 	// Add mailbox command
 	rootCmd.AddCommand(mailboxCmd)

@@ -1,4 +1,4 @@
-package agent
+package session
 
 import (
 	"context"
@@ -17,23 +17,25 @@ import (
 func runCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "run <agent>",
-		Short: "Run an AI agent in a workspace",
-		Long: `Run an AI agent in a workspace.
+		Short: "Run an agent session in a workspace",
+		Long: `Run an agent session in a workspace.
 
 If no workspace is specified, a new workspace will be automatically created
 with a name based on the session ID (e.g., session-f47ac10b).
 
 Examples:
   # Run Claude with auto-created workspace
-  amux agent run claude
+  amux session run claude
   # Run Claude in a specific workspace
-  amux agent run claude --workspace feature-auth
+  amux session run claude --workspace feature-auth
   # Run with custom command
-  amux agent run claude --command "claude code --model opus"
+  amux session run claude --command "claude code --model opus"
   # Run with environment variables
-  amux agent run claude --env ANTHROPIC_API_KEY=sk-...`,
+  amux session run claude --env ANTHROPIC_API_KEY=sk-...
+  # Run with initial prompt
+  amux session run claude --initial-prompt "Please analyze the codebase"`,
 		Args: cobra.ExactArgs(1),
-		RunE: runAgent,
+		RunE: runSession,
 	}
 
 	// Run command flags
@@ -45,7 +47,7 @@ Examples:
 	return cmd
 }
 
-func runAgent(cmd *cobra.Command, args []string) error {
+func runSession(cmd *cobra.Command, args []string) error {
 	agentID := args[0]
 
 	// Find project root

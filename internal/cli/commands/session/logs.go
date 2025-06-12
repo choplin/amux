@@ -1,4 +1,4 @@
-package agent
+package session
 
 import (
 	"context"
@@ -19,13 +19,13 @@ import (
 func logsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "logs <session>",
-		Short: "View agent session output",
+		Short: "View session output",
 		Long: `View the output from an agent session.
 
 Shows the current content of the agent's terminal.
 Use -f/--follow to continuously stream new output.`,
 		Args: cobra.ExactArgs(1),
-		RunE: viewAgentLogs,
+		RunE: viewSessionLogs,
 	}
 
 	// Logs command flags
@@ -34,7 +34,7 @@ Use -f/--follow to continuously stream new output.`,
 	return cmd
 }
 
-func viewAgentLogs(cmd *cobra.Command, args []string) error {
+func viewSessionLogs(cmd *cobra.Command, args []string) error {
 	sessionID := args[0]
 
 	// Find project root
@@ -79,12 +79,12 @@ func viewAgentLogs(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// tailAgentLogs is a wrapper for following agent logs
-func tailAgentLogs(cmd *cobra.Command, args []string) error {
+// tailSessionLogs is a wrapper for following session logs
+func tailSessionLogs(cmd *cobra.Command, args []string) error {
 	// Set follow flag to true
 	followLogs = true
-	// Reuse viewAgentLogs logic
-	return viewAgentLogs(cmd, args)
+	// Reuse viewSessionLogs logic
+	return viewSessionLogs(cmd, args)
 }
 
 // streamSessionLogs continuously streams session output

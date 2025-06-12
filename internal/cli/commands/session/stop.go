@@ -1,4 +1,4 @@
-package agent
+package session
 
 import (
 	"fmt"
@@ -13,13 +13,13 @@ import (
 func stopCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "stop <session>",
-		Short: "Stop a running agent session",
+		Short: "Stop a running session",
 		Args:  cobra.ExactArgs(1),
-		RunE:  stopAgent,
+		RunE:  stopSession,
 	}
 }
 
-func stopAgent(cmd *cobra.Command, args []string) error {
+func stopSession(cmd *cobra.Command, args []string) error {
 	sessionID := args[0]
 
 	// Find project root
