@@ -40,8 +40,11 @@ var agentRunCmd = &cobra.Command{
 	Short: "Run an AI agent in a workspace",
 	Long: `Run an AI agent in a workspace.
 
+If no workspace is specified, a new workspace will be automatically created
+with a name based on the session ID (e.g., session-f47ac10b).
+
 Examples:
-  # Run Claude in the latest workspace
+  # Run Claude with auto-created workspace
   amux agent run claude
   # Run Claude in a specific workspace
   amux agent run claude --workspace feature-auth
@@ -121,6 +124,9 @@ func runAgent(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create workspace manager: %w", err)
 	}
 
+	// Generate session ID upfront
+	sessionID := session.GenerateID()
+
 	// Get or select workspace
 	var ws *workspace.Workspace
 	if runWorkspace != "" {
@@ -129,15 +135,12 @@ func runAgent(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to resolve workspace: %w", err)
 		}
 	} else {
-		// Get the most recent workspace
-		workspaces, err := wsManager.List(workspace.ListOptions{})
+		// Auto-create a new workspace using session ID
+		ws, err = createAutoWorkspace(wsManager, sessionID)
 		if err != nil {
-			return fmt.Errorf("failed to list workspaces: %w", err)
+			return fmt.Errorf("failed to create auto-workspace: %w", err)
 		}
-		if len(workspaces) == 0 {
-			return fmt.Errorf("no workspaces available. Create one with 'amux ws create'")
-		}
-		ws = workspaces[0] // List returns sorted by UpdatedAt desc
+		ui.Success("Created workspace: '%s'", ws.Name)
 	}
 
 	// Create agent manager
@@ -187,6 +190,7 @@ func runAgent(cmd *cobra.Command, args []string) error {
 
 	// Create session
 	opts := session.Options{
+		ID:          sessionID,
 		WorkspaceID: ws.ID,
 		AgentID:     agentID,
 		Command:     command,
@@ -198,11 +202,13 @@ func runAgent(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create session: %w", err)
 	}
 
-	sessionID := sess.ID()
+	displayID := sess.ID()
 	if info := sess.Info(); info.Index != "" {
-		sessionID = info.Index
+		displayID = info.Index
 	}
-	ui.Info("Created session %s for agent '%s' in workspace '%s'", sessionID, agentID, ws.Name)
+
+	// Show consistent session creation info with workspace name
+	ui.Success("Started session: %s in workspace '%s'", displayID, ws.Name)
 
 	// Start session
 	ctx := context.Background()
@@ -462,4 +468,24 @@ func viewAgentLogs(cmd *cobra.Command, args []string) error {
 	// Print output
 	ui.Raw(string(output))
 	return nil
+}
+
+// createAutoWorkspace creates a new workspace with a name based on session ID
+func createAutoWorkspace(wsManager *workspace.Manager, sessionID session.ID) (*workspace.Workspace, error) {
+	// Use first 8 chars of session ID for workspace name
+	name := fmt.Sprintf("session-%s", sessionID.Short())
+
+	// Create the workspace
+	opts := workspace.CreateOptions{
+		Name:        name,
+		Description: fmt.Sprintf("Auto-created workspace for session %s", sessionID.Short()),
+		BaseBranch:  "main",
+	}
+
+	ws, err := wsManager.Create(opts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create workspace: %w", err)
+	}
+
+	return ws, nil
 }

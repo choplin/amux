@@ -73,9 +73,12 @@ This creates:
 # Initialize project
 amux init
 
-# Create a workspace and run an agent
-amux ws create feature-auth --agent claude
+# Run an agent (auto-creates workspace if needed)
 amux run claude
+
+# Or create a specific workspace first
+amux ws create feature-auth
+amux run claude --workspace feature-auth
 
 # Check running sessions
 amux ps
