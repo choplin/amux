@@ -200,7 +200,6 @@ amux://workspace/ws-abc123/context
 ### MCP Tools (Actions)
 
 - `workspace_create` - Create isolated workspace (supports existing branches)
-- `workspace_get` - Get specific workspace details
 - `workspace_remove` - Remove workspace and cleanup
 
 ### MCP Prompts (Guided Workflows)

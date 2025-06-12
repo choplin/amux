@@ -97,15 +97,6 @@ func (s *ServerV2) registerTools() error {
 
 	s.mcpServer.AddTool(mcp.NewTool("workspace_create", createOpts...), s.handleWorkspaceCreate)
 
-	// workspace_get tool
-
-	getOpts, err := WithStructOptions("Get detailed information about a specific workspace by ID or name. Returns workspace metadata, paths, and branch information", WorkspaceIDParams{})
-	if err != nil {
-		return fmt.Errorf("failed to create workspace_get options: %w", err)
-	}
-
-	s.mcpServer.AddTool(mcp.NewTool("workspace_get", getOpts...), s.handleWorkspaceGet)
-
 	// workspace_remove tool
 
 	removeOpts, err := WithStructOptions("Remove a workspace and its associated git worktree. This permanently deletes the workspace directory and cannot be undone", WorkspaceIDParams{})
@@ -154,33 +145,6 @@ func (s *ServerV2) handleWorkspaceCreate(ctx context.Context, request mcp.CallTo
 	ws, err := s.workspaceManager.Create(opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create workspace: %w", err)
-	}
-
-	result, _ := json.MarshalIndent(ws, "", "  ")
-
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-
-				Text: string(result),
-			},
-		},
-	}, nil
-}
-
-func (s *ServerV2) handleWorkspaceGet(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	args := request.GetArguments()
-
-	workspaceID, ok := args["workspace_id"].(string)
-
-	if !ok {
-		return nil, fmt.Errorf("invalid or missing workspace_id argument")
-	}
-
-	ws, err := s.workspaceManager.ResolveWorkspace(workspaceID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 	}
 
 	result, _ := json.MarshalIndent(ws, "", "  ")
