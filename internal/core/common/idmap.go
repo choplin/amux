@@ -1,4 +1,6 @@
 // Package common provides shared utilities for Amux core functionality.
+//
+//nolint:revive
 package common
 
 import (
