@@ -71,13 +71,13 @@ func PrintWorkspace(w *workspace.Workspace) {
 	// Show consistency status
 	var statusStr string
 	switch w.Status {
-	case "consistent":
+	case workspace.StatusConsistent:
 		statusStr = SuccessStyle.Render("✓ Consistent")
-	case "folder-missing":
+	case workspace.StatusFolderMissing:
 		statusStr = WarningStyle.Render("⚠ Folder missing (run 'amux ws rm' to clean up)")
-	case "worktree-missing":
+	case workspace.StatusWorktreeMissing:
 		statusStr = WarningStyle.Render("⚠ Git worktree missing (run 'amux ws rm' to clean up)")
-	case "orphaned":
+	case workspace.StatusOrphaned:
 		statusStr = ErrorStyle.Render("✗ Orphaned (both folder and worktree missing)")
 	default:
 		statusStr = DimStyle.Render("Unknown")
@@ -124,13 +124,13 @@ func PrintWorkspaceList(workspaces []*workspace.Workspace) {
 		// Format status with appropriate icon
 		var status string
 		switch w.Status {
-		case "consistent":
+		case workspace.StatusConsistent:
 			status = SuccessStyle.Render("✓ ok")
-		case "folder-missing":
+		case workspace.StatusFolderMissing:
 			status = WarningStyle.Render("⚠ folder missing")
-		case "worktree-missing":
+		case workspace.StatusWorktreeMissing:
 			status = WarningStyle.Render("⚠ worktree missing")
-		case "orphaned":
+		case workspace.StatusOrphaned:
 			status = ErrorStyle.Render("✗ orphaned")
 		default:
 			status = DimStyle.Render("unknown")

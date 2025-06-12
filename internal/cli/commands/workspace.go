@@ -234,7 +234,7 @@ func runListWorkspace(cmd *cobra.Command, args []string) error {
 			if ws.Index != "" {
 				id = ws.Index
 			}
-			fmt.Printf("%s\t%s\t%s\t%s\t%s\t%s\n", ws.Name, id, ws.Branch, ws.Status, ws.Path, description)
+			fmt.Printf("%s\t%s\t%s\t%s\t%s\t%s\n", ws.Name, id, ws.Branch, ws.Status.String(), ws.Path, description)
 
 		}
 	} else {

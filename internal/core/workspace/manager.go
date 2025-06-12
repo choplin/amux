@@ -312,19 +312,19 @@ func (m *Manager) Remove(id string) error {
 
 	// Handle different inconsistency cases
 	switch workspace.Status {
-	case "consistent":
+	case StatusConsistent:
 		// Normal case: both worktree and folder exist
 		if err := m.gitOps.RemoveWorktree(workspace.Path); err != nil {
 			return fmt.Errorf("failed to remove worktree: %w", err)
 		}
-	case "folder-missing":
+	case StatusFolderMissing:
 		// Case 1: Folder deleted but git worktree exists
 		// Need to prune the worktree reference
 		_ = m.gitOps.PruneWorktrees()
-	case "worktree-missing":
+	case StatusWorktreeMissing:
 		// Case 2: Git worktree removed but folder exists
 		// Nothing special needed, will clean up folder below
-	case "orphaned":
+	case StatusOrphaned:
 		// Both are missing, just clean up metadata
 	}
 
@@ -444,13 +444,13 @@ func (m *Manager) CheckConsistency(workspace *Workspace) {
 
 	// Determine status based on existence flags
 	if workspace.PathExists && workspace.WorktreeExists {
-		workspace.Status = "consistent"
+		workspace.Status = StatusConsistent
 	} else if !workspace.PathExists && workspace.WorktreeExists {
-		workspace.Status = "folder-missing"
+		workspace.Status = StatusFolderMissing
 	} else if workspace.PathExists && !workspace.WorktreeExists {
-		workspace.Status = "worktree-missing"
+		workspace.Status = StatusWorktreeMissing
 	} else {
-		workspace.Status = "orphaned"
+		workspace.Status = StatusOrphaned
 	}
 }
 

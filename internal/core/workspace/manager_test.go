@@ -235,8 +235,8 @@ func TestManager_ConsistencyChecking(t *testing.T) {
 		t.Logf("Path exists: %v, Worktree exists: %v, Status: %s",
 			retrieved.PathExists, retrieved.WorktreeExists, retrieved.Status)
 
-		if retrieved.Status != "consistent" {
-			t.Errorf("Expected status 'consistent', got '%s'", retrieved.Status)
+		if retrieved.Status != workspace.StatusConsistent {
+			t.Errorf("Expected status StatusConsistent, got '%s'", retrieved.Status)
 		}
 		if !retrieved.PathExists {
 			t.Error("Expected PathExists to be true")
@@ -284,8 +284,8 @@ func TestManager_ConsistencyChecking(t *testing.T) {
 		t.Logf("Path exists: %v, Worktree exists: %v, Status: %s",
 			retrieved.PathExists, retrieved.WorktreeExists, retrieved.Status)
 
-		if retrieved.Status != "folder-missing" {
-			t.Errorf("Expected status 'folder-missing', got '%s'", retrieved.Status)
+		if retrieved.Status != workspace.StatusFolderMissing {
+			t.Errorf("Expected status StatusFolderMissing, got '%s'", retrieved.Status)
 		}
 		if retrieved.PathExists {
 			t.Error("Expected PathExists to be false")
@@ -365,8 +365,8 @@ func TestManager_ConsistencyChecking(t *testing.T) {
 		t.Logf("Path exists: %v, Worktree exists: %v, Status: %s",
 			retrieved.PathExists, retrieved.WorktreeExists, retrieved.Status)
 
-		if retrieved.Status != "worktree-missing" {
-			t.Errorf("Expected status 'worktree-missing', got '%s'", retrieved.Status)
+		if retrieved.Status != workspace.StatusWorktreeMissing {
+			t.Errorf("Expected status StatusWorktreeMissing, got '%s'", retrieved.Status)
 		}
 		if !retrieved.PathExists {
 			t.Error("Expected PathExists to be true")
