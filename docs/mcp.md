@@ -119,12 +119,12 @@ Tools perform state-changing operations on workspaces.
 - **Returns**: Confirmation message
 - **Note**: Equivalent to CLI's `amux agent stop`
 
-#### session_send
+#### session_send_input
 
-- **Description**: Send input text to a running agent session
+- **Description**: Send input text to a running agent session's stdin
 - **Parameters**:
   - `session_id` (required): Session ID or short ID
-  - `input` (required): Input text to send
+  - `input` (required): Input text to send to stdin
 - **Returns**: Confirmation message
 - **Note**: Session must be running to receive input
 
@@ -345,7 +345,7 @@ Prompts provide structured guidance for common AI agent workflows.
 {
   "method": "tools/call",
   "params": {
-    "name": "session_send",
+    "name": "session_send_input",
     "arguments": {
       "session_id": "3",
       "input": "Please implement the login endpoint"
@@ -507,7 +507,7 @@ Bridge tools provide the same data as resources but through the tools interface:
 3. **Send instructions** to the agent:
 
    ```json
-   { "method": "tools/call", "params": { "name": "session_send", "arguments": { "session_id": "3", "input": "Please add tests for the auth module" } } }
+   { "method": "tools/call", "params": { "name": "session_send_input", "arguments": { "session_id": "3", "input": "Please add tests for the auth module" } } }
    ```
 
 4. **View agent output**:

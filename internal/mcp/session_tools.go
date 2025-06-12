@@ -23,8 +23,8 @@ type SessionIDParams struct {
 	SessionID string `json:"session_id" jsonschema:"required,description=Session ID or short ID"`
 }
 
-// SessionSendParams contains parameters for session_send tool
-type SessionSendParams struct {
+// SessionSendInputParams contains parameters for session_send_input tool
+type SessionSendInputParams struct {
 	SessionID string `json:"session_id" jsonschema:"required,description=Session ID or short ID"`
 	Input     string `json:"input" jsonschema:"required,description=Input text to send to the session"`
 }
@@ -51,15 +51,15 @@ func (s *ServerV2) registerSessionTools() error {
 	}
 	s.mcpServer.AddTool(mcp.NewTool("session_stop", stopOpts...), s.handleSessionStop)
 
-	// session_send tool
+	// session_send_input tool
 	sendOpts, err := WithStructOptions(
-		"Send input text to a running agent session.",
-		SessionSendParams{},
+		"Send input text to a running agent session's stdin.",
+		SessionSendInputParams{},
 	)
 	if err != nil {
-		return fmt.Errorf("failed to create session_send options: %w", err)
+		return fmt.Errorf("failed to create session_send_input options: %w", err)
 	}
-	s.mcpServer.AddTool(mcp.NewTool("session_send", sendOpts...), s.handleSessionSend)
+	s.mcpServer.AddTool(mcp.NewTool("session_send_input", sendOpts...), s.handleSessionSendInput)
 
 	return nil
 }
@@ -208,8 +208,8 @@ func (s *ServerV2) handleSessionStop(ctx context.Context, request mcp.CallToolRe
 	}, nil
 }
 
-// handleSessionSend handles the session_send tool
-func (s *ServerV2) handleSessionSend(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+// handleSessionSendInput handles the session_send_input tool
+func (s *ServerV2) handleSessionSendInput(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	args := request.GetArguments()
 
 	sessionID, ok := args["session_id"].(string)

@@ -193,7 +193,7 @@ func TestSessionStop(t *testing.T) {
 	})
 }
 
-func TestSessionSend(t *testing.T) {
+func TestSessionSendInput(t *testing.T) {
 	testServer := setupTestServer(t)
 
 	// Create workspace and session
@@ -226,7 +226,7 @@ func TestSessionSend(t *testing.T) {
 	t.Run("sends input to running session", func(t *testing.T) {
 		req := mcp.CallToolRequest{
 			Params: mcp.CallToolParams{
-				Name: "session_send",
+				Name: "session_send_input",
 				Arguments: map[string]interface{}{
 					"session_id": sess.ID(),
 					"input":      "test input",
@@ -234,7 +234,7 @@ func TestSessionSend(t *testing.T) {
 			},
 		}
 
-		result, err := testServer.handleSessionSend(context.Background(), req)
+		result, err := testServer.handleSessionSendInput(context.Background(), req)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -261,7 +261,7 @@ func TestSessionSend(t *testing.T) {
 
 		req := mcp.CallToolRequest{
 			Params: mcp.CallToolParams{
-				Name: "session_send",
+				Name: "session_send_input",
 				Arguments: map[string]interface{}{
 					"session_id": sess.ID(),
 					"input":      "test input",
@@ -269,7 +269,7 @@ func TestSessionSend(t *testing.T) {
 			},
 		}
 
-		_, err := testServer.handleSessionSend(context.Background(), req)
+		_, err := testServer.handleSessionSendInput(context.Background(), req)
 		if err == nil {
 			t.Error("expected error for stopped session, got nil")
 		}
