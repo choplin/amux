@@ -70,10 +70,27 @@ clean:
 test:
     go test -v ./...
 
+# Run short tests (for pre-commit hooks)
+test-short:
+    go test -short ./...
+
 # Run tests with coverage
 test-coverage:
     go test -v -coverprofile=coverage.out ./...
     go tool cover -html=coverage.out -o coverage.html
+
+# Run Go vet (accepts file list or defaults to all)
+vet *files:
+    #!/usr/bin/env bash
+    if [ -z "{{files}}" ]; then
+        go vet ./...
+    else
+        # Extract directories from file list for vet
+        dirs=$(echo {{files}} | xargs -n1 dirname | sort -u | sed 's|^\./||')
+        for dir in $dirs; do
+            go vet ./$dir
+        done
+    fi
 
 # === Formatting ===
 
@@ -150,8 +167,8 @@ lint: lint-go lint-md
 
 # === Combined Commands ===
 
-# Check code (format + lint) - matches pre-commit hooks
-check: fmt lint
+# Check code (format + lint + vet) - matches pre-commit hooks
+check: fmt lint vet
 
 # Check formatting without fixing (for CI)
 check-fmt:

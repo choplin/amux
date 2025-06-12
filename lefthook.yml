@@ -23,11 +23,11 @@ pre-commit:
       priority: 3
     # Vet Go code
     vet:
-      run: go vet ./...
+      run: just vet {staged_files}
       glob: "*.go"
     # Run short tests
     test:
-      run: go test -short ./...
+      run: just test-short
       glob: "*.go"
     # Tidy go modules
     mod-tidy:
