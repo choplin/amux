@@ -1,0 +1,48 @@
+# Example CLAUDE.local.md - Personal Workflow Configuration
+
+This is an example of what you can include in your personal CLAUDE.local.md file.
+Copy this to CLAUDE.local.md and customize it for your workflow.
+
+## Personal MCP Configuration
+
+```json
+{
+  "mcpServers": {
+    "amux": {
+      "command": "/path/to/your/amux/bin/amux",
+      "args": ["mcp", "--root-dir", "/path/to/your/project"],
+      "env": {}
+    }
+  }
+}
+```
+
+## Your Workflow Preferences
+
+### When Working on Issues
+
+- Always create descriptive workspace names
+- Document progress in context files
+- Run tests before committing
+
+### Personal Aliases or Commands
+
+```bash
+# Your custom aliases
+alias amux-clean='amux ws prune --days 3'
+alias amux-status='amux ws list && git status'
+```
+
+## Project-Specific Notes
+
+Add any personal notes, reminders, or preferences here that help you work
+more effectively with the amux project.
+
+## Development Environment
+
+- Editor: [Your editor]
+- Terminal: [Your terminal]
+- OS: [Your OS]
+
+Remember: This file is excluded from git, so feel free to add any personal
+information, paths, or preferences that shouldn't be shared.
