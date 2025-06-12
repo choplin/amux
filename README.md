@@ -350,6 +350,7 @@ go test ./internal/core/config
 
 ## 📚 Documentation
 
+- [MCP Integration](docs/mcp.md) - Model Context Protocol resources, tools, and prompts
 - [Agent Multiplexing Guide](docs/agent-multiplexing.md) - Complete guide to running multiple agents
 - [Architecture](docs/architecture.md) - System design and technical details
 - [Development Guide](DEVELOPMENT.md) - Setup and contribution guidelines
