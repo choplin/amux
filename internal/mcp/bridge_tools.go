@@ -186,7 +186,7 @@ func (s *ServerV2) getPromptDetail(name string) (map[string]interface{}, error) 
 			}
 
 			// Add arguments if any
-			if prompt.Arguments != nil && len(prompt.Arguments) > 0 {
+			if len(prompt.Arguments) > 0 {
 				detail["arguments"] = prompt.Arguments
 			}
 
