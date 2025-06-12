@@ -172,6 +172,9 @@ func (m *Manager) Get(id string) (*Workspace, error) {
 		workspace.Index = index
 	}
 
+	// Check consistency status
+	m.CheckConsistency(&workspace)
+
 	return &workspace, nil
 }
 
@@ -214,6 +217,9 @@ func (m *Manager) List(opts ListOptions) ([]*Workspace, error) {
 			index, _ := m.idMapper.AddWorkspace(workspace.ID)
 			workspace.Index = index
 		}
+
+		// Check consistency status
+		m.CheckConsistency(&workspace)
 
 		workspaces = append(workspaces, &workspace)
 	}
@@ -301,18 +307,40 @@ func (m *Manager) Remove(id string) error {
 		return err
 	}
 
-	// Remove git worktree
-	if err := m.gitOps.RemoveWorktree(workspace.Path); err != nil {
-		// If worktree doesn't exist, continue with cleanup
-		if !strings.Contains(err.Error(), "not a valid path") {
+	// Check consistency to determine the right cleanup approach
+	m.CheckConsistency(workspace)
+
+	// Handle different inconsistency cases
+	switch workspace.Status {
+	case StatusConsistent:
+		// Normal case: both worktree and folder exist
+		if err := m.gitOps.RemoveWorktree(workspace.Path); err != nil {
 			return fmt.Errorf("failed to remove worktree: %w", err)
+		}
+	case StatusFolderMissing:
+		// Case 1: Folder deleted but git worktree exists
+		// Need to prune the worktree reference
+		_ = m.gitOps.PruneWorktrees()
+	case StatusWorktreeMissing:
+		// Case 2: Git worktree removed but folder exists
+		// Nothing special needed, will clean up folder below
+	case StatusOrphaned:
+		// Both are missing, just clean up metadata
+	}
+
+	// Try to remove git worktree if it exists (for backward compatibility)
+	if workspace.WorktreeExists {
+		if err := m.gitOps.RemoveWorktree(workspace.Path); err != nil {
+			// If it fails, try pruning
+			_ = m.gitOps.PruneWorktrees()
 		}
 	}
 
 	// Delete branch
 	if err := m.gitOps.DeleteBranch(workspace.Branch); err != nil {
-		// If branch doesn't exist, continue
-		if !strings.Contains(err.Error(), "not found") {
+		// If branch doesn't exist or is checked out in a non-existent worktree, continue
+		if !strings.Contains(err.Error(), "not found") &&
+			!strings.Contains(err.Error(), "checked out at") {
 			return fmt.Errorf("failed to delete branch: %w", err)
 		}
 	}
@@ -360,6 +388,70 @@ func (m *Manager) Cleanup(opts CleanupOptions) ([]string, error) {
 	}
 
 	return removed, nil
+}
+
+// CheckConsistency checks the consistency status of a workspace
+func (m *Manager) CheckConsistency(workspace *Workspace) {
+	// Check if workspace folder exists
+	if _, err := os.Stat(workspace.Path); err == nil {
+		workspace.PathExists = true
+	} else {
+		workspace.PathExists = false
+	}
+
+	// Check if git worktree exists
+	worktrees, err := m.gitOps.ListWorktrees()
+	workspace.WorktreeExists = false
+	if err == nil {
+		for _, wt := range worktrees {
+			// Normalize paths for comparison
+			wtPath := filepath.Clean(wt.Path)
+			wsPath := filepath.Clean(workspace.Path)
+
+			// Try to resolve symlinks for both paths to handle macOS /var -> /private/var
+			// We need to resolve even non-existent paths by resolving their parent directories
+			wtPathResolved := wtPath
+			wsPathResolved := wsPath
+
+			// For worktree path
+			if resolvedWt, err := filepath.EvalSymlinks(wtPath); err == nil {
+				wtPathResolved = resolvedWt
+			} else {
+				// If path doesn't exist, try to resolve parent directory
+				wtDir := filepath.Dir(wtPath)
+				if resolvedDir, err := filepath.EvalSymlinks(wtDir); err == nil {
+					wtPathResolved = filepath.Join(resolvedDir, filepath.Base(wtPath))
+				}
+			}
+
+			// For workspace path
+			if resolvedWs, err := filepath.EvalSymlinks(wsPath); err == nil {
+				wsPathResolved = resolvedWs
+			} else {
+				// If path doesn't exist, try to resolve parent directory
+				wsDir := filepath.Dir(wsPath)
+				if resolvedDir, err := filepath.EvalSymlinks(wsDir); err == nil {
+					wsPathResolved = filepath.Join(resolvedDir, filepath.Base(wsPath))
+				}
+			}
+
+			if wtPathResolved == wsPathResolved {
+				workspace.WorktreeExists = true
+				break
+			}
+		}
+	}
+
+	// Determine status based on existence flags
+	if workspace.PathExists && workspace.WorktreeExists {
+		workspace.Status = StatusConsistent
+	} else if !workspace.PathExists && workspace.WorktreeExists {
+		workspace.Status = StatusFolderMissing
+	} else if workspace.PathExists && !workspace.WorktreeExists {
+		workspace.Status = StatusWorktreeMissing
+	} else {
+		workspace.Status = StatusOrphaned
+	}
 }
 
 // saveWorkspace saves workspace metadata to disk
