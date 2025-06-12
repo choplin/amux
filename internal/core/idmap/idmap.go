@@ -1,7 +1,5 @@
-// Package common provides shared utilities for Amux core functionality.
-//
-//nolint:revive
-package common
+// Package idmap provides ID mapping functionality for Amux entities.
+package idmap
 
 import (
 	"fmt"

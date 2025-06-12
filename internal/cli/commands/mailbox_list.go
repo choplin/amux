@@ -9,8 +9,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/aki/amux/internal/cli/ui"
-	"github.com/aki/amux/internal/core/common"
 	"github.com/aki/amux/internal/core/config"
+	"github.com/aki/amux/internal/core/idmap"
 	"github.com/aki/amux/internal/core/mailbox"
 	"github.com/aki/amux/internal/core/workspace"
 )
@@ -62,7 +62,7 @@ func listMailbox(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get ID mapper (workspace manager already has it internally)
-	idMapper, err := common.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		return fmt.Errorf("failed to create ID mapper: %w", err)
 	}
