@@ -29,15 +29,15 @@ func (s *ServerV2) registerBridgeTools() error {
 	}
 	s.mcpServer.AddTool(mcp.NewTool("resource_workspace_list", listOpts...), s.handleResourceWorkspaceList)
 
-	// resource_workspace_get - Bridge to amux://workspace/{id}
-	getOpts, err := WithStructOptions(
+	// resource_workspace_show - Bridge to amux://workspace/{id}
+	showOpts, err := WithStructOptions(
 		"Get details of a specific workspace (bridge to amux://workspace/{id} resource). Returns the same data as the workspace detail resource.",
 		WorkspaceIDParams{},
 	)
 	if err != nil {
-		return fmt.Errorf("failed to create resource_workspace_get options: %w", err)
+		return fmt.Errorf("failed to create resource_workspace_show options: %w", err)
 	}
-	s.mcpServer.AddTool(mcp.NewTool("resource_workspace_get", getOpts...), s.handleResourceWorkspaceGet)
+	s.mcpServer.AddTool(mcp.NewTool("resource_workspace_show", showOpts...), s.handleResourceWorkspaceShow)
 
 	// resource_workspace_browse - Bridge to amux://workspace/{id}/files
 	type WorkspaceBrowseParams struct {
@@ -163,7 +163,7 @@ func (s *ServerV2) handleResourceWorkspaceList(ctx context.Context, request mcp.
 	}, nil
 }
 
-func (s *ServerV2) handleResourceWorkspaceGet(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *ServerV2) handleResourceWorkspaceShow(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	args := request.GetArguments()
 	workspaceID, ok := args["workspace_id"].(string)
 	if !ok {

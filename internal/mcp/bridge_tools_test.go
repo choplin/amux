@@ -35,17 +35,17 @@ func TestBridgeTools(t *testing.T) {
 		assert.Empty(t, workspaces)
 	})
 
-	t.Run("resource_workspace_get returns error for non-existent workspace", func(t *testing.T) {
+	t.Run("resource_workspace_show returns error for non-existent workspace", func(t *testing.T) {
 		request := mcp.CallToolRequest{
 			Params: mcp.CallToolParams{
-				Name: "resource_workspace_get",
+				Name: "resource_workspace_show",
 				Arguments: map[string]interface{}{
 					"workspace_id": "non-existent",
 				},
 			},
 		}
 
-		_, err := server.handleResourceWorkspaceGet(ctx, request)
+		_, err := server.handleResourceWorkspaceShow(ctx, request)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "workspace not found")
 	})
@@ -172,17 +172,17 @@ func TestBridgeToolsWithWorkspace(t *testing.T) {
 		assert.Equal(t, "test-workspace", workspaces[0].Name)
 	})
 
-	t.Run("resource_workspace_get returns workspace details", func(t *testing.T) {
+	t.Run("resource_workspace_show returns workspace details", func(t *testing.T) {
 		request := mcp.CallToolRequest{
 			Params: mcp.CallToolParams{
-				Name: "resource_workspace_get",
+				Name: "resource_workspace_show",
 				Arguments: map[string]interface{}{
 					"workspace_id": workspaceID,
 				},
 			},
 		}
 
-		result, err := server.handleResourceWorkspaceGet(ctx, request)
+		result, err := server.handleResourceWorkspaceShow(ctx, request)
 		require.NoError(t, err)
 
 		var detail workspaceDetail
