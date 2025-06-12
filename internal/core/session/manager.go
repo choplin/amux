@@ -198,13 +198,14 @@ func (m *Manager) CreateSession(opts Options) (Session, error) {
 
 	// Create session info
 	info := &Info{
-		ID:          sessionID,
-		WorkspaceID: ws.ID,
-		AgentID:     opts.AgentID,
-		Status:      StatusCreated,
-		Command:     opts.Command,
-		Environment: opts.Environment,
-		CreatedAt:   time.Now(),
+		ID:            sessionID,
+		WorkspaceID:   ws.ID,
+		AgentID:       opts.AgentID,
+		Status:        StatusCreated,
+		Command:       opts.Command,
+		Environment:   opts.Environment,
+		InitialPrompt: opts.InitialPrompt,
+		CreatedAt:     time.Now(),
 	}
 
 	// Initialize working context for the workspace

@@ -21,9 +21,10 @@ import (
 
 var (
 	// Flags for agent run
-	runWorkspace string
-	runCommand   string
-	runEnv       []string
+	runWorkspace     string
+	runCommand       string
+	runEnv           []string
+	runInitialPrompt string
 )
 
 var agentCmd = &cobra.Command{
@@ -51,7 +52,9 @@ Examples:
   # Run with custom command
   amux agent run claude --command "claude code --model opus"
   # Run with environment variables
-  amux agent run claude --env ANTHROPIC_API_KEY=sk-...`,
+  amux agent run claude --env ANTHROPIC_API_KEY=sk-...
+  # Run with initial prompt
+  amux agent run claude --initial-prompt "Please analyze the codebase and suggest improvements"`,
 	Args: cobra.ExactArgs(1),
 	RunE: runAgent,
 }
@@ -106,6 +109,7 @@ func init() {
 	agentRunCmd.Flags().StringVarP(&runWorkspace, "workspace", "w", "", "Workspace to run agent in (name or ID)")
 	agentRunCmd.Flags().StringVarP(&runCommand, "command", "c", "", "Override agent command")
 	agentRunCmd.Flags().StringSliceVarP(&runEnv, "env", "e", []string{}, "Environment variables (KEY=VALUE)")
+	agentRunCmd.Flags().StringVarP(&runInitialPrompt, "initial-prompt", "p", "", "Initial prompt to send to the agent after starting")
 }
 
 func runAgent(cmd *cobra.Command, args []string) error {
@@ -190,11 +194,12 @@ func runAgent(cmd *cobra.Command, args []string) error {
 
 	// Create session
 	opts := session.Options{
-		ID:          sessionID,
-		WorkspaceID: ws.ID,
-		AgentID:     agentID,
-		Command:     command,
-		Environment: env,
+		ID:            sessionID,
+		WorkspaceID:   ws.ID,
+		AgentID:       agentID,
+		Command:       command,
+		Environment:   env,
+		InitialPrompt: runInitialPrompt,
 	}
 
 	sess, err := sessionManager.CreateSession(opts)

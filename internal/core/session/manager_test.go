@@ -75,6 +75,63 @@ func TestManager_CreateSession(t *testing.T) {
 	}
 }
 
+func TestManager_CreateSessionWithInitialPrompt(t *testing.T) {
+	// Setup test environment
+	_, wsManager, configManager := setupTestEnvironment(t)
+
+	// Create a test workspace
+	ws, err := wsManager.Create(workspace.CreateOptions{
+		Name:       "test-workspace-prompt",
+		BaseBranch: "main",
+	})
+	if err != nil {
+		t.Fatalf("Failed to create test workspace: %v", err)
+	}
+
+	// Create session store
+	store, err := NewFileStore(configManager.GetAmuxDir())
+	if err != nil {
+		t.Fatalf("Failed to create session store: %v", err)
+	}
+
+	// Create session manager
+	manager := NewManager(store, wsManager, nil, nil)
+
+	// Use mock adapter for consistent testing
+	mockAdapter := tmux.NewMockAdapter()
+	manager.SetTmuxAdapter(mockAdapter)
+
+	// Test creating a session with initial prompt
+	testPrompt := "Please analyze the codebase and suggest improvements"
+	opts := Options{
+		WorkspaceID:   ws.ID,
+		AgentID:       "claude",
+		Command:       "claude code",
+		InitialPrompt: testPrompt,
+	}
+
+	session, err := manager.CreateSession(opts)
+	if err != nil {
+		t.Fatalf("Failed to create session: %v", err)
+	}
+
+	// Verify session info includes initial prompt
+	info := session.Info()
+	if info.InitialPrompt != testPrompt {
+		t.Errorf("Expected initial prompt '%s', got '%s'", testPrompt, info.InitialPrompt)
+	}
+
+	// Verify session was saved with initial prompt
+	loaded, err := store.Load(session.ID())
+	if err != nil {
+		t.Fatalf("Failed to load session from store: %v", err)
+	}
+
+	if loaded.InitialPrompt != testPrompt {
+		t.Errorf("Loaded initial prompt mismatch: expected '%s', got '%s'", testPrompt, loaded.InitialPrompt)
+	}
+}
+
 func TestManager_GetSession(t *testing.T) {
 	// Setup
 	_, wsManager, configManager := setupTestEnvironment(t)
