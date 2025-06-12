@@ -80,6 +80,11 @@ func NewServerV2(configManager *config.Manager, transport string, httpConfig *co
 		return nil, fmt.Errorf("failed to register resource templates: %w", err)
 	}
 
+	// Register all prompts
+	if err := s.registerPrompts(); err != nil {
+		return nil, fmt.Errorf("failed to register prompts: %w", err)
+	}
+
 	return s, nil
 }
 
