@@ -79,5 +79,4 @@ func (s *ServerV2) handleWorkspaceListResource(ctx context.Context, request mcp.
 			Text:     string(jsonData),
 		},
 	}, nil
-
 }

@@ -70,8 +70,8 @@ func (s *ServerV2) handleStartIssueWorkPrompt(ctx context.Context, request mcp.G
 		return nil, fmt.Errorf("issue_number is required")
 	}
 
-	issueTitle, _ := request.Params.Arguments["issue_title"]
-	issueURL, _ := request.Params.Arguments["issue_url"]
+	issueTitle := request.Params.Arguments["issue_title"]
+	issueURL := request.Params.Arguments["issue_url"]
 
 	// Build the prompt messages
 	messages := []mcp.PromptMessage{
@@ -120,12 +120,12 @@ func (s *ServerV2) buildStartIssueWorkPromptText(issueNumber, issueTitle, issueU
 	sb.WriteString("2. **Ask clarifying questions** if anything is unclear\n")
 	sb.WriteString("3. **Create a workspace** for this issue:\n")
 	sb.WriteString("   ```\n")
-	sb.WriteString(fmt.Sprintf("   workspace_create({\n"))
+	sb.WriteString("   workspace_create({\n")
 	sb.WriteString(fmt.Sprintf("     name: \"issue-%s\",\n", issueNumber))
 	if issueTitle != "" {
 		sb.WriteString(fmt.Sprintf("     description: \"%s\",\n", issueTitle))
 	}
-	sb.WriteString(fmt.Sprintf("     baseBranch: \"main\"\n"))
+	sb.WriteString("     baseBranch: \"main\"\n")
 	sb.WriteString("   })\n")
 	sb.WriteString("   ```\n")
 	sb.WriteString("4. **Document your understanding** in the workspace context.md\n")
@@ -158,8 +158,8 @@ func (s *ServerV2) handlePreparePRPrompt(ctx context.Context, request mcp.GetPro
 		return nil, fmt.Errorf("failed to get workspace: %w", err)
 	}
 
-	prTitle, _ := request.Params.Arguments["pr_title"]
-	prDescription, _ := request.Params.Arguments["pr_description"]
+	prTitle := request.Params.Arguments["pr_title"]
+	prDescription := request.Params.Arguments["pr_description"]
 
 	// Build the prompt messages
 	messages := []mcp.PromptMessage{
@@ -373,5 +373,4 @@ func (s *ServerV2) buildReviewWorkspacePromptText(ws *workspace.Workspace) strin
 	sb.WriteString("- **Archive**: Remove if work is complete or abandoned\n")
 
 	return sb.String()
-
 }

@@ -487,5 +487,4 @@ func TestRegisterPrompts(t *testing.T) {
 	result, err = s.handleReviewWorkspacePrompt(ctx, reviewReq)
 	require.NoError(t, err)
 	assert.NotNil(t, result)
-
 }

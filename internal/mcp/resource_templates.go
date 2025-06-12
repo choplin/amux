@@ -298,5 +298,4 @@ func (s *ServerV2) handleWorkspaceContextResource(ctx context.Context, request m
 			Text:     string(content),
 		},
 	}, nil
-
 }

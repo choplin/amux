@@ -134,11 +134,11 @@ func TestHandleWorkspaceFilesResource(t *testing.T) {
 
 	// Create test files
 	testFile := filepath.Join(ws.Path, "test.txt")
-	err = os.WriteFile(testFile, []byte("test content"), 0644)
+	err = os.WriteFile(testFile, []byte("test content"), 0o644)
 	require.NoError(t, err)
 
 	testDir := filepath.Join(ws.Path, "src")
-	err = os.MkdirAll(testDir, 0755)
+	err = os.MkdirAll(testDir, 0o755)
 	require.NoError(t, err)
 
 	t.Run("list directory", func(t *testing.T) {
@@ -233,7 +233,7 @@ func TestHandleWorkspaceContextResource(t *testing.T) {
 		// Create context.md
 		contextContent := "# Test Context\n\nThis is a test context file."
 		contextPath := filepath.Join(ws.Path, "context.md")
-		err = os.WriteFile(contextPath, []byte(contextContent), 0644)
+		err = os.WriteFile(contextPath, []byte(contextContent), 0o644)
 		require.NoError(t, err)
 
 		ctx := context.Background()
@@ -298,5 +298,4 @@ func TestRegisterResourceTemplates(t *testing.T) {
 	contents, err = s.handleWorkspaceContextResource(ctx, contextReq)
 	require.NoError(t, err)
 	assert.NotEmpty(t, contents)
-
 }

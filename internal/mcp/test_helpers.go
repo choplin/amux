@@ -33,5 +33,4 @@ func setupTestServer(t *testing.T) *ServerV2 {
 	// Cleanup is handled by helpers.CreateTestRepo
 
 	return server
-
 }

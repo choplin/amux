@@ -82,5 +82,4 @@ func TestRegisterResources(t *testing.T) {
 	contents, err := s.handleWorkspaceListResource(ctx, workspaceReq)
 	require.NoError(t, err)
 	assert.NotEmpty(t, contents)
-
 }
