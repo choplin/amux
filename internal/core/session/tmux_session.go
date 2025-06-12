@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/aki/amux/internal/adapters/tmux"
+	"github.com/aki/amux/internal/core/logger"
 	"github.com/aki/amux/internal/core/workspace"
 )
 
@@ -17,17 +18,36 @@ type tmuxSessionImpl struct {
 	store       Store
 	tmuxAdapter tmux.Adapter
 	workspace   *workspace.Workspace
+	logger      logger.Logger
 	mu          sync.RWMutex
 }
 
+// TmuxSessionOption is a function that configures a tmux session
+type TmuxSessionOption func(*tmuxSessionImpl)
+
+// WithTmuxLogger sets the logger for the tmux session
+func WithTmuxLogger(log logger.Logger) TmuxSessionOption {
+	return func(s *tmuxSessionImpl) {
+		s.logger = log
+	}
+}
+
 // NewTmuxSession creates a new tmux-backed session
-func NewTmuxSession(info *Info, store Store, tmuxAdapter tmux.Adapter, workspace *workspace.Workspace) Session {
-	return &tmuxSessionImpl{
+func NewTmuxSession(info *Info, store Store, tmuxAdapter tmux.Adapter, workspace *workspace.Workspace, opts ...TmuxSessionOption) Session {
+	s := &tmuxSessionImpl{
 		info:        info,
 		store:       store,
 		tmuxAdapter: tmuxAdapter,
 		workspace:   workspace,
+		logger:      logger.Nop(), // Default to no-op logger
 	}
+
+	// Apply options
+	for _, opt := range opts {
+		opt(s)
+	}
+
+	return s
 }
 
 func (s *tmuxSessionImpl) ID() string {
@@ -92,7 +112,7 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 	if err := s.tmuxAdapter.SetEnvironment(tmuxSession, env); err != nil {
 		// Clean up on failure
 		if killErr := s.tmuxAdapter.KillSession(tmuxSession); killErr != nil {
-			fmt.Printf("Warning: failed to kill tmux session during cleanup: %v\n", killErr)
+			s.logger.Warn("failed to kill tmux session during cleanup", "error", killErr, "session", tmuxSession)
 		}
 		return fmt.Errorf("failed to set environment: %w", err)
 	}
@@ -100,7 +120,7 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 	// Resize to standard dimensions
 	if err := s.tmuxAdapter.ResizeWindow(tmuxSession, 120, 40); err != nil {
 		// Log warning but don't fail - resize is not critical
-		fmt.Printf("Warning: failed to resize tmux window: %v\n", err)
+		s.logger.Warn("failed to resize tmux window", "error", err, "session", tmuxSession)
 	}
 
 	// Get the command to run
@@ -134,7 +154,7 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 	if err := s.store.Save(s.info); err != nil {
 		// Clean up on failure
 		if killErr := s.tmuxAdapter.KillSession(tmuxSession); killErr != nil {
-			fmt.Printf("Warning: failed to kill tmux session during cleanup: %v\n", killErr)
+			s.logger.Warn("failed to kill tmux session during cleanup", "error", killErr, "session", tmuxSession)
 		}
 		return fmt.Errorf("failed to save session: %w", err)
 	}
@@ -154,7 +174,7 @@ func (s *tmuxSessionImpl) Stop() error {
 	if s.info.TmuxSession != "" {
 		if err := s.tmuxAdapter.KillSession(s.info.TmuxSession); err != nil {
 			// Log error but continue
-			fmt.Printf("Warning: failed to kill tmux session: %v\n", err)
+			s.logger.Warn("failed to kill tmux session", "error", err, "session", s.info.TmuxSession)
 		}
 	}
 

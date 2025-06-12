@@ -9,6 +9,7 @@ import (
 	"github.com/aki/amux/internal/adapters/tmux"
 	contextmgr "github.com/aki/amux/internal/core/context"
 	"github.com/aki/amux/internal/core/idmap"
+	"github.com/aki/amux/internal/core/logger"
 	"github.com/aki/amux/internal/core/mailbox"
 	"github.com/aki/amux/internal/core/workspace"
 )
@@ -133,22 +134,41 @@ type Manager struct {
 	tmuxAdapter      tmux.Adapter
 	sessions         map[string]Session
 	idMapper         *idmap.IDMapper
+	logger           logger.Logger
 	mu               sync.RWMutex
 }
 
+// ManagerOption is a function that configures a Manager
+type ManagerOption func(*Manager)
+
+// WithLogger sets the logger for the Manager
+func WithLogger(log logger.Logger) ManagerOption {
+	return func(m *Manager) {
+		m.logger = log
+	}
+}
+
 // NewManager creates a new session manager
-func NewManager(store Store, workspaceManager *workspace.Manager, mailboxManager *mailbox.Manager, idMapper *idmap.IDMapper) *Manager {
+func NewManager(store Store, workspaceManager *workspace.Manager, mailboxManager *mailbox.Manager, idMapper *idmap.IDMapper, opts ...ManagerOption) *Manager {
 	// Try to create tmux adapter, but don't fail if unavailable
 	tmuxAdapter, _ := tmux.NewAdapter()
 
-	return &Manager{
+	m := &Manager{
 		store:            store,
 		workspaceManager: workspaceManager,
 		mailboxManager:   mailboxManager,
 		idMapper:         idMapper,
 		tmuxAdapter:      tmuxAdapter,
 		sessions:         make(map[string]Session),
+		logger:           logger.Nop(), // Default to no-op logger
 	}
+
+	// Apply options
+	for _, opt := range opts {
+		opt(m)
+	}
+
+	return m
 }
 
 // SetTmuxAdapter sets a custom tmux adapter (useful for testing)
@@ -187,12 +207,12 @@ func (m *Manager) CreateSession(opts Options) (Session, error) {
 	if err := contextManager.Initialize(); err != nil {
 		// Log error but don't fail session creation
 		// Context is helpful but not critical
-		fmt.Printf("Warning: failed to initialize working context: %v\n", err)
+		m.logger.Warn("failed to initialize working context", "error", err, "workspace", ws.ID)
 	} else {
 		// Add initial log entry
 		if err := contextManager.AppendToWorkingLog(fmt.Sprintf("Session started for agent '%s'", opts.AgentID)); err != nil {
 			// Log error but don't fail session creation
-			fmt.Printf("Warning: failed to append to working log: %v\n", err)
+			m.logger.Warn("failed to append to working log", "error", err, "workspace", ws.ID)
 		}
 	}
 
@@ -205,7 +225,7 @@ func (m *Manager) CreateSession(opts Options) (Session, error) {
 	if m.mailboxManager != nil {
 		if err := m.mailboxManager.Initialize(id); err != nil {
 			// Log error but don't fail session creation
-			fmt.Printf("Warning: failed to initialize mailbox: %v\n", err)
+			m.logger.Warn("failed to initialize mailbox", "error", err, "session", id)
 		}
 	}
 
@@ -224,7 +244,7 @@ func (m *Manager) CreateSession(opts Options) (Session, error) {
 	var session Session
 	if m.tmuxAdapter != nil && m.tmuxAdapter.IsAvailable() {
 		// Use tmux-backed session
-		session = NewTmuxSession(info, m.store, m.tmuxAdapter, ws)
+		session = NewTmuxSession(info, m.store, m.tmuxAdapter, ws, WithTmuxLogger(m.logger))
 	} else {
 		// Fall back to basic session
 		session = &sessionImpl{

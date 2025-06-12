@@ -5,13 +5,14 @@ import (
 
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/idmap"
+	"github.com/aki/amux/internal/core/logger"
 	"github.com/aki/amux/internal/core/mailbox"
 	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/workspace"
 )
 
 // createSessionManager is a helper to create a session manager with all dependencies
-func createSessionManager(configManager *config.Manager, wsManager *workspace.Manager, idMapper *idmap.IDMapper) (*session.Manager, error) {
+func createSessionManager(configManager *config.Manager, wsManager *workspace.Manager, idMapper *idmap.IDMapper, log logger.Logger) (*session.Manager, error) {
 	store, err := session.NewFileStore(configManager.GetAmuxDir())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session store: %w", err)
@@ -20,5 +21,5 @@ func createSessionManager(configManager *config.Manager, wsManager *workspace.Ma
 	// Create mailbox manager
 	mailboxManager := mailbox.NewManager(configManager.GetAmuxDir())
 
-	return session.NewManager(store, wsManager, mailboxManager, idMapper), nil
+	return session.NewManager(store, wsManager, mailboxManager, idMapper, session.WithLogger(log)), nil
 }

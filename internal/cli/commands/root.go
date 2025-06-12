@@ -31,6 +31,9 @@ func init() {
 	// Add global flags
 	rootCmd.PersistentFlags().StringVar(&formatFlag, "format", "pretty", "Output format (pretty, json)")
 
+	// Register global logger flags
+	RegisterLoggerFlags(rootCmd)
+
 	// Add subcommands
 
 	rootCmd.AddCommand(initCmd)
