@@ -30,6 +30,7 @@ type workspaceInfo struct {
 	Branch      string `json:"branch"`
 	BaseBranch  string `json:"baseBranch"`
 	Description string `json:"description,omitempty"`
+	ContextPath string `json:"contextPath,omitempty"`
 	CreatedAt   string `json:"createdAt"`
 	UpdatedAt   string `json:"updatedAt"`
 	Resources   struct {

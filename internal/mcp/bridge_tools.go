@@ -95,6 +95,7 @@ func (s *ServerV2) getWorkspaceList() ([]workspaceInfo, error) {
 			Branch:      ws.Branch,
 			BaseBranch:  ws.BaseBranch,
 			Description: ws.Description,
+			ContextPath: ws.ContextPath,
 			CreatedAt:   ws.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 			UpdatedAt:   ws.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		}
@@ -114,9 +115,6 @@ func (s *ServerV2) getWorkspaceDetail(workspaceID string) (*workspaceDetail, err
 		return nil, fmt.Errorf("failed to get workspace: %w", err)
 	}
 
-	// Get workspace root directory (parent of worktree)
-	workspaceRoot := filepath.Dir(ws.Path)
-
 	detail := &workspaceDetail{
 		ID:          ws.ID,
 		Index:       ws.Index,
@@ -129,7 +127,7 @@ func (s *ServerV2) getWorkspaceDetail(workspaceID string) (*workspaceDetail, err
 		UpdatedAt:   ws.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		Paths: workspacePaths{
 			Worktree: ws.Path,
-			Context:  filepath.Join(workspaceRoot, "context.md"),
+			Context:  ws.ContextPath,
 		},
 		Resources: workspaceResources{
 			Files:   fmt.Sprintf("amux://workspace/%s/files", ws.ID),
