@@ -1,4 +1,4 @@
-package commands
+package agent
 
 import (
 	"fmt"
@@ -80,14 +80,20 @@ var agentConfigShowCmd = &cobra.Command{
 	RunE:  showAgentConfig,
 }
 
-func init() {
+var agentConfigInitialized bool
+
+func initAgentConfig() {
+	if agentConfigInitialized {
+		return
+	}
+	agentConfigInitialized = true
+
 	// Add subcommands
 	agentConfigCmd.AddCommand(agentConfigListCmd)
 	agentConfigCmd.AddCommand(agentConfigAddCmd)
 	agentConfigCmd.AddCommand(agentConfigUpdateCmd)
 	agentConfigCmd.AddCommand(agentConfigRemoveCmd)
 	agentConfigCmd.AddCommand(agentConfigShowCmd)
-	agentCmd.AddCommand(agentConfigCmd)
 
 	// Add flags
 	agentConfigAddCmd.Flags().StringVar(&agentName, "name", "", "Agent display name")

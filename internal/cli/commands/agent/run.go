@@ -1,0 +1,165 @@
+package agent
+
+import (
+	"context"
+	"fmt"
+	"strings"
+
+	"github.com/spf13/cobra"
+
+	"github.com/aki/amux/internal/cli/ui"
+	"github.com/aki/amux/internal/core/agent"
+	"github.com/aki/amux/internal/core/config"
+	"github.com/aki/amux/internal/core/session"
+	"github.com/aki/amux/internal/core/workspace"
+)
+
+func runCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "run <agent>",
+		Short: "Run an AI agent in a workspace",
+		Long: `Run an AI agent in a workspace.
+
+If no workspace is specified, a new workspace will be automatically created
+with a name based on the session ID (e.g., session-f47ac10b).
+
+Examples:
+  # Run Claude with auto-created workspace
+  amux agent run claude
+  # Run Claude in a specific workspace
+  amux agent run claude --workspace feature-auth
+  # Run with custom command
+  amux agent run claude --command "claude code --model opus"
+  # Run with environment variables
+  amux agent run claude --env ANTHROPIC_API_KEY=sk-...`,
+		Args: cobra.ExactArgs(1),
+		RunE: runAgent,
+	}
+
+	// Run command flags
+	cmd.Flags().StringVarP(&runWorkspace, "workspace", "w", "", "Workspace to run agent in (name or ID)")
+	cmd.Flags().StringVarP(&runCommand, "command", "c", "", "Override agent command")
+	cmd.Flags().StringSliceVarP(&runEnv, "env", "e", []string{}, "Environment variables (KEY=VALUE)")
+	cmd.Flags().StringVarP(&runInitialPrompt, "initial-prompt", "p", "", "Initial prompt to send to the agent after starting")
+
+	return cmd
+}
+
+func runAgent(cmd *cobra.Command, args []string) error {
+	agentID := args[0]
+
+	// Find project root
+	projectRoot, err := config.FindProjectRoot()
+	if err != nil {
+		return err
+	}
+
+	// Create managers
+	configManager := config.NewManager(projectRoot)
+	wsManager, err := workspace.NewManager(configManager)
+	if err != nil {
+		return fmt.Errorf("failed to create workspace manager: %w", err)
+	}
+
+	// Generate session ID upfront
+	sessionID := session.GenerateID()
+
+	// Get or select workspace
+	var ws *workspace.Workspace
+	if runWorkspace != "" {
+		ws, err = wsManager.ResolveWorkspace(runWorkspace)
+		if err != nil {
+			return fmt.Errorf("failed to resolve workspace: %w", err)
+		}
+	} else {
+		// Auto-create a new workspace using session ID
+		ws, err = createAutoWorkspace(wsManager, sessionID)
+		if err != nil {
+			return fmt.Errorf("failed to create auto-workspace: %w", err)
+		}
+		ui.Success("Created workspace: '%s'", ws.Name)
+	}
+
+	// Create agent manager
+	agentManager := agent.NewManager(configManager)
+
+	// Get agent configuration
+	agentConfig, _ := agentManager.GetAgent(agentID)
+
+	// Determine command to use
+	command := runCommand
+	if command == "" {
+		// Use agent's configured command or fall back to agent ID
+		command, _ = agentManager.GetDefaultCommand(agentID)
+	}
+
+	// Merge environment variables
+	env := make(map[string]string)
+
+	// First, add agent's default environment
+	if agentConfig != nil && agentConfig.Environment != nil {
+		for k, v := range agentConfig.Environment {
+			env[k] = v
+		}
+	}
+
+	// Then, override with command-line environment
+	for _, envVar := range runEnv {
+		parts := strings.SplitN(envVar, "=", 2)
+		if len(parts) != 2 {
+			return fmt.Errorf("invalid environment variable format: %s (expected KEY=VALUE)", envVar)
+		}
+		env[parts[0]] = parts[1]
+	}
+
+	// Create session manager
+	sessionManager, err := createSessionManager(configManager, wsManager)
+	if err != nil {
+		return err
+	}
+
+	// Create session
+	opts := session.Options{
+		ID:            sessionID,
+		WorkspaceID:   ws.ID,
+		AgentID:       agentID,
+		Command:       command,
+		Environment:   env,
+		InitialPrompt: runInitialPrompt,
+	}
+
+	sess, err := sessionManager.CreateSession(opts)
+	if err != nil {
+		return fmt.Errorf("failed to create session: %w", err)
+	}
+
+	displayID := sess.ID()
+	if info := sess.Info(); info.Index != "" {
+		displayID = info.Index
+	}
+
+	// Show consistent session creation info with workspace name
+	ui.Success("Started session: %s in workspace '%s'", displayID, ws.Name)
+
+	// Start session
+	ctx := context.Background()
+	if err := sess.Start(ctx); err != nil {
+		return fmt.Errorf("failed to start session: %w", err)
+	}
+
+	ui.Success("Agent session started successfully!")
+
+	// Show attach instruction if tmux session
+	info := sess.Info()
+	if info.TmuxSession != "" {
+		ui.Info("To attach to this session, run:")
+		ui.Info("  tmux attach-session -t %s", info.TmuxSession)
+		attachID := sess.ID()
+		if info.Index != "" {
+			attachID = info.Index
+		}
+		ui.Info("  or: amux attach %s", attachID)
+	}
+
+	return nil
+}

@@ -1,8 +1,11 @@
 package commands
 
 import (
-	"github.com/aki/amux/internal/cli/ui"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+
+	"github.com/aki/amux/internal/cli/commands/agent"
+	"github.com/aki/amux/internal/cli/ui"
 )
 
 var formatFlag string
@@ -40,41 +43,66 @@ func init() {
 
 	rootCmd.AddCommand(workspaceCmd)
 
-	rootCmd.AddCommand(agentCmd)
+	rootCmd.AddCommand(agent.Command())
 
 	rootCmd.AddCommand(mcpCmd)
 
 	// Add global aliases for common agent operations
 	// These are shortcuts to agent subcommands
 
-	runCmd := &cobra.Command{
-		Use:   "run <agent>",
-		Short: "Alias for 'agent run'",
-		Long:  agentRunCmd.Long,
-		Args:  cobra.ExactArgs(1),
-		RunE:  runAgent,
-	}
-	// Copy flags from agent run command
-	runCmd.Flags().StringVarP(&runWorkspace, "workspace", "w", "", "Workspace to run agent in (name or ID)")
-	runCmd.Flags().StringVarP(&runCommand, "command", "c", "", "Override agent command")
-	runCmd.Flags().StringSliceVarP(&runEnv, "env", "e", []string{}, "Environment variables (KEY=VALUE)")
+	// Get the agent commands to create aliases
+	agentCmd := agent.Command()
 
-	psCmd := &cobra.Command{
-		Use:   "ps",
-		Short: "Alias for 'agent list'",
-		RunE:  listAgents,
+	// Find the subcommands to create aliases
+	var runSubCmd, listSubCmd, attachSubCmd *cobra.Command
+	for _, cmd := range agentCmd.Commands() {
+		switch cmd.Use {
+		case "run <agent>":
+			runSubCmd = cmd
+		case "list":
+			listSubCmd = cmd
+		case "attach <session>":
+			attachSubCmd = cmd
+		}
 	}
 
-	attachCmd := &cobra.Command{
-		Use:   "attach <session>",
-		Short: "Alias for 'agent attach'",
-		Args:  cobra.ExactArgs(1),
-		RunE:  attachAgent,
+	// Create alias commands
+	if runSubCmd != nil {
+		runCmd := &cobra.Command{
+			Use:   "run <agent>",
+			Short: "Alias for 'agent run'",
+			Long:  runSubCmd.Long,
+			Args:  runSubCmd.Args,
+			RunE:  runSubCmd.RunE,
+		}
+		// Copy flags
+		runSubCmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
+			runCmd.Flags().AddFlag(f)
+		})
+		rootCmd.AddCommand(runCmd)
 	}
 
-	rootCmd.AddCommand(runCmd)
-	rootCmd.AddCommand(psCmd)
-	rootCmd.AddCommand(attachCmd)
+	if listSubCmd != nil {
+		psCmd := &cobra.Command{
+			Use:   "ps",
+			Short: "Alias for 'agent list'",
+			RunE:  listSubCmd.RunE,
+		}
+		rootCmd.AddCommand(psCmd)
+	}
+
+	if attachSubCmd != nil {
+		attachCmd := &cobra.Command{
+			Use:   "attach <session>",
+			Short: "Alias for 'agent attach'",
+			Args:  attachSubCmd.Args,
+			RunE:  attachSubCmd.RunE,
+		}
+		rootCmd.AddCommand(attachCmd)
+	}
+
+	// Add tail command alias
+	rootCmd.AddCommand(agent.TailCommand())
 
 	// Add mailbox command
 	rootCmd.AddCommand(mailboxCmd)

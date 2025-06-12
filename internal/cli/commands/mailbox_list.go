@@ -10,7 +10,6 @@ import (
 
 	"github.com/aki/amux/internal/cli/ui"
 	"github.com/aki/amux/internal/core/config"
-	"github.com/aki/amux/internal/core/idmap"
 	"github.com/aki/amux/internal/core/mailbox"
 	"github.com/aki/amux/internal/core/workspace"
 )
@@ -61,15 +60,8 @@ func listMailbox(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create workspace manager: %w", err)
 	}
 
-	// Get ID mapper (workspace manager already has it internally)
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
-	if err != nil {
-		return fmt.Errorf("failed to create ID mapper: %w", err)
-	}
-
 	// Create session manager
-	log := CreateLogger()
-	sessionManager, err := createSessionManager(configManager, wsManager, idMapper, log)
+	sessionManager, err := createSessionManager(configManager, wsManager)
 	if err != nil {
 		return err
 	}

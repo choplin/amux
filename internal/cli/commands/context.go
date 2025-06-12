@@ -1,3 +1,4 @@
+// Package commands provides CLI command implementations for amux.
 package commands
 
 import (
