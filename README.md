@@ -131,13 +131,95 @@ amux mcp
 amux mcp --transport https --port 3000 --auth bearer --token secret123
 ```
 
-## 🤖 MCP Tools for AI Agents
+### Using MCP Features
+
+#### Accessing Resources
+
+```bash
+# In your AI agent, you can read resources like:
+# Read workspace list
+GET amux://workspace
+
+# Read specific workspace details
+GET amux://workspace/ws-feature-auth-123
+
+# Browse files in a workspace
+GET amux://workspace/ws-feature-auth-123/files
+GET amux://workspace/ws-feature-auth-123/files/src/auth.go
+
+# Read workspace context
+GET amux://workspace/ws-feature-auth-123/context
+```
+
+#### Using Prompts
+
+```bash
+# Start working on an issue
+PROMPT start-issue-work {
+  "issue_number": "42",
+  "issue_title": "Add authentication system"
+}
+
+# Prepare a PR when done
+PROMPT prepare-pr {
+  "pr_title": "feat: implement JWT authentication"
+}
+
+# Review workspace state
+PROMPT review-workspace {
+  "workspace_id": "ws-feature-auth-123"
+}
+```
+
+## 🤖 MCP Integration for AI Agents
+
+### MCP Resources (Read-only Data)
+
+Amux provides structured read-only data through MCP Resources:
+
+#### Static Resources
+
+- `amux://workspace` - List all workspaces with metadata and resource URIs
+
+#### Dynamic Resources (Per Workspace)
+
+- `amux://workspace/{id}` - Detailed workspace information including paths
+- `amux://workspace/{id}/files` - Browse workspace directory structure
+- `amux://workspace/{id}/files/{path}` - Read specific files
+- `amux://workspace/{id}/context` - Access workspace context.md file
+
+Example resource URIs:
+
+```text
+amux://workspace/ws-abc123
+amux://workspace/ws-abc123/files
+amux://workspace/ws-abc123/files/src/main.go
+amux://workspace/ws-abc123/context
+```
+
+### MCP Tools (Actions)
 
 - `workspace_create` - Create isolated workspace (supports existing branches)
 - `workspace_list` - List workspaces with optional filtering
 - `workspace_get` - Get specific workspace details
 - `workspace_remove` - Remove workspace and cleanup
-- `workspace_info` - Browse workspace files securely
+- `workspace_info` - [DEPRECATED - Use MCP Resources instead] Browse workspace files
+
+### MCP Prompts (Guided Workflows)
+
+Amux provides prompts to guide AI agents through common workflows:
+
+- **`start-issue-work`** - Start working on an issue with structured approach
+  - Parameters: `issue_number` (required), `issue_title`, `issue_url`
+  - Guides through requirements clarification and planning
+
+- **`prepare-pr`** - Prepare code for pull request submission
+  - Parameters: `pr_title`, `pr_description` (optional)
+  - Ensures tests pass and code is properly formatted
+
+- **`review-workspace`** - Analyze workspace state and suggest next steps
+  - Parameters: `workspace_id` (required)
+  - Shows workspace age, branch status, and recommended actions
 
 ## 🤖 Agent Multiplexing
 

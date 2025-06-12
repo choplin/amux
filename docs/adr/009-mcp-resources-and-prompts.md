@@ -141,12 +141,14 @@ The `amux://conventions` resource will return:
 ### 2025-06-12: Removed Conventions Resource
 
 After implementation review, we removed the `amux://conventions` resource because:
+
 - Conventions (paths, naming patterns) are implementation details
 - AI agents only need actual paths, not patterns to construct them
 - Each workspace now includes its actual paths in the detail response
 - This simplifies the API and makes it more practical
 
 Workspace details now include:
+
 - `paths.worktree` - Actual path to the git worktree
 - `paths.context` - Path to context.md file
 - `resources.*` - URIs to related resources

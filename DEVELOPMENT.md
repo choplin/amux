@@ -75,6 +75,28 @@ Using mark3labs/mcp-go for Model Context Protocol:
 - Struct-to-schema conversion
 - Multiple transport support (stdio, HTTP)
 
+#### MCP Architecture
+
+The MCP server provides three types of capabilities:
+
+##### Resources (Read-only Data)
+
+- Static resources: Fixed URIs like `amux://workspace`
+- Dynamic resources: Templated URIs like `amux://workspace/{id}/files`
+- Implemented in `internal/mcp/resources.go` and `resource_templates.go`
+
+##### Tools (Actions)
+
+- State-changing operations like creating/removing workspaces
+- Type-safe definitions using struct tags
+- Implemented in `internal/mcp/server.go`
+
+##### Prompts (Guided Workflows)
+
+- Pre-defined workflows for common tasks
+- Help AI agents follow best practices
+- Implemented in `internal/mcp/prompts.go`
+
 ### 4. Configuration Layers
 
 ```yaml
@@ -226,6 +248,70 @@ func WithTimeout(d time.Duration) Option {
     return func(c *Config) {
         c.Timeout = d
     }
+}
+```
+
+## Developing MCP Features
+
+### Adding a New Resource
+
+```go
+// 1. For static resources, add to registerResources()
+myResource := mcp.NewResource(
+    "amux://my-resource",
+    "My Resource",
+    mcp.WithResourceDescription("Description"),
+    mcp.WithMIMEType("application/json"),
+)
+s.mcpServer.AddResource(myResource, s.handleMyResource)
+
+// 2. For dynamic resources, add to registerResourceTemplates()
+template := mcp.NewResourceTemplate(
+    "amux://items/{id}",
+    "Item Details",
+    mcp.WithTemplateDescription("Get item by ID"),
+    mcp.WithTemplateMIMEType("application/json"),
+)
+s.mcpServer.AddResourceTemplate(template, s.handleItemResource)
+```
+
+### Adding a New Tool
+
+```go
+// 1. Define parameter struct with JSON tags
+type MyToolParams struct {
+    Name string `json:"name" jsonschema:"description=The name,required"`
+}
+
+// 2. Register in registerTools()
+opts, _ := WithStructOptions("Tool description", MyToolParams{})
+s.mcpServer.AddTool(mcp.NewTool("my_tool", opts...), s.handleMyTool)
+
+// 3. Implement handler
+func (s *ServerV2) handleMyTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+    var params MyToolParams
+    if err := json.Unmarshal(request.Params.Arguments, &params); err != nil {
+        return nil, err
+    }
+    // Implementation
+}
+```
+
+### Adding a New Prompt
+
+```go
+// 1. Register in registerPrompts()
+prompt := mcp.NewPrompt(
+    "my-prompt",
+    mcp.WithPromptDescription("Prompt description"),
+    mcp.WithArgument("arg1", "Argument description", true),
+)
+s.mcpServer.AddPrompt(prompt, s.handleMyPrompt)
+
+// 2. Implement handler
+func (s *ServerV2) handleMyPrompt(ctx context.Context, request mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
+    arg1 := request.Params.Arguments["arg1"]
+    // Generate prompt messages
 }
 ```
 
