@@ -9,6 +9,7 @@ Accepted
 ## Context
 
 The Model Context Protocol (MCP) specification defines three core primitives:
+
 - **Resources**: Read-only data access
 - **Tools**: State-changing operations
 - **Prompts**: Guided workflows
@@ -18,6 +19,7 @@ While amux has implemented all three primitives as designed in ADR-009, we disco
 to adoption since clients cannot access essential workspace data.
 
 The MCP ecosystem is still evolving, and client implementations vary significantly in their feature support:
+
 - Most clients fully support tools
 - Resource support is inconsistent or missing
 - Prompt support is often limited
@@ -29,12 +31,14 @@ tools act as a compatibility layer, allowing clients without native resource sup
 through the tools interface.
 
 Bridge tools will:
+
 1. Use a clear naming convention with prefixes (`resource_`, `prompt_`)
 2. Return identical data to their resource/prompt counterparts
 3. Share implementation logic with resources to ensure consistency
 4. Be clearly documented as a compatibility layer
 
 The following bridge tools will be implemented:
+
 - `resource_workspace_list` - Bridge to `amux://workspace`
 - `resource_workspace_get` - Bridge to `amux://workspace/{id}`
 - `resource_workspace_browse` - Bridge to `amux://workspace/{id}/files`
@@ -70,6 +74,7 @@ The following bridge tools will be implemented:
 The implementation follows these principles:
 
 1. **DRY (Don't Repeat Yourself)**: Resources and bridge tools share core logic
+
    ```go
    func (s *ServerV2) getWorkspaceList() ([]workspaceInfo, error) {
        // Shared implementation
@@ -77,6 +82,7 @@ The implementation follows these principles:
    ```
 
 2. **Type safety**: Reuse the same data structures
+
    ```go
    type workspaceInfo struct {
        ID          string `json:"id"`
@@ -86,6 +92,7 @@ The implementation follows these principles:
    ```
 
 3. **Clear documentation**: Each bridge tool describes its purpose
+
    ```go
    "List all workspaces (bridge to amux://workspace resource)"
    ```
