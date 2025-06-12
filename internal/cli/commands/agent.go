@@ -41,7 +41,7 @@ var agentRunCmd = &cobra.Command{
 	Long: `Run an AI agent in a workspace.
 
 If no workspace is specified, a new workspace will be automatically created
-with an auto-generated name (auto-1, auto-2, etc.).
+with a name based on the session ID (e.g., session-f47ac10b).
 
 Examples:
   # Run Claude with auto-created workspace
@@ -129,14 +129,21 @@ func runAgent(cmd *cobra.Command, args []string) error {
 
 	// Get or select workspace
 	var ws *workspace.Workspace
+	var sessionID session.ID
+
 	if runWorkspace != "" {
 		ws, err = wsManager.ResolveWorkspace(runWorkspace)
 		if err != nil {
 			return fmt.Errorf("failed to resolve workspace: %w", err)
 		}
+		// Generate session ID for specified workspace
+		sessionID = session.GenerateID()
 	} else {
-		// Auto-create a new workspace
-		ws, err = createAutoWorkspace(wsManager)
+		// Generate session ID first for auto-created workspace
+		sessionID = session.GenerateID()
+
+		// Auto-create a new workspace using session ID
+		ws, err = createAutoWorkspace(wsManager, sessionID)
 		if err != nil {
 			return fmt.Errorf("failed to create auto-workspace: %w", err)
 		}
@@ -190,6 +197,7 @@ func runAgent(cmd *cobra.Command, args []string) error {
 
 	// Create session
 	opts := session.Options{
+		ID:          sessionID,
 		WorkspaceID: ws.ID,
 		AgentID:     agentID,
 		Command:     command,
@@ -201,13 +209,13 @@ func runAgent(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create session: %w", err)
 	}
 
-	sessionID := sess.ID()
+	displayID := sess.ID()
 	if info := sess.Info(); info.Index != "" {
-		sessionID = info.Index
+		displayID = info.Index
 	}
 
 	// Show consistent session creation info with workspace name
-	ui.Success("Started session: %s in workspace '%s'", sessionID, ws.Name)
+	ui.Success("Started session: %s in workspace '%s'", displayID, ws.Name)
 
 	// Start session
 	ctx := context.Background()
@@ -469,37 +477,15 @@ func viewAgentLogs(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// createAutoWorkspace creates a new workspace with an auto-generated name
-func createAutoWorkspace(wsManager *workspace.Manager) (*workspace.Workspace, error) {
-	// Generate auto workspace name
-	// Try auto-1, auto-2, etc. until we find an available name
-	baseName := "auto"
-	var name string
-	var counter int
-
-	for {
-		counter++
-		name = fmt.Sprintf("%s-%d", baseName, counter)
-
-		// Check if this name already exists
-		_, err := wsManager.ResolveWorkspace(name)
-		if err != nil {
-			// Name doesn't exist, we can use it
-			break
-		}
-
-		// Safety check to prevent infinite loop
-		if counter > 100 {
-			// Fall back to timestamp-based name
-			name = fmt.Sprintf("%s-%d", baseName, time.Now().Unix())
-			break
-		}
-	}
+// createAutoWorkspace creates a new workspace with a name based on session ID
+func createAutoWorkspace(wsManager *workspace.Manager, sessionID session.ID) (*workspace.Workspace, error) {
+	// Use first 8 chars of session ID for workspace name
+	name := fmt.Sprintf("session-%s", sessionID.Short())
 
 	// Create the workspace
 	opts := workspace.CreateOptions{
 		Name:        name,
-		Description: "Auto-created workspace",
+		Description: fmt.Sprintf("Auto-created workspace for session %s", sessionID.Short()),
 		BaseBranch:  "main",
 	}
 

@@ -3,7 +3,35 @@ package session
 import (
 	"context"
 	"time"
+
+	"github.com/google/uuid"
 )
+
+// ID represents a unique session identifier
+type ID string
+
+// GenerateID generates a new unique session ID
+func GenerateID() ID {
+	return ID(uuid.New().String())
+}
+
+// String returns the string representation of the session ID
+func (id ID) String() string {
+	return string(id)
+}
+
+// Short returns the first 8 characters of the session ID
+func (id ID) Short() string {
+	if len(id) >= 8 {
+		return string(id[:8])
+	}
+	return string(id)
+}
+
+// IsEmpty returns true if the ID is empty
+func (id ID) IsEmpty() bool {
+	return id == ""
+}
 
 // Status represents the current state of a session
 type Status string
@@ -21,6 +49,7 @@ const (
 
 // Options contains options for creating a new session
 type Options struct {
+	ID          ID                // Optional: pre-generated session ID
 	WorkspaceID string            // Required: workspace to run in
 	AgentID     string            // Required: agent to run
 	Command     string            // Optional: override agent command
