@@ -76,6 +76,11 @@ func (s *ServerV2) registerBridgeTools() error {
 	}
 	s.mcpServer.AddTool(mcp.NewTool("prompt_get", promptGetOpts...), s.handlePromptGet)
 
+	// Register session bridge tools
+	if err := s.registerSessionBridgeTools(); err != nil {
+		return fmt.Errorf("failed to register session bridge tools: %w", err)
+	}
+
 	return nil
 }
 

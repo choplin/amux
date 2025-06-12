@@ -47,6 +47,32 @@ Resources provide structured read-only access to workspace information without m
 - **Description**: Read the workspace's context.md file
 - **Returns**: Markdown content or placeholder if not found
 
+#### Session List
+
+- **URI**: `amux://session`
+- **Description**: List all active sessions with metadata
+- **Returns**: JSON array of sessions with resource URIs
+
+#### Session Details
+
+- **URI**: `amux://session/{id}`
+- **Description**: Get complete session information
+- **Returns**: JSON object with session metadata, status, and resource URIs
+- **Note**: Accepts both session ID and short ID
+
+#### Session Output
+
+- **URI**: `amux://session/{id}/output`
+- **Description**: Read current session output/logs from tmux
+- **Returns**: Plain text output from the session
+- **Note**: Only available for running sessions
+
+#### Session Mailbox
+
+- **URI**: `amux://session/{id}/mailbox`
+- **Description**: Access session mailbox state and messages
+- **Returns**: JSON object with mailbox path and message list
+
 ## MCP Tools (Actions)
 
 Tools perform state-changing operations on workspaces.
@@ -99,6 +125,37 @@ counterparts.
   - `workspace_id` (required): Workspace ID or name
   - `path` (optional): Path within workspace to browse
 - **Returns**: Directory listing or file contents (same as resource)
+
+### Bridge Tools (Session Access)
+
+Session resources can also be accessed through bridge tools:
+
+#### resource_session_list
+
+- **Description**: List all active sessions (bridge to `amux://session` resource)
+- **Parameters**: None
+- **Returns**: JSON array of sessions (same as resource)
+
+#### resource_session_show
+
+- **Description**: Get session details (bridge to `amux://session/{id}` resource)
+- **Parameters**:
+  - `session_id` (required): Session ID or short ID
+- **Returns**: JSON object with session details (same as resource)
+
+#### resource_session_output
+
+- **Description**: Read session output (bridge to `amux://session/{id}/output` resource)
+- **Parameters**:
+  - `session_id` (required): Session ID or short ID
+- **Returns**: Plain text output from the session
+
+#### resource_session_mailbox
+
+- **Description**: Access session mailbox (bridge to `amux://session/{id}/mailbox` resource)
+- **Parameters**:
+  - `session_id` (required): Session ID or short ID
+- **Returns**: JSON object with mailbox information
 
 ### Bridge Tools (Prompt Access)
 
@@ -416,6 +473,7 @@ Prompts are implemented in `internal/mcp/prompts.go` with:
 
 Planned MCP extensions tracked in GitHub issues:
 
-- [#53](https://github.com/choplin/amux/issues/53): MCP Resources for session management
-
 - [#54](https://github.com/choplin/amux/issues/54): MCP Resources and Tools for mailbox system
+- Additional session management tools (start, stop, send input)
+- Enhanced mailbox tools for sending/receiving messages
+- Session status change notifications via MCP events
