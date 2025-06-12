@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -20,6 +21,15 @@ import (
 	"github.com/aki/amux/internal/core/workspace"
 	"github.com/aki/amux/internal/tests/helpers"
 )
+
+// writerFunc is an adapter to allow the use of ordinary functions as io.Writer
+type writerFunc struct {
+	fn func(p []byte) (int, error)
+}
+
+func (w *writerFunc) Write(p []byte) (int, error) {
+	return w.fn(p)
+}
 
 func TestTailer_Follow(t *testing.T) {
 	// Create test repository
@@ -78,12 +88,24 @@ func TestTailer_Follow(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("follows new output", func(t *testing.T) {
-		var buf bytes.Buffer
+		// Use a thread-safe buffer wrapper
+		type safeBuffer struct {
+			mu  sync.Mutex
+			buf bytes.Buffer
+		}
+		safeBuf := &safeBuffer{}
+
+		// Create a writer that locks the buffer
+		writer := &writerFunc{fn: func(p []byte) (int, error) {
+			safeBuf.mu.Lock()
+			defer safeBuf.mu.Unlock()
+			return safeBuf.buf.Write(p)
+		}}
 
 		// Create tailer with short poll interval for testing
 		tailOpts := tail.Options{
 			PollInterval: 100 * time.Millisecond,
-			Writer:       &buf,
+			Writer:       writer,
 		}
 		tailer := tail.New(sess, tailOpts)
 
@@ -94,9 +116,16 @@ func TestTailer_Follow(t *testing.T) {
 			done <- tailer.Follow(ctx)
 		}()
 
+		// Helper to safely read the buffer
+		getOutput := func() string {
+			safeBuf.mu.Lock()
+			defer safeBuf.mu.Unlock()
+			return safeBuf.buf.String()
+		}
+
 		// Wait for initial output
-		time.Sleep(50 * time.Millisecond)
-		assert.Contains(t, buf.String(), "Initial output")
+		time.Sleep(150 * time.Millisecond)
+		assert.Contains(t, getOutput(), "Initial output")
 
 		// Add new output while following
 		err = mockAdapter.AppendSessionOutput(info.TmuxSession, "New line 1\n")
@@ -119,7 +148,7 @@ func TestTailer_Follow(t *testing.T) {
 		}
 
 		// Check output
-		output := buf.String()
+		output := getOutput()
 		assert.Contains(t, output, "Initial output")
 		assert.Contains(t, output, "New line 1")
 		assert.Contains(t, output, "New line 2")
