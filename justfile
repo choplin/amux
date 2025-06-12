@@ -4,6 +4,8 @@
 default:
     @just --list
 
+# === Setup & Dependencies ===
+
 # Initialize go modules and download dependencies
 init:
     go mod download
@@ -42,6 +44,8 @@ check-tools:
     echo ""
     echo "All required tools are available!"
 
+# === Build & Install ===
+
 # Build the binary
 build:
     #!/usr/bin/env bash
@@ -49,6 +53,17 @@ build:
     COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
     DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     go build -ldflags "-X github.com/aki/amux/internal/cli/commands.Version=$VERSION -X github.com/aki/amux/internal/cli/commands.GitCommit=$COMMIT -X github.com/aki/amux/internal/cli/commands.BuildDate=$DATE" -o bin/amux cmd/amux/main.go
+
+# Install the binary to GOPATH/bin
+install: build
+    go install cmd/amux/main.go
+
+# Clean build artifacts
+clean:
+    rm -rf bin/
+    rm -f coverage.out coverage.html
+
+# === Testing ===
 
 # Run tests
 test:
@@ -59,6 +74,8 @@ test-coverage:
     go test -v -coverprofile=coverage.out ./...
     go tool cover -html=coverage.out -o coverage.html
 
+# === Formatting ===
+
 # Format Go code
 fmt:
     go run -mod=readonly github.com/golangci/golangci-lint/v2/cmd/golangci-lint fmt ./...
@@ -66,14 +83,6 @@ fmt:
 # Format YAML files
 fmt-yaml:
     go run -mod=readonly github.com/google/yamlfmt/cmd/yamlfmt .
-
-# Lint Go code
-lint:
-    go run -mod=readonly github.com/golangci/golangci-lint/v2/cmd/golangci-lint run
-
-# Lint markdown files
-lint-md:
-    npm run lint:md
 
 # Fix markdown files
 fix-md:
@@ -91,6 +100,18 @@ fix-whitespace:
         -not -path "./vendor/*" -not -path "./.git/*" -not -path "./bin/*" \
         -exec perl -i -pe 'eof && do{print "\n" unless /\n$/}' {} \;
 
+# === Linting ===
+
+# Lint Go code
+lint:
+    go run -mod=readonly github.com/golangci/golangci-lint/v2/cmd/golangci-lint run
+
+# Lint markdown files
+lint-md:
+    npm run lint:md
+
+# === Combined Commands ===
+
 # Check code (format + lint) - matches pre-commit hooks
 check: fix-whitespace fmt fmt-yaml fix-md lint lint-md
 
@@ -102,9 +123,10 @@ check-ci: lint lint-md
     # Check for yaml formatting
     go run -mod=readonly github.com/google/yamlfmt/cmd/yamlfmt -dry .
 
-# Install the binary to GOPATH/bin
-install: build
-    go install cmd/amux/main.go
+# Full development cycle - format, lint, test, build
+all: check test build
+
+# === Development Helpers ===
 
 # Show current version
 version:
@@ -113,11 +135,6 @@ version:
 # Run the development version
 dev *args:
     go run cmd/amux/main.go {{args}}
-
-# Clean build artifacts
-clean:
-    rm -rf bin/
-    rm -f coverage.out coverage.html
 
 # Create a new workspace (development helper)
 workspace name:
@@ -130,9 +147,6 @@ list:
 # Start MCP server
 serve:
     just dev serve
-
-# Full development cycle - format, lint, test, build
-all: check test build
 
 # Watch for changes and rebuild
 watch:
