@@ -1,8 +1,11 @@
 package commands
 
 import (
+	"github.com/aki/amux/internal/cli/ui"
 	"github.com/spf13/cobra"
 )
+
+var formatFlag string
 
 var rootCmd = &cobra.Command{
 	Use: "amux",
@@ -13,9 +16,21 @@ var rootCmd = &cobra.Command{
 
 can work independently without context mixing. It enables multiplexing multiple agent sessions
 across different workspaces.`,
+
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// Parse and set the global formatter
+		format, err := ui.ParseFormat(formatFlag)
+		if err != nil {
+			return err
+		}
+		return ui.SetGlobalFormatter(format)
+	},
 }
 
 func init() {
+	// Add global flags
+	rootCmd.PersistentFlags().StringVar(&formatFlag, "format", "pretty", "Output format (pretty, json)")
+
 	// Add subcommands
 
 	rootCmd.AddCommand(initCmd)
