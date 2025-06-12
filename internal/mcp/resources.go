@@ -4,11 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
-
-	"github.com/aki/amux/internal/core/workspace"
 )
 
 // registerResources registers all MCP resources
@@ -25,46 +22,28 @@ func (s *ServerV2) registerResources() error {
 	return nil
 }
 
+// workspaceInfo is the common structure for workspace information
+type workspaceInfo struct {
+	ID          string `json:"id"`
+	Index       string `json:"index"`
+	Name        string `json:"name"`
+	Branch      string `json:"branch"`
+	BaseBranch  string `json:"baseBranch"`
+	Description string `json:"description,omitempty"`
+	CreatedAt   string `json:"createdAt"`
+	UpdatedAt   string `json:"updatedAt"`
+	Resources   struct {
+		Detail  string `json:"detail"`
+		Files   string `json:"files"`
+		Context string `json:"context"`
+	} `json:"resources"`
+}
+
 // handleWorkspaceListResource returns a list of all workspaces
 func (s *ServerV2) handleWorkspaceListResource(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
-	workspaces, err := s.workspaceManager.List(workspace.ListOptions{})
+	workspaceList, err := s.getWorkspaceList()
 	if err != nil {
-		return nil, fmt.Errorf("failed to list workspaces: %w", err)
-	}
-
-	// Convert workspaces to a simpler format for JSON
-	type workspaceInfo struct {
-		ID          string `json:"id"`
-		Index       string `json:"index"`
-		Name        string `json:"name"`
-		Branch      string `json:"branch"`
-		BaseBranch  string `json:"baseBranch"`
-		Description string `json:"description,omitempty"`
-		CreatedAt   string `json:"createdAt"`
-		UpdatedAt   string `json:"updatedAt"`
-		Resources   struct {
-			Detail  string `json:"detail"`
-			Files   string `json:"files"`
-			Context string `json:"context"`
-		} `json:"resources"`
-	}
-
-	workspaceList := make([]workspaceInfo, len(workspaces))
-	for i, ws := range workspaces {
-		info := workspaceInfo{
-			ID:          ws.ID,
-			Index:       ws.Index,
-			Name:        ws.Name,
-			Branch:      ws.Branch,
-			BaseBranch:  ws.BaseBranch,
-			Description: ws.Description,
-			CreatedAt:   ws.CreatedAt.Format(time.RFC3339),
-			UpdatedAt:   ws.UpdatedAt.Format(time.RFC3339),
-		}
-		info.Resources.Detail = fmt.Sprintf("amux://workspace/%s", ws.ID)
-		info.Resources.Files = fmt.Sprintf("amux://workspace/%s/files", ws.ID)
-		info.Resources.Context = fmt.Sprintf("amux://workspace/%s/context", ws.ID)
-		workspaceList[i] = info
+		return nil, err
 	}
 
 	jsonData, err := json.MarshalIndent(workspaceList, "", "  ")

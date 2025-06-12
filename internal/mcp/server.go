@@ -67,6 +67,11 @@ func NewServerV2(configManager *config.Manager, transport string, httpConfig *co
 		return nil, fmt.Errorf("failed to register tools: %w", err)
 	}
 
+	// Register bridge tools
+	if err := s.registerBridgeTools(); err != nil {
+		return nil, fmt.Errorf("failed to register bridge tools: %w", err)
+	}
+
 	// Register all resources
 	if err := s.registerResources(); err != nil {
 		return nil, fmt.Errorf("failed to register resources: %w", err)

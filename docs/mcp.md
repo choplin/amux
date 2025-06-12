@@ -51,7 +51,9 @@ Resources provide structured read-only access to workspace information without m
 
 Tools perform state-changing operations on workspaces.
 
-### workspace_create
+### Core Tools
+
+#### workspace_create
 
 - **Description**: Create a new isolated git worktree workspace
 - **Parameters**:
@@ -62,13 +64,58 @@ Tools perform state-changing operations on workspaces.
   - `agent_id`: Associated agent ID
 - **Returns**: Created workspace details
 
-### workspace_remove
+#### workspace_remove
 
 - **Description**: Remove a workspace and its git worktree
 - **Parameters**:
   - `workspace_id` (required): Workspace ID or name
 - **Returns**: Confirmation message
 - **Warning**: This operation is permanent and cannot be undone
+
+### Bridge Tools (Resource Access)
+
+Many MCP clients have limited or no support for reading resources directly. To ensure compatibility, Amux provides
+"bridge" tools that give tool-based access to resource data. These tools return the same data as their resource
+counterparts.
+
+#### resource_workspace_list
+
+- **Description**: List all workspaces (bridge to `amux://workspace` resource)
+- **Parameters**: None
+- **Returns**: JSON array of workspaces (same as resource)
+- **Note**: Use this if your MCP client cannot read resources directly
+
+#### resource_workspace_get
+
+- **Description**: Get workspace details (bridge to `amux://workspace/{id}` resource)
+- **Parameters**:
+  - `workspace_id` (required): Workspace ID or name
+- **Returns**: JSON object with workspace details (same as resource)
+
+#### resource_workspace_browse
+
+- **Description**: Browse workspace files (bridge to `amux://workspace/{id}/files` resource)
+- **Parameters**:
+  - `workspace_id` (required): Workspace ID or name
+  - `path` (optional): Path within workspace to browse
+- **Returns**: Directory listing or file contents (same as resource)
+
+### Bridge Tools (Prompt Access)
+
+Similarly, prompt data can be accessed through bridge tools:
+
+#### prompt_list
+
+- **Description**: List all available prompts
+- **Parameters**: None
+- **Returns**: JSON array of prompt names and descriptions
+
+#### prompt_get
+
+- **Description**: Get a specific prompt definition
+- **Parameters**:
+  - `name` (required): Name of the prompt
+- **Returns**: JSON object with prompt details including template
 
 ## MCP Prompts (Guided Workflows)
 
@@ -181,6 +228,64 @@ Prompts provide structured guidance for common AI agent workflows.
 }
 ```
 
+### Using Bridge Tools
+
+Bridge tools provide the same data as resources but through the tools interface:
+
+```json
+// List workspaces (bridge to amux://workspace)
+{
+  "method": "tools/call",
+  "params": {
+    "name": "resource_workspace_list",
+    "arguments": {}
+  }
+}
+
+// Get workspace details (bridge to amux://workspace/{id})
+{
+  "method": "tools/call",
+  "params": {
+    "name": "resource_workspace_get",
+    "arguments": {
+      "workspace_id": "ws-123"
+    }
+  }
+}
+
+// Browse files (bridge to amux://workspace/{id}/files)
+{
+  "method": "tools/call",
+  "params": {
+    "name": "resource_workspace_browse",
+    "arguments": {
+      "workspace_id": "ws-123",
+      "path": "src"
+    }
+  }
+}
+
+// List available prompts
+{
+  "method": "tools/call",
+  "params": {
+    "name": "prompt_list",
+    "arguments": {}
+  }
+}
+
+// Get specific prompt
+{
+  "method": "tools/call",
+  "params": {
+    "name": "prompt_get",
+    "arguments": {
+      "name": "workspace_planning"
+    }
+  }
+}
+```
+
 ### Using Prompts
 
 ```json
@@ -277,11 +382,17 @@ Key features:
 
 ### Tool Implementation
 
-Tools are implemented in `internal/mcp/server.go` with:
+Tools are implemented in:
+
+- `internal/mcp/server.go` - Core tools (workspace_create, workspace_remove)
+- `internal/mcp/bridge_tools.go` - Bridge tools for resource/prompt access
+
+Key features:
 
 - Type-safe parameter structs with validation
 - Workspace name/ID resolution
 - Proper error handling and user feedback
+- Shared logic between resources and bridge tools to ensure consistency
 
 ### Prompt Implementation
 
@@ -295,9 +406,11 @@ Prompts are implemented in `internal/mcp/prompts.go` with:
 
 1. **Resources vs Tools**: Clear separation between read operations (Resources) and state changes (Tools)
 2. **Minimal Tool Set**: Only essential operations exposed as tools (create/remove)
-3. **Path Security**: All file access validated to prevent directory traversal
-4. **Name Resolution**: Both workspace IDs and names accepted for convenience
-5. **Resource URIs**: Hierarchical structure for intuitive navigation
+3. **Bridge Tools**: Compatibility layer for MCP clients without resource support
+4. **Path Security**: All file access validated to prevent directory traversal
+5. **Name Resolution**: Both workspace IDs and names accepted for convenience
+6. **Resource URIs**: Hierarchical structure for intuitive navigation
+7. **Shared Logic**: Resources and bridge tools share implementation to ensure consistency
 
 ## Future Enhancements
 
