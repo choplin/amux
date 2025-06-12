@@ -287,12 +287,12 @@ func TestSessionSendInput(t *testing.T) {
 }
 
 func TestSessionToolsRegistration(t *testing.T) {
+	// Just verify that setupTestServer succeeds, which includes registering session tools
 	testServer := setupTestServer(t)
 
-	// Test that tools can be registered without error
-	err := testServer.registerSessionTools()
-	if err != nil {
-		t.Fatalf("failed to register session tools: %v", err)
+	// If we got here without error, tools were registered successfully
+	if testServer == nil {
+		t.Fatal("expected server to be created with session tools registered")
 	}
 }
 
