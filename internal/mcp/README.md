@@ -17,10 +17,10 @@ MCP tool schemas.
 type MyToolParams struct {
     // Required fields use mcp:"required"
     Name string `json:"name" mcp:"required" description:"Item name"`
-    
+
     // Optional fields omit the mcp tag
     Count int `json:"count,omitempty" description:"Number of items"`
-    
+
     // Enum values can be specified
     Status string `json:"status,omitempty" description:"Status" enum:"\"active\",\"inactive\""`
 }
@@ -51,7 +51,7 @@ func handleMyTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallTo
     if err := UnmarshalArgs(request, &params); err != nil {
         return nil, err
     }
-    
+
     // Use params with full type safety
     fmt.Printf("Name: %s, Count: %d\n", params.Name, params.Count)
     // ...
