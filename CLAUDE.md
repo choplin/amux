@@ -48,7 +48,7 @@ When working on GitHub issues with AI agents (like Claude), follow this workflow
 
 3. **AI works in the workspace**:
 
-   - Uses `workspace_info` to browse files
+   - Uses `resource_workspace_browse` to browse files
    - Makes changes within the workspace
    - Tests changes in isolation
    - Creates CLAUDE.local.md for task context if needed
@@ -91,22 +91,22 @@ When working in Claude Code, you can use these amux tools:
    })
    ```
 
-2. **workspace_list** - List all workspaces
+2. **resource_workspace_list** - List all workspaces
 
    ```typescript
-   workspace_list(); // Shows ID, name, branch, created time
+   resource_workspace_list(); // Shows ID, name, branch, created time
    ```
 
-3. **workspace_get** - Get workspace details
+3. **resource_workspace_show** - Get workspace details
 
    ```typescript
-   workspace_get({ workspace_id: "1" }); // Use name or ID
+   resource_workspace_show({ workspace_id: "1" }); // Use name or ID
    ```
 
-4. **workspace_info** - Browse workspace files
+4. **resource_workspace_browse** - Browse workspace files
 
    ```typescript
-   workspace_info({
+   resource_workspace_browse({
      workspace_id: "1",
      path?: "src/"  // optional path within workspace
    })
