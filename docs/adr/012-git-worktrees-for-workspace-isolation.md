@@ -1,4 +1,4 @@
-# ADR-011: Git Worktrees for Workspace Isolation
+# ADR-012: Git Worktrees for Workspace Isolation
 
 Date: 2025-06-12
 

@@ -1,4 +1,4 @@
-# ADR-010: Documentation Structure Strategy
+# ADR-011: Documentation Structure Strategy
 
 Date: 2025-06-12
 
@@ -105,10 +105,10 @@ We will establish a clear documentation structure with distinct purposes for eac
 
 1. Create `docs/README.md` explaining the documentation structure
 2. Extract design decisions from `architecture.md` into new ADRs:
-   - ADR-011: Git Worktrees for Workspace Isolation
-   - ADR-012: Tmux for Session Management
-   - ADR-013: YAML for Configuration
-   - ADR-014: File-based Session Store
+   - ADR-012: Git Worktrees for Workspace Isolation
+   - ADR-013: Tmux for Session Management
+   - ADR-014: YAML for Configuration
+   - ADR-015: File-based Session Store
 3. Refactor `architecture.md` to remove rationale/trade-offs
 4. Update cross-references between documents
 5. Add documentation structure to contributing guidelines

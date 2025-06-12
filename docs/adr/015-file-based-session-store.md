@@ -1,4 +1,4 @@
-# ADR-014: File-based Session Store
+# ADR-015: File-based Session Store
 
 Date: 2025-06-12
 

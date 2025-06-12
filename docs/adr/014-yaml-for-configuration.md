@@ -1,4 +1,4 @@
-# ADR-013: YAML for Configuration and Metadata
+# ADR-014: YAML for Configuration and Metadata
 
 Date: 2025-06-12
 
