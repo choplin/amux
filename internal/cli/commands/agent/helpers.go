@@ -1,4 +1,4 @@
-package commands
+package agent
 
 import (
 	"fmt"
@@ -31,4 +31,24 @@ func createSessionManager(configManager *config.Manager, wsManager *workspace.Ma
 	log := logger.Default()
 
 	return session.NewManager(store, wsManager, mailboxManager, idMapper, session.WithLogger(log)), nil
+}
+
+// createAutoWorkspace creates a new workspace with a name based on session ID
+func createAutoWorkspace(wsManager *workspace.Manager, sessionID session.ID) (*workspace.Workspace, error) {
+	// Use first 8 chars of session ID for workspace name
+	name := fmt.Sprintf("session-%s", sessionID.Short())
+
+	// Create the workspace
+	opts := workspace.CreateOptions{
+		Name:        name,
+		Description: fmt.Sprintf("Auto-created workspace for session %s", sessionID.Short()),
+		BaseBranch:  "main",
+	}
+
+	ws, err := wsManager.Create(opts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create workspace: %w", err)
+	}
+
+	return ws, nil
 }
