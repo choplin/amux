@@ -125,16 +125,16 @@ fmt-md *files:
 fmt-whitespace *files:
     #!/usr/bin/env bash
     if [ -z "{{files}}" ]; then
-        # Remove trailing spaces
-        find . -type f \( -name "*.go" -o -name "*.md" -o -name "*.yml" -o -name "*.yaml" -o -name "*.txt" -o -name "*.json" -o -name "*.toml" -o -name "*.mod" -o -name "*.sum" -o -name "justfile" \) \
+        # Remove trailing spaces and ensure newline at EOF
+        # Note: justfile excluded as whitespace changes can break syntax
+        find . -type f \( -name "*.go" -o -name "*.md" -o -name "*.yml" -o -name "*.yaml" -o -name "*.txt" -o -name "*.json" -o -name "*.toml" -o -name "*.mod" -o -name "*.sum" \) \
             -not -path "./vendor/*" -not -path "./.git/*" -not -path "./bin/*" \
             -exec perl -i -pe 's/[ \t]+$//' {} \;
-        # Ensure newline at EOF
-        find . -type f \( -name "*.go" -o -name "*.md" -o -name "*.yml" -o -name "*.yaml" -o -name "*.txt" -o -name "*.json" -o -name "*.toml" -o -name "*.mod" -o -name "*.sum" -o -name "justfile" \) \
+        find . -type f \( -name "*.go" -o -name "*.md" -o -name "*.yml" -o -name "*.yaml" -o -name "*.txt" -o -name "*.json" -o -name "*.toml" -o -name "*.mod" -o -name "*.sum" \) \
             -not -path "./vendor/*" -not -path "./.git/*" -not -path "./bin/*" \
             -exec perl -i -pe 'eof && do{print "\n" unless /\n$/}' {} \;
     else
-        # Process specific files
+        # Process specific files (including justfile if explicitly specified)
         perl -i -pe 's/[ \t]+$//' {{files}}
         perl -i -pe 'eof && do{print "\n" unless /\n$/}' {{files}}
     fi
