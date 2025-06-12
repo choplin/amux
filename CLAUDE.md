@@ -160,15 +160,11 @@ This file is automatically loaded when AI agents work in the workspace, suppleme
 # 1. Create workspace
 amux ws create fix-issue-30 --description "Standardize console output"
 
-# 2. (Optional) Add workspace-specific context
-cd .amux/workspaces/workspace-fix-issue-30-*
-echo "# Fix Issue #30\n\nReplace all fmt.Print* with ui.Output methods" > CLAUDE.local.md
-
-# 3. Work in Claude Code using MCP tools
-# 4. Test your changes
+# 2. Work in Claude Code using MCP tools
+# 3. Test your changes
 just test
 
-# 5. Create PR when ready
+# 4. Create PR when ready
 git add .
 git commit -m "fix: standardize console output"
 gh pr create --draft
@@ -180,24 +176,8 @@ gh pr create --draft
 # 1. Create feature workspace
 amux ws create feat-log-tail --description "Add log tailing command"
 
-# 2. (Optional) Create detailed workspace context
-cd .amux/workspaces/workspace-feat-log-tail-*
-cat > CLAUDE.local.md << 'EOF'
-# Log Tailing Feature
-
-## Requirements
-- Real-time log output from agent sessions
-- Support for `amux tail <session-id>`
-- Handle tmux output streaming
-
-## Design Notes
-- Use tmux capture-pane for reading output
-- Stream updates every 100ms
-- Support --follow flag for continuous tailing
-EOF
-
-# 3. Use Claude Code with amux MCP tools
-# 4. Run tests and checks
+# 2. Use Claude Code with amux MCP tools to implement the feature
+# 3. Run tests and checks
 just check
 ```
 
@@ -207,9 +187,10 @@ just check
 amux/
 ├── .amux/                         # Amux data directory
 │   ├── config.yaml               # Project configuration
-│   ├── workspaces/               # Workspace directories (git worktrees)
-│   │   └── workspace-{name}-*/   # Isolated workspace directories
-│   │       └── CLAUDE.local.md   # Workspace-specific context (optional)
+│   ├── workspaces/               # Workspace storage
+│   │   └── workspace-{id}/       # Workspace directories
+│   │       ├── workspace.yaml    # Workspace metadata
+│   │       └── worktree/         # Git worktree (clean workspace)
 │   └── mailbox/                  # Agent mailboxes (when using CLI)
 ├── cmd/amux/                     # CLI entry point
 ├── internal/                     # Core implementation

@@ -62,10 +62,13 @@ func TestManager_CreateWithExistingBranch(t *testing.T) {
 		t.Errorf("Workspace path does not exist: %s", ws.Path)
 	}
 
-	// Verify .amux directory was created
-	amuxDir := filepath.Join(ws.Path, ".amux")
-	if _, err := os.Stat(amuxDir); os.IsNotExist(err) {
-		t.Errorf("Amux directory not created in workspace")
+	// Verify we can get the workspace back
+	retrievedWs, err := manager.Get(ws.ID)
+	if err != nil {
+		t.Errorf("Failed to retrieve workspace: %v", err)
+	}
+	if retrievedWs.ID != ws.ID {
+		t.Errorf("Retrieved workspace ID mismatch: got %s, want %s", retrievedWs.ID, ws.ID)
 	}
 
 	// Clean up
@@ -312,7 +315,7 @@ func TestManager_ConsistencyChecking(t *testing.T) {
 		}
 
 		// Get the workspace metadata to simulate orphaned metadata
-		tempPath := filepath.Join(configManager.GetWorkspacesDir(), tempWs.ID+".yaml")
+		tempPath := filepath.Join(configManager.GetWorkspacesDir(), tempWs.ID, "workspace.yaml")
 		metadata, err := os.ReadFile(tempPath)
 		if err != nil {
 			t.Fatalf("Failed to read workspace metadata: %v", err)
@@ -322,9 +325,10 @@ func TestManager_ConsistencyChecking(t *testing.T) {
 		manager.Remove(tempWs.ID)
 
 		// Now create the test scenario:
-		// 1. Create workspace folder manually (without git worktree)
+		// 1. Create workspace directory structure manually
 		wsID := "workspace-test-worktree-missing-manual"
-		wsPath := filepath.Join(configManager.GetWorkspacesDir(), wsID)
+		wsDir := filepath.Join(configManager.GetWorkspacesDir(), wsID)
+		wsPath := filepath.Join(wsDir, "worktree")
 		err = os.MkdirAll(wsPath, 0o755)
 		if err != nil {
 			t.Fatalf("Failed to create workspace folder: %v", err)
@@ -341,8 +345,8 @@ func TestManager_ConsistencyChecking(t *testing.T) {
 			CreatedAt:   tempWs.CreatedAt,
 		}
 
-		// Save the metadata
-		metadataPath := filepath.Join(configManager.GetWorkspacesDir(), wsID+".yaml")
+		// Save the metadata in the new location
+		metadataPath := filepath.Join(wsDir, "workspace.yaml")
 		modifiedMetadata := string(metadata)
 		// Update metadata with new workspace info
 		// This is a simple approach - in reality we'd marshal the struct

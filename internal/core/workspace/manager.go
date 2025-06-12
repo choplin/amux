@@ -15,7 +15,6 @@ import (
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/git"
 	"github.com/aki/amux/internal/core/idmap"
-	"github.com/aki/amux/internal/templates"
 )
 
 // Manager manages Amux workspaces
@@ -65,12 +64,13 @@ func (m *Manager) Create(opts CreateOptions) (*Workspace, error) {
 		}
 	}
 
-	// Create workspace directory path
-	workspacePath := filepath.Join(m.workspacesDir, id)
+	// Create workspace directory structure
+	workspaceDir := filepath.Join(m.workspacesDir, id)
+	worktreePath := filepath.Join(workspaceDir, "worktree")
 
-	// Ensure the workspaces directory exists
-	if err := os.MkdirAll(m.workspacesDir, 0o755); err != nil {
-		return nil, fmt.Errorf("failed to create worktrees directory: %w", err)
+	// Ensure the workspace directory exists
+	if err := os.MkdirAll(workspaceDir, 0o755); err != nil {
+		return nil, fmt.Errorf("failed to create workspace directory: %w", err)
 	}
 
 	// Determine branch name
@@ -79,14 +79,14 @@ func (m *Manager) Create(opts CreateOptions) (*Workspace, error) {
 		// Use existing branch
 		branch = opts.Branch
 		// Create worktree from existing branch
-		if err := m.gitOps.CreateWorktreeFromExistingBranch(workspacePath, branch); err != nil {
+		if err := m.gitOps.CreateWorktreeFromExistingBranch(worktreePath, branch); err != nil {
 			return nil, fmt.Errorf("failed to create worktree from existing branch: %w", err)
 		}
 	} else {
 		// Create new branch
 		branch = fmt.Sprintf("amux/%s", id)
 		// Create worktree with new branch
-		if err := m.gitOps.CreateWorktree(workspacePath, branch, baseBranch); err != nil {
+		if err := m.gitOps.CreateWorktree(worktreePath, branch, baseBranch); err != nil {
 			return nil, fmt.Errorf("failed to create worktree: %w", err)
 		}
 	}
@@ -97,7 +97,7 @@ func (m *Manager) Create(opts CreateOptions) (*Workspace, error) {
 		Name:        opts.Name,
 		Branch:      branch,
 		BaseBranch:  baseBranch,
-		Path:        workspacePath,
+		Path:        worktreePath,
 		AgentID:     opts.AgentID,
 		Description: opts.Description,
 		CreatedAt:   time.Now(),
@@ -106,7 +106,7 @@ func (m *Manager) Create(opts CreateOptions) (*Workspace, error) {
 	// Save workspace metadata
 	if err := m.saveWorkspace(workspace); err != nil {
 		// Cleanup on failure
-		_ = m.gitOps.RemoveWorktree(workspacePath)
+		_ = m.gitOps.RemoveWorktree(worktreePath)
 		_ = m.gitOps.DeleteBranch(branch)
 		return nil, fmt.Errorf("failed to save workspace metadata: %w", err)
 	}
@@ -121,22 +121,7 @@ func (m *Manager) Create(opts CreateOptions) (*Workspace, error) {
 		workspace.Index = index
 	}
 
-	// Write template files
-	templateData := templates.TemplateData{
-		ProjectName: m.configManager.GetProjectRoot(),
-		WorkspaceID: id,
-		Branch:      branch,
-		AgentID:     opts.AgentID,
-		Timestamp:   time.Now().Format(time.RFC3339),
-	}
-
-	if err := templates.WriteInstructions(workspacePath, templateData); err != nil {
-		return nil, fmt.Errorf("failed to write instructions: %w", err)
-	}
-
-	if err := templates.WriteContextFiles(workspacePath, templateData); err != nil {
-		return nil, fmt.Errorf("failed to write context files: %w", err)
-	}
+	// No template files needed - workspaces are clean git worktrees
 
 	return workspace, nil
 }
@@ -149,9 +134,9 @@ func (m *Manager) Get(id string) (*Workspace, error) {
 		fullID = fullIDFromShort
 	}
 
-	workspacePath := filepath.Join(m.workspacesDir, fullID+".yaml")
+	workspaceMetaPath := filepath.Join(m.workspacesDir, fullID, "workspace.yaml")
 
-	data, err := os.ReadFile(workspacePath)
+	data, err := os.ReadFile(workspaceMetaPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, fmt.Errorf("workspace not found: %s", id)
@@ -192,11 +177,13 @@ func (m *Manager) List(opts ListOptions) ([]*Workspace, error) {
 
 	var workspaces []*Workspace
 	for _, file := range files {
-		if !strings.HasSuffix(file.Name(), ".yaml") {
+		if !file.IsDir() {
 			continue
 		}
 
-		data, err := os.ReadFile(filepath.Join(m.workspacesDir, file.Name()))
+		// Look for workspace.yaml inside the directory
+		workspaceMetaPath := filepath.Join(m.workspacesDir, file.Name(), "workspace.yaml")
+		data, err := os.ReadFile(workspaceMetaPath)
 		if err != nil {
 			continue
 		}
@@ -345,18 +332,13 @@ func (m *Manager) Remove(id string) error {
 		}
 	}
 
-	// Remove workspace metadata (use full ID for filename)
-	workspacePath := filepath.Join(m.workspacesDir, workspace.ID+".yaml")
-	if err := os.Remove(workspacePath); err != nil {
-		return fmt.Errorf("failed to remove workspace metadata: %w", err)
-	}
-
 	// Remove index mapping
 	_ = m.idMapper.RemoveWorkspace(workspace.ID)
 
-	// Clean up workspace directory if it exists
-	if _, err := os.Stat(workspace.Path); err == nil {
-		if err := os.RemoveAll(workspace.Path); err != nil {
+	// Clean up entire workspace directory (which contains worktree and workspace.yaml)
+	workspaceDir := filepath.Join(m.workspacesDir, workspace.ID)
+	if _, err := os.Stat(workspaceDir); err == nil {
+		if err := os.RemoveAll(workspaceDir); err != nil {
 			return fmt.Errorf("failed to remove workspace directory: %w", err)
 		}
 	}
@@ -456,25 +438,18 @@ func (m *Manager) CheckConsistency(workspace *Workspace) {
 
 // saveWorkspace saves workspace metadata to disk
 func (m *Manager) saveWorkspace(workspace *Workspace) error {
-	// Ensure workspaces directory exists
-	if err := os.MkdirAll(m.workspacesDir, 0o755); err != nil {
-		return fmt.Errorf("failed to create workspaces directory: %w", err)
-	}
-
 	data, err := yaml.Marshal(workspace)
 	if err != nil {
 		return fmt.Errorf("failed to marshal workspace: %w", err)
 	}
 
-	workspacePath := filepath.Join(m.workspacesDir, workspace.ID+".yaml")
-	if err := os.WriteFile(workspacePath, data, 0o644); err != nil {
-		return fmt.Errorf("failed to write workspace: %w", err)
-	}
+	// Save workspace.yaml inside the workspace directory (not in the worktree)
+	workspaceDir := filepath.Join(m.workspacesDir, workspace.ID)
+	workspaceMetaPath := filepath.Join(workspaceDir, "workspace.yaml")
 
-	// Also save workspace metadata in the workspace itself
-	workspaceMetaPath := filepath.Join(workspace.Path, ".amux", "workspace.yaml")
-	if err := os.MkdirAll(filepath.Dir(workspaceMetaPath), 0o755); err != nil {
-		return fmt.Errorf("failed to create workspace .amux directory: %w", err)
+	// Ensure workspace directory exists
+	if err := os.MkdirAll(workspaceDir, 0o755); err != nil {
+		return fmt.Errorf("failed to create workspace directory: %w", err)
 	}
 
 	if err := os.WriteFile(workspaceMetaPath, data, 0o644); err != nil {

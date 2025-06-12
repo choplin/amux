@@ -154,16 +154,10 @@ project-root/
 │   ├── sessions/              # Session metadata
 │   │   └── session-*.yaml     # Individual session files
 │   └── workspaces/            # Workspace storage
-│       ├── workspace-*.yaml   # Workspace metadata files
-│       └── workspace-{id}/    # Git worktrees (isolated workspaces)
-│           ├── .amux/
-│           │   ├── workspace.yaml # Workspace metadata
-│           │   └── context/       # Working context
-│           │       ├── background.md
-│           │       ├── plan.md
-│           │       ├── working-log.md
-│           │       └── results-summary.md
-│           └── [project files]    # Actual code
+│       └── workspace-{id}/    # Workspace directories
+│           ├── workspace.yaml # Workspace metadata
+│           └── worktree/      # Git worktree (clean workspace)
+│               └── [project files]    # Actual code
 └── [main project files]       # Original repository
 
 ```
