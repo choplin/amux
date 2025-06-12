@@ -4,6 +4,8 @@ version: '2'
 run:
   timeout: 5m
   tests: true
+  skip-dirs:
+    - .amux
 formatters:
   enable:
     - goimports

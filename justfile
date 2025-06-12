@@ -127,11 +127,11 @@ fmt-whitespace *files:
     if [ -z "{{files}}" ]; then
         # Remove trailing spaces
         find . -type f \( -name "*.go" -o -name "*.md" -o -name "*.yml" -o -name "*.yaml" -o -name "*.txt" -o -name "*.json" -o -name "*.toml" -o -name "*.mod" -o -name "*.sum" -o -name "justfile" \) \
-            -not -path "./vendor/*" -not -path "./.git/*" -not -path "./bin/*" \
+            -not -path "./vendor/*" -not -path "./.git/*" -not -path "./bin/*" -not -path "./.amux/*" \
             -exec perl -i -pe 's/[ \t]+$//' {} \;
         # Ensure newline at EOF
         find . -type f \( -name "*.go" -o -name "*.md" -o -name "*.yml" -o -name "*.yaml" -o -name "*.txt" -o -name "*.json" -o -name "*.toml" -o -name "*.mod" -o -name "*.sum" -o -name "justfile" \) \
-            -not -path "./vendor/*" -not -path "./.git/*" -not -path "./bin/*" \
+            -not -path "./vendor/*" -not -path "./.git/*" -not -path "./bin/*" -not -path "./.amux/*" \
             -exec sh -c '[ "$(tail -c1 "$1")" != "" ] && echo >> "$1" || true' _ {} \;
     else
         # Process specific files
