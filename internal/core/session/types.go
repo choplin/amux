@@ -49,28 +49,30 @@ const (
 
 // Options contains options for creating a new session
 type Options struct {
-	ID          ID                // Optional: pre-generated session ID
-	WorkspaceID string            // Required: workspace to run in
-	AgentID     string            // Required: agent to run
-	Command     string            // Optional: override agent command
-	Environment map[string]string // Optional: additional env vars
+	ID            ID                // Optional: pre-generated session ID
+	WorkspaceID   string            // Required: workspace to run in
+	AgentID       string            // Required: agent to run
+	Command       string            // Optional: override agent command
+	Environment   map[string]string // Optional: additional env vars
+	InitialPrompt string            // Optional: initial prompt to send after starting
 }
 
 // Info contains metadata about a session
 type Info struct {
-	ID          string            `yaml:"id"`
-	Index       string            `yaml:"-"` // Populated from ID mapper, not persisted
-	WorkspaceID string            `yaml:"workspace_id"`
-	AgentID     string            `yaml:"agent_id"`
-	Status      Status            `yaml:"status"`
-	Command     string            `yaml:"command"`
-	Environment map[string]string `yaml:"environment,omitempty"`
-	PID         int               `yaml:"pid,omitempty"`
-	TmuxSession string            `yaml:"tmux_session,omitempty"`
-	CreatedAt   time.Time         `yaml:"created_at"`
-	StartedAt   *time.Time        `yaml:"started_at,omitempty"`
-	StoppedAt   *time.Time        `yaml:"stopped_at,omitempty"`
-	Error       string            `yaml:"error,omitempty"`
+	ID            string            `yaml:"id"`
+	Index         string            `yaml:"-"` // Populated from ID mapper, not persisted
+	WorkspaceID   string            `yaml:"workspace_id"`
+	AgentID       string            `yaml:"agent_id"`
+	Status        Status            `yaml:"status"`
+	Command       string            `yaml:"command"`
+	Environment   map[string]string `yaml:"environment,omitempty"`
+	InitialPrompt string            `yaml:"initial_prompt,omitempty"`
+	PID           int               `yaml:"pid,omitempty"`
+	TmuxSession   string            `yaml:"tmux_session,omitempty"`
+	CreatedAt     time.Time         `yaml:"created_at"`
+	StartedAt     *time.Time        `yaml:"started_at,omitempty"`
+	StoppedAt     *time.Time        `yaml:"stopped_at,omitempty"`
+	Error         string            `yaml:"error,omitempty"`
 }
 
 // Session represents an active or inactive agent session

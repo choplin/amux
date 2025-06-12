@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -81,5 +82,83 @@ func TestTmuxSession_StartStop(t *testing.T) {
 	// Verify stopped
 	if session.Status() != StatusStopped {
 		t.Errorf("Expected status %s, got %s", StatusStopped, session.Status())
+	}
+}
+
+func TestTmuxSession_WithInitialPrompt(t *testing.T) {
+	// Skip if tmux not available
+	tmuxAdapter, err := tmux.NewAdapter()
+	if err != nil || !tmuxAdapter.IsAvailable() {
+		t.Skip("tmux not available")
+	}
+
+	// Setup
+	_, wsManager, configManager := setupTestEnvironment(t)
+
+	// Create workspace
+	ws, err := wsManager.Create(workspace.CreateOptions{
+		Name: "test-workspace-prompt",
+	})
+	if err != nil {
+		t.Fatalf("Failed to create workspace: %v", err)
+	}
+
+	// Create store
+	store, err := NewFileStore(configManager.GetAmuxDir())
+	if err != nil {
+		t.Fatalf("Failed to create store: %v", err)
+	}
+
+	// Create session info with initial prompt
+	testPrompt := "echo 'Initial prompt executed'"
+	info := &Info{
+		ID:            "test-tmux-prompt-session",
+		WorkspaceID:   ws.ID,
+		AgentID:       "test-agent",
+		Status:        StatusCreated,
+		Command:       "bash", // Start bash to receive the prompt
+		InitialPrompt: testPrompt,
+		CreatedAt:     time.Now(),
+	}
+
+	// Save info
+	if err := store.Save(info); err != nil {
+		t.Fatalf("Failed to save session info: %v", err)
+	}
+
+	// Create tmux session
+	session := NewTmuxSession(info, store, tmuxAdapter, ws)
+
+	// Start session
+	ctx := context.Background()
+	if err := session.Start(ctx); err != nil {
+		t.Fatalf("Failed to start tmux session: %v", err)
+	}
+
+	// Verify running
+	if session.Status() != StatusRunning {
+		t.Errorf("Expected status %s, got %s", StatusRunning, session.Status())
+	}
+
+	// Wait for initial prompt to be sent (2 seconds + buffer)
+	time.Sleep(3 * time.Second)
+
+	// Get output
+	output, err := session.GetOutput()
+	if err != nil {
+		t.Errorf("Failed to get output: %v", err)
+	} else {
+		outputStr := string(output)
+		t.Logf("Session output:\n%s", outputStr)
+
+		// Verify initial prompt was executed
+		if !strings.Contains(outputStr, "Initial prompt executed") {
+			t.Errorf("Initial prompt not found in output")
+		}
+	}
+
+	// Stop session
+	if err := session.Stop(); err != nil {
+		t.Fatalf("Failed to stop session: %v", err)
 	}
 }

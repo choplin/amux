@@ -141,6 +141,17 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 		}
 	}
 
+	// Send initial prompt if provided
+	if s.info.InitialPrompt != "" {
+		// Wait a bit for the agent to start up
+		time.Sleep(2 * time.Second)
+
+		if err := s.tmuxAdapter.SendKeys(tmuxSession, s.info.InitialPrompt); err != nil {
+			// Log warning but don't fail - initial prompt is not critical
+			s.logger.Warn("failed to send initial prompt", "error", err, "session", tmuxSession)
+		}
+	}
+
 	// Get PID
 	pid, _ := s.tmuxAdapter.GetSessionPID(tmuxSession)
 
