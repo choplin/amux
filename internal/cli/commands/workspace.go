@@ -56,7 +56,7 @@ func init() {
 
 	workspaceCmd.AddCommand(listWorkspaceCmd)
 
-	workspaceCmd.AddCommand(getWorkspaceCmd)
+	workspaceCmd.AddCommand(showWorkspaceCmd)
 
 	workspaceCmd.AddCommand(removeWorkspaceCmd)
 
@@ -135,11 +135,11 @@ Examples:
 	RunE: runListWorkspace,
 }
 
-var getWorkspaceCmd = &cobra.Command{
-	Use:   "get <workspace-name-or-id>",
-	Short: "Get detailed information about a workspace",
+var showWorkspaceCmd = &cobra.Command{
+	Use:   "show <workspace-name-or-id>",
+	Short: "Show detailed information about a workspace",
 	Args:  cobra.ExactArgs(1),
-	RunE:  runGetWorkspace,
+	RunE:  runShowWorkspace,
 }
 
 var removeWorkspaceCmd = &cobra.Command{
@@ -244,7 +244,7 @@ func runListWorkspace(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func runGetWorkspace(cmd *cobra.Command, args []string) error {
+func runShowWorkspace(cmd *cobra.Command, args []string) error {
 	identifier := args[0]
 
 	manager, err := getWorkspaceManager()

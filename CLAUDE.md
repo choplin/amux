@@ -308,7 +308,7 @@ amux init
 # Workspace management
 amux ws create <name> [--description "..."] [--branch existing-branch]
 amux ws list
-amux ws get <id-or-name>
+amux ws show <id-or-name>
 amux ws remove <id-or-name>
 
 # Start MCP server
