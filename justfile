@@ -125,14 +125,28 @@ fmt-md *files:
 fmt-whitespace *files:
     #!/usr/bin/env bash
     if [ -z "{{files}}" ]; then
-        # Remove trailing spaces
-        find . -type f \( -name "*.go" -o -name "*.md" -o -name "*.yml" -o -name "*.yaml" -o -name "*.txt" -o -name "*.json" -o -name "*.toml" -o -name "*.mod" -o -name "*.sum" -o -name "justfile" \) \
-            -not -path "./vendor/*" -not -path "./.git/*" -not -path "./bin/*" \
-            -exec perl -i -pe 's/[ \t]+$//' {} \;
-        # Ensure newline at EOF
-        find . -type f \( -name "*.go" -o -name "*.md" -o -name "*.yml" -o -name "*.yaml" -o -name "*.txt" -o -name "*.json" -o -name "*.toml" -o -name "*.mod" -o -name "*.sum" -o -name "justfile" \) \
-            -not -path "./vendor/*" -not -path "./.git/*" -not -path "./bin/*" \
-            -exec sh -c '[ "$(tail -c1 "$1")" != "" ] && echo >> "$1" || true' _ {} \;
+        # Check if fd is available
+        if command -v fd &> /dev/null; then
+            # Use fd for cleaner syntax
+            fd -t f -e go -e md -e yml -e yaml -e txt -e json -e toml -e mod -e sum \
+                -E vendor -E .git -E bin -x sh -c '
+                    perl -i -pe "s/[ \t]+$//" "$1"
+                    [ "$(tail -c1 "$1")" != "" ] && echo >> "$1" || true
+                ' _ {}
+            # Handle the single justfile at root
+            if [ -f justfile ]; then
+                perl -i -pe 's/[ \t]+$//' justfile
+                [ "$(tail -c1 justfile)" != "" ] && echo >> justfile || true
+            fi
+        else
+            # Fallback to find
+            find . -type f \( -name "*.go" -o -name "*.md" -o -name "*.yml" -o -name "*.yaml" -o -name "*.txt" -o -name "*.json" -o -name "*.toml" -o -name "*.mod" -o -name "*.sum" -o -name "justfile" \) \
+                -not -path "./vendor/*" -not -path "./.git/*" -not -path "./bin/*" \
+                -exec sh -c '
+                    perl -i -pe "s/[ \t]+$//" "$1"
+                    [ "$(tail -c1 "$1")" != "" ] && echo >> "$1" || true
+                ' _ {} \;
+        fi
     else
         # Process specific files
         for file in {{files}}; do
