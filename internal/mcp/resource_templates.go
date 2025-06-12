@@ -56,6 +56,21 @@ type workspaceResources struct {
 	Context string `json:"context"`
 }
 
+// workspaceDetail is the common structure for detailed workspace information
+type workspaceDetail struct {
+	ID          string             `json:"id"`
+	Index       string             `json:"index"`
+	Name        string             `json:"name"`
+	Branch      string             `json:"branch"`
+	BaseBranch  string             `json:"baseBranch"`
+	Path        string             `json:"path"`
+	Description string             `json:"description,omitempty"`
+	CreatedAt   string             `json:"createdAt"`
+	UpdatedAt   string             `json:"updatedAt"`
+	Paths       workspacePaths     `json:"paths"`
+	Resources   workspaceResources `json:"resources"`
+}
+
 // parseWorkspaceURI extracts the workspace ID from a URI like amux://workspace/{id}
 func parseWorkspaceURI(uri string) (string, string, error) {
 	// Remove the scheme
@@ -88,47 +103,9 @@ func (s *ServerV2) handleWorkspaceDetailResource(ctx context.Context, request mc
 		return nil, err
 	}
 
-	ws, err := s.workspaceManager.Get(workspaceID)
+	detail, err := s.getWorkspaceDetail(workspaceID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get workspace: %w", err)
-	}
-
-	// Convert to JSON-friendly format with useful paths
-	type workspaceDetail struct {
-		ID          string             `json:"id"`
-		Index       string             `json:"index"`
-		Name        string             `json:"name"`
-		Branch      string             `json:"branch"`
-		BaseBranch  string             `json:"baseBranch"`
-		Path        string             `json:"path"`
-		Description string             `json:"description,omitempty"`
-		CreatedAt   string             `json:"createdAt"`
-		UpdatedAt   string             `json:"updatedAt"`
-		Paths       workspacePaths     `json:"paths"`
-		Resources   workspaceResources `json:"resources"`
-	}
-
-	// Get workspace root directory (parent of worktree)
-	workspaceRoot := filepath.Dir(ws.Path)
-
-	detail := workspaceDetail{
-		ID:          ws.ID,
-		Index:       ws.Index,
-		Name:        ws.Name,
-		Branch:      ws.Branch,
-		BaseBranch:  ws.BaseBranch,
-		Path:        ws.Path,
-		Description: ws.Description,
-		CreatedAt:   ws.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
-		UpdatedAt:   ws.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
-		Paths: workspacePaths{
-			Worktree: ws.Path,
-			Context:  filepath.Join(workspaceRoot, "context.md"),
-		},
-		Resources: workspaceResources{
-			Files:   fmt.Sprintf("amux://workspace/%s/files", ws.ID),
-			Context: fmt.Sprintf("amux://workspace/%s/context", ws.ID),
-		},
+		return nil, err
 	}
 
 	jsonData, err := json.MarshalIndent(detail, "", "  ")
