@@ -70,6 +70,7 @@ type Workspace struct {
 	Path        string    `yaml:"path" json:"path"`
 	AgentID     string    `yaml:"agentId,omitempty" json:"agentId,omitempty"`
 	Description string    `yaml:"description,omitempty" json:"description,omitempty"`
+	ContextPath string    `yaml:"contextPath,omitempty" json:"contextPath,omitempty"`
 	CreatedAt   time.Time `yaml:"createdAt" json:"createdAt"`
 	UpdatedAt   time.Time `yaml:"-" json:"updatedAt"` // Dynamically populated from filesystem
 

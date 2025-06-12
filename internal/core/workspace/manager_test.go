@@ -384,3 +384,63 @@ func TestManager_ConsistencyChecking(t *testing.T) {
 		os.Remove(metadataPath)
 	})
 }
+
+func TestManager_CreateSetsContextPath(t *testing.T) {
+	// Create test repository
+	repoDir := helpers.CreateTestRepo(t)
+	defer os.RemoveAll(repoDir)
+
+	// Initialize Amux
+	configManager := config.NewManager(repoDir)
+	cfg := config.DefaultConfig()
+	err := configManager.Save(cfg)
+	if err != nil {
+		t.Fatalf("Failed to initialize: %v", err)
+	}
+
+	// Create workspace manager
+	manager, err := workspace.NewManager(configManager)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
+
+	// Create workspace
+	opts := workspace.CreateOptions{
+		Name:        "test-context-path",
+		BaseBranch:  "main",
+		Description: "Test workspace context path",
+	}
+
+	ws, err := manager.Create(opts)
+	if err != nil {
+		t.Fatalf("Failed to create workspace: %v", err)
+	}
+
+	// Verify context path is set
+	if ws.ContextPath == "" {
+		t.Error("Expected ContextPath to be set, but it was empty")
+	}
+
+	// Verify context path follows expected pattern
+	expectedContextPath := filepath.Join(configManager.GetWorkspacesDir(), ws.ID, "context.md")
+	if ws.ContextPath != expectedContextPath {
+		t.Errorf("Expected context path %s, got %s", expectedContextPath, ws.ContextPath)
+	}
+
+	// Verify we can retrieve the workspace with context path
+	retrievedWs, err := manager.Get(ws.ID)
+	if err != nil {
+		t.Fatalf("Failed to retrieve workspace: %v", err)
+	}
+
+	if retrievedWs.ContextPath != ws.ContextPath {
+		t.Errorf("Retrieved workspace context path mismatch: got %s, want %s",
+			retrievedWs.ContextPath, ws.ContextPath)
+	}
+
+	// Clean up
+	err = manager.Remove(ws.ID)
+	if err != nil {
+		t.Fatalf("Failed to remove workspace: %v", err)
+	}
+}
