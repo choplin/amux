@@ -180,13 +180,13 @@ func PrintWorkspaceList(workspaces []*workspace.Workspace) {
 	}
 
 	// Print with header
-	PrintSectionHeader(CaveIcon, "Workspaces", len(workspaces))
+	PrintSectionHeader(WorkspaceIcon, "Workspaces", len(workspaces))
 	tbl.Print()
 }
 
 // PrintWorkspaceDetails displays detailed information about a single workspace
 func PrintWorkspaceDetails(w *workspace.Workspace) {
-	OutputLine("%s Workspace Details\n", CaveIcon)
+	OutputLine("%s Workspace Details\n", WorkspaceIcon)
 	PrintWorkspace(w)
 }
 

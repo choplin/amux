@@ -25,8 +25,8 @@ var (
 	// HeaderStyle is the style for headers
 	HeaderStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFFFFF"))
 
-	// CaveIcon is the icon for caves/workspaces
-	CaveIcon = "🕳️"
+	// WorkspaceIcon is the icon for workspaces
+	WorkspaceIcon = "📋"
 
 	// SuccessIcon is the icon for success messages
 	SuccessIcon = "✅"
@@ -35,7 +35,7 @@ var (
 	ErrorIcon = "❌"
 
 	// InfoIcon is the icon for informational messages
-	InfoIcon = "ℹ️"
+	InfoIcon = "ⓘ"
 
 	// WarningIcon is the icon for warning messages
 	WarningIcon = "⚠️"
