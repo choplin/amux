@@ -32,10 +32,8 @@ Examples:
   # Send a simple message
   amux mailbox send s1 "Please focus on the authentication module"
   amux mb send s1 "Please focus on the authentication module"
-
   # Send from a file
   amux mailbox send s1 --file requirements.md
-
   # Send from stdin
   echo "Update the tests" | amux mailbox send s1
   amux mailbox send s1 < requirements.md`,
