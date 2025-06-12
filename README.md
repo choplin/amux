@@ -10,6 +10,13 @@ Amux provides isolated git worktree-based environments where AI agents can work 
 With built-in session management, you can run multiple agents concurrently, attach to their sessions, and manage
 their lifecycle.
 
+## 📦 v0.1.0 Release Status
+
+- ✅ **Workspace Management**: Fully functional and ready for use
+- 🚧 **Session/Agent Features**: Preview release - foundational structure in place, full functionality coming soon
+
+For v0.1.0, we recommend starting with the workspace features which provide stable, isolated development environments.
+
 > [!WARNING]
 > **🚧 Work in Progress**
 >
