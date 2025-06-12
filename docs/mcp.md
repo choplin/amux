@@ -17,6 +17,7 @@ Resources provide structured read-only access to workspace information without m
 ### Static Resources
 
 #### Workspace List
+
 - **URI**: `amux://workspace`
 - **Description**: List all amux workspaces with metadata
 - **Returns**: JSON array of workspaces with resource URIs
@@ -24,12 +25,14 @@ Resources provide structured read-only access to workspace information without m
 ### Dynamic Resources
 
 #### Workspace Details
+
 - **URI**: `amux://workspace/{id}`
 - **Description**: Get complete workspace information
 - **Returns**: JSON object with workspace metadata, paths, and resource URIs
 - **Note**: Accepts both workspace ID and name
 
 #### Workspace Files
+
 - **URI**: `amux://workspace/{id}/files`
 - **URI**: `amux://workspace/{id}/files/{path}`
 - **Description**: Browse directories or read specific files
@@ -39,6 +42,7 @@ Resources provide structured read-only access to workspace information without m
 - **Security**: Path validation prevents traversal attacks
 
 #### Workspace Context
+
 - **URI**: `amux://workspace/{id}/context`
 - **Description**: Read the workspace's context.md file
 - **Returns**: Markdown content or placeholder if not found
@@ -48,6 +52,7 @@ Resources provide structured read-only access to workspace information without m
 Tools perform state-changing operations on workspaces.
 
 ### workspace_create
+
 - **Description**: Create a new isolated git worktree workspace
 - **Parameters**:
   - `name` (required): Workspace name
@@ -58,6 +63,7 @@ Tools perform state-changing operations on workspaces.
 - **Returns**: Created workspace details
 
 ### workspace_remove
+
 - **Description**: Remove a workspace and its git worktree
 - **Parameters**:
   - `workspace_id` (required): Workspace ID or name
@@ -69,6 +75,7 @@ Tools perform state-changing operations on workspaces.
 Prompts provide structured guidance for common AI agent workflows.
 
 ### start-issue-work
+
 - **Description**: Guide through starting work on an issue
 - **Arguments**:
   - `issue_number` (required): Issue number to work on
@@ -80,6 +87,7 @@ Prompts provide structured guidance for common AI agent workflows.
   - Planning templates
 
 ### prepare-pr
+
 - **Description**: Prepare code for pull request submission
 - **Arguments**:
   - `workspace_id` (required): Workspace ID or name
@@ -91,6 +99,7 @@ Prompts provide structured guidance for common AI agent workflows.
   - PR creation commands
 
 ### review-workspace
+
 - **Description**: Analyze workspace state and suggest next steps
 - **Arguments**:
   - `workspace_id` (required): Workspace ID or name
@@ -215,31 +224,37 @@ Prompts provide structured guidance for common AI agent workflows.
 ## Typical AI Agent Workflow
 
 1. **Start with a prompt** to get guided workflow:
+
    ```json
    { "method": "prompts/get", "params": { "name": "start-issue-work", "arguments": { "issue_number": "42" } } }
    ```
 
 2. **Create a workspace** using a tool:
+
    ```json
    { "method": "tools/call", "params": { "name": "workspace_create", "arguments": { "name": "feature-auth" } } }
    ```
 
 3. **Read workspace details** to get paths:
+
    ```json
    { "method": "resources/read", "params": { "uri": "amux://workspace/ws-123" } }
    ```
 
 4. **Browse and read files** as needed:
+
    ```json
    { "method": "resources/read", "params": { "uri": "amux://workspace/ws-123/files" } }
    ```
 
 5. **Review progress** periodically:
+
    ```json
    { "method": "prompts/get", "params": { "name": "review-workspace", "arguments": { "workspace_id": "ws-123" } } }
    ```
 
 6. **Prepare PR** when done:
+
    ```json
    { "method": "prompts/get", "params": { "name": "prepare-pr", "arguments": { "workspace_id": "ws-123" } } }
    ```
@@ -249,10 +264,12 @@ Prompts provide structured guidance for common AI agent workflows.
 ### Resource Implementation
 
 Resources are implemented in:
+
 - `internal/mcp/resources.go` - Static resources
 - `internal/mcp/resource_templates.go` - Dynamic resources with URI templates
 
 Key features:
+
 - URI template matching using RFC 6570 patterns
 - Security validation to prevent path traversal
 - MIME type detection for file contents
@@ -261,6 +278,7 @@ Key features:
 ### Tool Implementation
 
 Tools are implemented in `internal/mcp/server.go` with:
+
 - Type-safe parameter structs with validation
 - Workspace name/ID resolution
 - Proper error handling and user feedback
@@ -268,6 +286,7 @@ Tools are implemented in `internal/mcp/server.go` with:
 ### Prompt Implementation
 
 Prompts are implemented in `internal/mcp/prompts.go` with:
+
 - Dynamic content generation based on workspace state
 - Structured markdown output
 - Integration with workspace and git operations
@@ -283,6 +302,7 @@ Prompts are implemented in `internal/mcp/prompts.go` with:
 ## Future Enhancements
 
 Planned MCP extensions tracked in GitHub issues:
+
 - [#53](https://github.com/choplin/amux/issues/53): MCP Resources for session management
 
 - [#54](https://github.com/choplin/amux/issues/54): MCP Resources and Tools for mailbox system
