@@ -206,13 +206,8 @@ func runAgent(cmd *cobra.Command, args []string) error {
 		sessionID = info.Index
 	}
 
-	// Show session creation info with workspace ID for auto-created workspaces
-	if runWorkspace == "" {
-		// Auto-created workspace - show workspace ID
-		ui.Success("Started session: %s in workspace %s", sessionID, ws.Index)
-	} else {
-		ui.Info("Created session %s for agent '%s' in workspace '%s'", sessionID, agentID, ws.Name)
-	}
+	// Show consistent session creation info
+	ui.Success("Started session: %s in workspace %s", sessionID, ws.Index)
 
 	// Start session
 	ctx := context.Background()
