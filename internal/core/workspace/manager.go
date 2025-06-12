@@ -303,8 +303,14 @@ func (m *Manager) Remove(id string) error {
 
 	// Remove git worktree
 	if err := m.gitOps.RemoveWorktree(workspace.Path); err != nil {
-		// If worktree doesn't exist, continue with cleanup
-		if !strings.Contains(err.Error(), "not a valid path") {
+		// Check if worktree is already gone (manually deleted)
+		if strings.Contains(err.Error(), "not a working tree") ||
+			strings.Contains(err.Error(), "No such file or directory") ||
+			strings.Contains(err.Error(), "not a valid path") {
+			// Worktree was already removed, continue with cleanup
+			// Prune git's worktree list to clean up stale references
+			_ = m.gitOps.PruneWorktrees()
+		} else {
 			return fmt.Errorf("failed to remove worktree: %w", err)
 		}
 	}

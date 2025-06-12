@@ -123,3 +123,70 @@ func TestManager_CreateWithNewBranch(t *testing.T) {
 		t.Fatalf("Failed to remove workspace: %v", err)
 	}
 }
+
+func TestManager_RemoveWithManuallyDeletedWorktree(t *testing.T) {
+	// Create test repository
+	repoDir := helpers.CreateTestRepo(t)
+	defer os.RemoveAll(repoDir)
+
+	// Initialize Amux
+	configManager := config.NewManager(repoDir)
+	cfg := config.DefaultConfig()
+	err := configManager.Save(cfg)
+	if err != nil {
+		t.Fatalf("Failed to initialize: %v", err)
+	}
+
+	// Create workspace manager
+	manager, err := workspace.NewManager(configManager)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
+
+	// Create a workspace
+	opts := workspace.CreateOptions{
+		Name:        "test-manual-delete",
+		BaseBranch:  "main",
+		Description: "Test workspace for manual deletion",
+	}
+
+	ws, err := manager.Create(opts)
+	if err != nil {
+		t.Fatalf("Failed to create workspace: %v", err)
+	}
+
+	// Verify workspace exists
+	if _, err := os.Stat(ws.Path); os.IsNotExist(err) {
+		t.Errorf("Workspace path does not exist: %s", ws.Path)
+	}
+
+	// Manually delete the worktree directory (simulating user action)
+	err = os.RemoveAll(ws.Path)
+	if err != nil {
+		t.Fatalf("Failed to manually delete worktree: %v", err)
+	}
+
+	// Verify worktree is gone
+	if _, err := os.Stat(ws.Path); !os.IsNotExist(err) {
+		t.Errorf("Worktree directory still exists after manual deletion")
+	}
+
+	// Now try to remove the workspace through amux
+	// This should succeed and clean up metadata even though worktree is gone
+	err = manager.Remove(ws.ID)
+	if err != nil {
+		t.Fatalf("Failed to remove workspace with manually deleted worktree: %v", err)
+	}
+
+	// Verify workspace is no longer listed
+	workspaces, err := manager.List(workspace.ListOptions{})
+	if err != nil {
+		t.Fatalf("Failed to list workspaces: %v", err)
+	}
+
+	for _, w := range workspaces {
+		if w.ID == ws.ID {
+			t.Errorf("Workspace %s still exists in list after removal", ws.ID)
+		}
+	}
+}

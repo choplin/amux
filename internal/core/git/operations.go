@@ -115,6 +115,19 @@ func (o *Operations) RemoveWorktree(path string) error {
 	return nil
 }
 
+// PruneWorktrees removes worktree references for directories that no longer exist
+func (o *Operations) PruneWorktrees() error {
+	cmd := exec.Command("git", "worktree", "prune")
+	cmd.Dir = o.repoPath
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to prune worktrees: %s", output)
+	}
+
+	return nil
+}
+
 // CreateBranch creates a new branch from a base branch
 func (o *Operations) CreateBranch(branch, baseBranch string) error {
 	cmd := exec.Command("git", "branch", branch, baseBranch)
