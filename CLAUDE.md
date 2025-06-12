@@ -5,119 +5,6 @@
 **Amux** (Agent Multiplexer) is a workspace management tool that creates isolated git worktree-based environments
 where AI agents can work independently. It's now functionally complete and ready for dogfooding!
 
-## 🚀 Dogfooding Workflow
-
-### Initial Setup
-
-1. **Initialize Project** (if not done)
-
-   ```bash
-   amux init
-   ```
-
-2. **Configure Claude Code MCP**
-   Add to your MCP settings:
-
-   ```json
-   {
-     "mcpServers": {
-       "amux": {
-         "command": "/Users/aki/workspace/amux/bin/amux",
-         "args": ["mcp", "--root-dir", "/Users/aki/workspace/amux"],
-         "env": {}
-       }
-     }
-   }
-   ```
-
-### Typical AI Agent Workflow
-
-When working on GitHub issues with AI agents (like Claude), follow this workflow:
-
-1. **User assigns issue** → "Work on issue #30" or "Pick an open issue to work on"
-
-2. **AI creates workspace** via MCP:
-
-   ```typescript
-   workspace_create({
-     name: "fix-issue-30",
-     baseBranch: "main", // Always specify base branch
-     description: "Standardize console output (#30)",
-   });
-   ```
-
-3. **AI works in the workspace**:
-
-   - Uses `resource_workspace_browse` to browse files
-   - Makes changes within the workspace
-   - Tests changes in isolation
-   - Creates CLAUDE.local.md for task context if needed
-
-4. **AI creates pull request**:
-
-   ```bash
-   # In the workspace directory
-   git add .
-   git commit -m "fix: standardize console output"
-   gh pr create --draft --base main --title "fix: standardize console output (#30)"
-   ```
-
-5. **After PR is merged**, AI cleans up:
-
-   ```bash
-   # First, change to main repository directory
-   cd /Users/aki/workspace/amux
-
-   # Remove the workspace
-   workspace_remove({ workspace_id: "fix-issue-30" });
-
-   # Update main branch
-   git checkout main
-   git pull origin main
-   ```
-
-### Available MCP Tools for AI Agents
-
-When working in Claude Code, you can use these amux tools:
-
-1. **workspace_create** - Create isolated workspace
-
-   ```typescript
-   workspace_create({
-     name: "feature-auth",
-     description: "Implement authentication",
-     branch?: "existing-branch",  // optional
-     agentId?: "claude"          // optional
-   })
-   ```
-
-2. **resource_workspace_list** - List all workspaces
-
-   ```typescript
-   resource_workspace_list(); // Shows ID, name, branch, created time
-   ```
-
-3. **resource_workspace_show** - Get workspace details
-
-   ```typescript
-   resource_workspace_show({ workspace_id: "1" }); // Use name or ID
-   ```
-
-4. **resource_workspace_browse** - Browse workspace files
-
-   ```typescript
-   resource_workspace_browse({
-     workspace_id: "1",
-     path?: "src/"  // optional path within workspace
-   })
-   ```
-
-5. **workspace_remove** - Clean up workspace
-
-   ```typescript
-   workspace_remove({ workspace_id: "1" });
-   ```
-
 ## Current Functional Features
 
 ### ✅ Core Functionality
@@ -127,6 +14,7 @@ When working in Claude Code, you can use these amux tools:
 - **MCP Server**: Full integration with Claude Code
 - **Short IDs**: Simple numeric IDs (1, 2, 3) instead of UUIDs
 - **Session Mailbox**: Communication system for agents (CLI only for now)
+- **Context Files**: Workspace context files at `.amux/workspaces/{id}/context.md`
 
 ### ⚠️ Limitations
 
@@ -137,50 +25,6 @@ When working in Claude Code, you can use these amux tools:
   - Manually create context files if needed
 - **Log Tailing**: Not implemented yet (issue #6)
 
-## Development Workflow
-
-### Workspace-Specific Context
-
-Each workspace can have its own `CLAUDE.local.md` file for workspace-specific instructions and context:
-
-```markdown
-# CLAUDE.local.md (in workspace root)
-
-- Task-specific requirements
-- Design decisions for this feature
-- TODO items for this workspace
-- Any workspace-specific instructions
-```
-
-This file is automatically loaded when AI agents work in the workspace, supplementing the global CLAUDE.md.
-
-### For Bug Fixes
-
-```bash
-# 1. Create workspace
-amux ws create fix-issue-30 --description "Standardize console output"
-
-# 2. Work in Claude Code using MCP tools
-# 3. Test your changes
-just test
-
-# 4. Create PR when ready
-git add .
-git commit -m "fix: standardize console output"
-gh pr create --draft
-```
-
-### For New Features
-
-```bash
-# 1. Create feature workspace
-amux ws create feat-log-tail --description "Add log tailing command"
-
-# 2. Use Claude Code with amux MCP tools to implement the feature
-# 3. Run tests and checks
-just check
-```
-
 ## Project Structure
 
 ```text
@@ -190,6 +34,7 @@ amux/
 │   ├── workspaces/               # Workspace storage
 │   │   └── workspace-{id}/       # Workspace directories
 │   │       ├── workspace.yaml    # Workspace metadata
+│   │       ├── context.md        # Workspace context (optional)
 │   │       └── worktree/         # Git worktree (clean workspace)
 │   └── mailbox/                  # Agent mailboxes (when using CLI)
 ├── cmd/amux/                     # CLI entry point
@@ -266,6 +111,14 @@ return fmt.Errorf("Workspace not found.")  // Bad
 - Keep test files next to implementation
 - Aim for >80% coverage on new code
 
+#### Pull Request Guidelines
+
+- **Always create draft PRs** using `gh pr create --draft`
+- **Never push directly to main branch**
+- **Create feature branches** in workspaces using amux
+- **Include issue references** in PR titles and descriptions
+- **Run all checks** before creating PR (`just check && just test`)
+
 ## Important Notes
 
 1. **MCP Connection**: Always use `--root-dir` flag when starting MCP server
@@ -273,18 +126,10 @@ return fmt.Errorf("Workspace not found.")  // Bad
 3. **IDs**: Both names and numeric IDs work for all commands
 4. **Git Integration**: Each workspace is a real git worktree - use git normally
 5. **No Auto-commit**: Amux never commits without explicit user action
-6. **Context Loading**: AI agents automatically load both CLAUDE.md (global) and CLAUDE.local.md
-   (workspace-specific) if present
-
-## Workspace Management Safety
-
-When working in amux workspaces:
-
-- NEVER remove a workspace while your current directory is inside it
-- Always `cd` out of the workspace directory before running `workspace_remove`
-- If you need to clean up a workspace after completing work:
-  1. First change directory to the main repository: `cd /Users/aki/workspace/amux`
-  2. Then remove the workspace: `workspace_remove({ workspace_id: "..." })`
+6. **Context Files**: Workspace context files are stored at `.amux/workspaces/{id}/context.md`
+   - Path is available via `amux ws show` or MCP workspace resources
+   - Files are optional - create only when documentation is needed
+   - Located outside git worktree to keep repository clean
 
 ## Quick Reference
 
@@ -332,4 +177,4 @@ If Claude Code can't connect:
 
 ---
 
-**Ready to dogfood!** Create workspaces for all your amux development tasks and help us improve the tool by using it.
+@CLAUDE.local.md

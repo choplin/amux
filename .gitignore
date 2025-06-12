@@ -35,6 +35,9 @@ Thumbs.db
 # Lefthook
 .lefthook-local.yml
 
+# Local configuration
+CLAUDE.local.md
+
 # Test artifacts
 test-*-repo/
 *.test
