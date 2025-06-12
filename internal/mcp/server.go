@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -15,8 +14,6 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 
 	"github.com/aki/amux/internal/core/config"
-
-	"github.com/aki/amux/internal/core/git"
 
 	"github.com/aki/amux/internal/core/workspace"
 )
@@ -70,6 +67,21 @@ func NewServerV2(configManager *config.Manager, transport string, httpConfig *co
 		return nil, fmt.Errorf("failed to register tools: %w", err)
 	}
 
+	// Register all resources
+	if err := s.registerResources(); err != nil {
+		return nil, fmt.Errorf("failed to register resources: %w", err)
+	}
+
+	// Register resource templates
+	if err := s.registerResourceTemplates(); err != nil {
+		return nil, fmt.Errorf("failed to register resource templates: %w", err)
+	}
+
+	// Register all prompts
+	if err := s.registerPrompts(); err != nil {
+		return nil, fmt.Errorf("failed to register prompts: %w", err)
+	}
+
 	return s, nil
 }
 
@@ -78,48 +90,21 @@ func NewServerV2(configManager *config.Manager, transport string, httpConfig *co
 func (s *ServerV2) registerTools() error {
 	// workspace_create tool
 
-	createOpts, err := WithStructOptions("Create a new isolated workspace", WorkspaceCreateParams{})
+	createOpts, err := WithStructOptions("Create a new isolated git worktree-based workspace for development. Each workspace has its own branch and can be used for working on separate features or issues", WorkspaceCreateParams{})
 	if err != nil {
 		return fmt.Errorf("failed to create workspace_create options: %w", err)
 	}
 
 	s.mcpServer.AddTool(mcp.NewTool("workspace_create", createOpts...), s.handleWorkspaceCreate)
 
-	// workspace_list tool
-
-	listOpts, err := WithStructOptions("List all workspaces", WorkspaceListParams{})
-	if err != nil {
-		return fmt.Errorf("failed to create workspace_list options: %w", err)
-	}
-
-	s.mcpServer.AddTool(mcp.NewTool("workspace_list", listOpts...), s.handleWorkspaceList)
-
-	// workspace_get tool
-
-	getOpts, err := WithStructOptions("Get workspace details", WorkspaceIDParams{})
-	if err != nil {
-		return fmt.Errorf("failed to create workspace_get options: %w", err)
-	}
-
-	s.mcpServer.AddTool(mcp.NewTool("workspace_get", getOpts...), s.handleWorkspaceGet)
-
 	// workspace_remove tool
 
-	removeOpts, err := WithStructOptions("Remove workspace", WorkspaceIDParams{})
+	removeOpts, err := WithStructOptions("Remove a workspace and its associated git worktree. This permanently deletes the workspace directory and cannot be undone", WorkspaceIDParams{})
 	if err != nil {
 		return fmt.Errorf("failed to create workspace_remove options: %w", err)
 	}
 
 	s.mcpServer.AddTool(mcp.NewTool("workspace_remove", removeOpts...), s.handleWorkspaceRemove)
-
-	// workspace_info tool
-
-	workspaceInfoOpts, err := WithStructOptions("Browse workspace files and directories", WorkspaceInfoParams{})
-	if err != nil {
-		return fmt.Errorf("failed to create workspace_info options: %w", err)
-	}
-
-	s.mcpServer.AddTool(mcp.NewTool("workspace_info", workspaceInfoOpts...), s.handleWorkspaceInfo)
 
 	return nil
 }
@@ -175,54 +160,6 @@ func (s *ServerV2) handleWorkspaceCreate(ctx context.Context, request mcp.CallTo
 	}, nil
 }
 
-func (s *ServerV2) handleWorkspaceList(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// No parameters needed, just list all workspaces
-
-	workspaces, err := s.workspaceManager.List(workspace.ListOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to list workspaces: %w", err)
-	}
-
-	result, _ := json.MarshalIndent(workspaces, "", "  ")
-
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-
-				Text: string(result),
-			},
-		},
-	}, nil
-}
-
-func (s *ServerV2) handleWorkspaceGet(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	args := request.GetArguments()
-
-	workspaceID, ok := args["workspace_id"].(string)
-
-	if !ok {
-		return nil, fmt.Errorf("invalid or missing workspace_id argument")
-	}
-
-	ws, err := s.workspaceManager.ResolveWorkspace(workspaceID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve workspace: %w", err)
-	}
-
-	result, _ := json.MarshalIndent(ws, "", "  ")
-
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-
-				Text: string(result),
-			},
-		},
-	}, nil
-}
-
 func (s *ServerV2) handleWorkspaceRemove(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	args := request.GetArguments()
 
@@ -249,128 +186,6 @@ func (s *ServerV2) handleWorkspaceRemove(ctx context.Context, request mcp.CallTo
 				Type: "text",
 
 				Text: fmt.Sprintf("Workspace %s (%s) removed", ws.Name, ws.ID),
-			},
-		},
-	}, nil
-}
-
-func (s *ServerV2) handleWorkspaceInfo(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	var params WorkspaceInfoParams
-
-	if err := UnmarshalArgs(request, &params); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal arguments: %w", err)
-	}
-
-	// Resolve workspace by name or ID
-
-	ws, err := s.workspaceManager.ResolveWorkspace(params.WorkspaceID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve workspace: %w", err)
-	}
-
-	// Validate path
-
-	if err := git.ValidateWorktreePath(ws.Path, params.Path); err != nil {
-		return nil, fmt.Errorf("invalid path: %w", err)
-	}
-
-	fullPath := filepath.Join(ws.Path, params.Path)
-
-	// Check if path exists
-
-	info, err := os.Stat(fullPath)
-	if err != nil {
-		return nil, fmt.Errorf("path not found: %w", err)
-	}
-
-	if info.IsDir() {
-
-		// List directory contents
-
-		entries, err := os.ReadDir(fullPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read directory: %w", err)
-		}
-
-		var files []map[string]interface{}
-
-		for _, entry := range entries {
-
-			fileInfo := map[string]interface{}{
-				"name": entry.Name(),
-
-				"type": "file",
-
-				"size": 0,
-			}
-
-			if entry.IsDir() {
-				fileInfo["type"] = "directory"
-			} else {
-				if info, err := entry.Info(); err == nil {
-					fileInfo["size"] = info.Size()
-				}
-			}
-
-			files = append(files, fileInfo)
-
-		}
-
-		result, _ := json.MarshalIndent(map[string]interface{}{
-			"type": "directory",
-
-			"path": params.Path,
-
-			"files": files,
-		}, "", "  ")
-
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-
-					Text: string(result),
-				},
-			},
-		}, nil
-
-	}
-
-	// Read file
-
-	content, err := os.ReadFile(fullPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read file: %w", err)
-	}
-
-	// Limit file size
-
-	const maxFileSize = 1024 * 1024 // 1MB
-
-	if len(content) > maxFileSize {
-
-		content = content[:maxFileSize]
-
-		content = append(content, []byte("\n\n[File truncated - exceeds 1MB limit]")...)
-
-	}
-
-	result, _ := json.MarshalIndent(map[string]interface{}{
-		"type": "file",
-
-		"path": params.Path,
-
-		"size": info.Size(),
-
-		"content": string(content),
-	}, "", "  ")
-
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-
-				Text: string(result),
 			},
 		},
 	}, nil

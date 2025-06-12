@@ -23,28 +23,11 @@ func TestStructToToolOptions(t *testing.T) {
 		},
 
 		{
-			name: "WorkspaceListParams",
-
-			structType: WorkspaceListParams{},
-
-			checkFields: []string{}, // No fields in WorkspaceListParams
-
-		},
-
-		{
 			name: "WorkspaceIDParams",
 
 			structType: WorkspaceIDParams{},
 
 			checkFields: []string{"workspace_id"},
-		},
-
-		{
-			name: "WorkspaceInfoParams",
-
-			structType: WorkspaceInfoParams{},
-
-			checkFields: []string{"workspace_id", "path"},
 		},
 	}
 

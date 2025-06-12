@@ -189,19 +189,7 @@ type WorkspaceCreateParams struct {
 	Description string `json:"description,omitempty" description:"Description (optional)"`
 }
 
-// WorkspaceListParams defines parameters for listing workspaces
-type WorkspaceListParams struct {
-	// No parameters needed for listing workspaces
-}
-
 // WorkspaceIDParams defines parameters for workspace operations requiring an ID
 type WorkspaceIDParams struct {
 	WorkspaceID string `json:"workspace_id" mcp:"required" description:"Workspace name or ID"`
-}
-
-// WorkspaceInfoParams defines parameters for getting workspace file information
-type WorkspaceInfoParams struct {
-	WorkspaceID string `json:"workspace_id" mcp:"required" description:"Workspace name or ID"`
-
-	Path string `json:"path,omitempty" description:"File or directory path (optional)"`
 }
