@@ -171,6 +171,7 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 	now := time.Now()
 	s.info.Status = StatusWorking // Initially working when started
 	s.info.StartedAt = &now
+	s.info.StatusChangedAt = now
 	s.info.TmuxSession = tmuxSession
 	s.info.PID = pid
 	s.lastOutputTime = now // Reset output tracking
@@ -206,6 +207,7 @@ func (s *tmuxSessionImpl) Stop() error {
 	now := time.Now()
 	s.info.Status = StatusStopped
 	s.info.StoppedAt = &now
+	s.info.StatusChangedAt = now
 
 	if err := s.store.Save(s.info); err != nil {
 		return fmt.Errorf("failed to save session: %w", err)
@@ -271,8 +273,10 @@ func (s *tmuxSessionImpl) GetOutput(maxLines int) ([]byte, error) {
 		// Output changed, agent is working
 		s.lastOutputContent = outputStr
 		s.lastOutputTime = now
-		s.info.Status = StatusWorking
-		s.info.IdleSince = nil
+		if s.info.Status != StatusWorking {
+			s.info.Status = StatusWorking
+			s.info.StatusChangedAt = now
+		}
 	} else {
 		// Check if we should transition to idle
 		s.updateStatus()
@@ -312,6 +316,6 @@ func (s *tmuxSessionImpl) updateStatus() {
 		// Transition to idle
 		now := time.Now()
 		s.info.Status = StatusIdle
-		s.info.IdleSince = &now
+		s.info.StatusChangedAt = now
 	}
 }

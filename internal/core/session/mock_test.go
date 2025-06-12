@@ -230,13 +230,15 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 	mockAdapter := tmux.NewMockAdapter()
 
 	// Create session info
+	now := time.Now()
 	info := &Info{
-		ID:          "test-status-mock-session",
-		WorkspaceID: ws.ID,
-		AgentID:     "test-agent",
-		Status:      StatusCreated,
-		Command:     "test-command",
-		CreatedAt:   time.Now(),
+		ID:              "test-status-mock-session",
+		WorkspaceID:     ws.ID,
+		AgentID:         "test-agent",
+		Status:          StatusCreated,
+		Command:         "test-command",
+		CreatedAt:       now,
+		StatusChangedAt: now,
 	}
 
 	// Save info
@@ -301,14 +303,10 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 				t.Errorf("Expected status %s, got %s", tt.expectedStatus, status)
 			}
 
-			// Check IdleSince is set correctly
+			// Check StatusChangedAt is set correctly
 			if tt.checkIdleSince {
-				if session.info.IdleSince == nil {
-					t.Error("Expected IdleSince to be set when status is idle")
-				}
-			} else {
-				if session.info.IdleSince != nil {
-					t.Error("Expected IdleSince to be nil when status is not idle")
+				if session.info.StatusChangedAt.IsZero() {
+					t.Error("Expected StatusChangedAt to be set when status changes")
 				}
 			}
 		})

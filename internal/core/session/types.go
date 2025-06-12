@@ -76,21 +76,21 @@ type Options struct {
 
 // Info contains metadata about a session
 type Info struct {
-	ID            string            `yaml:"id"`
-	Index         string            `yaml:"-"` // Populated from ID mapper, not persisted
-	WorkspaceID   string            `yaml:"workspace_id"`
-	AgentID       string            `yaml:"agent_id"`
-	Status        Status            `yaml:"status"`
-	Command       string            `yaml:"command"`
-	Environment   map[string]string `yaml:"environment,omitempty"`
-	InitialPrompt string            `yaml:"initial_prompt,omitempty"`
-	PID           int               `yaml:"pid,omitempty"`
-	TmuxSession   string            `yaml:"tmux_session,omitempty"`
-	CreatedAt     time.Time         `yaml:"created_at"`
-	StartedAt     *time.Time        `yaml:"started_at,omitempty"`
-	StoppedAt     *time.Time        `yaml:"stopped_at,omitempty"`
-	IdleSince     *time.Time        `yaml:"-"` // When session became idle, not persisted
-	Error         string            `yaml:"error,omitempty"`
+	ID              string            `yaml:"id"`
+	Index           string            `yaml:"-"` // Populated from ID mapper, not persisted
+	WorkspaceID     string            `yaml:"workspace_id"`
+	AgentID         string            `yaml:"agent_id"`
+	Status          Status            `yaml:"status"`
+	Command         string            `yaml:"command"`
+	Environment     map[string]string `yaml:"environment,omitempty"`
+	InitialPrompt   string            `yaml:"initial_prompt,omitempty"`
+	PID             int               `yaml:"pid,omitempty"`
+	TmuxSession     string            `yaml:"tmux_session,omitempty"`
+	CreatedAt       time.Time         `yaml:"created_at"`
+	StartedAt       *time.Time        `yaml:"started_at,omitempty"`
+	StoppedAt       *time.Time        `yaml:"stopped_at,omitempty"`
+	StatusChangedAt time.Time         `yaml:"-"` // When status last changed, not persisted
+	Error           string            `yaml:"error,omitempty"`
 }
 
 // Session represents an active or inactive agent session

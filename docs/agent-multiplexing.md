@@ -53,16 +53,16 @@ amux status
 Output:
 
 ```text
-SESSION ID           AGENT      WORKSPACE            STATUS     ACTIVITY   RUNTIME
-session-abc123       claude     feature-auth         running    busy       5m30s
-session-def456       gpt        bugfix-api          running    idle       2m15s
-session-ghi789       gemini     docs-update         stopped    -          10m45s
+SESSION ID           AGENT      WORKSPACE            STATUS     ACTIVITY       RUNTIME
+session-abc123       claude     feature-auth         working    working 45s    5m30s
+session-def456       gpt        bugfix-api          idle       idle 2m 15s    8m45s
+session-ghi789       gemini     docs-update         stopped    -              10m45s
 ```
 
-The **ACTIVITY** column shows real-time status of running sessions:
-- **busy**: Agent is actively working (output changed within 3 seconds)
-- **idle**: Agent is waiting for input (no output for 3+ seconds)
-- **stuck**: Agent may need attention (no output for 30+ seconds)
+The **ACTIVITY** column shows real-time status with duration:
+
+- **working Xs**: Agent is actively processing (e.g., "working 45s")
+- **idle Xm Ys**: Agent is waiting for input (e.g., "idle 2m 15s")
 
 ### Attaching to Sessions
 

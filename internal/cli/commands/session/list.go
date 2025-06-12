@@ -94,13 +94,16 @@ func listSessions(cmd *cobra.Command, args []string) error {
 			statusStr = ui.ErrorStyle.Render(statusStr)
 		}
 
-		// Show idle duration for idle sessions
+		// Show status with duration
 		activityStr := "-"
-		if info.Status == session.StatusIdle && info.IdleSince != nil {
-			idleDuration := time.Since(*info.IdleSince)
-			activityStr = ui.DimStyle.Render(fmt.Sprintf("idle %s", ui.FormatDuration(idleDuration)))
-		} else if info.Status == session.StatusWorking {
-			activityStr = ui.SuccessStyle.Render("working")
+		if info.Status.IsRunning() && !info.StatusChangedAt.IsZero() {
+			statusDuration := time.Since(info.StatusChangedAt)
+			switch info.Status {
+			case session.StatusWorking:
+				activityStr = ui.SuccessStyle.Render(fmt.Sprintf("working %s", ui.FormatDuration(statusDuration)))
+			case session.StatusIdle:
+				activityStr = ui.DimStyle.Render(fmt.Sprintf("idle %s", ui.FormatDuration(statusDuration)))
+			}
 		}
 
 		displayID := info.ID
