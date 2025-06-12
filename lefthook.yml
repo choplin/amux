@@ -16,6 +16,7 @@ pre-commit:
         - "*.toml"
         - "*.mod"
         - "*.sum"
+        - "justfile"
       stage_fixed: true
       priority: 1
     # Format Go code using golangci-lint
