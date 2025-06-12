@@ -14,6 +14,11 @@ type Workspace struct {
 	Description string    `yaml:"description,omitempty" json:"description,omitempty"`
 	CreatedAt   time.Time `yaml:"createdAt" json:"createdAt"`
 	UpdatedAt   time.Time `yaml:"-" json:"updatedAt"` // Dynamically populated from filesystem
+
+	// Consistency status fields (not persisted)
+	PathExists     bool   `yaml:"-" json:"pathExists"`
+	WorktreeExists bool   `yaml:"-" json:"worktreeExists"`
+	Status         string `yaml:"-" json:"status"` // "consistent", "folder-missing", "worktree-missing", "orphaned"
 }
 
 // CreateOptions represents options for creating a new workspace

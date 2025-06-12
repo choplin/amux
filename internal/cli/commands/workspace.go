@@ -222,7 +222,7 @@ func runListWorkspace(cmd *cobra.Command, args []string) error {
 
 		for _, ws := range workspaces {
 
-			// Format: name<tab>id<tab>branch<tab>path<tab>description
+			// Format: name<tab>id<tab>branch<tab>status<tab>path<tab>description
 
 			description := ws.Description
 
@@ -234,7 +234,7 @@ func runListWorkspace(cmd *cobra.Command, args []string) error {
 			if ws.Index != "" {
 				id = ws.Index
 			}
-			fmt.Printf("%s\t%s\t%s\t%s\t%s\n", ws.Name, id, ws.Branch, ws.Path, description)
+			fmt.Printf("%s\t%s\t%s\t%s\t%s\t%s\n", ws.Name, id, ws.Branch, ws.Status, ws.Path, description)
 
 		}
 	} else {

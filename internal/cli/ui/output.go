@@ -67,6 +67,22 @@ func PrintWorkspace(w *workspace.Workspace) {
 	fmt.Printf("   %s %s\n", DimStyle.Render("Created:"), FormatTime(w.CreatedAt))
 
 	fmt.Printf("   %s %s\n", DimStyle.Render("Updated:"), FormatTime(w.UpdatedAt))
+
+	// Show consistency status
+	var statusStr string
+	switch w.Status {
+	case "consistent":
+		statusStr = SuccessStyle.Render("✓ Consistent")
+	case "folder-missing":
+		statusStr = WarningStyle.Render("⚠ Folder missing (run 'amux ws rm' to clean up)")
+	case "worktree-missing":
+		statusStr = WarningStyle.Render("⚠ Git worktree missing (run 'amux ws rm' to clean up)")
+	case "orphaned":
+		statusStr = ErrorStyle.Render("✗ Orphaned (both folder and worktree missing)")
+	default:
+		statusStr = DimStyle.Render("Unknown")
+	}
+	fmt.Printf("   %s %s\n", DimStyle.Render("Status:"), statusStr)
 }
 
 // FormatDuration formats a duration into a human-readable string
@@ -91,7 +107,7 @@ func PrintWorkspaceList(workspaces []*workspace.Workspace) {
 	}
 
 	// Create table
-	tbl := NewTable("ID", "NAME", "BRANCH", "AGE", "DESCRIPTION")
+	tbl := NewTable("ID", "NAME", "BRANCH", "AGE", "STATUS", "DESCRIPTION")
 
 	// Add rows
 	for _, w := range workspaces {
@@ -105,7 +121,22 @@ func PrintWorkspaceList(workspaces []*workspace.Workspace) {
 			description = "-"
 		}
 
-		tbl.AddRow(id, w.Name, w.Branch, age, description)
+		// Format status with appropriate icon
+		var status string
+		switch w.Status {
+		case "consistent":
+			status = SuccessStyle.Render("✓ ok")
+		case "folder-missing":
+			status = WarningStyle.Render("⚠ folder missing")
+		case "worktree-missing":
+			status = WarningStyle.Render("⚠ worktree missing")
+		case "orphaned":
+			status = ErrorStyle.Render("✗ orphaned")
+		default:
+			status = DimStyle.Render("unknown")
+		}
+
+		tbl.AddRow(id, w.Name, w.Branch, age, status, description)
 	}
 
 	// Print with header
