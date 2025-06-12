@@ -17,8 +17,39 @@ import (
 // for clients that don't support native resource reading.
 // These tools return the same data as their resource counterparts.
 
+// WorkspaceBrowseParams contains parameters for resource_workspace_browse tool
+type WorkspaceBrowseParams struct {
+	WorkspaceID string `json:"workspace_id" jsonschema:"required,description=Workspace name or ID"`
+	Path        string `json:"path,omitempty" jsonschema:"description=Path within the workspace to browse (optional)"`
+}
+
+// PromptGetParams contains parameters for prompt_get tool
+type PromptGetParams struct {
+	Name string `json:"name" jsonschema:"required,description=Name of the prompt to retrieve"`
+}
+
 // registerBridgeTools registers all bridge tools that provide access to resources
 func (s *ServerV2) registerBridgeTools() error {
+	// Register workspace bridge tools
+	if err := s.registerWorkspaceBridgeTools(); err != nil {
+		return fmt.Errorf("failed to register workspace bridge tools: %w", err)
+	}
+
+	// Register prompt bridge tools
+	if err := s.registerPromptBridgeTools(); err != nil {
+		return fmt.Errorf("failed to register prompt bridge tools: %w", err)
+	}
+
+	// Register session bridge tools
+	if err := s.registerSessionBridgeTools(); err != nil {
+		return fmt.Errorf("failed to register session bridge tools: %w", err)
+	}
+
+	return nil
+}
+
+// registerWorkspaceBridgeTools registers bridge tools for workspace resources
+func (s *ServerV2) registerWorkspaceBridgeTools() error {
 	// resource_workspace_list - Bridge to amux://workspace
 	listOpts, err := WithStructOptions(
 		"List all workspaces (bridge to amux://workspace resource). Returns the same data as the workspace resource.",
@@ -40,10 +71,6 @@ func (s *ServerV2) registerBridgeTools() error {
 	s.mcpServer.AddTool(mcp.NewTool("resource_workspace_show", showOpts...), s.handleResourceWorkspaceShow)
 
 	// resource_workspace_browse - Bridge to amux://workspace/{id}/files
-	type WorkspaceBrowseParams struct {
-		WorkspaceID string `json:"workspace_id" jsonschema:"required,description=Workspace name or ID"`
-		Path        string `json:"path,omitempty" jsonschema:"description=Path within the workspace to browse (optional)"`
-	}
 	browseOpts, err := WithStructOptions(
 		"Browse files in a workspace (bridge to amux://workspace/{id}/files resource). Returns directory listings or file contents.",
 		WorkspaceBrowseParams{},
@@ -53,6 +80,11 @@ func (s *ServerV2) registerBridgeTools() error {
 	}
 	s.mcpServer.AddTool(mcp.NewTool("resource_workspace_browse", browseOpts...), s.handleResourceWorkspaceBrowse)
 
+	return nil
+}
+
+// registerPromptBridgeTools registers bridge tools for prompt resources
+func (s *ServerV2) registerPromptBridgeTools() error {
 	// prompt_list - List available prompts
 	promptListOpts, err := WithStructOptions(
 		"List all available prompts. Returns prompt names and descriptions.",
@@ -64,9 +96,6 @@ func (s *ServerV2) registerBridgeTools() error {
 	s.mcpServer.AddTool(mcp.NewTool("prompt_list", promptListOpts...), s.handlePromptList)
 
 	// prompt_get - Get a specific prompt
-	type PromptGetParams struct {
-		Name string `json:"name" jsonschema:"required,description=Name of the prompt to retrieve"`
-	}
 	promptGetOpts, err := WithStructOptions(
 		"Get a specific prompt by name. Returns the prompt definition including description and arguments.",
 		PromptGetParams{},
@@ -75,11 +104,6 @@ func (s *ServerV2) registerBridgeTools() error {
 		return fmt.Errorf("failed to create prompt_get options: %w", err)
 	}
 	s.mcpServer.AddTool(mcp.NewTool("prompt_get", promptGetOpts...), s.handlePromptGet)
-
-	// Register session bridge tools
-	if err := s.registerSessionBridgeTools(); err != nil {
-		return fmt.Errorf("failed to register session bridge tools: %w", err)
-	}
 
 	return nil
 }
