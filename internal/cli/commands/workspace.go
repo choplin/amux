@@ -2,6 +2,9 @@ package commands
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -277,6 +280,41 @@ func runRemoveWorkspace(cmd *cobra.Command, args []string) error {
 	ws, err := manager.ResolveWorkspace(identifier)
 	if err != nil {
 		return fmt.Errorf("failed to resolve workspace: %w", err)
+	}
+
+	// Check if current working directory is inside the workspace
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get current directory: %w", err)
+	}
+
+	// Resolve symlinks for comparison
+	resolvedCwd, err := filepath.EvalSymlinks(cwd)
+	if err != nil {
+		// If we can't resolve, use original path
+		resolvedCwd = cwd
+	}
+
+	resolvedWorkspacePath, err := filepath.EvalSymlinks(ws.Path)
+	if err != nil {
+		// If workspace path doesn't exist, try to resolve parent directory
+		wsDir := filepath.Dir(ws.Path)
+		if resolvedDir, err := filepath.EvalSymlinks(wsDir); err == nil {
+			resolvedWorkspacePath = filepath.Join(resolvedDir, filepath.Base(ws.Path))
+		} else {
+			resolvedWorkspacePath = ws.Path
+		}
+	}
+
+	// Check if current directory is inside the workspace
+	if strings.HasPrefix(resolvedCwd, resolvedWorkspacePath) || strings.HasPrefix(cwd, ws.Path) {
+		ui.Error("Cannot remove workspace while working inside it")
+		ui.Info("Please change to a different directory first:")
+		projectRoot, _ := config.FindProjectRoot()
+		if projectRoot != "" {
+			ui.Info("  cd %s", projectRoot)
+		}
+		return fmt.Errorf("cannot remove workspace from within itself")
 	}
 
 	if !removeForce {
