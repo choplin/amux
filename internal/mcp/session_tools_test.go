@@ -8,6 +8,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 
+	"github.com/aki/amux/internal/adapters/tmux"
 	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/workspace"
 )
@@ -194,6 +195,12 @@ func TestSessionStop(t *testing.T) {
 }
 
 func TestSessionSendInput(t *testing.T) {
+	// Skip if tmux not available
+	tmuxAdapter, err := tmux.NewAdapter()
+	if err != nil || !tmuxAdapter.IsAvailable() {
+		t.Skip("tmux not available, skipping SendInput test")
+	}
+
 	testServer := setupTestServer(t)
 
 	// Create workspace and session
