@@ -102,17 +102,18 @@ func recvFromSession(cmd *cobra.Command, args []string) error {
 
 	if recvQuiet {
 		// Just print the content
-		fmt.Print(content)
+		ui.Raw(content)
 	} else {
 		// Show metadata
 		msg := messages[0]
 		ui.PrintSectionHeader("📤", fmt.Sprintf("Latest from agent in session %s", sessionID), 1)
-		fmt.Printf("Timestamp: %s\n", msg.Timestamp.Format("2006-01-02 15:04:05"))
-		fmt.Printf("Name: %s\n", msg.Name)
-		fmt.Printf("Age: %s\n\n", ui.FormatTime(msg.Timestamp))
-		fmt.Print(content)
+		ui.PrintKeyValue("Timestamp", msg.Timestamp.Format("2006-01-02 15:04:05"))
+		ui.PrintKeyValue("Name", msg.Name)
+		ui.PrintKeyValue("Age", ui.FormatTime(msg.Timestamp))
+		ui.OutputLine("")
+		ui.Raw(content)
 		if !strings.HasSuffix(content, "\n") {
-			fmt.Println()
+			ui.OutputLine("")
 		}
 	}
 

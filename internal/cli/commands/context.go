@@ -87,7 +87,7 @@ func showContext(cmd *cobra.Command, args []string) error {
 	// Show context information
 	ui.Info("Workspace: %s (%s)", ws.Name, ws.ID)
 	ui.Info("Context directory: %s", contextManager.GetContextPath())
-	fmt.Println()
+	ui.OutputLine("")
 
 	// Check if context exists
 	if !contextManager.Exists() {
@@ -110,15 +110,15 @@ func showContext(cmd *cobra.Command, args []string) error {
 	for _, file := range files {
 		path := contextManager.GetFilePath(file.name)
 		if _, err := os.Stat(path); err == nil {
-			fmt.Printf("  • %s\n", path)
-			fmt.Printf("    %s\n", ui.DimStyle.Render(file.desc))
+			ui.OutputLine("  • %s", path)
+			ui.OutputLine("    %s", ui.DimStyle.Render(file.desc))
 		}
 	}
 
 	// Show environment variable hint
-	fmt.Println()
+	ui.OutputLine("")
 	ui.Info("Environment variable available in sessions:")
-	fmt.Printf("  AMUX_CONTEXT_PATH=%s\n", contextManager.GetContextPath())
+	ui.OutputLine("  AMUX_CONTEXT_PATH=%s", contextManager.GetContextPath())
 
 	return nil
 }

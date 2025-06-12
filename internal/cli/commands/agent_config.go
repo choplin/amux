@@ -124,8 +124,8 @@ func listAgentConfigs(cmd *cobra.Command, args []string) error {
 	}
 
 	// Print header
-	fmt.Printf("%-15s %-20s %-15s %-30s\n", "ID", "NAME", "TYPE", "COMMAND")
-	fmt.Println(strings.Repeat("-", 80))
+	ui.OutputLine("%-15s %-20s %-15s %-30s", "ID", "NAME", "TYPE", "COMMAND")
+	ui.Separator("-", 80)
 
 	// Print agents
 	for id, agent := range agents {
@@ -133,7 +133,7 @@ func listAgentConfigs(cmd *cobra.Command, args []string) error {
 		if command == "" {
 			command = ui.DimStyle.Render("(default: " + id + ")")
 		}
-		fmt.Printf("%-15s %-20s %-15s %-30s\n", id, agent.Name, agent.Type, command)
+		ui.OutputLine("%-15s %-20s %-15s %-30s", id, agent.Name, agent.Type, command)
 	}
 
 	return nil
@@ -285,18 +285,18 @@ func showAgentConfig(cmd *cobra.Command, args []string) error {
 	}
 
 	// Display agent details
-	fmt.Printf("Agent: %s\n", ui.BoldStyle.Render(agentID))
-	fmt.Printf("  Name:    %s\n", agent.Name)
-	fmt.Printf("  Type:    %s\n", agent.Type)
+	ui.OutputLine("Agent: %s", ui.BoldStyle.Render(agentID))
+	ui.PrintIndented(2, "Name:    %s", agent.Name)
+	ui.PrintIndented(2, "Type:    %s", agent.Type)
 
 	if agent.Command != "" {
-		fmt.Printf("  Command: %s\n", agent.Command)
+		ui.PrintIndented(2, "Command: %s", agent.Command)
 	} else {
-		fmt.Printf("  Command: %s\n", ui.DimStyle.Render("(default: "+agentID+")"))
+		ui.PrintIndented(2, "Command: %s", ui.DimStyle.Render("(default: "+agentID+")"))
 	}
 
 	if len(agent.Environment) > 0 {
-		fmt.Println("  Environment:")
+		ui.PrintIndented(2, "Environment:")
 		for k, v := range agent.Environment {
 			// Mask sensitive values
 			displayValue := v
@@ -307,7 +307,7 @@ func showAgentConfig(cmd *cobra.Command, args []string) error {
 					displayValue = "***"
 				}
 			}
-			fmt.Printf("    %s=%s\n", k, displayValue)
+			ui.PrintIndented(4, "%s=%s", k, displayValue)
 		}
 	}
 

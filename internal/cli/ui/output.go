@@ -1,8 +1,10 @@
 package ui
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/aki/amux/internal/core/workspace"
@@ -28,12 +30,56 @@ func Warning(format string, args ...interface{}) {
 	fmt.Printf("%s %s\n", WarningIcon, WarningStyle.Render(fmt.Sprintf(format, args...)))
 }
 
+// Output prints plain text without any formatting or icons
+func Output(format string, args ...interface{}) {
+	fmt.Printf(format, args...)
+}
+
+// OutputLine prints plain text with a newline
+func OutputLine(format string, args ...interface{}) {
+	fmt.Printf(format+"\n", args...)
+}
+
+// PrintKeyValue prints a key-value pair with styling
+func PrintKeyValue(key, value string) {
+	OutputLine("%s %s", DimStyle.Render(key+":"), value)
+}
+
+// PrintIndented prints text with indentation
+func PrintIndented(indent int, format string, args ...interface{}) {
+	padding := strings.Repeat(" ", indent)
+	OutputLine("%s%s", padding, fmt.Sprintf(format, args...))
+}
+
+// Separator prints a separator line
+func Separator(char string, width int) {
+	OutputLine("%s", strings.Repeat(char, width))
+}
+
+// Prompt displays a prompt and reads user input
+func Prompt(message string) string {
+	Output("%s", message)
+	reader := bufio.NewReader(os.Stdin)
+	input, _ := reader.ReadString('\n')
+	return strings.TrimSpace(input)
+}
+
+// PrintTSV prints tab-separated values
+func PrintTSV(rows [][]string) {
+	for _, row := range rows {
+		OutputLine("%s", strings.Join(row, "\t"))
+	}
+}
+
+// Raw prints raw content without any processing
+func Raw(content string) {
+	Output("%s", content)
+}
+
 // PrintWorkspace displays a single workspace with formatting
 func PrintWorkspace(w *workspace.Workspace) {
 	// Calculate age from last modified time
-
 	age := time.Since(w.UpdatedAt)
-
 	ageStr := FormatDuration(age)
 
 	id := w.ID
@@ -41,32 +87,26 @@ func PrintWorkspace(w *workspace.Workspace) {
 		id = w.Index
 	}
 
-	fmt.Printf("%s %s %s %s\n",
-
+	OutputLine("%s %s %s %s",
 		"📁",
-
 		BoldStyle.Render(w.Name),
-
 		DimStyle.Render(fmt.Sprintf("(%s)", id)),
-
 		DimStyle.Render(fmt.Sprintf("updated %s ago", ageStr)),
 	)
 
 	if w.Description != "" {
-		fmt.Printf("   %s\n", w.Description)
+		OutputLine("   %s", w.Description)
 	}
 
-	fmt.Printf("   %s %s\n", DimStyle.Render("Branch:"), w.Branch)
-
-	fmt.Printf("   %s %s\n", DimStyle.Render("Path:"), w.Path)
+	OutputLine("   %s %s", DimStyle.Render("Branch:"), w.Branch)
+	OutputLine("   %s %s", DimStyle.Render("Path:"), w.Path)
 
 	if w.AgentID != "" {
-		fmt.Printf("   %s %s\n", DimStyle.Render("Agent:"), w.AgentID)
+		OutputLine("   %s %s", DimStyle.Render("Agent:"), w.AgentID)
 	}
 
-	fmt.Printf("   %s %s\n", DimStyle.Render("Created:"), FormatTime(w.CreatedAt))
-
-	fmt.Printf("   %s %s\n", DimStyle.Render("Updated:"), FormatTime(w.UpdatedAt))
+	OutputLine("   %s %s", DimStyle.Render("Created:"), FormatTime(w.CreatedAt))
+	OutputLine("   %s %s", DimStyle.Render("Updated:"), FormatTime(w.UpdatedAt))
 
 	// Show consistency status
 	var statusStr string
@@ -82,7 +122,7 @@ func PrintWorkspace(w *workspace.Workspace) {
 	default:
 		statusStr = DimStyle.Render("Unknown")
 	}
-	fmt.Printf("   %s %s\n", DimStyle.Render("Status:"), statusStr)
+	OutputLine("   %s %s", DimStyle.Render("Status:"), statusStr)
 }
 
 // FormatDuration formats a duration into a human-readable string
@@ -146,7 +186,7 @@ func PrintWorkspaceList(workspaces []*workspace.Workspace) {
 
 // PrintWorkspaceDetails displays detailed information about a single workspace
 func PrintWorkspaceDetails(w *workspace.Workspace) {
-	fmt.Printf("%s Workspace Details\n\n", CaveIcon)
+	OutputLine("%s Workspace Details\n", CaveIcon)
 	PrintWorkspace(w)
 }
 

@@ -161,13 +161,14 @@ func showLatestMessage(sessionID, fullID string, mailboxManager *mailbox.Manager
 	}
 
 	ui.PrintSectionHeader(icon, fmt.Sprintf("Latest message in session %s", sessionID), 1)
-	fmt.Printf("Timestamp: %s\n", msg.Timestamp.Format("2006-01-02 15:04:05"))
-	fmt.Printf("Name: %s\n", msg.Name)
-	fmt.Printf("Direction: %s\n", msg.Direction)
-	fmt.Printf("Age: %s\n\n", ui.FormatTime(msg.Timestamp))
-	fmt.Print(content)
+	ui.PrintKeyValue("Timestamp", msg.Timestamp.Format("2006-01-02 15:04:05"))
+	ui.PrintKeyValue("Name", msg.Name)
+	ui.PrintKeyValue("Direction", string(msg.Direction))
+	ui.PrintKeyValue("Age", ui.FormatTime(msg.Timestamp))
+	ui.OutputLine("")
+	ui.Raw(content)
 	if !strings.HasSuffix(content, "\n") {
-		fmt.Println()
+		ui.OutputLine("")
 	}
 
 	return nil
@@ -228,13 +229,14 @@ func showMessageByIndex(sessionID, fullID string, mailboxManager *mailbox.Manage
 	}
 
 	ui.PrintSectionHeader(icon, fmt.Sprintf("Message #%d in session %s", index, sessionID), 1)
-	fmt.Printf("Timestamp: %s\n", msg.Timestamp.Format("2006-01-02 15:04:05"))
-	fmt.Printf("Name: %s\n", msg.Name)
-	fmt.Printf("Direction: %s\n", msg.Direction)
-	fmt.Printf("Age: %s\n\n", ui.FormatTime(msg.Timestamp))
-	fmt.Print(content)
+	ui.PrintKeyValue("Timestamp", msg.Timestamp.Format("2006-01-02 15:04:05"))
+	ui.PrintKeyValue("Name", msg.Name)
+	ui.PrintKeyValue("Direction", string(msg.Direction))
+	ui.PrintKeyValue("Age", ui.FormatTime(msg.Timestamp))
+	ui.OutputLine("")
+	ui.Raw(content)
 	if !strings.HasSuffix(content, "\n") {
-		fmt.Println()
+		ui.OutputLine("")
 	}
 
 	return nil
@@ -272,7 +274,7 @@ func showTailMessages(sessionID, fullID string, mailboxManager *mailbox.Manager,
 		}
 
 		// Format message header
-		fmt.Printf("%s %s %s %s\n",
+		ui.OutputLine("%s %s %s %s",
 			ui.DimStyle.Render(msg.Timestamp.Format("2006-01-02 15:04:05")),
 			dirArrow,
 			ui.BoldStyle.Render(msg.Name),
@@ -282,18 +284,18 @@ func showTailMessages(sessionID, fullID string, mailboxManager *mailbox.Manager,
 		// Read and show content
 		content, err := mailboxManager.ReadMessage(msg)
 		if err != nil {
-			fmt.Printf("  %s\n", ui.ErrorStyle.Render(fmt.Sprintf("Error reading message: %v", err)))
+			ui.OutputLine("  %s", ui.ErrorStyle.Render(fmt.Sprintf("Error reading message: %v", err)))
 		} else {
 			// Indent content
 			lines := strings.Split(strings.TrimSpace(content), "\n")
 			for _, line := range lines {
-				fmt.Printf("  %s\n", line)
+				ui.OutputLine("  %s", line)
 			}
 		}
 
 		// Add spacing between messages
 		if i < len(messages)-1 {
-			fmt.Println()
+			ui.OutputLine("")
 		}
 	}
 
@@ -354,9 +356,11 @@ func showAllMessages(sessionID, fullID string, mailboxManager *mailbox.Manager) 
 
 	// Show incoming messages
 	if len(inMsgs) > 0 && (showDirection == "" || showDirection == "in") {
-		fmt.Printf("\n📥 Incoming (%d)\n\n", len(inMsgs))
+		ui.OutputLine("")
+		ui.OutputLine("📥 Incoming (%d)", len(inMsgs))
+		ui.OutputLine("")
 		for i, msg := range inMsgs {
-			fmt.Printf("%d. %s %s %s\n",
+			ui.OutputLine("%d. %s %s %s",
 				i+1,
 				ui.DimStyle.Render(msg.Timestamp.Format("2006-01-02 15:04:05")),
 				ui.BoldStyle.Render(msg.Name),
@@ -371,20 +375,21 @@ func showAllMessages(sessionID, fullID string, mailboxManager *mailbox.Manager) 
 				if len(preview) > 60 {
 					preview = preview[:60] + "..."
 				}
-				fmt.Printf("   %s\n", ui.DimStyle.Render(preview))
+				ui.OutputLine("   %s", ui.DimStyle.Render(preview))
 			}
-			fmt.Println()
+			ui.OutputLine("")
 		}
 	}
 
 	// Show outgoing messages
 	if len(outMsgs) > 0 && (showDirection == "" || showDirection == "out") {
 		if len(inMsgs) > 0 {
-			fmt.Println()
+			ui.OutputLine("")
 		}
-		fmt.Printf("📤 Outgoing (%d)\n\n", len(outMsgs))
+		ui.OutputLine("📤 Outgoing (%d)", len(outMsgs))
+		ui.OutputLine("")
 		for i, msg := range outMsgs {
-			fmt.Printf("%d. %s %s %s\n",
+			ui.OutputLine("%d. %s %s %s",
 				len(inMsgs)+i+1,
 				ui.DimStyle.Render(msg.Timestamp.Format("2006-01-02 15:04:05")),
 				ui.BoldStyle.Render(msg.Name),
@@ -399,13 +404,13 @@ func showAllMessages(sessionID, fullID string, mailboxManager *mailbox.Manager) 
 				if len(preview) > 60 {
 					preview = preview[:60] + "..."
 				}
-				fmt.Printf("   %s\n", ui.DimStyle.Render(preview))
+				ui.OutputLine("   %s", ui.DimStyle.Render(preview))
 			}
-			fmt.Println()
+			ui.OutputLine("")
 		}
 	}
 
-	fmt.Printf("Use 'amux mailbox show %s <index>' to read a specific message\n", sessionID)
+	ui.OutputLine("Use 'amux mailbox show %s <index>' to read a specific message", sessionID)
 
 	return nil
 }
