@@ -59,8 +59,8 @@ func TestTmuxSession_StartStop(t *testing.T) {
 	}
 
 	// Verify running
-	if session.Status() != StatusRunning {
-		t.Errorf("Expected status %s, got %s", StatusRunning, session.Status())
+	if !session.Status().IsRunning() {
+		t.Errorf("Expected running status, got %s", session.Status())
 	}
 
 	// Wait a bit for session to establish
@@ -136,8 +136,8 @@ func TestTmuxSession_WithInitialPrompt(t *testing.T) {
 	}
 
 	// Verify running
-	if session.Status() != StatusRunning {
-		t.Errorf("Expected status %s, got %s", StatusRunning, session.Status())
+	if !session.Status().IsRunning() {
+		t.Errorf("Expected running status, got %s", session.Status())
 	}
 
 	// Wait for initial prompt to be sent and processed
@@ -160,5 +160,85 @@ func TestTmuxSession_WithInitialPrompt(t *testing.T) {
 	// Stop session
 	if err := session.Stop(); err != nil {
 		t.Fatalf("Failed to stop session: %v", err)
+	}
+}
+
+func TestTmuxSession_StatusTracking(t *testing.T) {
+	// Skip if tmux not available
+	tmuxAdapter, err := tmux.NewAdapter()
+	if err != nil || !tmuxAdapter.IsAvailable() {
+		t.Skip("tmux not available")
+	}
+
+	// Setup
+	_, wsManager, configManager := setupTestEnvironment(t)
+
+	// Create workspace
+	ws, err := wsManager.Create(workspace.CreateOptions{
+		Name: "test-workspace-status",
+	})
+	if err != nil {
+		t.Fatalf("Failed to create workspace: %v", err)
+	}
+
+	// Create store
+	store, err := NewFileStore(configManager.GetAmuxDir())
+	if err != nil {
+		t.Fatalf("Failed to create store: %v", err)
+	}
+
+	// Create session info
+	info := &Info{
+		ID:          "test-status-session",
+		WorkspaceID: ws.ID,
+		AgentID:     "test-agent",
+		Status:      StatusCreated,
+		Command:     "bash",
+		CreatedAt:   time.Now(),
+	}
+
+	// Save info
+	if err := store.Save(info); err != nil {
+		t.Fatalf("Failed to save session info: %v", err)
+	}
+
+	// Create tmux session
+	session := NewTmuxSession(info, store, tmuxAdapter, ws)
+
+	// Initial status should be created
+	if status := session.Status(); status != StatusCreated {
+		t.Errorf("Expected initial status to be created, got %s", status)
+	}
+
+	// Start session
+	ctx := context.Background()
+	if err := session.Start(ctx); err != nil {
+		t.Fatalf("Failed to start tmux session: %v", err)
+	}
+
+	// After start, status should be working
+	if status := session.Status(); status != StatusWorking {
+		t.Errorf("Expected status after start to be working, got %s", status)
+	}
+
+	// Get output - this should keep status as working
+	_, err = session.GetOutput()
+	if err != nil {
+		t.Errorf("Failed to get output: %v", err)
+	}
+
+	// Status should still be working
+	if status := session.Status(); status != StatusWorking {
+		t.Errorf("Expected status after output to be working, got %s", status)
+	}
+
+	// Stop session
+	if err := session.Stop(); err != nil {
+		t.Fatalf("Failed to stop session: %v", err)
+	}
+
+	// After stop, status should be stopped
+	if status := session.Status(); status != StatusStopped {
+		t.Errorf("Expected status after stop to be stopped, got %s", status)
 	}
 }

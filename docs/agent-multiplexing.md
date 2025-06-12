@@ -46,16 +46,23 @@ List running agent sessions:
 amux ps
 # or
 amux session list
+# or
+amux status
 ```
 
 Output:
 
 ```text
-SESSION ID           AGENT      WORKSPACE            STATUS     RUNTIME
-session-abc123       claude     feature-auth         running    5m30s
-session-def456       gpt        bugfix-api          running    2m15s
-session-ghi789       gemini     docs-update         stopped    10m45s
+SESSION ID           AGENT      WORKSPACE            STATUS     ACTIVITY   RUNTIME
+session-abc123       claude     feature-auth         running    busy       5m30s
+session-def456       gpt        bugfix-api          running    idle       2m15s
+session-ghi789       gemini     docs-update         stopped    -          10m45s
 ```
+
+The **ACTIVITY** column shows real-time status of running sessions:
+- **busy**: Agent is actively working (output changed within 3 seconds)
+- **idle**: Agent is waiting for input (no output for 3+ seconds)
+- **stuck**: Agent may need attention (no output for 30+ seconds)
 
 ### Attaching to Sessions
 
@@ -220,13 +227,14 @@ Each session automatically includes:
 4. **Monitor progress**:
 
    ```bash
-   # Check session status
+   # Check session status with real-time activity
    amux ps
+   # Look for "busy", "idle", or "stuck" in the ACTIVITY column
 
    # View current output
    amux session logs session-abc123
 
-   # Attach if needed
+   # Attach if needed (especially for "stuck" sessions)
    amux attach session-abc123
    ```
 

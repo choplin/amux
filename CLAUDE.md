@@ -16,6 +16,12 @@ where AI agents can work independently. It's now functionally complete and ready
 - **Session Mailbox**: Communication system for agents (CLI only for now)
 - **Context Files**: Workspace context files at `.amux/workspaces/{id}/context.md`
 
+### ✅ New Features
+
+- **Session Status Tracking**: Real-time activity monitoring for agent sessions
+  - Shows "busy", "idle", or "stuck" status in `amux ps` and `amux status`
+  - Helps identify when agents need assistance
+
 ### ⚠️ Limitations
 
 - **Agent Commands**: Structure exists but not fully implemented

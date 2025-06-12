@@ -249,7 +249,7 @@ func (m *Manager) RemoveSession(id string) error {
 	}
 
 	// Check if session is stopped
-	if session.Status() == StatusRunning {
+	if session.Status().IsRunning() {
 		return fmt.Errorf("cannot remove running session")
 	}
 

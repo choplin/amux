@@ -207,3 +207,110 @@ func TestManager_WithUnavailableTmux(t *testing.T) {
 		t.Errorf("Expected ErrTmuxNotAvailable, got %T: %v", err, err)
 	}
 }
+
+func TestSessionStatus_MockAdapter(t *testing.T) {
+	// Setup
+	_, wsManager, configManager := setupTestEnvironment(t)
+
+	// Create workspace
+	ws, err := wsManager.Create(workspace.CreateOptions{
+		Name: "test-workspace-status-mock",
+	})
+	if err != nil {
+		t.Fatalf("Failed to create workspace: %v", err)
+	}
+
+	// Create store
+	store, err := NewFileStore(configManager.GetAmuxDir())
+	if err != nil {
+		t.Fatalf("Failed to create store: %v", err)
+	}
+
+	// Create mock adapter
+	mockAdapter := tmux.NewMockAdapter()
+
+	// Create session info
+	info := &Info{
+		ID:          "test-status-mock-session",
+		WorkspaceID: ws.ID,
+		AgentID:     "test-agent",
+		Status:      StatusCreated,
+		Command:     "test-command",
+		CreatedAt:   time.Now(),
+	}
+
+	// Save info
+	if err := store.Save(info); err != nil {
+		t.Fatalf("Failed to save session info: %v", err)
+	}
+
+	// Create tmux session with mock adapter
+	session := NewTmuxSession(info, store, mockAdapter, ws).(*tmuxSessionImpl)
+
+	// Test status behavior
+	tests := []struct {
+		name           string
+		setupFunc      func()
+		expectedStatus Status
+		checkIdleSince bool
+	}{
+		{
+			name:           "Initial status is created",
+			setupFunc:      func() {},
+			expectedStatus: StatusCreated,
+			checkIdleSince: false,
+		},
+		{
+			name: "Status becomes working after output change",
+			setupFunc: func() {
+				// Simulate session is running
+				session.info.Status = StatusWorking
+				session.info.TmuxSession = "test-session"
+
+				// Mock adapter returns different output
+				mockAdapter.SetPaneContent("test-session", "new output")
+				session.GetOutput()
+			},
+			expectedStatus: StatusWorking,
+			checkIdleSince: false,
+		},
+		{
+			name: "Status remains working within idle threshold",
+			setupFunc: func() {
+				// Just check status again - should still be working
+			},
+			expectedStatus: StatusWorking,
+			checkIdleSince: false,
+		},
+		{
+			name: "Status becomes idle after no output for idle threshold",
+			setupFunc: func() {
+				// Manually set last output time to past idle threshold
+				session.lastOutputTime = time.Now().Add(-5 * time.Second)
+			},
+			expectedStatus: StatusIdle,
+			checkIdleSince: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupFunc()
+			status := session.Status()
+			if status != tt.expectedStatus {
+				t.Errorf("Expected status %s, got %s", tt.expectedStatus, status)
+			}
+
+			// Check IdleSince is set correctly
+			if tt.checkIdleSince {
+				if session.info.IdleSince == nil {
+					t.Error("Expected IdleSince to be set when status is idle")
+				}
+			} else {
+				if session.info.IdleSince != nil {
+					t.Error("Expected IdleSince to be nil when status is not idle")
+				}
+			}
+		})
+	}
+}

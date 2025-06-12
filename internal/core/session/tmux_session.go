@@ -15,12 +15,14 @@ import (
 
 // tmuxSessionImpl implements Session interface with tmux backend
 type tmuxSessionImpl struct {
-	info        *Info
-	store       Store
-	tmuxAdapter tmux.Adapter
-	workspace   *workspace.Workspace
-	logger      logger.Logger
-	mu          sync.RWMutex
+	info              *Info
+	store             Store
+	tmuxAdapter       tmux.Adapter
+	workspace         *workspace.Workspace
+	logger            logger.Logger
+	mu                sync.RWMutex
+	lastOutputTime    time.Time
+	lastOutputContent string
 }
 
 // TmuxSessionOption is a function that configures a tmux session
@@ -36,11 +38,12 @@ func WithTmuxLogger(log logger.Logger) TmuxSessionOption {
 // NewTmuxSession creates a new tmux-backed session
 func NewTmuxSession(info *Info, store Store, tmuxAdapter tmux.Adapter, workspace *workspace.Workspace, opts ...TmuxSessionOption) Session {
 	s := &tmuxSessionImpl{
-		info:        info,
-		store:       store,
-		tmuxAdapter: tmuxAdapter,
-		workspace:   workspace,
-		logger:      logger.Nop(), // Default to no-op logger
+		info:           info,
+		store:          store,
+		tmuxAdapter:    tmuxAdapter,
+		workspace:      workspace,
+		logger:         logger.Nop(), // Default to no-op logger
+		lastOutputTime: time.Now(),
 	}
 
 	// Apply options
@@ -64,8 +67,14 @@ func (s *tmuxSessionImpl) AgentID() string {
 }
 
 func (s *tmuxSessionImpl) Status() Status {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Update status based on output activity before returning
+	if s.info.Status.IsRunning() {
+		s.updateStatus()
+	}
+
 	return s.info.Status
 }
 
@@ -82,7 +91,7 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.info.Status == StatusRunning {
+	if s.info.Status.IsRunning() {
 		return ErrSessionAlreadyRunning{ID: s.info.ID}
 	}
 
@@ -160,10 +169,11 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 
 	// Update session info
 	now := time.Now()
-	s.info.Status = StatusRunning
+	s.info.Status = StatusWorking // Initially working when started
 	s.info.StartedAt = &now
 	s.info.TmuxSession = tmuxSession
 	s.info.PID = pid
+	s.lastOutputTime = now // Reset output tracking
 
 	if err := s.store.Save(s.info); err != nil {
 		// Clean up on failure
@@ -180,7 +190,7 @@ func (s *tmuxSessionImpl) Stop() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.info.Status != StatusRunning {
+	if !s.info.Status.IsRunning() {
 		return ErrSessionNotRunning{ID: s.info.ID}
 	}
 
@@ -208,7 +218,7 @@ func (s *tmuxSessionImpl) Attach() error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	if s.info.Status != StatusRunning {
+	if !s.info.Status.IsRunning() {
 		return ErrSessionNotRunning{ID: s.info.ID}
 	}
 
@@ -224,7 +234,7 @@ func (s *tmuxSessionImpl) SendInput(input string) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	if s.info.Status != StatusRunning {
+	if !s.info.Status.IsRunning() {
 		return ErrSessionNotRunning{ID: s.info.ID}
 	}
 
@@ -236,10 +246,10 @@ func (s *tmuxSessionImpl) SendInput(input string) error {
 }
 
 func (s *tmuxSessionImpl) GetOutput(maxLines int) ([]byte, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	if s.info.Status != StatusRunning {
+	if !s.info.Status.IsRunning() {
 		return nil, ErrSessionNotRunning{ID: s.info.ID}
 	}
 
@@ -251,6 +261,21 @@ func (s *tmuxSessionImpl) GetOutput(maxLines int) ([]byte, error) {
 	output, err := s.tmuxAdapter.CapturePaneWithOptions(s.info.TmuxSession, maxLines)
 	if err != nil {
 		return nil, err
+	}
+
+	// Track output changes and update status
+	outputStr := string(output)
+	now := time.Now()
+
+	if outputStr != s.lastOutputContent {
+		// Output changed, agent is working
+		s.lastOutputContent = outputStr
+		s.lastOutputTime = now
+		s.info.Status = StatusWorking
+		s.info.IdleSince = nil
+	} else {
+		// Check if we should transition to idle
+		s.updateStatus()
 	}
 
 	return []byte(output), nil
@@ -268,5 +293,25 @@ func (s *tmuxSessionImpl) getDefaultCommand() string {
 	default:
 		// No default command for unknown agents
 		return ""
+	}
+}
+
+// updateStatus updates the session status based on time since last output
+func (s *tmuxSessionImpl) updateStatus() {
+	// Only update if session is running
+	if !s.info.Status.IsRunning() {
+		return
+	}
+
+	timeSinceLastOutput := time.Since(s.lastOutputTime)
+
+	// Define threshold for idle detection
+	const idleThreshold = 3 * time.Second // No output for 3 seconds = idle (AI agents show indicators while working)
+
+	if timeSinceLastOutput >= idleThreshold && s.info.Status == StatusWorking {
+		// Transition to idle
+		now := time.Now()
+		s.info.Status = StatusIdle
+		s.info.IdleSince = &now
 	}
 }

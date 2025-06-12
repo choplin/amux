@@ -36,11 +36,28 @@ func (id ID) IsEmpty() bool {
 // Status represents the current state of a session
 type Status string
 
+// String returns the string representation of the status
+func (s Status) String() string {
+	return string(s)
+}
+
+// IsRunning returns true if the session is in a running state (working or idle)
+func (s Status) IsRunning() bool {
+	return s == StatusWorking || s == StatusIdle
+}
+
+// IsTerminal returns true if the session is in a terminal state (stopped or failed)
+func (s Status) IsTerminal() bool {
+	return s == StatusStopped || s == StatusFailed
+}
+
 const (
 	// StatusCreated indicates a session has been created but not started
 	StatusCreated Status = "created"
-	// StatusRunning indicates a session is currently running
-	StatusRunning Status = "running"
+	// StatusWorking indicates a session is actively processing (output changing)
+	StatusWorking Status = "working"
+	// StatusIdle indicates a session is waiting for input (no recent output)
+	StatusIdle Status = "idle"
 	// StatusStopped indicates a session has been stopped normally
 	StatusStopped Status = "stopped"
 	// StatusFailed indicates a session has failed or crashed
@@ -72,6 +89,7 @@ type Info struct {
 	CreatedAt     time.Time         `yaml:"created_at"`
 	StartedAt     *time.Time        `yaml:"started_at,omitempty"`
 	StoppedAt     *time.Time        `yaml:"stopped_at,omitempty"`
+	IdleSince     *time.Time        `yaml:"-"` // When session became idle, not persisted
 	Error         string            `yaml:"error,omitempty"`
 }
 

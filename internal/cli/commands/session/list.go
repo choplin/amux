@@ -56,7 +56,7 @@ func listSessions(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create table
-	tbl := ui.NewTable("SESSION", "AGENT", "WORKSPACE", "STATUS", "RUNTIME")
+	tbl := ui.NewTable("SESSION", "AGENT", "WORKSPACE", "STATUS", "ACTIVITY", "RUNTIME")
 
 	// Add rows
 	for _, sess := range sessions {
@@ -74,7 +74,7 @@ func listSessions(cmd *cobra.Command, args []string) error {
 		if info.StartedAt != nil {
 			if info.StoppedAt != nil {
 				runtime = ui.FormatDuration(info.StoppedAt.Sub(*info.StartedAt))
-			} else if info.Status == session.StatusRunning {
+			} else if info.Status.IsRunning() {
 				runtime = ui.FormatDuration(time.Since(*info.StartedAt))
 			}
 		}
@@ -84,12 +84,23 @@ func listSessions(cmd *cobra.Command, args []string) error {
 		switch info.Status {
 		case session.StatusCreated:
 			// StatusCreated uses default styling (no color)
-		case session.StatusRunning:
+		case session.StatusWorking:
 			statusStr = ui.SuccessStyle.Render(statusStr)
+		case session.StatusIdle:
+			statusStr = ui.DimStyle.Render(statusStr)
 		case session.StatusStopped:
 			statusStr = ui.DimStyle.Render(statusStr)
 		case session.StatusFailed:
 			statusStr = ui.ErrorStyle.Render(statusStr)
+		}
+
+		// Show idle duration for idle sessions
+		activityStr := "-"
+		if info.Status == session.StatusIdle && info.IdleSince != nil {
+			idleDuration := time.Since(*info.IdleSince)
+			activityStr = ui.DimStyle.Render(fmt.Sprintf("idle %s", ui.FormatDuration(idleDuration)))
+		} else if info.Status == session.StatusWorking {
+			activityStr = ui.SuccessStyle.Render("working")
 		}
 
 		displayID := info.ID
@@ -97,7 +108,7 @@ func listSessions(cmd *cobra.Command, args []string) error {
 			displayID = info.Index
 		}
 
-		tbl.AddRow(displayID, info.AgentID, wsName, statusStr, runtime)
+		tbl.AddRow(displayID, info.AgentID, wsName, statusStr, activityStr, runtime)
 	}
 
 	// Print with header

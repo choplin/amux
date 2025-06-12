@@ -232,7 +232,6 @@ func (m *MockAdapter) GetSessionEnvironment(sessionName string) map[string]strin
 	}
 	return nil
 }
-
 // AppendSessionOutput appends output to a specific session (for testing streaming)
 func (m *MockAdapter) AppendSessionOutput(sessionName string, output string) error {
 	m.mu.Lock()
@@ -246,7 +245,6 @@ func (m *MockAdapter) AppendSessionOutput(sessionName string, output string) err
 	session.output = append(session.output, output)
 	return nil
 }
-
 // CapturePaneWithOptions captures the content with specified options
 func (m *MockAdapter) CapturePaneWithOptions(sessionName string, lines int) (string, error) {
 	m.mu.RLock()
@@ -271,4 +269,14 @@ func (m *MockAdapter) CapturePaneWithOptions(sessionName string, lines int) (str
 	}
 
 	return output, nil
+}
+
+// SetPaneContent sets the pane content for testing
+func (m *MockAdapter) SetPaneContent(sessionName string, content string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if session, exists := m.sessions[sessionName]; exists {
+		session.output = []string{content}
+	}
 }
