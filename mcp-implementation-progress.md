@@ -35,19 +35,34 @@
      - Returns placeholder if file doesn't exist
 - All resources have comprehensive test coverage
 
+### Phase 2: MCP Prompts ✅
+
+#### Infrastructure Setup ✅
+- Created `internal/mcp/prompts.go`
+- Implemented prompt registration system
+- Created prompt handlers with proper mcp-go SDK integration
+
+#### Core Prompts ✅
+- **`start-issue-work`** - Guides through issue workflow with emphasis on requirements clarification
+  - Takes issue number, optional title and URL
+  - Provides structured workflow with concrete steps
+  - Emphasizes understanding before implementation
+
+- **`prepare-pr`** - Helps prepare pull request
+  - Validates all tests pass
+  - Ensures proper formatting
+  - Provides PR creation commands
+  - Supports optional PR title/description
+
+- **`review-workspace`** - Analyzes workspace state
+  - Shows workspace metadata and age
+  - Suggests next steps based on state
+  - Provides git commands for review
+  - Links to MCP resources for browsing
+
+All prompts have comprehensive test coverage and are registered with the MCP server.
+
 ## Next Steps
-
-### Phase 2: MCP Prompts (In Progress)
-
-1. **Infrastructure Setup**
-   - [ ] Create `internal/mcp/prompts.go`
-   - [ ] Design prompt registration system
-   - [ ] Implement prompt handlers
-
-2. **Core Prompts**
-   - [ ] `start-issue-work` - Guide through issue workflow
-   - [ ] `review-workspace` - Analyze workspace state
-   - [ ] `prepare-pr` - Help prepare pull request
 
 ### Phase 3: Tool Improvements
 
@@ -87,10 +102,12 @@
    - `internal/mcp/resource_templates.go` - Dynamic resource handlers
    - `internal/mcp/resources_test.go` - Resource tests
    - `internal/mcp/resource_templates_test.go` - Template tests
+   - `internal/mcp/prompts.go` - Prompt handlers
+   - `internal/mcp/prompts_test.go` - Prompt tests
    - `internal/mcp/test_helpers.go` - Test utilities
 
 2. **Modified Files**
-   - `internal/mcp/server.go` - Added resource registration
+   - `internal/mcp/server.go` - Added resource and prompt registration
    - `docs/adr/009-mcp-resources-and-prompts.md` - Architecture decision
 
 ### Testing

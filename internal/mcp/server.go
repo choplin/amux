@@ -93,7 +93,7 @@ func NewServerV2(configManager *config.Manager, transport string, httpConfig *co
 func (s *ServerV2) registerTools() error {
 	// workspace_create tool
 
-	createOpts, err := WithStructOptions("Create a new isolated workspace", WorkspaceCreateParams{})
+	createOpts, err := WithStructOptions("Create a new isolated git worktree-based workspace for development. Each workspace has its own branch and can be used for working on separate features or issues", WorkspaceCreateParams{})
 	if err != nil {
 		return fmt.Errorf("failed to create workspace_create options: %w", err)
 	}
@@ -102,7 +102,7 @@ func (s *ServerV2) registerTools() error {
 
 	// workspace_list tool
 
-	listOpts, err := WithStructOptions("List all workspaces", WorkspaceListParams{})
+	listOpts, err := WithStructOptions("List all amux workspaces with their metadata including ID, name, branch, and creation time. Use this to see available workspaces", WorkspaceListParams{})
 	if err != nil {
 		return fmt.Errorf("failed to create workspace_list options: %w", err)
 	}
@@ -111,7 +111,7 @@ func (s *ServerV2) registerTools() error {
 
 	// workspace_get tool
 
-	getOpts, err := WithStructOptions("Get workspace details", WorkspaceIDParams{})
+	getOpts, err := WithStructOptions("Get detailed information about a specific workspace by ID or name. Returns workspace metadata, paths, and branch information", WorkspaceIDParams{})
 	if err != nil {
 		return fmt.Errorf("failed to create workspace_get options: %w", err)
 	}
@@ -120,7 +120,7 @@ func (s *ServerV2) registerTools() error {
 
 	// workspace_remove tool
 
-	removeOpts, err := WithStructOptions("Remove workspace", WorkspaceIDParams{})
+	removeOpts, err := WithStructOptions("Remove a workspace and its associated git worktree. This permanently deletes the workspace directory and cannot be undone", WorkspaceIDParams{})
 	if err != nil {
 		return fmt.Errorf("failed to create workspace_remove options: %w", err)
 	}
@@ -129,7 +129,7 @@ func (s *ServerV2) registerTools() error {
 
 	// workspace_info tool
 
-	workspaceInfoOpts, err := WithStructOptions("Browse workspace files and directories", WorkspaceInfoParams{})
+	workspaceInfoOpts, err := WithStructOptions("[DEPRECATED - Use MCP Resources instead] Browse workspace files and directories. For browsing files, use amux://workspace/{id}/files resource. For reading specific files, use standard file reading tools", WorkspaceInfoParams{})
 	if err != nil {
 		return fmt.Errorf("failed to create workspace_info options: %w", err)
 	}
