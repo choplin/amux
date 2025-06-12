@@ -7,9 +7,10 @@ import (
 
 var (
 	// Flags for agent run
-	runWorkspace string
-	runCommand   string
-	runEnv       []string
+	runWorkspace     string
+	runCommand       string
+	runEnv           []string
+	runInitialPrompt string
 
 	// Flags for agent logs
 	followLogs bool

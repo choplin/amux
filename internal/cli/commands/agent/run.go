@@ -40,6 +40,7 @@ Examples:
 	cmd.Flags().StringVarP(&runWorkspace, "workspace", "w", "", "Workspace to run agent in (name or ID)")
 	cmd.Flags().StringVarP(&runCommand, "command", "c", "", "Override agent command")
 	cmd.Flags().StringSliceVarP(&runEnv, "env", "e", []string{}, "Environment variables (KEY=VALUE)")
+	cmd.Flags().StringVarP(&runInitialPrompt, "initial-prompt", "p", "", "Initial prompt to send to the agent after starting")
 
 	return cmd
 }
@@ -119,11 +120,12 @@ func runAgent(cmd *cobra.Command, args []string) error {
 
 	// Create session
 	opts := session.Options{
-		ID:          sessionID,
-		WorkspaceID: ws.ID,
-		AgentID:     agentID,
-		Command:     command,
-		Environment: env,
+		ID:            sessionID,
+		WorkspaceID:   ws.ID,
+		AgentID:       agentID,
+		Command:       command,
+		Environment:   env,
+		InitialPrompt: runInitialPrompt,
 	}
 
 	sess, err := sessionManager.CreateSession(opts)
