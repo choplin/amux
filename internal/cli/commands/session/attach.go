@@ -7,9 +7,12 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/aki/amux/internal/adapters/tmux"
 	"github.com/aki/amux/internal/cli/ui"
 	"github.com/aki/amux/internal/core/config"
+	"github.com/aki/amux/internal/core/logger"
 	"github.com/aki/amux/internal/core/session"
+	"github.com/aki/amux/internal/core/terminal"
 	"github.com/aki/amux/internal/core/workspace"
 )
 
@@ -63,6 +66,18 @@ func attachSession(cmd *cobra.Command, args []string) error {
 	info := sess.Info()
 	if info.TmuxSession == "" {
 		return fmt.Errorf("session does not have a tmux session")
+	}
+
+	// Detect current terminal size and resize tmux window
+	width, height := terminal.GetSize()
+	tmuxAdapter, err := tmux.NewAdapter()
+	if err == nil {
+		// Create a logger for debugging
+		log := logger.Nop()
+		if err := tmuxAdapter.ResizeWindow(info.TmuxSession, width, height); err != nil {
+			// Log warning but don't fail - resize is not critical
+			log.Warn("failed to resize tmux window", "error", err, "session", info.TmuxSession)
+		}
 	}
 
 	// Execute tmux attach
