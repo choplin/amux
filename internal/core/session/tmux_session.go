@@ -3,6 +3,7 @@ package session
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sync"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"github.com/aki/amux/internal/adapters/tmux"
 	"github.com/aki/amux/internal/core/logger"
 	"github.com/aki/amux/internal/core/workspace"
+	"github.com/charmbracelet/x/term"
 )
 
 // tmuxSessionImpl implements Session interface with tmux backend
@@ -117,8 +119,9 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to set environment: %w", err)
 	}
 
-	// Resize to standard dimensions
-	if err := s.tmuxAdapter.ResizeWindow(tmuxSession, 120, 40); err != nil {
+	// Resize to terminal dimensions or use defaults
+	width, height := s.getTerminalSize()
+	if err := s.tmuxAdapter.ResizeWindow(tmuxSession, width, height); err != nil {
 		// Log warning but don't fail - resize is not critical
 		s.logger.Warn("failed to resize tmux window", "error", err, "session", tmuxSession)
 	}
@@ -266,4 +269,24 @@ func (s *tmuxSessionImpl) getDefaultCommand() string {
 		// No default command for unknown agents
 		return ""
 	}
+}
+
+// getTerminalSize returns the current terminal dimensions or defaults
+func (s *tmuxSessionImpl) getTerminalSize() (width, height int) {
+	// Default dimensions
+	width, height = 120, 40
+
+	// Try to get terminal size from stdout
+	if w, h, err := term.GetSize(os.Stdout.Fd()); err == nil && w > 0 && h > 0 {
+		width, height = w, h
+		s.logger.Debug("detected terminal size", "width", width, "height", height)
+		return
+	}
+
+	// Try stderr as fallback
+	if w, h, err := term.GetSize(os.Stderr.Fd()); err == nil && w > 0 && h > 0 {
+		width, height = w, h
+		s.logger.Debug("detected terminal size from stderr", "width", width, "height", height)
+	}
+	return
 }
