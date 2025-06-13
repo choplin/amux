@@ -251,16 +251,16 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 
 	// Test status behavior
 	tests := []struct {
-		name           string
-		setupFunc      func()
-		expectedStatus Status
-		checkIdleSince bool
+		name                 string
+		setupFunc            func()
+		expectedStatus       Status
+		checkStatusChangedAt bool
 	}{
 		{
-			name:           "Initial status is created",
-			setupFunc:      func() {},
-			expectedStatus: StatusCreated,
-			checkIdleSince: false,
+			name:                 "Initial status is created",
+			setupFunc:            func() {},
+			expectedStatus:       StatusCreated,
+			checkStatusChangedAt: false,
 		},
 		{
 			name: "Status becomes working after output change",
@@ -273,16 +273,16 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 				mockAdapter.SetPaneContent("test-session", "new output")
 				session.GetOutput()
 			},
-			expectedStatus: StatusWorking,
-			checkIdleSince: false,
+			expectedStatus:       StatusWorking,
+			checkStatusChangedAt: false,
 		},
 		{
 			name: "Status remains working within idle threshold",
 			setupFunc: func() {
 				// Just check status again - should still be working
 			},
-			expectedStatus: StatusWorking,
-			checkIdleSince: false,
+			expectedStatus:       StatusWorking,
+			checkStatusChangedAt: false,
 		},
 		{
 			name: "Status becomes idle after no output for idle threshold",
@@ -290,8 +290,8 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 				// Manually set last output time to past idle threshold
 				session.lastOutputTime = time.Now().Add(-5 * time.Second)
 			},
-			expectedStatus: StatusIdle,
-			checkIdleSince: true,
+			expectedStatus:       StatusIdle,
+			checkStatusChangedAt: true,
 		},
 	}
 
@@ -304,7 +304,7 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 			}
 
 			// Check StatusChangedAt is set correctly
-			if tt.checkIdleSince {
+			if tt.checkStatusChangedAt {
 				if session.info.StatusChangedAt.IsZero() {
 					t.Error("Expected StatusChangedAt to be set when status changes")
 				}

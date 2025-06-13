@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/aki/amux/internal/adapters/tmux"
-	contextmgr "github.com/aki/amux/internal/core/context"
 	"github.com/aki/amux/internal/core/idmap"
 	"github.com/aki/amux/internal/core/logger"
 	"github.com/aki/amux/internal/core/mailbox"
@@ -78,8 +77,13 @@ func (m *Manager) CreateSession(opts Options) (Session, error) {
 		return nil, ErrTmuxNotAvailable{}
 	}
 
-	// Generate unique session ID
-	sessionID := generateSessionID()
+	// Use provided ID or generate a new one
+	var sessionID string
+	if !opts.ID.IsEmpty() {
+		sessionID = opts.ID.String()
+	} else {
+		sessionID = GenerateID().String()
+	}
 
 	// Set defaults
 	if opts.Command == "" {
@@ -107,36 +111,18 @@ func (m *Manager) CreateSession(opts Options) (Session, error) {
 		return nil, fmt.Errorf("failed to save session: %w", err)
 	}
 
-	// Register the session ID for short ID mapping
-	if err := m.idMapper.Register(sessionID); err != nil {
-		// Log warning but don't fail
-		m.logger.WithField("session_id", sessionID).Warn("Failed to register session ID")
-	}
-
-	// Update index after registration
-	if index, err := m.idMapper.Resolve(sessionID); err == nil {
-		info.Index = index.Index
-		// Update the stored info with index
-		if err := m.store.Save(info); err != nil {
-			m.logger.WithField("session_id", sessionID).Warn("Failed to update session with index")
+	// Generate and assign index
+	if m.idMapper != nil {
+		index, err := m.idMapper.AddSession(info.ID)
+		if err != nil {
+			// Don't fail if index generation fails
+			info.Index = ""
+		} else {
+			info.Index = index
 		}
 	}
 
-	// Create context in working directory if template exists
-	if opts.CreateContext {
-		// Create context manager
-		contextManager := contextmgr.NewManager(
-			contextmgr.WithWorkspaceID(ws.ID),
-			contextmgr.WithSessionID(sessionID),
-			contextmgr.WithAgentID(opts.AgentID),
-		)
-
-		// Try to create context
-		if _, err := contextManager.CreateContext(ws.Path); err != nil {
-			// Log warning but don't fail session creation
-			m.logger.WithField("error", err).Warn("Failed to create working context")
-		}
-	}
+	// TODO: Create context in working directory if template exists
 
 	// Create and cache session
 	sess := NewTmuxSession(info, m.store, m.tmuxAdapter, ws)
@@ -185,21 +171,48 @@ func (m *Manager) GetSession(idOrIndex string) (Session, error) {
 
 // ListSessions returns all sessions
 func (m *Manager) ListSessions() ([]Session, error) {
-	// Get all session IDs from store
-	ids, err := m.store.List()
+	// Get all session infos from store
+	infos, err := m.store.List()
 	if err != nil {
 		return nil, fmt.Errorf("failed to list sessions: %w", err)
 	}
 
-	sessions := make([]Session, 0, len(ids))
-	for _, id := range ids {
-		sess, err := m.GetSession(id)
-		if err != nil {
-			// Log warning but continue
-			m.logger.WithField("session_id", id).WithField("error", err).Warn("Failed to load session")
+	sessions := make([]Session, 0, len(infos))
+	for _, info := range infos {
+		// Populate short ID
+		if m.idMapper != nil {
+			if index, exists := m.idMapper.GetSessionIndex(info.ID); exists {
+				info.Index = index
+			} else {
+				// Generate index if it doesn't exist
+				index, _ := m.idMapper.AddSession(info.ID)
+				info.Index = index
+			}
+		}
+
+		// Check if already in cache
+		m.mu.RLock()
+		if session, ok := m.sessions[info.ID]; ok {
+			sessions = append(sessions, session)
+			m.mu.RUnlock()
 			continue
 		}
-		sessions = append(sessions, sess)
+		m.mu.RUnlock()
+
+		// Create session from info
+		session, err := m.createSessionFromInfo(info)
+		if err != nil {
+			// Log warning but continue
+			m.logger.Warn("Failed to create session", "session_id", info.ID, "error", err)
+			continue
+		}
+
+		// Cache it
+		m.mu.Lock()
+		m.sessions[info.ID] = session
+		m.mu.Unlock()
+
+		sessions = append(sessions, session)
 	}
 
 	return sessions, nil
@@ -229,10 +242,9 @@ func (m *Manager) RemoveSession(idOrIndex string) error {
 		return fmt.Errorf("failed to delete session: %w", err)
 	}
 
-	// Unregister the ID mapping
-	if err := m.idMapper.Unregister(fullID); err != nil {
-		// Log warning but don't fail
-		m.logger.WithField("session_id", fullID).Warn("Failed to unregister session ID")
+	// Remove short ID mapping
+	if m.idMapper != nil {
+		_ = m.idMapper.RemoveSession(fullID)
 	}
 
 	// Remove from cache
@@ -268,11 +280,12 @@ func (m *Manager) createSessionFromInfo(info *Info) (Session, error) {
 
 // resolveSessionID resolves a short index or ID to full session ID
 func (m *Manager) resolveSessionID(idOrIndex string) (string, error) {
-	// Try to resolve as index first
-	if resolvedID, err := m.idMapper.Resolve(idOrIndex); err == nil {
-		return resolvedID.ID, nil
+	// Check if this is a short ID
+	fullID := idOrIndex
+	if m.idMapper != nil {
+		if fullIDFromShort, exists := m.idMapper.GetSessionFull(idOrIndex); exists {
+			fullID = fullIDFromShort
+		}
 	}
-
-	// Otherwise, assume it's already a full ID
-	return idOrIndex, nil
+	return fullID, nil
 }

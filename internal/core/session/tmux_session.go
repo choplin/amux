@@ -51,6 +51,11 @@ func NewTmuxSession(info *Info, store Store, tmuxAdapter tmux.Adapter, workspace
 		opt(s)
 	}
 
+	// Initialize StatusChangedAt if not set (e.g., when loading from store)
+	if s.info.StatusChangedAt.IsZero() {
+		s.info.StatusChangedAt = time.Now()
+	}
+
 	return s
 }
 
