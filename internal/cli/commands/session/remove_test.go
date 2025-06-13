@@ -114,4 +114,168 @@ func TestRemoveSession(t *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to get session")
 	})
+
+	t.Run("auto-removes workspace when session is removed", func(t *testing.T) {
+		// Create a new workspace marked as auto-created
+		wsAuto, err := wsManager.Create(workspace.CreateOptions{
+			Name:        "test-workspace-auto",
+			AutoCreated: true,
+		})
+		require.NoError(t, err)
+
+		// Create a session in the auto-created workspace
+		sess, err := sessionManager.CreateSession(session.Options{
+			WorkspaceID: wsAuto.ID,
+			AgentID:     "claude",
+		})
+		require.NoError(t, err)
+
+		// Start and then stop the session
+		ctx := context.TODO()
+		err = sess.Start(ctx)
+		require.NoError(t, err)
+		err = sess.Stop()
+		require.NoError(t, err)
+
+		// Verify workspace exists before removal
+		_, err = wsManager.ResolveWorkspace(wsAuto.ID)
+		require.NoError(t, err)
+
+		// Remove the session
+		cmd := removeCmd()
+		cmd.SetArgs([]string{sess.ID()})
+		err = cmd.Execute()
+		assert.NoError(t, err)
+
+		// Verify workspace was removed
+		_, err = wsManager.ResolveWorkspace(wsAuto.ID)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "workspace not found")
+	})
+
+	t.Run("keeps workspace when --keep-workspace flag is used", func(t *testing.T) {
+		// Create a new workspace marked as auto-created
+		ws2, err := wsManager.Create(workspace.CreateOptions{
+			Name:        "test-workspace-2",
+			AutoCreated: true,
+		})
+		require.NoError(t, err)
+
+		// Create a session in the auto-created workspace
+		sess, err := sessionManager.CreateSession(session.Options{
+			WorkspaceID: ws2.ID,
+			AgentID:     "claude",
+		})
+		require.NoError(t, err)
+
+		// Start and then stop the session
+		ctx := context.TODO()
+		err = sess.Start(ctx)
+		require.NoError(t, err)
+		err = sess.Stop()
+		require.NoError(t, err)
+
+		// Remove the session with --keep-workspace flag
+		cmd := removeCmd()
+		cmd.SetArgs([]string{sess.ID(), "--keep-workspace"})
+		err = cmd.Execute()
+		assert.NoError(t, err)
+
+		// Verify workspace still exists
+		_, err = wsManager.ResolveWorkspace(ws2.ID)
+		assert.NoError(t, err)
+	})
+
+	t.Run("does not remove workspace when used by other sessions", func(t *testing.T) {
+		// Create a new workspace marked as auto-created
+		ws3, err := wsManager.Create(workspace.CreateOptions{
+			Name:        "test-workspace-3",
+			AutoCreated: true,
+		})
+		require.NoError(t, err)
+
+		// Create first session in the auto-created workspace
+		sess1, err := sessionManager.CreateSession(session.Options{
+			WorkspaceID: ws3.ID,
+			AgentID:     "claude",
+		})
+		require.NoError(t, err)
+
+		// Create second session in the same workspace
+		sess2, err := sessionManager.CreateSession(session.Options{
+			WorkspaceID: ws3.ID,
+			AgentID:     "claude",
+		})
+		require.NoError(t, err)
+
+		// Start and stop both sessions
+		ctx := context.TODO()
+		err = sess1.Start(ctx)
+		require.NoError(t, err)
+		err = sess1.Stop()
+		require.NoError(t, err)
+
+		err = sess2.Start(ctx)
+		require.NoError(t, err)
+		err = sess2.Stop()
+		require.NoError(t, err)
+
+		// Store session IDs
+		sess1ID := sess1.ID()
+		sess2ID := sess2.ID()
+
+		// Remove the first session
+		cmd := removeCmd()
+		cmd.SetArgs([]string{sess1ID})
+		err = cmd.Execute()
+		assert.NoError(t, err)
+
+		// Verify workspace still exists (because sess2 is using it)
+		_, err = wsManager.ResolveWorkspace(ws3.ID)
+		assert.NoError(t, err)
+
+		// Remove the second session
+		cmd2 := removeCmd()
+		cmd2.SetArgs([]string{sess2ID})
+		err = cmd2.Execute()
+		assert.NoError(t, err)
+
+		// Workspace should be removed now (it was auto-created and no sessions are using it)
+		_, err = wsManager.ResolveWorkspace(ws3.ID)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "workspace not found")
+	})
+
+	t.Run("does not remove manually created workspace", func(t *testing.T) {
+		// Create a new workspace WITHOUT auto-created flag
+		ws4, err := wsManager.Create(workspace.CreateOptions{
+			Name:        "test-workspace-4",
+			AutoCreated: false, // explicitly not auto-created
+		})
+		require.NoError(t, err)
+
+		// Create a session in the manually created workspace
+		sess, err := sessionManager.CreateSession(session.Options{
+			WorkspaceID: ws4.ID,
+			AgentID:     "claude",
+		})
+		require.NoError(t, err)
+
+		// Start and then stop the session
+		ctx := context.TODO()
+		err = sess.Start(ctx)
+		require.NoError(t, err)
+		err = sess.Stop()
+		require.NoError(t, err)
+
+		// Remove the session
+		cmd := removeCmd()
+		cmd.SetArgs([]string{sess.ID()})
+		err = cmd.Execute()
+		assert.NoError(t, err)
+
+		// Verify workspace still exists
+		_, err = wsManager.ResolveWorkspace(ws4.ID)
+		assert.NoError(t, err)
+	})
 }

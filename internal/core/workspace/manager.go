@@ -102,6 +102,7 @@ func (m *Manager) Create(opts CreateOptions) (*Workspace, error) {
 		Description: opts.Description,
 		ContextPath: filepath.Join(workspaceDir, "context.md"),
 		CreatedAt:   time.Now(),
+		AutoCreated: opts.AutoCreated,
 	}
 
 	// Save workspace metadata

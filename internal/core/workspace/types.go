@@ -73,6 +73,7 @@ type Workspace struct {
 	ContextPath string    `yaml:"contextPath,omitempty" json:"contextPath,omitempty"`
 	CreatedAt   time.Time `yaml:"createdAt" json:"createdAt"`
 	UpdatedAt   time.Time `yaml:"-" json:"updatedAt"` // Dynamically populated from filesystem
+	AutoCreated bool      `yaml:"autoCreated,omitempty" json:"autoCreated,omitempty"`
 
 	// Consistency status fields (not persisted)
 	PathExists     bool              `yaml:"-" json:"pathExists"`
@@ -87,6 +88,7 @@ type CreateOptions struct {
 	Branch      string // Specify existing branch to use
 	AgentID     string
 	Description string
+	AutoCreated bool // Internal: whether workspace was auto-created by session
 }
 
 // ListOptions represents options for listing workspaces
