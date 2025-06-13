@@ -53,14 +53,14 @@ amux status
 Output:
 
 ```text
-SESSION ID           AGENT      WORKSPACE            STATUS     DURATION    RUNTIME
+SESSION ID           AGENT      WORKSPACE            STATUS     IN STATUS   TOTAL TIME
 session-abc123       claude     feature-auth         working    45s         5m30s
 session-def456       gpt        bugfix-api          idle       2m 15s      8m45s
 session-ghi789       gemini     docs-update         stopped    5m          15m45s
 ```
 
-The **DURATION** column shows how long the session has been in its current status,
-while **RUNTIME** shows the total time since the session started.
+The **IN STATUS** column shows how long the session has been in its current status,
+while **TOTAL TIME** shows the total elapsed time since the session started.
 
 ### Attaching to Sessions
 
@@ -227,7 +227,7 @@ Each session automatically includes:
    ```bash
    # Check session status and how long it's been in that state
    amux ps
-   # The DURATION column shows how long each session has been working/idle/stopped
+   # The IN STATUS column shows how long each session has been working/idle/stopped
 
    # View current output
    amux session logs session-abc123
