@@ -271,22 +271,29 @@ func (s *tmuxSessionImpl) getDefaultCommand() string {
 	}
 }
 
-// getTerminalSize returns the current terminal dimensions or defaults
-func (s *tmuxSessionImpl) getTerminalSize() (width, height int) {
+// GetTerminalSize returns the current terminal dimensions or defaults
+func GetTerminalSize() (width, height int) {
 	// Default dimensions
 	width, height = 120, 40
 
 	// Try to get terminal size from stdout
 	if w, h, err := term.GetSize(os.Stdout.Fd()); err == nil && w > 0 && h > 0 {
 		width, height = w, h
-		s.logger.Debug("detected terminal size", "width", width, "height", height)
 		return
 	}
 
 	// Try stderr as fallback
 	if w, h, err := term.GetSize(os.Stderr.Fd()); err == nil && w > 0 && h > 0 {
 		width, height = w, h
-		s.logger.Debug("detected terminal size from stderr", "width", width, "height", height)
+	}
+	return
+}
+
+// getTerminalSize returns the current terminal dimensions or defaults
+func (s *tmuxSessionImpl) getTerminalSize() (width, height int) {
+	width, height = GetTerminalSize()
+	if width != 120 || height != 40 {
+		s.logger.Debug("detected terminal size", "width", width, "height", height)
 	}
 	return
 }

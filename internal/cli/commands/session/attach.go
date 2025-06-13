@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/charmbracelet/x/term"
 	"github.com/spf13/cobra"
 
 	"github.com/aki/amux/internal/adapters/tmux"
@@ -27,24 +26,6 @@ Use Ctrl-B D to detach from the session without stopping it.`,
 		Args: cobra.ExactArgs(1),
 		RunE: attachSession,
 	}
-}
-
-// getTerminalSize returns the current terminal dimensions or defaults
-func getTerminalSize() (width, height int) {
-	// Default dimensions
-	width, height = 120, 40
-
-	// Try to get terminal size from stdout
-	if w, h, err := term.GetSize(os.Stdout.Fd()); err == nil && w > 0 && h > 0 {
-		width, height = w, h
-		return
-	}
-
-	// Try stderr as fallback
-	if w, h, err := term.GetSize(os.Stderr.Fd()); err == nil && w > 0 && h > 0 {
-		width, height = w, h
-	}
-	return
 }
 
 func attachSession(cmd *cobra.Command, args []string) error {
@@ -87,7 +68,7 @@ func attachSession(cmd *cobra.Command, args []string) error {
 	}
 
 	// Detect current terminal size and resize tmux window
-	width, height := getTerminalSize()
+	width, height := session.GetTerminalSize()
 	tmuxAdapter, err := tmux.NewAdapter()
 	if err == nil {
 		// Create a logger for debugging
