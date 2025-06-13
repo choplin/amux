@@ -184,7 +184,7 @@ func quickHash(data []byte) uint32 {
 func (t *Tailer) clearScreen() {
 	if t.opts.Writer != nil {
 		// Clear screen and move cursor to top-left
-		t.opts.Writer.Write([]byte("\033[2J\033[H"))
+		_, _ = t.opts.Writer.Write([]byte("\033[2J\033[H"))
 	}
 }
 
@@ -192,7 +192,7 @@ func (t *Tailer) clearScreen() {
 func (t *Tailer) moveCursorHome() {
 	if t.opts.Writer != nil {
 		// Move cursor to top-left
-		t.opts.Writer.Write([]byte("\033[H"))
+		_, _ = t.opts.Writer.Write([]byte("\033[H"))
 	}
 }
 
@@ -200,7 +200,7 @@ func (t *Tailer) moveCursorHome() {
 func (t *Tailer) clearToEnd() {
 	if t.opts.Writer != nil {
 		// Clear from cursor to end of screen
-		t.opts.Writer.Write([]byte("\033[J"))
+		_, _ = t.opts.Writer.Write([]byte("\033[J"))
 	}
 }
 
