@@ -262,7 +262,7 @@ func (s *ServerV2) handleSessionOutputResource(ctx context.Context, request mcp.
 	}
 
 	// Check if session is running
-	if sess.Status() != session.StatusRunning {
+	if !sess.Status().IsRunning() {
 		return []mcp.ResourceContents{
 			&mcp.TextResourceContents{
 				URI:      request.Params.URI,

@@ -84,8 +84,11 @@ func TestSessionRun(t *testing.T) {
 		if response["agent_id"] != "test-agent" {
 			t.Errorf("expected agent_id test-agent, got %v", response["agent_id"])
 		}
-		if response["status"] != string(session.StatusRunning) {
-			t.Errorf("expected status running, got %v", response["status"])
+		status, ok := response["status"].(string)
+		if !ok {
+			t.Errorf("expected status to be string, got %T", response["status"])
+		} else if status != string(session.StatusWorking) && status != string(session.StatusIdle) {
+			t.Errorf("expected status to be working or idle, got %v", status)
 		}
 	})
 

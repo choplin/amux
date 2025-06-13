@@ -235,7 +235,7 @@ func (s *ServerV2) handleSessionSendInput(ctx context.Context, request mcp.CallT
 	}
 
 	// Check if session is running
-	if sess.Status() != session.StatusRunning {
+	if !sess.Status().IsRunning() {
 		return nil, fmt.Errorf("session is not running (status: %s)", sess.Status())
 	}
 

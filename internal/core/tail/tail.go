@@ -84,7 +84,7 @@ func (t *Tailer) Follow(ctx context.Context) error {
 			return ctx.Err()
 		case <-ticker.C:
 			// Check if session is still running
-			if t.session.Status() != session.StatusRunning {
+			if !t.session.Status().IsRunning() {
 				return nil // Session ended normally
 			}
 
@@ -95,7 +95,7 @@ func (t *Tailer) Follow(ctx context.Context) error {
 			output, err := t.session.GetOutput(maxLines)
 			if err != nil {
 				// Session might have ended, check status
-				if t.session.Status() != session.StatusRunning {
+				if !t.session.Status().IsRunning() {
 					return nil // Session ended normally
 				}
 				return fmt.Errorf("failed to get output: %w", err)
