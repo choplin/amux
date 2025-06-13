@@ -28,12 +28,28 @@ We implemented a refresh-based approach using `tmux capture-pane` with smart opt
 4. **Full screen clear** before each redraw for clean rendering
 5. **ANSI escape sequence preservation** for colored output
 
+### Performance Optimization Journey
+
+During implementation, we discovered a critical performance issue: the initial implementation was capturing
+the ENTIRE tmux buffer (potentially thousands of lines) every second, then trimming it to terminal size.
+This was fixed by:
+
+1. Modifying the `Session` interface to accept a line limit
+2. Calculating terminal size dynamically before each capture
+3. Passing this limit down to tmux to capture ONLY what we display
+4. Removing post-processing since we capture exactly what we need
+
+This resulted in a 50-100x reduction in data transfer for long-running sessions.
+
 Key implementation details:
 
 - Added `CapturePaneWithOptions` to tmux adapter with `-e` flag for escape sequences
-- Enhanced tail package with refresh mode and configurable options
-- Added `--interval` flag to customize refresh rate
-- Use FNV-1a hash for fast change detection
+- Modified `Session.GetOutput()` interface to accept line limit parameter
+- Dynamic terminal size detection before each capture
+- Capture ONLY terminal-visible lines from tmux (e.g., 40 lines vs 2000+)
+- Use Go's standard `hash/fnv` for fast change detection
+- Added `--interval` flag to customize refresh rate (default 1s)
+- Removed unnecessary `processOutput()` function since we capture exactly what we need
 
 ## Consequences
 
@@ -41,9 +57,11 @@ Key implementation details:
 
 - Captures all AI agent output including progress updates
 - Clean, reliable output without corruption
-- Minimal performance impact (60 subprocess calls/minute at 1s interval)
-- Preserves colors and formatting
-- Configurable for different use cases
+- **Dramatic performance improvement**: Only captures terminal-visible lines (50-100x reduction)
+- Minimal data transfer: ~40 lines instead of entire buffer (2000+ lines)
+- Preserves colors and formatting with `-e` flag
+- Automatically handles terminal resize
+- Configurable refresh rate for different use cases
 
 ### Negative
 
