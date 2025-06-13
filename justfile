@@ -57,7 +57,7 @@ build:
 
 # Install the binary to GOPATH/bin
 install: build
-    go install cmd/amux/main.go
+    go install ./cmd/amux
 
 # Clean build artifacts
 clean:
