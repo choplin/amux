@@ -1,4 +1,4 @@
-package agent
+package session
 
 import (
 	"fmt"
@@ -16,17 +16,17 @@ import (
 func attachCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "attach <session>",
-		Short: "Attach to a running agent session",
+		Short: "Attach to a running session",
 		Long: `Attach to a running agent session.
 
 This will connect you to the tmux session where the agent is running.
 Use Ctrl-B D to detach from the session without stopping it.`,
 		Args: cobra.ExactArgs(1),
-		RunE: attachAgent,
+		RunE: attachSession,
 	}
 }
 
-func attachAgent(cmd *cobra.Command, args []string) error {
+func attachSession(cmd *cobra.Command, args []string) error {
 	sessionID := args[0]
 
 	// Find project root

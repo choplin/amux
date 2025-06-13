@@ -2,24 +2,22 @@ package agent
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/aki/amux/internal/cli/ui"
+	"github.com/aki/amux/internal/core/agent"
 	"github.com/aki/amux/internal/core/config"
-	"github.com/aki/amux/internal/core/session"
-	"github.com/aki/amux/internal/core/workspace"
 )
 
 func listCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
-		Short:   "List agent sessions",
-		Long: `List all agent sessions.
+		Short:   "List configured agents",
+		Long: `List all configured AI agents.
 
-Shows session ID, agent, workspace, status, and runtime.`,
+Shows agent ID, name, type, and command for each configured agent.`,
 		RunE: listAgents,
 	}
 }
@@ -33,75 +31,34 @@ func listAgents(cmd *cobra.Command, args []string) error {
 
 	// Create managers
 	configManager := config.NewManager(projectRoot)
-	wsManager, err := workspace.NewManager(configManager)
+	agentManager := agent.NewManager(configManager)
+
+	// List agents
+	agents, err := agentManager.ListAgents()
 	if err != nil {
-		return fmt.Errorf("failed to create workspace manager: %w", err)
+		return fmt.Errorf("failed to list agents: %w", err)
 	}
 
-	// Create session manager
-	sessionManager, err := createSessionManager(configManager, wsManager)
-	if err != nil {
-		return err
-	}
-
-	// List sessions
-	sessions, err := sessionManager.ListSessions()
-	if err != nil {
-		return fmt.Errorf("failed to list sessions: %w", err)
-	}
-
-	if len(sessions) == 0 {
-		ui.Info("No agent sessions found")
+	if len(agents) == 0 {
+		ui.Info("No agents configured")
+		ui.Info("Add agents by editing the configuration with 'amux config edit'")
 		return nil
 	}
 
 	// Create table
-	tbl := ui.NewTable("SESSION", "AGENT", "WORKSPACE", "STATUS", "RUNTIME")
+	tbl := ui.NewTable("ID", "NAME", "TYPE", "COMMAND")
 
 	// Add rows
-	for _, sess := range sessions {
-		info := sess.Info()
-
-		// Get workspace name
-		ws, err := wsManager.ResolveWorkspace(info.WorkspaceID)
-		wsName := info.WorkspaceID
-		if err == nil {
-			wsName = ws.Name
+	for id, agent := range agents {
+		command := agent.Command
+		if command == "" {
+			command = ui.DimStyle.Render("(default: " + id + ")")
 		}
-
-		// Calculate runtime
-		runtime := "-"
-		if info.StartedAt != nil {
-			if info.StoppedAt != nil {
-				runtime = ui.FormatDuration(info.StoppedAt.Sub(*info.StartedAt))
-			} else if info.Status == session.StatusRunning {
-				runtime = ui.FormatDuration(time.Since(*info.StartedAt))
-			}
-		}
-
-		// Format status for display
-		statusStr := string(info.Status)
-		switch info.Status {
-		case session.StatusCreated:
-			// StatusCreated uses default styling (no color)
-		case session.StatusRunning:
-			statusStr = ui.SuccessStyle.Render(statusStr)
-		case session.StatusStopped:
-			statusStr = ui.DimStyle.Render(statusStr)
-		case session.StatusFailed:
-			statusStr = ui.ErrorStyle.Render(statusStr)
-		}
-
-		displayID := info.ID
-		if info.Index != "" {
-			displayID = info.Index
-		}
-
-		tbl.AddRow(displayID, info.AgentID, wsName, statusStr, runtime)
+		tbl.AddRow(id, agent.Name, agent.Type, command)
 	}
 
 	// Print with header
-	ui.PrintSectionHeader("🤖", "Agent Sessions", len(sessions))
+	ui.PrintSectionHeader("🤖", "Configured Agents", len(agents))
 	tbl.Print()
 	ui.OutputLine("")
 
