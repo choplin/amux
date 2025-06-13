@@ -14,6 +14,12 @@ import (
 )
 
 func TestSessionRun(t *testing.T) {
+	// Skip if tmux not available
+	tmuxAdapter, err := tmux.NewAdapter()
+	if err != nil || !tmuxAdapter.IsAvailable() {
+		t.Skip("tmux not available, skipping SessionRun test")
+	}
+
 	testServer := setupTestServer(t)
 
 	// Create a workspace first
@@ -119,6 +125,12 @@ func TestSessionRun(t *testing.T) {
 }
 
 func TestSessionStop(t *testing.T) {
+	// Skip if tmux not available
+	tmuxAdapter, err := tmux.NewAdapter()
+	if err != nil || !tmuxAdapter.IsAvailable() {
+		t.Skip("tmux not available, skipping SessionStop test")
+	}
+
 	testServer := setupTestServer(t)
 
 	// Create workspace and session
