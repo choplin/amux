@@ -4,10 +4,13 @@ package tail
 import (
 	"context"
 	"fmt"
+	"hash/fnv"
 	"io"
+	"os"
 	"time"
 
 	"github.com/aki/amux/internal/core/session"
+	"github.com/charmbracelet/x/term"
 )
 
 // Options configures the tail behavior
@@ -16,12 +19,15 @@ type Options struct {
 	PollInterval time.Duration
 	// Writer is where to write the output
 	Writer io.Writer
+	// MaxLines limits the number of lines to display
+	MaxLines int
 }
 
 // DefaultOptions returns default tail options
 func DefaultOptions() Options {
 	return Options{
-		PollInterval: 500 * time.Millisecond,
+		PollInterval: 1 * time.Second, // 1 second for responsive monitoring
+		MaxLines:     0,               // 0 means auto-detect based on terminal size
 	}
 }
 
@@ -45,26 +51,33 @@ func New(sess session.Session, opts Options) *Tailer {
 // Follow continuously streams session output until the context is cancelled
 // or the session stops running
 func (t *Tailer) Follow(ctx context.Context) error {
-	// Keep track of the last output to detect changes
-	var lastOutput []byte
 	ticker := time.NewTicker(t.opts.PollInterval)
 	defer ticker.Stop()
 
+	// Track state for optimization
+	var lastHash uint32 // Hash to detect changes
+
+	// Calculate terminal size for initial output
+	maxLines := t.getTerminalLines()
+
 	// Get initial output
-	output, err := t.session.GetOutput()
+	output, err := t.session.GetOutput(maxLines)
 	if err != nil {
 		return fmt.Errorf("failed to get initial output: %w", err)
 	}
-	lastOutput = output
 
-	// Write initial output if any
+	// Display initial output
 	if len(output) > 0 && t.opts.Writer != nil {
+		t.clearScreen()
 		if _, err := t.opts.Writer.Write(output); err != nil {
 			return fmt.Errorf("failed to write initial output: %w", err)
 		}
 	}
+	h := fnv.New32a()
+	h.Write(output)
+	lastHash = h.Sum32()
 
-	// Stream new output
+	// Stream output
 	for {
 		select {
 		case <-ctx.Done():
@@ -75,8 +88,11 @@ func (t *Tailer) Follow(ctx context.Context) error {
 				return nil // Session ended normally
 			}
 
-			// Get current output
-			output, err := t.session.GetOutput()
+			// Calculate terminal size (handles resize)
+			maxLines := t.getTerminalLines()
+
+			// Get current output limited to terminal size
+			output, err := t.session.GetOutput(maxLines)
 			if err != nil {
 				// Session might have ended, check status
 				if t.session.Status() != session.StatusRunning {
@@ -85,18 +101,49 @@ func (t *Tailer) Follow(ctx context.Context) error {
 				return fmt.Errorf("failed to get output: %w", err)
 			}
 
-			// Check if output has changed
-			if len(output) > len(lastOutput) {
-				// Write only the new content
-				newContent := output[len(lastOutput):]
-				if t.opts.Writer != nil {
-					if _, err := t.opts.Writer.Write(newContent); err != nil {
-						return fmt.Errorf("failed to write output: %w", err)
-					}
-				}
-				lastOutput = output
+			// Quick change detection using hash
+			h := fnv.New32a()
+			h.Write(output)
+			currentHash := h.Sum32()
+			if currentHash == lastHash {
+				continue // No change, skip expensive operations
 			}
+
+			// Redraw the changed content
+			if t.opts.Writer != nil {
+				// Clear entire screen before redraw for clean rendering
+				t.clearScreen()
+				if _, err := t.opts.Writer.Write(output); err != nil {
+					return fmt.Errorf("failed to write output: %w", err)
+				}
+			}
+			lastHash = currentHash
 		}
+	}
+}
+
+// getTerminalLines calculates how many lines to capture based on terminal size
+func (t *Tailer) getTerminalLines() int {
+	// Check if MaxLines is explicitly set
+	if t.opts.MaxLines > 0 {
+		return t.opts.MaxLines
+	}
+
+	// Auto-detect terminal size
+	_, height, err := term.GetSize(os.Stdout.Fd())
+	if err != nil || height < 10 {
+		return 30 // Default to 30 lines if can't detect
+	}
+
+	// Reserve 2 lines for status info
+	return height - 2
+}
+
+// clearScreen clears the terminal screen using ANSI escape codes
+func (t *Tailer) clearScreen() {
+	if t.opts.Writer != nil {
+		// Clear screen and move cursor to top-left
+		_, _ = t.opts.Writer.Write([]byte("\033[2J\033[H"))
 	}
 }
 

@@ -105,7 +105,7 @@ type Session interface {
 	SendInput(input string) error
 
 	// GetOutput returns recent output from the session
-	GetOutput() ([]byte, error)
+	GetOutput(maxLines int) ([]byte, error)
 }
 
 // Store persists session metadata

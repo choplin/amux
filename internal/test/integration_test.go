@@ -165,7 +165,7 @@ func TestIntegration_FullWorkflow(t *testing.T) {
 	}
 
 	// Get output
-	output, err := sess.GetOutput()
+	output, err := sess.GetOutput(0)
 	if err != nil {
 		t.Errorf("Failed to get output: %v", err)
 	}

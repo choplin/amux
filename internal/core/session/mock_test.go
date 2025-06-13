@@ -85,7 +85,7 @@ func TestTmuxSession_WithMock(t *testing.T) {
 	}
 
 	// Get output
-	output, err := session.GetOutput()
+	output, err := session.GetOutput(0)
 	if err != nil {
 		t.Errorf("Failed to get output: %v", err)
 	}

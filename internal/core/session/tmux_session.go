@@ -235,7 +235,7 @@ func (s *tmuxSessionImpl) SendInput(input string) error {
 	return s.tmuxAdapter.SendKeys(s.info.TmuxSession, input)
 }
 
-func (s *tmuxSessionImpl) GetOutput() ([]byte, error) {
+func (s *tmuxSessionImpl) GetOutput(maxLines int) ([]byte, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -247,7 +247,8 @@ func (s *tmuxSessionImpl) GetOutput() ([]byte, error) {
 		return nil, fmt.Errorf("no tmux session associated")
 	}
 
-	output, err := s.tmuxAdapter.CapturePane(s.info.TmuxSession)
+	// Capture only the requested number of lines
+	output, err := s.tmuxAdapter.CapturePaneWithOptions(s.info.TmuxSession, maxLines)
 	if err != nil {
 		return nil, err
 	}

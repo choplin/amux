@@ -67,7 +67,7 @@ func TestTmuxSession_StartStop(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Get output
-	output, err := session.GetOutput()
+	output, err := session.GetOutput(0)
 	if err != nil {
 		t.Errorf("Failed to get output: %v", err)
 	} else {
@@ -144,7 +144,7 @@ func TestTmuxSession_WithInitialPrompt(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	// Get output
-	output, err := session.GetOutput()
+	output, err := session.GetOutput(0)
 	if err != nil {
 		t.Errorf("Failed to get output: %v", err)
 	} else {

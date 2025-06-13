@@ -90,12 +90,8 @@ func (a *RealAdapter) SendKeys(sessionName, keys string) error {
 
 // CapturePane captures the content of the current pane
 func (a *RealAdapter) CapturePane(sessionName string) (string, error) {
-	cmd := exec.Command(a.tmuxPath, "capture-pane", "-t", sessionName, "-p")
-	output, err := cmd.Output()
-	if err != nil {
-		return "", fmt.Errorf("failed to capture pane: %w", err)
-	}
-	return string(output), nil
+	// Use CapturePaneWithOptions with 0 to capture all lines
+	return a.CapturePaneWithOptions(sessionName, 0)
 }
 
 // AttachSession attaches to a tmux session
@@ -176,4 +172,26 @@ func (a *RealAdapter) ResizeWindow(sessionName string, width, height int) error 
 		return nil //nolint:nilerr // Intentionally ignoring resize errors
 	}
 	return nil
+}
+
+// CapturePaneWithOptions captures the content with specified options
+func (a *RealAdapter) CapturePaneWithOptions(sessionName string, lines int) (string, error) {
+	// Build command with options
+	// -p: print to stdout
+	// -J: join wrapped lines
+	// -e: include escape sequences (ANSI color codes)
+	args := []string{"capture-pane", "-t", sessionName, "-p", "-J", "-e"}
+
+	// Add line limit if specified
+	if lines > 0 {
+		// Capture last N lines
+		args = append(args, "-S", fmt.Sprintf("-%d", lines))
+	}
+
+	cmd := exec.Command(a.tmuxPath, args...)
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to capture pane: %w", err)
+	}
+	return string(output), nil
 }

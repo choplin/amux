@@ -13,7 +13,8 @@ var (
 	runInitialPrompt string
 
 	// Flags for session logs
-	followLogs bool
+	followLogs     bool
+	followInterval string
 )
 
 // Command returns the session command
