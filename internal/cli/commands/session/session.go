@@ -36,6 +36,7 @@ manage their lifecycle.`,
 	cmd.AddCommand(stopCmd())
 	cmd.AddCommand(logsCmd())
 	cmd.AddCommand(removeCmd())
+	cmd.AddCommand(sendInputCmd())
 
 	return cmd
 }
