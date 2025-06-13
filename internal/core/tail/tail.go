@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"hash/fnv"
 	"io"
 	"os"
 	"time"
@@ -169,13 +170,11 @@ func (t *Tailer) processOutput(output []byte) []byte {
 }
 
 // quickHash provides a fast hash for change detection
+// Uses FNV-1a which is one of the fastest non-cryptographic hashes
 func quickHash(data []byte) uint32 {
-	var hash uint32 = 2166136261
-	for _, b := range data {
-		hash ^= uint32(b)
-		hash *= 16777619
-	}
-	return hash
+	h := fnv.New32a()
+	h.Write(data)
+	return h.Sum32()
 }
 
 // clearScreen clears the terminal screen using ANSI escape codes
