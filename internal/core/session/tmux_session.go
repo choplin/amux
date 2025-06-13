@@ -120,7 +120,10 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 	}
 
 	// Resize to terminal dimensions or use defaults
-	width, height := s.getTerminalSize()
+	width, height := GetTerminalSize()
+	if width != 120 || height != 40 {
+		s.logger.Debug("detected terminal size", "width", width, "height", height)
+	}
 	if err := s.tmuxAdapter.ResizeWindow(tmuxSession, width, height); err != nil {
 		// Log warning but don't fail - resize is not critical
 		s.logger.Warn("failed to resize tmux window", "error", err, "session", tmuxSession)
@@ -285,15 +288,6 @@ func GetTerminalSize() (width, height int) {
 	// Try stderr as fallback
 	if w, h, err := term.GetSize(os.Stderr.Fd()); err == nil && w > 0 && h > 0 {
 		width, height = w, h
-	}
-	return
-}
-
-// getTerminalSize returns the current terminal dimensions or defaults
-func (s *tmuxSessionImpl) getTerminalSize() (width, height int) {
-	width, height = GetTerminalSize()
-	if width != 120 || height != 40 {
-		s.logger.Debug("detected terminal size", "width", width, "height", height)
 	}
 	return
 }
