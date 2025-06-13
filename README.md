@@ -118,7 +118,12 @@ amux session logs -f <session> # Follow logs (tail -f behavior)
 amux tail <session>           # alias: amux session logs -f
 
 # Agent configuration
-amux agent config <subcommand>
+amux agent list               # List configured agents
+amux agent show <agent>       # Show agent details
+
+# Configuration management
+amux config show              # Display current configuration
+amux config edit              # Edit configuration in your editor
 
 # MCP server
 amux mcp [options]            # Start MCP server
@@ -145,6 +150,27 @@ amux ws remove workspace-abc123 --force
 # Clean up old workspaces
 amux ws prune --days 7
 ```
+
+### Configuration Management
+
+```bash
+# View current configuration in YAML format (default)
+amux config show
+
+# View configuration in JSON format
+amux config show --format json
+
+# View configuration in a human-friendly format
+amux config show --format pretty
+
+# Edit configuration in your default editor
+amux config edit
+
+# Edit with a specific editor
+EDITOR=nano amux config edit
+```
+
+The configuration file is stored at `.amux/config.yaml` in your project root.
 
 ### Start MCP Server
 
