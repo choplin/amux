@@ -104,7 +104,9 @@ func TestRemoveSession(t *testing.T) {
 		cmd2.SetArgs([]string{sess.ID()})
 		err = cmd2.Execute()
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to get session")
+		if err != nil {
+			assert.Contains(t, err.Error(), "failed to get session")
+		}
 	})
 
 	t.Run("error on non-existent session", func(t *testing.T) {
