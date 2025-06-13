@@ -88,8 +88,10 @@ amux run claude
 amux ws create feature-auth
 amux run claude --workspace feature-auth
 
-# Check running sessions
+# Check running sessions (shows real-time activity status)
 amux ps
+# or
+amux status
 
 # Attach to a session
 amux attach session-abc123

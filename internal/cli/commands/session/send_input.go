@@ -7,7 +7,6 @@ import (
 
 	"github.com/aki/amux/internal/cli/ui"
 	"github.com/aki/amux/internal/core/config"
-	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/workspace"
 )
 
@@ -70,7 +69,7 @@ func sendInputToSession(cmd *cobra.Command, args []string) error {
 	}
 
 	// Check if session is running
-	if sess.Status() != session.StatusRunning {
+	if !sess.Status().IsRunning() {
 		return fmt.Errorf("session %s is not running (current status: %s)", sessionID, sess.Status())
 	}
 

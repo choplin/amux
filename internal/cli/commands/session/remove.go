@@ -7,7 +7,6 @@ import (
 
 	"github.com/aki/amux/internal/cli/ui"
 	"github.com/aki/amux/internal/core/config"
-	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/workspace"
 )
 
@@ -65,7 +64,7 @@ func removeSession(cmd *cobra.Command, args []string, keepWorkspace bool) error 
 	}
 
 	// Check if session is running
-	if sess.Status() == session.StatusRunning {
+	if sess.Status().IsRunning() {
 		return fmt.Errorf("cannot remove running session %s (use 'amux session stop' first)", sessionID)
 	}
 

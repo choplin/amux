@@ -141,13 +141,18 @@ func (s *ServerV2) handleSessionListResource(ctx context.Context, request mcp.Re
 
 	sessionList := make([]sessionInfo, len(sessions))
 	for i, sess := range sessions {
+		// Update status for running sessions
+		if sess.Status().IsRunning() {
+			_ = sess.UpdateStatus() // Ignore errors, use current status if update fails
+		}
+
 		info := sess.Info()
 		sessionInfo := sessionInfo{
 			ID:          info.ID,
 			Index:       info.Index,
 			WorkspaceID: info.WorkspaceID,
 			AgentID:     info.AgentID,
-			Status:      info.Status,
+			Status:      info.StatusState.Status,
 			CreatedAt:   info.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		}
 
@@ -200,13 +205,18 @@ func (s *ServerV2) handleSessionDetailResource(ctx context.Context, request mcp.
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
 
+	// Update status for running sessions before returning details
+	if sess.Status().IsRunning() {
+		_ = sess.UpdateStatus() // Ignore errors, use current status if update fails
+	}
+
 	info := sess.Info()
 	detail := sessionDetail{
 		ID:          info.ID,
 		Index:       info.Index,
 		WorkspaceID: info.WorkspaceID,
 		AgentID:     info.AgentID,
-		Status:      info.Status,
+		Status:      info.StatusState.Status,
 		Command:     info.Command,
 		Environment: info.Environment,
 		PID:         info.PID,
@@ -262,7 +272,7 @@ func (s *ServerV2) handleSessionOutputResource(ctx context.Context, request mcp.
 	}
 
 	// Check if session is running
-	if sess.Status() != session.StatusRunning {
+	if !sess.Status().IsRunning() {
 		return []mcp.ResourceContents{
 			&mcp.TextResourceContents{
 				URI:      request.Params.URI,

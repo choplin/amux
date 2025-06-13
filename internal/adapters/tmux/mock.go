@@ -272,3 +272,13 @@ func (m *MockAdapter) CapturePaneWithOptions(sessionName string, lines int) (str
 
 	return output, nil
 }
+
+// SetPaneContent sets the pane content for testing
+func (m *MockAdapter) SetPaneContent(sessionName string, content string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if session, exists := m.sessions[sessionName]; exists {
+		session.output = []string{content}
+	}
+}

@@ -92,6 +92,14 @@ func init() {
 			RunE:  listSubCmd.RunE,
 		}
 		rootCmd.AddCommand(psCmd)
+
+		// Add status alias too (same as ps/list)
+		statusCmd := &cobra.Command{
+			Use:   "status",
+			Short: "Show status of agent sessions (alias for 'session list')",
+			RunE:  listSubCmd.RunE,
+		}
+		rootCmd.AddCommand(statusCmd)
 	}
 
 	if attachSubCmd != nil {

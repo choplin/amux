@@ -36,16 +36,41 @@ func (id ID) IsEmpty() bool {
 // Status represents the current state of a session
 type Status string
 
+// String returns the string representation of the status
+func (s Status) String() string {
+	return string(s)
+}
+
+// IsRunning returns true if the session is in a running state (working or idle)
+func (s Status) IsRunning() bool {
+	return s == StatusWorking || s == StatusIdle
+}
+
+// IsTerminal returns true if the session is in a terminal state (stopped or failed)
+func (s Status) IsTerminal() bool {
+	return s == StatusStopped || s == StatusFailed
+}
+
 const (
 	// StatusCreated indicates a session has been created but not started
 	StatusCreated Status = "created"
-	// StatusRunning indicates a session is currently running
-	StatusRunning Status = "running"
+	// StatusWorking indicates a session is actively processing (output changing)
+	StatusWorking Status = "working"
+	// StatusIdle indicates a session is waiting for input (no recent output)
+	StatusIdle Status = "idle"
 	// StatusStopped indicates a session has been stopped normally
 	StatusStopped Status = "stopped"
 	// StatusFailed indicates a session has failed or crashed
 	StatusFailed Status = "failed"
 )
+
+// StatusState holds runtime state for status tracking
+type StatusState struct {
+	Status          Status    `yaml:"status"`
+	StatusChangedAt time.Time `yaml:"statusChangedAt"`
+	LastOutputHash  uint32    `yaml:"lastOutputHash,omitempty"`
+	LastOutputTime  time.Time `yaml:"lastOutputTime,omitempty"`
+}
 
 // Options contains options for creating a new session
 type Options struct {
@@ -63,7 +88,7 @@ type Info struct {
 	Index         string            `yaml:"-"` // Populated from ID mapper, not persisted
 	WorkspaceID   string            `yaml:"workspace_id"`
 	AgentID       string            `yaml:"agent_id"`
-	Status        Status            `yaml:"status"`
+	StatusState   StatusState       `yaml:"statusState"`
 	Command       string            `yaml:"command"`
 	Environment   map[string]string `yaml:"environment,omitempty"`
 	InitialPrompt string            `yaml:"initial_prompt,omitempty"`
@@ -106,6 +131,9 @@ type Session interface {
 
 	// GetOutput returns recent output from the session
 	GetOutput(maxLines int) ([]byte, error)
+
+	// UpdateStatus updates the session status based on current output
+	UpdateStatus() error
 }
 
 // Store persists session metadata

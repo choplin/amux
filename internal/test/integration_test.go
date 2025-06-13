@@ -136,8 +136,8 @@ func TestIntegration_FullWorkflow(t *testing.T) {
 		t.Fatalf("Failed to start session: %v", err)
 	}
 
-	// Verify session is running
-	if sess.Status() != session.StatusRunning {
+	// Verify session is running (either working or idle)
+	if !sess.Status().IsRunning() {
 		t.Errorf("Expected session to be running, got %s", sess.Status())
 	}
 

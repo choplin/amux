@@ -36,16 +36,21 @@ func TestTmuxSession_WithMock(t *testing.T) {
 	mockAdapter := tmux.NewMockAdapter()
 
 	// Create session info
+	now := time.Now()
 	info := &Info{
 		ID:          "test-mock-session",
 		WorkspaceID: ws.ID,
 		AgentID:     "test-agent",
-		Status:      StatusCreated,
-		Command:     "echo 'Test session started'",
+		StatusState: StatusState{
+			Status:          StatusCreated,
+			StatusChangedAt: now,
+			LastOutputTime:  now,
+		},
+		Command: "echo 'Test session started'",
 		Environment: map[string]string{
 			"TEST_VAR": "test_value",
 		},
-		CreatedAt: time.Now(),
+		CreatedAt: now,
 	}
 
 	// Save info
@@ -205,5 +210,141 @@ func TestManager_WithUnavailableTmux(t *testing.T) {
 	// Should return ErrTmuxNotAvailable
 	if _, ok := err.(ErrTmuxNotAvailable); !ok {
 		t.Errorf("Expected ErrTmuxNotAvailable, got %T: %v", err, err)
+	}
+}
+
+func TestSessionStatus_MockAdapter(t *testing.T) {
+	// Setup
+	_, wsManager, configManager := setupTestEnvironment(t)
+
+	// Create workspace
+	ws, err := wsManager.Create(workspace.CreateOptions{
+		Name: "test-workspace-status-mock",
+	})
+	if err != nil {
+		t.Fatalf("Failed to create workspace: %v", err)
+	}
+
+	// Create store
+	store, err := NewFileStore(configManager.GetAmuxDir())
+	if err != nil {
+		t.Fatalf("Failed to create store: %v", err)
+	}
+
+	// Create mock adapter
+	mockAdapter := tmux.NewMockAdapter()
+
+	// Create session info
+	now := time.Now()
+	info := &Info{
+		ID:          "test-status-mock-session",
+		WorkspaceID: ws.ID,
+		AgentID:     "test-agent",
+		StatusState: StatusState{
+			Status:          StatusCreated,
+			StatusChangedAt: now,
+			LastOutputTime:  now,
+		},
+		Command:   "test-command",
+		CreatedAt: now,
+	}
+
+	// Save info
+	if err := store.Save(info); err != nil {
+		t.Fatalf("Failed to save session info: %v", err)
+	}
+
+	// Create tmux session with mock adapter
+	session := NewTmuxSession(info, store, mockAdapter, ws).(*tmuxSessionImpl)
+
+	// Initialize the session as if it started
+	session.info.StatusState.Status = StatusWorking
+	session.info.TmuxSession = "test-session"
+
+	// Create the session in the mock adapter
+	err = mockAdapter.CreateSession("test-session", ws.Path)
+	if err != nil {
+		t.Fatalf("Failed to create mock session: %v", err)
+	}
+	mockAdapter.SetPaneContent("test-session", "initial output")
+
+	// Test status behavior
+	tests := []struct {
+		name                 string
+		setupFunc            func()
+		expectedStatus       Status
+		checkStatusChangedAt bool
+	}{
+		{
+			name: "Initial working status remains working",
+			setupFunc: func() {
+				// First update to establish baseline
+				session.UpdateStatus()
+			},
+			expectedStatus:       StatusWorking,
+			checkStatusChangedAt: false,
+		},
+		{
+			name: "Status remains working with new output",
+			setupFunc: func() {
+				// Change output
+				mockAdapter.SetPaneContent("test-session", "new output")
+				session.UpdateStatus()
+			},
+			expectedStatus:       StatusWorking,
+			checkStatusChangedAt: false,
+		},
+		{
+			name: "Status remains working within idle threshold",
+			setupFunc: func() {
+				// Wait a bit but less than idle threshold
+				time.Sleep(1 * time.Second)
+				session.UpdateStatus()
+			},
+			expectedStatus:       StatusWorking,
+			checkStatusChangedAt: false,
+		},
+		{
+			name: "Status becomes idle after no output for idle threshold",
+			setupFunc: func() {
+				// Reset to a known state
+				mockAdapter.SetPaneContent("test-session", "idle test output")
+
+				// First ensure we have current state by calling UpdateStatus
+				// This will capture the current output and set lastOutputContent
+				err := session.UpdateStatus()
+				if err != nil {
+					t.Fatalf("First UpdateStatus failed: %v", err)
+				}
+
+				// Wait for idle threshold to pass
+				time.Sleep(3500 * time.Millisecond) // Well over 3 seconds
+
+				// Update status again - should detect idle since output hasn't changed
+				err = session.UpdateStatus()
+				if err != nil {
+					t.Fatalf("Second UpdateStatus failed: %v", err)
+				}
+			},
+			expectedStatus:       StatusIdle,
+			checkStatusChangedAt: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupFunc()
+			status := session.Status()
+			if status != tt.expectedStatus {
+				t.Errorf("Expected status %s, got %s", tt.expectedStatus, status)
+			}
+
+			// Check StatusChangedAt is set correctly
+			if tt.checkStatusChangedAt {
+				if session.info.StatusState.StatusChangedAt.IsZero() {
+					t.Error("Expected StatusChangedAt to be set when status changes")
+				}
+			}
+		})
 	}
 }

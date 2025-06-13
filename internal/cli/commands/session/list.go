@@ -56,10 +56,15 @@ func listSessions(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create table
-	tbl := ui.NewTable("SESSION", "AGENT", "WORKSPACE", "STATUS", "RUNTIME")
+	tbl := ui.NewTable("SESSION", "AGENT", "WORKSPACE", "STATUS", "IN STATUS", "TOTAL TIME")
 
 	// Add rows
 	for _, sess := range sessions {
+		// Update status for running sessions
+		if sess.Status().IsRunning() {
+			_ = sess.UpdateStatus() // Ignore errors, just use current status if update fails
+		}
+
 		info := sess.Info()
 
 		// Get workspace name
@@ -69,27 +74,36 @@ func listSessions(cmd *cobra.Command, args []string) error {
 			wsName = ws.Name
 		}
 
-		// Calculate runtime
-		runtime := "-"
+		// Calculate total time
+		totalTime := "-"
 		if info.StartedAt != nil {
 			if info.StoppedAt != nil {
-				runtime = ui.FormatDuration(info.StoppedAt.Sub(*info.StartedAt))
-			} else if info.Status == session.StatusRunning {
-				runtime = ui.FormatDuration(time.Since(*info.StartedAt))
+				totalTime = ui.FormatDuration(info.StoppedAt.Sub(*info.StartedAt))
+			} else if info.StatusState.Status.IsRunning() {
+				totalTime = ui.FormatDuration(time.Since(*info.StartedAt))
 			}
 		}
 
 		// Format status for display
-		statusStr := string(info.Status)
-		switch info.Status {
+		statusStr := string(info.StatusState.Status)
+		switch info.StatusState.Status {
 		case session.StatusCreated:
 			// StatusCreated uses default styling (no color)
-		case session.StatusRunning:
+		case session.StatusWorking:
 			statusStr = ui.SuccessStyle.Render(statusStr)
+		case session.StatusIdle:
+			statusStr = ui.DimStyle.Render(statusStr)
 		case session.StatusStopped:
 			statusStr = ui.DimStyle.Render(statusStr)
 		case session.StatusFailed:
 			statusStr = ui.ErrorStyle.Render(statusStr)
+		}
+
+		// Show time in current status
+		inStatusStr := "-"
+		if !info.StatusState.StatusChangedAt.IsZero() {
+			statusDuration := time.Since(info.StatusState.StatusChangedAt)
+			inStatusStr = ui.FormatDuration(statusDuration)
 		}
 
 		displayID := info.ID
@@ -97,7 +111,7 @@ func listSessions(cmd *cobra.Command, args []string) error {
 			displayID = info.Index
 		}
 
-		tbl.AddRow(displayID, info.AgentID, wsName, statusStr, runtime)
+		tbl.AddRow(displayID, info.AgentID, wsName, statusStr, inStatusStr, totalTime)
 	}
 
 	// Print with header

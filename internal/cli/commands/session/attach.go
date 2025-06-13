@@ -11,7 +11,6 @@ import (
 	"github.com/aki/amux/internal/cli/ui"
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/logger"
-	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/terminal"
 	"github.com/aki/amux/internal/core/workspace"
 )
@@ -58,7 +57,7 @@ func attachSession(cmd *cobra.Command, args []string) error {
 	}
 
 	// Check if running
-	if sess.Status() != session.StatusRunning {
+	if !sess.Status().IsRunning() {
 		return fmt.Errorf("session is not running (status: %s)", sess.Status())
 	}
 
