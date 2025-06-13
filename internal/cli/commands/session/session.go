@@ -34,6 +34,7 @@ manage their lifecycle.`,
 	cmd.AddCommand(attachCmd())
 	cmd.AddCommand(stopCmd())
 	cmd.AddCommand(logsCmd())
+	cmd.AddCommand(removeCmd())
 
 	return cmd
 }

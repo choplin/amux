@@ -103,6 +103,7 @@ amux agent run <agent>         # alias: amux run
 amux agent list               # alias: amux ps
 amux agent attach <session>   # alias: amux attach
 amux agent stop <session>
+amux agent remove <session>   # alias: amux agent rm
 amux agent logs <session>     # View session output
 amux agent logs -f <session>  # Follow logs (tail -f behavior)
 amux tail <session>           # alias: amux agent logs -f
@@ -244,6 +245,7 @@ amux run gpt --workspace bugfix-api        # Run GPT in another workspace
 amux ps                                    # List running agents
 amux attach session-123                    # Attach to agent session
 amux agent stop session-123                # Stop a specific session
+amux agent remove session-123              # Remove a stopped session
 amux agent logs session-123                # View session output
 amux agent logs -f session-123             # Follow logs in real-time
 amux tail session-123                      # Shortcut for follow logs
