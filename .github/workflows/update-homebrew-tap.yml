@@ -12,8 +12,6 @@ jobs:
   update-tap:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout amux repository
-        uses: actions/checkout@v4
       - name: Get release version
         id: version
         run: |
@@ -25,18 +23,91 @@ jobs:
           # Remove 'v' prefix if present
           VERSION="${VERSION#v}"
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
-      - name: Run update script
+      - name: Download checksums
         run: |
-          cd scripts/homebrew-tap
-          ./update-formula.sh "${{ steps.version.outputs.version }}"
-      - name: Trigger homebrew-amux update
-        uses: peter-evans/repository-dispatch@v3
+          VERSION="${{ steps.version.outputs.version }}"
+          curl -sL "https://github.com/choplin/amux/releases/download/v${VERSION}/amux_${VERSION}_checksums.txt" -o checksums.txt
+      - name: Extract SHA256 checksums
+        id: checksums
+        run: |
+          DARWIN_AMD64_SHA=$(grep "darwin_amd64.tar.gz" checksums.txt | cut -d' ' -f1)
+          DARWIN_ARM64_SHA=$(grep "darwin_arm64.tar.gz" checksums.txt | cut -d' ' -f1)
+          LINUX_AMD64_SHA=$(grep "linux_amd64.tar.gz" checksums.txt | cut -d' ' -f1)
+          LINUX_ARM64_SHA=$(grep "linux_arm64.tar.gz" checksums.txt | cut -d' ' -f1)
+
+          echo "darwin_amd64_sha256=${DARWIN_AMD64_SHA}" >> $GITHUB_OUTPUT
+          echo "darwin_arm64_sha256=${DARWIN_ARM64_SHA}" >> $GITHUB_OUTPUT
+          echo "linux_amd64_sha256=${LINUX_AMD64_SHA}" >> $GITHUB_OUTPUT
+          echo "linux_arm64_sha256=${LINUX_ARM64_SHA}" >> $GITHUB_OUTPUT
+      - name: Generate formula
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          DARWIN_AMD64_SHA="${{ steps.checksums.outputs.darwin_amd64_sha256 }}"
+          DARWIN_ARM64_SHA="${{ steps.checksums.outputs.darwin_arm64_sha256 }}"
+          LINUX_AMD64_SHA="${{ steps.checksums.outputs.linux_amd64_sha256 }}"
+          LINUX_ARM64_SHA="${{ steps.checksums.outputs.linux_arm64_sha256 }}"
+
+          cat > amux.rb << EOF
+          class Amux < Formula
+            desc "Agent Multiplexer - workspace management for AI agents"
+            homepage "https://github.com/choplin/amux"
+            version "${VERSION}"
+            license "MIT"
+
+            on_macos do
+              if Hardware::CPU.intel?
+                url "https://github.com/choplin/amux/releases/download/v${VERSION}/amux_${VERSION}_darwin_amd64.tar.gz"
+                sha256 "${DARWIN_AMD64_SHA}"
+              else
+                url "https://github.com/choplin/amux/releases/download/v${VERSION}/amux_${VERSION}_darwin_arm64.tar.gz"
+                sha256 "${DARWIN_ARM64_SHA}"
+              end
+            end
+
+            on_linux do
+              if Hardware::CPU.intel?
+                url "https://github.com/choplin/amux/releases/download/v${VERSION}/amux_${VERSION}_linux_amd64.tar.gz"
+                sha256 "${LINUX_AMD64_SHA}"
+              else
+                url "https://github.com/choplin/amux/releases/download/v${VERSION}/amux_${VERSION}_linux_arm64.tar.gz"
+                sha256 "${LINUX_ARM64_SHA}"
+              end
+            end
+
+            depends_on "git"
+
+            def install
+              bin.install "amux"
+            end
+
+            test do
+              # Test version command
+              assert_match version.to_s, shell_output("\#{bin}/amux version")
+
+              # Test help command
+              assert_match "Agent Multiplexer", shell_output("\#{bin}/amux --help")
+            end
+          end
+          EOF
+      - name: Checkout homebrew-amux
+        uses: actions/checkout@v4
         with:
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           repository: choplin/homebrew-amux
-          event-type: update-formula
-          client-payload: |-
-            {
-              "version": "${{ steps.version.outputs.version }}",
-              "formula_url": "https://raw.githubusercontent.com/choplin/amux/${{ github.sha }}/scripts/homebrew-tap/amux.rb"
-            }
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-amux
+      - name: Update formula in tap repository
+        run: |-
+          cp amux.rb homebrew-amux/Formula/
+          cd homebrew-amux
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if git diff --quiet Formula/amux.rb; then
+            echo "No changes to formula"
+            exit 0
+          fi
+
+          VERSION="${{ steps.version.outputs.version }}"
+          git add Formula/amux.rb
+          git commit -m "chore: update amux to v${VERSION}"
+          git push
