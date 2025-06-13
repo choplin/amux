@@ -45,7 +45,7 @@ List running agent sessions:
 ```bash
 amux ps
 # or
-amux agent list
+amux session list
 ```
 
 Output:
@@ -64,7 +64,7 @@ Attach to a running agent session:
 ```bash
 amux attach session-abc123
 # or
-amux agent attach session-abc123
+amux session attach session-abc123
 ```
 
 To detach from a tmux session without stopping it, use `Ctrl-B D`.
@@ -74,7 +74,7 @@ To detach from a tmux session without stopping it, use `Ctrl-B D`.
 Stop a running session:
 
 ```bash
-amux agent stop session-abc123
+amux session stop session-abc123
 ```
 
 **Important**: Sessions in Amux are one-shot. Once stopped, a session cannot be resumed or restarted. To continue
@@ -86,7 +86,7 @@ preserved, allowing agents to pick up where they left off.
 View the current output of a session:
 
 ```bash
-amux agent logs session-abc123
+amux session logs session-abc123
 ```
 
 ## Agent Configuration
@@ -224,7 +224,7 @@ Each session automatically includes:
    amux ps
 
    # View current output
-   amux agent logs session-abc123
+   amux session logs session-abc123
 
    # Attach if needed
    amux attach session-abc123
@@ -234,7 +234,7 @@ Each session automatically includes:
 
    ```bash
    # Stop session when done
-   amux agent stop session-abc123
+   amux session stop session-abc123
 
    # Review results
    cat .amux/context/results-summary.md
