@@ -106,4 +106,3 @@ We implemented a **refresh-based approach** using `tmux capture-pane` with smart
 - Issue: #111 (Fix logs -f to capture AI agent output)
 - tmux capture-pane documentation
 - ANSI escape code standards
-
