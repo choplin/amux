@@ -141,6 +141,11 @@ func (s *ServerV2) handleSessionListResource(ctx context.Context, request mcp.Re
 
 	sessionList := make([]sessionInfo, len(sessions))
 	for i, sess := range sessions {
+		// Update status for running sessions
+		if sess.Status().IsRunning() {
+			_ = sess.UpdateStatus() // Ignore errors, use current status if update fails
+		}
+
 		info := sess.Info()
 		sessionInfo := sessionInfo{
 			ID:          info.ID,
@@ -198,6 +203,11 @@ func (s *ServerV2) handleSessionDetailResource(ctx context.Context, request mcp.
 	sess, err := sessionManager.GetSession(sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get session: %w", err)
+	}
+
+	// Update status for running sessions before returning details
+	if sess.Status().IsRunning() {
+		_ = sess.UpdateStatus() // Ignore errors, use current status if update fails
 	}
 
 	info := sess.Info()

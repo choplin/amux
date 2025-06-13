@@ -125,8 +125,6 @@ func (m *Manager) CreateSession(opts Options) (Session, error) {
 		}
 	}
 
-	// TODO: Create context in working directory if template exists
-
 	// Create and cache session
 	sess := NewTmuxSession(info, m.store, m.tmuxAdapter, ws)
 	m.mu.Lock()

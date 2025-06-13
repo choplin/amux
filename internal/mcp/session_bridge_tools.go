@@ -72,6 +72,11 @@ func (s *ServerV2) handleResourceSessionList(ctx context.Context, request mcp.Ca
 
 	sessionList := make([]sessionInfo, len(sessions))
 	for i, sess := range sessions {
+		// Update status for running sessions
+		if sess.Status().IsRunning() {
+			_ = sess.UpdateStatus() // Ignore errors, use current status if update fails
+		}
+
 		info := sess.Info()
 		sessionInfo := sessionInfo{
 			ID:          info.ID,

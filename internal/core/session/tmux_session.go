@@ -235,8 +235,8 @@ func (s *tmuxSessionImpl) Attach() error {
 }
 
 func (s *tmuxSessionImpl) SendInput(input string) error {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	if !s.info.StatusState.Status.IsRunning() {
 		return ErrSessionNotRunning{ID: s.info.ID}
@@ -246,7 +246,26 @@ func (s *tmuxSessionImpl) SendInput(input string) error {
 		return fmt.Errorf("no tmux session associated")
 	}
 
-	return s.tmuxAdapter.SendKeys(s.info.TmuxSession, input)
+	// Send the input
+	if err := s.tmuxAdapter.SendKeys(s.info.TmuxSession, input); err != nil {
+		return err
+	}
+
+	// Update status to working since we just sent input
+	now := time.Now()
+	if s.info.StatusState.Status == StatusIdle {
+		s.info.StatusState.Status = StatusWorking
+		s.info.StatusState.StatusChangedAt = now
+		// Save status change
+		if err := s.store.Save(s.info); err != nil {
+			// Log error but don't fail the input operation
+			s.logger.Warn("failed to save status change after input", "error", err)
+		}
+	}
+	// Always update last activity time
+	s.info.StatusState.LastOutputTime = now
+
+	return nil
 }
 
 func (s *tmuxSessionImpl) GetOutput(maxLines int) ([]byte, error) {
