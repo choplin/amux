@@ -181,7 +181,10 @@ func (a *RealAdapter) ResizeWindow(sessionName string, width, height int) error 
 // CapturePaneWithOptions captures the content with specified options
 func (a *RealAdapter) CapturePaneWithOptions(sessionName string, lines int) (string, error) {
 	// Build command with options
-	args := []string{"capture-pane", "-t", sessionName, "-p", "-J", "-e"}
+	// -p: print to stdout
+	// -J: join wrapped lines
+	// Note: removed -e flag to preserve ANSI color codes properly
+	args := []string{"capture-pane", "-t", sessionName, "-p", "-J"}
 
 	// Add line limit if specified
 	if lines > 0 {

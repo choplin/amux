@@ -111,13 +111,11 @@ func (t *Tailer) Follow(ctx context.Context) error {
 				// Only redraw if content actually changed
 				if !bytes.Equal(output, lastOutput) && t.opts.Writer != nil {
 					displayOutput := t.processOutput(output)
-					// Use minimal clear - just move cursor home instead of full clear
-					t.moveCursorHome()
+					// Clear entire screen before redraw for clean rendering
+					t.clearScreen()
 					if _, err := t.opts.Writer.Write(displayOutput); err != nil {
 						return fmt.Errorf("failed to write output: %w", err)
 					}
-					// Clear any remaining lines from previous output
-					t.clearToEnd()
 				}
 			} else {
 				// In append mode, only write new content
@@ -185,22 +183,6 @@ func (t *Tailer) clearScreen() {
 	if t.opts.Writer != nil {
 		// Clear screen and move cursor to top-left
 		_, _ = t.opts.Writer.Write([]byte("\033[2J\033[H"))
-	}
-}
-
-// moveCursorHome moves cursor to home position without clearing
-func (t *Tailer) moveCursorHome() {
-	if t.opts.Writer != nil {
-		// Move cursor to top-left
-		_, _ = t.opts.Writer.Write([]byte("\033[H"))
-	}
-}
-
-// clearToEnd clears from cursor to end of screen
-func (t *Tailer) clearToEnd() {
-	if t.opts.Writer != nil {
-		// Clear from cursor to end of screen
-		_, _ = t.opts.Writer.Write([]byte("\033[J"))
 	}
 }
 
