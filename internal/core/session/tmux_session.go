@@ -337,10 +337,10 @@ func (s *tmuxSessionImpl) UpdateStatus() error {
 		if s.info.StatusState.Status != StatusWorking {
 			s.info.StatusState.Status = StatusWorking
 			s.info.StatusState.StatusChangedAt = now
-			// Save status change
-			if err := s.store.Save(s.info); err != nil {
-				return fmt.Errorf("failed to save status change: %w", err)
-			}
+		}
+		// Always save when hash changes to persist the new hash
+		if err := s.store.Save(s.info); err != nil {
+			return fmt.Errorf("failed to save status change: %w", err)
 		}
 	} else {
 		// No output change, check if we should transition to idle
