@@ -32,6 +32,9 @@ Thumbs.db
 .amux/
 .worktrees/
 
+# Homebrew tap repository (temporary)
+homebrew-amux/
+
 # Lefthook
 .lefthook-local.yml
 
