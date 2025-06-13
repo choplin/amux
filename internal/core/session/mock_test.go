@@ -197,13 +197,13 @@ func TestManager_WithUnavailableTmux(t *testing.T) {
 		AgentID:     "test-agent",
 	}
 
-	session, err := manager.CreateSession(opts)
-	if err != nil {
-		t.Fatalf("Failed to create session: %v", err)
+	_, err = manager.CreateSession(opts)
+	if err == nil {
+		t.Fatal("Expected error when creating session with unavailable tmux")
 	}
 
-	// Should create a basic session when tmux unavailable
-	if _, ok := session.(*sessionImpl); !ok {
-		t.Error("Expected basic session when tmux unavailable")
+	// Should return ErrTmuxNotAvailable
+	if _, ok := err.(ErrTmuxNotAvailable); !ok {
+		t.Errorf("Expected ErrTmuxNotAvailable, got %T: %v", err, err)
 	}
 }
