@@ -146,7 +146,7 @@ func (t *Tailer) processOutput(output []byte) []byte {
 		// Auto-detect terminal size
 		_, height, err := term.GetSize(os.Stdout.Fd())
 		if err != nil || height < 10 {
-			maxLines = 10 // Minimum 10 lines
+			maxLines = 30 // Default to 30 lines if can't detect
 		} else {
 			// Reserve 2 lines for status info
 			maxLines = height - 2

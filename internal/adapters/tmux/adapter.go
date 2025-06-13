@@ -90,7 +90,7 @@ func (a *RealAdapter) SendKeys(sessionName, keys string) error {
 
 // CapturePane captures the content of the current pane
 func (a *RealAdapter) CapturePane(sessionName string) (string, error) {
-	cmd := exec.Command(a.tmuxPath, "capture-pane", "-t", sessionName, "-p")
+	cmd := exec.Command(a.tmuxPath, "capture-pane", "-t", sessionName, "-p", "-e")
 	output, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("failed to capture pane: %w", err)
@@ -183,8 +183,8 @@ func (a *RealAdapter) CapturePaneWithOptions(sessionName string, lines int) (str
 	// Build command with options
 	// -p: print to stdout
 	// -J: join wrapped lines
-	// Note: removed -e flag to preserve ANSI color codes properly
-	args := []string{"capture-pane", "-t", sessionName, "-p", "-J"}
+	// -e: include escape sequences (ANSI color codes)
+	args := []string{"capture-pane", "-t", sessionName, "-p", "-J", "-e"}
 
 	// Add line limit if specified
 	if lines > 0 {
