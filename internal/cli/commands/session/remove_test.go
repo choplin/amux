@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/aki/amux/internal/adapters/tmux"
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/workspace"
@@ -15,6 +16,12 @@ import (
 )
 
 func TestRemoveSession(t *testing.T) {
+	// Skip if tmux is not available
+	tmuxAdapter, err := tmux.NewAdapter()
+	if err != nil || !tmuxAdapter.IsAvailable() {
+		t.Skip("tmux not available on this system")
+	}
+
 	// Create test repository
 	repoDir := helpers.CreateTestRepo(t)
 	defer os.RemoveAll(repoDir)
