@@ -271,7 +271,7 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 
 				// Mock adapter returns different output
 				mockAdapter.SetPaneContent("test-session", "new output")
-				session.GetOutput()
+				session.GetOutput(0)
 			},
 			expectedStatus:       StatusWorking,
 			checkStatusChangedAt: false,

@@ -222,7 +222,7 @@ func TestTmuxSession_StatusTracking(t *testing.T) {
 	}
 
 	// Get output - this should keep status as working
-	_, err = session.GetOutput()
+	_, err = session.GetOutput(0)
 	if err != nil {
 		t.Errorf("Failed to get output: %v", err)
 	}
