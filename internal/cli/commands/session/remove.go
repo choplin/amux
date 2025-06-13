@@ -85,8 +85,8 @@ func removeSession(cmd *cobra.Command, args []string, keepWorkspace bool) error 
 		// Get workspace to check if it was auto-created
 		ws, err := wsManager.ResolveWorkspace(workspaceID)
 		if err != nil {
-			// Workspace might already be removed or not found
-			return nil
+			// Workspace might already be removed or not found, skip auto-removal
+			return nil //nolint:nilerr // Workspace not found is not an error in this context
 		}
 
 		// If workspace was auto-created, try to remove it
@@ -95,7 +95,7 @@ func removeSession(cmd *cobra.Command, args []string, keepWorkspace bool) error 
 			sessions, err := sessionManager.ListSessions()
 			if err != nil {
 				ui.Warning("Failed to check for other sessions using workspace: %v", err)
-				return nil
+				return nil //nolint:nilerr // Continue even if we can't check other sessions
 			}
 
 			// Check if any other session is using the same workspace

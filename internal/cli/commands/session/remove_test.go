@@ -243,7 +243,9 @@ func TestRemoveSession(t *testing.T) {
 		// Workspace should be removed now (it was auto-created and no sessions are using it)
 		_, err = wsManager.ResolveWorkspace(ws3.ID)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "workspace not found")
+		if err != nil {
+			assert.Contains(t, err.Error(), "workspace not found")
+		}
 	})
 
 	t.Run("does not remove manually created workspace", func(t *testing.T) {
