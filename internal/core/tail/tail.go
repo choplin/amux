@@ -2,7 +2,6 @@
 package tail
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"hash/fnv"
@@ -58,17 +57,19 @@ func (t *Tailer) Follow(ctx context.Context) error {
 	// Track state for optimization
 	var lastHash uint32 // Hash to detect changes
 
+	// Calculate terminal size for initial output
+	maxLines := t.getTerminalLines()
+
 	// Get initial output
-	output, err := t.session.GetOutput()
+	output, err := t.session.GetOutput(maxLines)
 	if err != nil {
 		return fmt.Errorf("failed to get initial output: %w", err)
 	}
 
-	// Process and display initial output
-	displayOutput := t.processOutput(output)
-	if len(displayOutput) > 0 && t.opts.Writer != nil {
+	// Display initial output
+	if len(output) > 0 && t.opts.Writer != nil {
 		t.clearScreen()
-		if _, err := t.opts.Writer.Write(displayOutput); err != nil {
+		if _, err := t.opts.Writer.Write(output); err != nil {
 			return fmt.Errorf("failed to write initial output: %w", err)
 		}
 	}
@@ -87,8 +88,11 @@ func (t *Tailer) Follow(ctx context.Context) error {
 				return nil // Session ended normally
 			}
 
-			// Get current output
-			output, err := t.session.GetOutput()
+			// Calculate terminal size (handles resize)
+			maxLines := t.getTerminalLines()
+
+			// Get current output limited to terminal size
+			output, err := t.session.GetOutput(maxLines)
 			if err != nil {
 				// Session might have ended, check status
 				if t.session.Status() != session.StatusRunning {
@@ -107,10 +111,9 @@ func (t *Tailer) Follow(ctx context.Context) error {
 
 			// Redraw the changed content
 			if t.opts.Writer != nil {
-				displayOutput := t.processOutput(output)
 				// Clear entire screen before redraw for clean rendering
 				t.clearScreen()
-				if _, err := t.opts.Writer.Write(displayOutput); err != nil {
+				if _, err := t.opts.Writer.Write(output); err != nil {
 					return fmt.Errorf("failed to write output: %w", err)
 				}
 			}
@@ -119,36 +122,21 @@ func (t *Tailer) Follow(ctx context.Context) error {
 	}
 }
 
-// processOutput processes the output to limit to terminal height
-func (t *Tailer) processOutput(output []byte) []byte {
-	// Determine number of lines to show
-	maxLines := t.opts.MaxLines
-	if maxLines == 0 {
-		// Auto-detect terminal size
-		_, height, err := term.GetSize(os.Stdout.Fd())
-		if err != nil || height < 10 {
-			maxLines = 30 // Default to 30 lines if can't detect
-		} else {
-			// Reserve 2 lines for status info
-			maxLines = height - 2
-		}
+// getTerminalLines calculates how many lines to capture based on terminal size
+func (t *Tailer) getTerminalLines() int {
+	// Check if MaxLines is explicitly set
+	if t.opts.MaxLines > 0 {
+		return t.opts.MaxLines
 	}
 
-	// Split into lines and take last N
-	lines := bytes.Split(output, []byte("\n"))
-	if len(lines) <= maxLines {
-		return output
+	// Auto-detect terminal size
+	_, height, err := term.GetSize(os.Stdout.Fd())
+	if err != nil || height < 10 {
+		return 30 // Default to 30 lines if can't detect
 	}
 
-	// Take last maxLines
-	start := len(lines) - maxLines
-	limited := bytes.Join(lines[start:], []byte("\n"))
-
-	// Add indicator that output was truncated
-	// Note: We're already capturing ~100 lines from tmux, so this truncation
-	// only happens if terminal is very small
-	header := fmt.Sprintf("... (showing last %d lines) ...\n", maxLines)
-	return append([]byte(header), limited...)
+	// Reserve 2 lines for status info
+	return height - 2
 }
 
 // clearScreen clears the terminal screen using ANSI escape codes

@@ -70,8 +70,8 @@ func viewSessionLogs(cmd *cobra.Command, args []string) error {
 		return streamSessionLogs(sess)
 	}
 
-	// Get snapshot of output
-	output, err := sess.GetOutput()
+	// Get snapshot of output (0 = all lines for non-follow mode)
+	output, err := sess.GetOutput(0)
 	if err != nil {
 		return fmt.Errorf("failed to get session output: %w", err)
 	}

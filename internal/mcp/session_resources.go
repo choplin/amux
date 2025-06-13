@@ -272,8 +272,8 @@ func (s *ServerV2) handleSessionOutputResource(ctx context.Context, request mcp.
 		}, nil
 	}
 
-	// Get output
-	output, err := sess.GetOutput()
+	// Get output (0 = all lines for resource access)
+	output, err := sess.GetOutput(0)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get session output: %w", err)
 	}
