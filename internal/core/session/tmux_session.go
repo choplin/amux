@@ -279,14 +279,12 @@ func GetTerminalSize() (width, height int) {
 	// Try to get terminal size from stdout
 	if w, h, err := term.GetSize(os.Stdout.Fd()); err == nil && w > 0 && h > 0 {
 		width, height = w, h
-		logger.Default().Debug("detected terminal size from stdout", "width", width, "height", height)
 		return
 	}
 
 	// Try stderr as fallback
 	if w, h, err := term.GetSize(os.Stderr.Fd()); err == nil && w > 0 && h > 0 {
 		width, height = w, h
-		logger.Default().Debug("detected terminal size from stderr", "width", width, "height", height)
 	}
 	return
 }
