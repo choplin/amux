@@ -90,12 +90,8 @@ func (a *RealAdapter) SendKeys(sessionName, keys string) error {
 
 // CapturePane captures the content of the current pane
 func (a *RealAdapter) CapturePane(sessionName string) (string, error) {
-	cmd := exec.Command(a.tmuxPath, "capture-pane", "-t", sessionName, "-p", "-e")
-	output, err := cmd.Output()
-	if err != nil {
-		return "", fmt.Errorf("failed to capture pane: %w", err)
-	}
-	return string(output), nil
+	// Use CapturePaneWithOptions with 0 to capture all lines
+	return a.CapturePaneWithOptions(sessionName, 0)
 }
 
 // AttachSession attaches to a tmux session

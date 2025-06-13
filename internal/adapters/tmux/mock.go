@@ -131,21 +131,8 @@ func (m *MockAdapter) SendKeys(sessionName, keys string) error {
 
 // CapturePane captures the content of the current pane
 func (m *MockAdapter) CapturePane(sessionName string) (string, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	session, exists := m.sessions[sessionName]
-	if !exists {
-		return "", fmt.Errorf("session does not exist: %s", sessionName)
-	}
-
-	// Return all output joined by newlines
-	output := ""
-	for _, line := range session.output {
-		output += line + "\n"
-	}
-
-	return output, nil
+	// Use CapturePaneWithOptions with 0 to capture all lines
+	return m.CapturePaneWithOptions(sessionName, 0)
 }
 
 // AttachSession attaches to a tmux session
