@@ -18,9 +18,10 @@ their lifecycle.
 For v0.1.0, we recommend starting with the workspace features which provide stable, isolated development environments.
 
 > [!WARNING]
-> **🚧 Work in Progress**
+> **🚧 Alpha Release**
 >
-> This project is actively being developed. Expect frequent updates and potential breaking changes.
+> This software is in alpha stage. Features may be incomplete, unstable, or change significantly.
+> Expect bugs and breaking changes until the 1.0 release.
 
 ## 🚀 Features
 
