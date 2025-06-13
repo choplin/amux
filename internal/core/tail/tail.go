@@ -6,9 +6,11 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"time"
 
 	"github.com/aki/amux/internal/core/session"
+	"github.com/charmbracelet/x/term"
 )
 
 // Options configures the tail behavior
@@ -19,13 +21,16 @@ type Options struct {
 	Writer io.Writer
 	// RefreshMode refreshes the entire display instead of appending
 	RefreshMode bool
+	// MaxLines limits the number of lines to display in refresh mode
+	MaxLines int
 }
 
 // DefaultOptions returns default tail options
 func DefaultOptions() Options {
 	return Options{
-		PollInterval: 500 * time.Millisecond,
-		RefreshMode:  true, // Default to refresh mode for better AI agent output
+		PollInterval: 5 * time.Second, // 5 seconds is sufficient for monitoring
+		RefreshMode:  true,            // Default to refresh mode for better AI agent output
+		MaxLines:     0,               // 0 means auto-detect based on terminal size
 	}
 }
 
@@ -52,8 +57,9 @@ func (t *Tailer) Follow(ctx context.Context) error {
 	ticker := time.NewTicker(t.opts.PollInterval)
 	defer ticker.Stop()
 
-	// Track last output for append mode
+	// Track state for optimization
 	var lastOutput []byte
+	var lastHash uint32 // Quick hash to detect changes
 
 	// Get initial output
 	output, err := t.session.GetOutput()
@@ -61,17 +67,18 @@ func (t *Tailer) Follow(ctx context.Context) error {
 		return fmt.Errorf("failed to get initial output: %w", err)
 	}
 
-	// Write initial output if any
-	if len(output) > 0 && t.opts.Writer != nil {
+	// Process and display initial output
+	displayOutput := t.processOutput(output)
+	if len(displayOutput) > 0 && t.opts.Writer != nil {
 		if t.opts.RefreshMode {
-			// Clear screen and move cursor to top
 			t.clearScreen()
 		}
-		if _, err := t.opts.Writer.Write(output); err != nil {
+		if _, err := t.opts.Writer.Write(displayOutput); err != nil {
 			return fmt.Errorf("failed to write initial output: %w", err)
 		}
 	}
 	lastOutput = output
+	lastHash = quickHash(output)
 
 	// Stream output
 	for {
@@ -94,15 +101,23 @@ func (t *Tailer) Follow(ctx context.Context) error {
 				return fmt.Errorf("failed to get output: %w", err)
 			}
 
+			// Quick change detection using hash
+			currentHash := quickHash(output)
+			if currentHash == lastHash {
+				continue // No change, skip expensive operations
+			}
+
 			if t.opts.RefreshMode {
-				// In refresh mode, redraw entire output when it changes
-				// Compare content, not just length, to detect all changes
+				// Only redraw if content actually changed
 				if !bytes.Equal(output, lastOutput) && t.opts.Writer != nil {
-					// Clear screen and redraw
-					t.clearScreen()
-					if _, err := t.opts.Writer.Write(output); err != nil {
+					displayOutput := t.processOutput(output)
+					// Use minimal clear - just move cursor home instead of full clear
+					t.moveCursorHome()
+					if _, err := t.opts.Writer.Write(displayOutput); err != nil {
 						return fmt.Errorf("failed to write output: %w", err)
 					}
+					// Clear any remaining lines from previous output
+					t.clearToEnd()
 				}
 			} else {
 				// In append mode, only write new content
@@ -116,8 +131,53 @@ func (t *Tailer) Follow(ctx context.Context) error {
 				}
 			}
 			lastOutput = output
+			lastHash = currentHash
 		}
 	}
+}
+
+// processOutput processes the output based on options
+func (t *Tailer) processOutput(output []byte) []byte {
+	if !t.opts.RefreshMode {
+		return output
+	}
+
+	// Determine number of lines to show
+	maxLines := t.opts.MaxLines
+	if maxLines == 0 {
+		// Auto-detect terminal size
+		_, height, err := term.GetSize(os.Stdout.Fd())
+		if err != nil || height < 10 {
+			maxLines = 10 // Minimum 10 lines
+		} else {
+			// Reserve 2 lines for status info
+			maxLines = height - 2
+		}
+	}
+
+	// Split into lines and take last N
+	lines := bytes.Split(output, []byte("\n"))
+	if len(lines) <= maxLines {
+		return output
+	}
+
+	// Take last maxLines
+	start := len(lines) - maxLines
+	limited := bytes.Join(lines[start:], []byte("\n"))
+
+	// Add indicator that output was truncated
+	header := fmt.Sprintf("... (showing last %d lines) ...\n", maxLines)
+	return append([]byte(header), limited...)
+}
+
+// quickHash provides a fast hash for change detection
+func quickHash(data []byte) uint32 {
+	var hash uint32 = 2166136261
+	for _, b := range data {
+		hash ^= uint32(b)
+		hash *= 16777619
+	}
+	return hash
 }
 
 // clearScreen clears the terminal screen using ANSI escape codes
@@ -125,6 +185,22 @@ func (t *Tailer) clearScreen() {
 	if t.opts.Writer != nil {
 		// Clear screen and move cursor to top-left
 		t.opts.Writer.Write([]byte("\033[2J\033[H"))
+	}
+}
+
+// moveCursorHome moves cursor to home position without clearing
+func (t *Tailer) moveCursorHome() {
+	if t.opts.Writer != nil {
+		// Move cursor to top-left
+		t.opts.Writer.Write([]byte("\033[H"))
+	}
+}
+
+// clearToEnd clears from cursor to end of screen
+func (t *Tailer) clearToEnd() {
+	if t.opts.Writer != nil {
+		// Clear from cursor to end of screen
+		t.opts.Writer.Write([]byte("\033[J"))
 	}
 }
 

@@ -13,4 +13,5 @@ type Adapter interface {
 	GetSessionPID(sessionName string) (int, error)
 	SetEnvironment(sessionName string, env map[string]string) error
 	ResizeWindow(sessionName string, width, height int) error
+	CapturePaneWithOptions(sessionName string, lines int) (string, error)
 }

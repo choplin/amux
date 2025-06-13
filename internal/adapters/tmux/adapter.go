@@ -177,3 +177,22 @@ func (a *RealAdapter) ResizeWindow(sessionName string, width, height int) error 
 	}
 	return nil
 }
+
+// CapturePaneWithOptions captures the content with specified options
+func (a *RealAdapter) CapturePaneWithOptions(sessionName string, lines int) (string, error) {
+	// Build command with options
+	args := []string{"capture-pane", "-t", sessionName, "-p", "-J", "-e"}
+
+	// Add line limit if specified
+	if lines > 0 {
+		// Capture last N lines
+		args = append(args, "-S", fmt.Sprintf("-%d", lines))
+	}
+
+	cmd := exec.Command(a.tmuxPath, args...)
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to capture pane: %w", err)
+	}
+	return string(output), nil
+}

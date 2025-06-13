@@ -259,3 +259,29 @@ func (m *MockAdapter) AppendSessionOutput(sessionName string, output string) err
 	session.output = append(session.output, output)
 	return nil
 }
+
+// CapturePaneWithOptions captures the content with specified options
+func (m *MockAdapter) CapturePaneWithOptions(sessionName string, lines int) (string, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	session, exists := m.sessions[sessionName]
+	if !exists {
+		return "", fmt.Errorf("session does not exist: %s", sessionName)
+	}
+
+	// Return output joined by newlines
+	output := ""
+	outputLines := session.output
+
+	// Limit to last N lines if specified
+	if lines > 0 && len(outputLines) > lines {
+		outputLines = outputLines[len(outputLines)-lines:]
+	}
+
+	for _, line := range outputLines {
+		output += line + "\n"
+	}
+
+	return output, nil
+}

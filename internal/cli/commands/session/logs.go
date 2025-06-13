@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -30,6 +31,7 @@ Use -f/--follow to continuously stream new output.`,
 
 	// Logs command flags
 	cmd.Flags().BoolVarP(&followLogs, "follow", "f", false, "Follow log output (tail -f behavior)")
+	cmd.Flags().StringVar(&followInterval, "interval", "5s", "Refresh interval when following logs")
 
 	return cmd
 }
@@ -89,6 +91,12 @@ func tailSessionLogs(cmd *cobra.Command, args []string) error {
 
 // streamSessionLogs continuously streams session output
 func streamSessionLogs(sess session.Session) error {
+	// Parse refresh interval
+	interval, err := time.ParseDuration(followInterval)
+	if err != nil {
+		return fmt.Errorf("invalid interval: %w", err)
+	}
+
 	// Set up signal handling for graceful exit
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
@@ -104,10 +112,16 @@ func streamSessionLogs(sess session.Session) error {
 		cancel()
 	}()
 
-	ui.Info("Following logs... (press Ctrl+C to stop)")
+	ui.Output("Following logs (refresh every %s, press Ctrl+C to stop)", interval)
+
+	// Create tail options with custom interval
+	opts := tail.DefaultOptions()
+	opts.PollInterval = interval
+	opts.Writer = os.Stdout
 
 	// Use the tail package to follow logs
-	err := tail.FollowFunc(ctx, sess, os.Stdout)
+	tailer := tail.New(sess, opts)
+	err = tailer.Follow(ctx)
 
 	if err == context.Canceled {
 		ui.Info("\nStopped following logs")
