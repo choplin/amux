@@ -56,7 +56,7 @@ func listSessions(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create table
-	tbl := ui.NewTable("SESSION", "AGENT", "WORKSPACE", "STATUS", "ACTIVITY", "RUNTIME")
+	tbl := ui.NewTable("SESSION", "AGENT", "WORKSPACE", "STATUS", "DURATION", "RUNTIME")
 
 	// Add rows
 	for _, sess := range sessions {
@@ -94,16 +94,11 @@ func listSessions(cmd *cobra.Command, args []string) error {
 			statusStr = ui.ErrorStyle.Render(statusStr)
 		}
 
-		// Show status with duration
-		activityStr := "-"
-		if info.Status.IsRunning() && !info.StatusChangedAt.IsZero() {
+		// Show duration in current status
+		durationStr := "-"
+		if !info.StatusChangedAt.IsZero() {
 			statusDuration := time.Since(info.StatusChangedAt)
-			switch info.Status {
-			case session.StatusWorking:
-				activityStr = ui.SuccessStyle.Render(fmt.Sprintf("working %s", ui.FormatDuration(statusDuration)))
-			case session.StatusIdle:
-				activityStr = ui.DimStyle.Render(fmt.Sprintf("idle %s", ui.FormatDuration(statusDuration)))
-			}
+			durationStr = ui.FormatDuration(statusDuration)
 		}
 
 		displayID := info.ID
@@ -111,7 +106,7 @@ func listSessions(cmd *cobra.Command, args []string) error {
 			displayID = info.Index
 		}
 
-		tbl.AddRow(displayID, info.AgentID, wsName, statusStr, activityStr, runtime)
+		tbl.AddRow(displayID, info.AgentID, wsName, statusStr, durationStr, runtime)
 	}
 
 	// Print with header
