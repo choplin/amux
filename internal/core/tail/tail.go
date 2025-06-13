@@ -20,9 +20,7 @@ type Options struct {
 	PollInterval time.Duration
 	// Writer is where to write the output
 	Writer io.Writer
-	// RefreshMode refreshes the entire display instead of appending
-	RefreshMode bool
-	// MaxLines limits the number of lines to display in refresh mode
+	// MaxLines limits the number of lines to display
 	MaxLines int
 }
 
@@ -30,7 +28,6 @@ type Options struct {
 func DefaultOptions() Options {
 	return Options{
 		PollInterval: 1 * time.Second, // 1 second for responsive monitoring
-		RefreshMode:  true,            // Default to refresh mode for better AI agent output
 		MaxLines:     0,               // 0 means auto-detect based on terminal size
 	}
 }
@@ -59,8 +56,7 @@ func (t *Tailer) Follow(ctx context.Context) error {
 	defer ticker.Stop()
 
 	// Track state for optimization
-	var lastOutput []byte
-	var lastHash uint32 // Quick hash to detect changes
+	var lastHash uint32 // Hash to detect changes
 
 	// Get initial output
 	output, err := t.session.GetOutput()
@@ -71,15 +67,14 @@ func (t *Tailer) Follow(ctx context.Context) error {
 	// Process and display initial output
 	displayOutput := t.processOutput(output)
 	if len(displayOutput) > 0 && t.opts.Writer != nil {
-		if t.opts.RefreshMode {
-			t.clearScreen()
-		}
+		t.clearScreen()
 		if _, err := t.opts.Writer.Write(displayOutput); err != nil {
 			return fmt.Errorf("failed to write initial output: %w", err)
 		}
 	}
-	lastOutput = output
-	lastHash = quickHash(output)
+	h := fnv.New32a()
+	h.Write(output)
+	lastHash = h.Sum32()
 
 	// Stream output
 	for {
@@ -103,44 +98,29 @@ func (t *Tailer) Follow(ctx context.Context) error {
 			}
 
 			// Quick change detection using hash
-			currentHash := quickHash(output)
+			h := fnv.New32a()
+			h.Write(output)
+			currentHash := h.Sum32()
 			if currentHash == lastHash {
 				continue // No change, skip expensive operations
 			}
 
-			if t.opts.RefreshMode {
-				// Only redraw if content actually changed
-				if !bytes.Equal(output, lastOutput) && t.opts.Writer != nil {
-					displayOutput := t.processOutput(output)
-					// Clear entire screen before redraw for clean rendering
-					t.clearScreen()
-					if _, err := t.opts.Writer.Write(displayOutput); err != nil {
-						return fmt.Errorf("failed to write output: %w", err)
-					}
-				}
-			} else {
-				// In append mode, only write new content
-				if len(output) > len(lastOutput) {
-					newContent := output[len(lastOutput):]
-					if t.opts.Writer != nil {
-						if _, err := t.opts.Writer.Write(newContent); err != nil {
-							return fmt.Errorf("failed to write output: %w", err)
-						}
-					}
+			// Redraw the changed content
+			if t.opts.Writer != nil {
+				displayOutput := t.processOutput(output)
+				// Clear entire screen before redraw for clean rendering
+				t.clearScreen()
+				if _, err := t.opts.Writer.Write(displayOutput); err != nil {
+					return fmt.Errorf("failed to write output: %w", err)
 				}
 			}
-			lastOutput = output
 			lastHash = currentHash
 		}
 	}
 }
 
-// processOutput processes the output based on options
+// processOutput processes the output to limit to terminal height
 func (t *Tailer) processOutput(output []byte) []byte {
-	if !t.opts.RefreshMode {
-		return output
-	}
-
 	// Determine number of lines to show
 	maxLines := t.opts.MaxLines
 	if maxLines == 0 {
@@ -165,16 +145,10 @@ func (t *Tailer) processOutput(output []byte) []byte {
 	limited := bytes.Join(lines[start:], []byte("\n"))
 
 	// Add indicator that output was truncated
+	// Note: We're already capturing ~100 lines from tmux, so this truncation
+	// only happens if terminal is very small
 	header := fmt.Sprintf("... (showing last %d lines) ...\n", maxLines)
 	return append([]byte(header), limited...)
-}
-
-// quickHash provides a fast hash for change detection
-// Uses FNV-1a which is one of the fastest non-cryptographic hashes
-func quickHash(data []byte) uint32 {
-	h := fnv.New32a()
-	h.Write(data)
-	return h.Sum32()
 }
 
 // clearScreen clears the terminal screen using ANSI escape codes

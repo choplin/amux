@@ -248,8 +248,10 @@ func (s *tmuxSessionImpl) GetOutput() ([]byte, error) {
 		return nil, fmt.Errorf("no tmux session associated")
 	}
 
-	// Use optimized capture with no line limit (0 = capture all)
-	output, err := s.tmuxAdapter.CapturePaneWithOptions(s.info.TmuxSession, 0)
+	// Capture only recent output for performance
+	// 100 lines is sufficient for monitoring while avoiding huge buffer captures
+	// This prevents capturing thousands of lines from long-running sessions
+	output, err := s.tmuxAdapter.CapturePaneWithOptions(s.info.TmuxSession, 100)
 	if err != nil {
 		return nil, err
 	}
