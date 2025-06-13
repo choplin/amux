@@ -12,6 +12,7 @@ import (
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/logger"
 	"github.com/aki/amux/internal/core/session"
+	"github.com/aki/amux/internal/core/terminal"
 	"github.com/aki/amux/internal/core/workspace"
 )
 
@@ -68,7 +69,7 @@ func attachSession(cmd *cobra.Command, args []string) error {
 	}
 
 	// Detect current terminal size and resize tmux window
-	width, height := session.GetTerminalSize()
+	width, height := terminal.GetSize()
 	tmuxAdapter, err := tmux.NewAdapter()
 	if err == nil {
 		// Create a logger for debugging
