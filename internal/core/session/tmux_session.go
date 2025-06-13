@@ -72,13 +72,8 @@ func (s *tmuxSessionImpl) AgentID() string {
 }
 
 func (s *tmuxSessionImpl) Status() Status {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	// Update status based on output activity before returning
-	if s.info.Status.IsRunning() {
-		s.updateStatus()
-	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	return s.info.Status
 }
@@ -253,8 +248,8 @@ func (s *tmuxSessionImpl) SendInput(input string) error {
 }
 
 func (s *tmuxSessionImpl) GetOutput(maxLines int) ([]byte, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	if !s.info.Status.IsRunning() {
 		return nil, ErrSessionNotRunning{ID: s.info.ID}
@@ -270,22 +265,6 @@ func (s *tmuxSessionImpl) GetOutput(maxLines int) ([]byte, error) {
 		return nil, err
 	}
 
-	// Track output changes and update status
-	outputStr := string(output)
-	now := time.Now()
-
-	if outputStr != s.lastOutputContent {
-		// Output changed, agent is working
-		s.lastOutputContent = outputStr
-		s.lastOutputTime = now
-		if s.info.Status != StatusWorking {
-			s.info.Status = StatusWorking
-			s.info.StatusChangedAt = now
-		}
-	} else {
-		// Check if we should transition to idle
-		s.updateStatus()
-	}
 	return []byte(output), nil
 }
 
@@ -304,22 +283,54 @@ func (s *tmuxSessionImpl) getDefaultCommand() string {
 	}
 }
 
-// updateStatus updates the session status based on time since last output
-func (s *tmuxSessionImpl) updateStatus() {
+// UpdateStatus checks the current output and updates the session status accordingly.
+// This should be called by commands that need fresh status information.
+func (s *tmuxSessionImpl) UpdateStatus() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	// Only update if session is running
 	if !s.info.Status.IsRunning() {
-		return
+		return nil
 	}
 
-	timeSinceLastOutput := time.Since(s.lastOutputTime)
-
-	// Define threshold for idle detection
-	const idleThreshold = 3 * time.Second // No output for 3 seconds = idle (AI agents show indicators while working)
-
-	if timeSinceLastOutput >= idleThreshold && s.info.Status == StatusWorking {
-		// Transition to idle
-		now := time.Now()
-		s.info.Status = StatusIdle
-		s.info.StatusChangedAt = now
+	// Get current output
+	output, err := s.tmuxAdapter.CapturePaneWithOptions(s.info.TmuxSession, 0)
+	if err != nil {
+		return fmt.Errorf("failed to capture pane: %w", err)
 	}
+
+	outputStr := string(output)
+	now := time.Now()
+
+	// Check if output changed
+	if outputStr != s.lastOutputContent {
+		// Output changed, agent is working
+		s.lastOutputContent = outputStr
+		s.lastOutputTime = now
+		if s.info.Status != StatusWorking {
+			s.info.Status = StatusWorking
+			s.info.StatusChangedAt = now
+			// Save status change
+			if err := s.store.Save(s.info); err != nil {
+				return fmt.Errorf("failed to save status change: %w", err)
+			}
+		}
+	} else {
+		// No output change, check if we should transition to idle
+		timeSinceLastOutput := time.Since(s.lastOutputTime)
+		const idleThreshold = 3 * time.Second
+
+		if timeSinceLastOutput >= idleThreshold && s.info.Status == StatusWorking {
+			// Transition to idle
+			s.info.Status = StatusIdle
+			s.info.StatusChangedAt = now
+			// Save status change
+			if err := s.store.Save(s.info); err != nil {
+				return fmt.Errorf("failed to save status change: %w", err)
+			}
+		}
+	}
+
+	return nil
 }

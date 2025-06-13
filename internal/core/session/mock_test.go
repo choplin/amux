@@ -249,6 +249,17 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 	// Create tmux session with mock adapter
 	session := NewTmuxSession(info, store, mockAdapter, ws).(*tmuxSessionImpl)
 
+	// Initialize the session as if it started
+	session.info.Status = StatusWorking
+	session.info.TmuxSession = "test-session"
+
+	// Create the session in the mock adapter
+	err = mockAdapter.CreateSession("test-session", ws.Path)
+	if err != nil {
+		t.Fatalf("Failed to create mock session: %v", err)
+	}
+	mockAdapter.SetPaneContent("test-session", "initial output")
+
 	// Test status behavior
 	tests := []struct {
 		name                 string
@@ -257,21 +268,20 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 		checkStatusChangedAt bool
 	}{
 		{
-			name:                 "Initial status is created",
-			setupFunc:            func() {},
-			expectedStatus:       StatusCreated,
+			name: "Initial working status remains working",
+			setupFunc: func() {
+				// First update to establish baseline
+				session.UpdateStatus()
+			},
+			expectedStatus:       StatusWorking,
 			checkStatusChangedAt: false,
 		},
 		{
-			name: "Status becomes working after output change",
+			name: "Status remains working with new output",
 			setupFunc: func() {
-				// Simulate session is running
-				session.info.Status = StatusWorking
-				session.info.TmuxSession = "test-session"
-
-				// Mock adapter returns different output
+				// Change output
 				mockAdapter.SetPaneContent("test-session", "new output")
-				session.GetOutput(0)
+				session.UpdateStatus()
 			},
 			expectedStatus:       StatusWorking,
 			checkStatusChangedAt: false,
@@ -279,7 +289,9 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 		{
 			name: "Status remains working within idle threshold",
 			setupFunc: func() {
-				// Just check status again - should still be working
+				// Wait a bit but less than idle threshold
+				time.Sleep(1 * time.Second)
+				session.UpdateStatus()
 			},
 			expectedStatus:       StatusWorking,
 			checkStatusChangedAt: false,
@@ -287,8 +299,24 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 		{
 			name: "Status becomes idle after no output for idle threshold",
 			setupFunc: func() {
-				// Manually set last output time to past idle threshold
-				session.lastOutputTime = time.Now().Add(-5 * time.Second)
+				// Reset to a known state
+				mockAdapter.SetPaneContent("test-session", "idle test output")
+
+				// First ensure we have current state by calling UpdateStatus
+				// This will capture the current output and set lastOutputContent
+				err := session.UpdateStatus()
+				if err != nil {
+					t.Fatalf("First UpdateStatus failed: %v", err)
+				}
+
+				// Wait for idle threshold to pass
+				time.Sleep(3500 * time.Millisecond) // Well over 3 seconds
+
+				// Update status again - should detect idle since output hasn't changed
+				err = session.UpdateStatus()
+				if err != nil {
+					t.Fatalf("Second UpdateStatus failed: %v", err)
+				}
 			},
 			expectedStatus:       StatusIdle,
 			checkStatusChangedAt: true,

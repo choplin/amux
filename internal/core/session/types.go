@@ -124,6 +124,9 @@ type Session interface {
 
 	// GetOutput returns recent output from the session
 	GetOutput(maxLines int) ([]byte, error)
+
+	// UpdateStatus updates the session status based on current output
+	UpdateStatus() error
 }
 
 // Store persists session metadata

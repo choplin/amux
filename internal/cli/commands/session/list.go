@@ -60,6 +60,11 @@ func listSessions(cmd *cobra.Command, args []string) error {
 
 	// Add rows
 	for _, sess := range sessions {
+		// Update status for running sessions
+		if sess.Status().IsRunning() {
+			_ = sess.UpdateStatus() // Ignore errors, just use current status if update fails
+		}
+
 		info := sess.Info()
 
 		// Get workspace name
