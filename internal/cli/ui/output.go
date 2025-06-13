@@ -266,3 +266,17 @@ func FormatSize(bytes int64) string {
 		return fmt.Sprintf("%.1fGB", float64(bytes)/GB)
 	}
 }
+
+// Confirm asks the user for confirmation
+func Confirm(prompt string) bool {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Printf("%s [y/N]: ", prompt)
+
+	response, err := reader.ReadString('\n')
+	if err != nil {
+		return false
+	}
+
+	response = strings.TrimSpace(strings.ToLower(response))
+	return response == "y" || response == "yes"
+}

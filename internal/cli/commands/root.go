@@ -109,6 +109,9 @@ func init() {
 
 	// Add mailbox command
 	rootCmd.AddCommand(mailboxCmd)
+
+	// Add hooks command
+	rootCmd.AddCommand(hooksCmd)
 }
 
 // Execute runs the root command
