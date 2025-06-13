@@ -32,6 +32,13 @@ For v0.1.0, we recommend starting with the workspace features which provide stab
 
 ## 📦 Installation
 
+### Homebrew (macOS and Linux)
+
+```bash
+brew tap choplin/amux
+brew install amux
+```
+
 ### From Source
 
 ```bash
