@@ -17,8 +17,8 @@ cumbersome to type:
 This creates friction in the user experience, especially for commands that are run frequently like:
 
 - `amux ws get <id>`
-- `amux agent attach <id>`
-- `amux agent stop <id>`
+- `amux session attach <id>`
+- `amux session stop <id>`
 
 ## Decision
 

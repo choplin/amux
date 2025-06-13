@@ -109,7 +109,7 @@ Tools perform state-changing operations on workspaces.
   - `command` (optional): Override the agent's default command
   - `environment` (optional): Additional environment variables
 - **Returns**: Session details including ID, status, and attach commands
-- **Note**: Equivalent to CLI's `amux agent run`
+- **Note**: Equivalent to CLI's `amux session run`
 
 #### session_stop
 
@@ -117,7 +117,7 @@ Tools perform state-changing operations on workspaces.
 - **Parameters**:
   - `session_id` (required): Session ID or short ID
 - **Returns**: Confirmation message
-- **Note**: Equivalent to CLI's `amux agent stop`
+- **Note**: Equivalent to CLI's `amux session stop`
 
 #### session_send_input
 

@@ -98,14 +98,17 @@ amux workspace show <id>       # alias: amux ws show
 amux workspace remove <id>     # alias: amux ws remove
 amux workspace prune           # alias: amux ws prune
 
-# Agent management
-amux agent run <agent>         # alias: amux run
-amux agent list               # alias: amux ps
-amux agent attach <session>   # alias: amux attach
-amux agent stop <session>
-amux agent logs <session>     # View session output
-amux agent logs -f <session>  # Follow logs (tail -f behavior)
-amux tail <session>           # alias: amux agent logs -f
+# Session management
+amux session run <agent>       # alias: amux run
+amux session list             # alias: amux ps
+amux session attach <session> # alias: amux attach
+amux session stop <session>
+amux session remove <session> # alias: amux session rm
+amux session logs <session>   # View session output
+amux session logs -f <session> # Follow logs (tail -f behavior)
+amux tail <session>           # alias: amux session logs -f
+
+# Agent configuration
 amux agent config <subcommand>
 
 # MCP server
@@ -243,9 +246,10 @@ amux run gpt --workspace bugfix-api        # Run GPT in another workspace
 # Manage sessions
 amux ps                                    # List running agents
 amux attach session-123                    # Attach to agent session
-amux agent stop session-123                # Stop a specific session
-amux agent logs session-123                # View session output
-amux agent logs -f session-123             # Follow logs in real-time
+amux session stop session-123              # Stop a specific session
+amux session remove session-123            # Remove a stopped session
+amux session logs session-123              # View session output
+amux session logs -f session-123           # Follow logs in real-time
 amux tail session-123                      # Shortcut for follow logs
 
 # Configure agents
