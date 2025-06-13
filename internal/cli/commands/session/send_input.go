@@ -1,0 +1,88 @@
+package session
+
+import (
+	"fmt"
+
+	"github.com/spf13/cobra"
+
+	"github.com/aki/amux/internal/cli/ui"
+	"github.com/aki/amux/internal/core/config"
+	"github.com/aki/amux/internal/core/session"
+	"github.com/aki/amux/internal/core/workspace"
+)
+
+// sendInputCmd returns the 'session send-input' command
+func sendInputCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "send-input <session-id> <input-text>",
+		Aliases: []string{"send"},
+		Short:   "Send input to a running session",
+		Long: `Send input text to a running AI agent session's stdin.
+
+This command allows you to programmatically send commands or data to an AI agent
+that is running in a session. The input is sent directly to the session's stdin
+through the tmux interface.
+
+Examples:
+  # Send a simple command to a session
+  amux session send-input 1 "ls -la"
+
+  # Send input using the session name
+  amux session send-input feat-auth-agent "npm test"
+
+  # Send multi-line input (use quotes)
+  amux session send-input 2 "echo 'line 1'
+echo 'line 2'"`,
+		Args: cobra.ExactArgs(2),
+		RunE: sendInputToSession,
+	}
+
+	return cmd
+}
+
+// sendInputToSession executes the send-input command
+func sendInputToSession(cmd *cobra.Command, args []string) error {
+	sessionID := args[0]
+	inputText := args[1]
+
+	// Find project root
+	projectRoot, err := config.FindProjectRoot()
+	if err != nil {
+		return fmt.Errorf("failed to find project root: %w", err)
+	}
+
+	// Create managers
+	configManager := config.NewManager(projectRoot)
+	wsManager, err := workspace.NewManager(configManager)
+	if err != nil {
+		return fmt.Errorf("failed to create workspace manager: %w", err)
+	}
+
+	sessionManager, err := createSessionManager(configManager, wsManager)
+	if err != nil {
+		return fmt.Errorf("failed to create session manager: %w", err)
+	}
+
+	// Get the session
+	sess, err := sessionManager.GetSession(sessionID)
+	if err != nil {
+		return fmt.Errorf("failed to get session: %w", err)
+	}
+
+	// Check if session is running
+	if sess.Status() != session.StatusRunning {
+		return fmt.Errorf("session %s is not running (current status: %s)", sessionID, sess.Status())
+	}
+
+	// Send input to the session
+	if err := sess.SendInput(inputText); err != nil {
+		return fmt.Errorf("failed to send input to session: %w", err)
+	}
+
+	// Display success message
+	info := sess.Info()
+	ui.Success("Input sent to session %s (agent: %s, workspace: %s)",
+		sessionID, info.AgentID, info.WorkspaceID)
+
+	return nil
+}
