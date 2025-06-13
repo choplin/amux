@@ -323,6 +323,99 @@ func TestManager_RemoveSession(t *testing.T) {
 	}
 }
 
+func TestManager_CreateSessionWithoutTmux(t *testing.T) {
+	// Setup test environment
+	_, wsManager, configManager := setupTestEnvironment(t)
+
+	// Create a test workspace
+	ws, err := wsManager.Create(workspace.CreateOptions{
+		Name:       "test-workspace-no-tmux",
+		BaseBranch: "main",
+	})
+	if err != nil {
+		t.Fatalf("Failed to create test workspace: %v", err)
+	}
+
+	// Create session store
+	store, err := NewFileStore(configManager.GetAmuxDir())
+	if err != nil {
+		t.Fatalf("Failed to create session store: %v", err)
+	}
+
+	// Create session manager without tmux adapter
+	manager := NewManager(store, wsManager, nil, nil)
+	manager.SetTmuxAdapter(nil) // Explicitly set to nil to simulate no tmux
+
+	// Test creating a session without tmux
+	opts := Options{
+		WorkspaceID: ws.ID,
+		AgentID:     "claude",
+		Command:     "claude code",
+	}
+
+	_, err = manager.CreateSession(opts)
+	if err == nil {
+		t.Fatal("Expected error when creating session without tmux")
+	}
+
+	// Verify we get the correct error type
+	if _, ok := err.(ErrTmuxNotAvailable); !ok {
+		t.Errorf("Expected ErrTmuxNotAvailable, got %T: %v", err, err)
+	}
+}
+
+func TestManager_GetSessionWithoutTmux(t *testing.T) {
+	// Setup test environment
+	_, wsManager, configManager := setupTestEnvironment(t)
+
+	// Create a test workspace
+	ws, err := wsManager.Create(workspace.CreateOptions{
+		Name:       "test-workspace-get-no-tmux",
+		BaseBranch: "main",
+	})
+	if err != nil {
+		t.Fatalf("Failed to create test workspace: %v", err)
+	}
+
+	// Create session store
+	store, err := NewFileStore(configManager.GetAmuxDir())
+	if err != nil {
+		t.Fatalf("Failed to create session store: %v", err)
+	}
+
+	// First create a session with tmux available
+	manager := NewManager(store, wsManager, nil, nil)
+	mockAdapter := tmux.NewMockAdapter()
+	manager.SetTmuxAdapter(mockAdapter)
+
+	session, err := manager.CreateSession(Options{
+		WorkspaceID: ws.ID,
+		AgentID:     "claude",
+		Command:     "claude code",
+	})
+	if err != nil {
+		t.Fatalf("Failed to create session: %v", err)
+	}
+
+	sessionID := session.ID()
+
+	// Create a new manager without tmux to simulate fresh start
+	// This tests the case where sessions are persisted but tmux is not available on restart
+	manager2 := NewManager(store, wsManager, nil, nil)
+	manager2.SetTmuxAdapter(nil)
+
+	// Try to get the session without tmux
+	_, err = manager2.GetSession(sessionID)
+	if err == nil {
+		t.Fatal("Expected error when getting session without tmux")
+	}
+
+	// Verify we get the correct error type
+	if _, ok := err.(ErrTmuxNotAvailable); !ok {
+		t.Errorf("Expected ErrTmuxNotAvailable, got %T: %v", err, err)
+	}
+}
+
 func TestFileStore_Operations(t *testing.T) {
 	tmpDir := t.TempDir()
 	store, err := NewFileStore(tmpDir)

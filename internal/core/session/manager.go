@@ -1,7 +1,6 @@
 package session
 
 import (
-	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -13,118 +12,6 @@ import (
 	"github.com/aki/amux/internal/core/mailbox"
 	"github.com/aki/amux/internal/core/workspace"
 )
-
-// sessionImpl implements the Session interface
-type sessionImpl struct {
-	info  *Info
-	store Store
-	mu    sync.RWMutex
-}
-
-func (s *sessionImpl) ID() string {
-	return s.info.ID
-}
-
-func (s *sessionImpl) WorkspaceID() string {
-	return s.info.WorkspaceID
-}
-
-func (s *sessionImpl) AgentID() string {
-	return s.info.AgentID
-}
-
-func (s *sessionImpl) Status() Status {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.info.Status
-}
-
-func (s *sessionImpl) Info() *Info {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	// Return a copy to prevent external modification
-	info := *s.info
-	return &info
-}
-
-func (s *sessionImpl) Start(ctx context.Context) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if s.info.Status == StatusRunning {
-		return ErrSessionAlreadyRunning{ID: s.info.ID}
-	}
-
-	// TODO: Implement actual session start with tmux
-	// For now, just update status
-	now := time.Now()
-	s.info.Status = StatusRunning
-	s.info.StartedAt = &now
-
-	if err := s.store.Save(s.info); err != nil {
-		return fmt.Errorf("failed to save session: %w", err)
-	}
-
-	return nil
-}
-
-func (s *sessionImpl) Stop() error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if s.info.Status != StatusRunning {
-		return ErrSessionNotRunning{ID: s.info.ID}
-	}
-
-	// TODO: Implement actual session stop with tmux
-	// For now, just update status
-	now := time.Now()
-	s.info.Status = StatusStopped
-	s.info.StoppedAt = &now
-
-	if err := s.store.Save(s.info); err != nil {
-		return fmt.Errorf("failed to save session: %w", err)
-	}
-
-	return nil
-}
-
-func (s *sessionImpl) Attach() error {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	if s.info.Status != StatusRunning {
-		return ErrSessionNotRunning{ID: s.info.ID}
-	}
-
-	// TODO: Implement actual attach with tmux
-	return fmt.Errorf("attach not yet implemented")
-}
-
-func (s *sessionImpl) SendInput(input string) error {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	if s.info.Status != StatusRunning {
-		return ErrSessionNotRunning{ID: s.info.ID}
-	}
-
-	// TODO: Implement actual input sending with tmux
-	return fmt.Errorf("send input not yet implemented")
-}
-
-func (s *sessionImpl) GetOutput() ([]byte, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	if s.info.Status != StatusRunning {
-		return nil, ErrSessionNotRunning{ID: s.info.ID}
-	}
-
-	// TODO: Implement actual output capture with tmux
-	return nil, fmt.Errorf("get output not yet implemented")
-}
 
 // Manager implements Manager interface
 type Manager struct {
@@ -246,18 +133,13 @@ func (m *Manager) CreateSession(opts Options) (Session, error) {
 		}
 	}
 
-	// Create session implementation
-	var session Session
-	if m.tmuxAdapter != nil && m.tmuxAdapter.IsAvailable() {
-		// Use tmux-backed session
-		session = NewTmuxSession(info, m.store, m.tmuxAdapter, ws, WithTmuxLogger(m.logger))
-	} else {
-		// Fall back to basic session
-		session = &sessionImpl{
-			info:  info,
-			store: m.store,
-		}
+	// Check if tmux is available
+	if m.tmuxAdapter == nil || !m.tmuxAdapter.IsAvailable() {
+		return nil, ErrTmuxNotAvailable{}
 	}
+
+	// Create tmux-backed session
+	session := NewTmuxSession(info, m.store, m.tmuxAdapter, ws, WithTmuxLogger(m.logger))
 
 	// Cache in memory
 	m.mu.Lock()
@@ -400,24 +282,16 @@ func (m *Manager) CleanupOrphaned() error {
 
 // createSessionFromInfo creates the appropriate session implementation from stored info
 func (m *Manager) createSessionFromInfo(info *Info) (Session, error) {
-	// If we have tmux and the session was using tmux, create tmux session
-	if m.tmuxAdapter != nil && m.tmuxAdapter.IsAvailable() && info.TmuxSession != "" {
-		// Get workspace for tmux session
-		ws, err := m.workspaceManager.ResolveWorkspace(info.WorkspaceID)
-		if err != nil {
-			// Workspace might be gone, fall back to basic session
-			//nolint:nilerr // Intentionally returning nil error to fall back gracefully
-			return &sessionImpl{
-				info:  info,
-				store: m.store,
-			}, nil
-		}
-		return NewTmuxSession(info, m.store, m.tmuxAdapter, ws), nil
+	// Check if tmux is available
+	if m.tmuxAdapter == nil || !m.tmuxAdapter.IsAvailable() {
+		return nil, ErrTmuxNotAvailable{}
 	}
 
-	// Fall back to basic session
-	return &sessionImpl{
-		info:  info,
-		store: m.store,
-	}, nil
+	// Get workspace for tmux session
+	ws, err := m.workspaceManager.ResolveWorkspace(info.WorkspaceID)
+	if err != nil {
+		return nil, fmt.Errorf("workspace not found for session: %w", err)
+	}
+
+	return NewTmuxSession(info, m.store, m.tmuxAdapter, ws), nil
 }
