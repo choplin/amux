@@ -79,14 +79,14 @@ func listSessions(cmd *cobra.Command, args []string) error {
 		if info.StartedAt != nil {
 			if info.StoppedAt != nil {
 				totalTime = ui.FormatDuration(info.StoppedAt.Sub(*info.StartedAt))
-			} else if info.Status.IsRunning() {
+			} else if info.StatusState.Status.IsRunning() {
 				totalTime = ui.FormatDuration(time.Since(*info.StartedAt))
 			}
 		}
 
 		// Format status for display
-		statusStr := string(info.Status)
-		switch info.Status {
+		statusStr := string(info.StatusState.Status)
+		switch info.StatusState.Status {
 		case session.StatusCreated:
 			// StatusCreated uses default styling (no color)
 		case session.StatusWorking:
@@ -101,8 +101,8 @@ func listSessions(cmd *cobra.Command, args []string) error {
 
 		// Show time in current status
 		inStatusStr := "-"
-		if !info.StatusChangedAt.IsZero() {
-			statusDuration := time.Since(info.StatusChangedAt)
+		if !info.StatusState.StatusChangedAt.IsZero() {
+			statusDuration := time.Since(info.StatusState.StatusChangedAt)
 			inStatusStr = ui.FormatDuration(statusDuration)
 		}
 

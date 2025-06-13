@@ -35,13 +35,18 @@ func TestTmuxSession_StartStop(t *testing.T) {
 	}
 
 	// Create session info
+	now := time.Now()
 	info := &Info{
 		ID:          "test-tmux-session",
 		WorkspaceID: ws.ID,
 		AgentID:     "test-agent",
-		Status:      StatusCreated,
-		Command:     "echo 'Test session started'",
-		CreatedAt:   time.Now(),
+		StatusState: StatusState{
+			Status:          StatusCreated,
+			StatusChangedAt: now,
+			LastOutputTime:  now,
+		},
+		Command:   "echo 'Test session started'",
+		CreatedAt: now,
 	}
 
 	// Save info
@@ -111,14 +116,19 @@ func TestTmuxSession_WithInitialPrompt(t *testing.T) {
 
 	// Create session info with initial prompt
 	testPrompt := "echo 'Initial prompt executed'"
+	now := time.Now()
 	info := &Info{
-		ID:            "test-tmux-prompt-session",
-		WorkspaceID:   ws.ID,
-		AgentID:       "test-agent",
-		Status:        StatusCreated,
+		ID:          "test-tmux-prompt-session",
+		WorkspaceID: ws.ID,
+		AgentID:     "test-agent",
+		StatusState: StatusState{
+			Status:          StatusCreated,
+			StatusChangedAt: now,
+			LastOutputTime:  now,
+		},
 		Command:       "bash", // Start bash to receive the prompt
 		InitialPrompt: testPrompt,
-		CreatedAt:     time.Now(),
+		CreatedAt:     now,
 	}
 
 	// Save info
@@ -188,13 +198,18 @@ func TestTmuxSession_StatusTracking(t *testing.T) {
 	}
 
 	// Create session info
+	now := time.Now()
 	info := &Info{
 		ID:          "test-status-session",
 		WorkspaceID: ws.ID,
 		AgentID:     "test-agent",
-		Status:      StatusCreated,
-		Command:     "bash",
-		CreatedAt:   time.Now(),
+		StatusState: StatusState{
+			Status:          StatusCreated,
+			StatusChangedAt: now,
+			LastOutputTime:  now,
+		},
+		Command:   "bash",
+		CreatedAt: now,
 	}
 
 	// Save info

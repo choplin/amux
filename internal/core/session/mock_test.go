@@ -36,16 +36,21 @@ func TestTmuxSession_WithMock(t *testing.T) {
 	mockAdapter := tmux.NewMockAdapter()
 
 	// Create session info
+	now := time.Now()
 	info := &Info{
 		ID:          "test-mock-session",
 		WorkspaceID: ws.ID,
 		AgentID:     "test-agent",
-		Status:      StatusCreated,
-		Command:     "echo 'Test session started'",
+		StatusState: StatusState{
+			Status:          StatusCreated,
+			StatusChangedAt: now,
+			LastOutputTime:  now,
+		},
+		Command: "echo 'Test session started'",
 		Environment: map[string]string{
 			"TEST_VAR": "test_value",
 		},
-		CreatedAt: time.Now(),
+		CreatedAt: now,
 	}
 
 	// Save info
@@ -232,13 +237,16 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 	// Create session info
 	now := time.Now()
 	info := &Info{
-		ID:              "test-status-mock-session",
-		WorkspaceID:     ws.ID,
-		AgentID:         "test-agent",
-		Status:          StatusCreated,
-		Command:         "test-command",
-		CreatedAt:       now,
-		StatusChangedAt: now,
+		ID:          "test-status-mock-session",
+		WorkspaceID: ws.ID,
+		AgentID:     "test-agent",
+		StatusState: StatusState{
+			Status:          StatusCreated,
+			StatusChangedAt: now,
+			LastOutputTime:  now,
+		},
+		Command:   "test-command",
+		CreatedAt: now,
 	}
 
 	// Save info
@@ -250,7 +258,7 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 	session := NewTmuxSession(info, store, mockAdapter, ws).(*tmuxSessionImpl)
 
 	// Initialize the session as if it started
-	session.info.Status = StatusWorking
+	session.info.StatusState.Status = StatusWorking
 	session.info.TmuxSession = "test-session"
 
 	// Create the session in the mock adapter
@@ -333,7 +341,7 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 
 			// Check StatusChangedAt is set correctly
 			if tt.checkStatusChangedAt {
-				if session.info.StatusChangedAt.IsZero() {
+				if session.info.StatusState.StatusChangedAt.IsZero() {
 					t.Error("Expected StatusChangedAt to be set when status changes")
 				}
 			}

@@ -3,6 +3,7 @@ package session
 import (
 	"context"
 	"fmt"
+	"hash/fnv"
 	"path/filepath"
 	"sync"
 	"time"
@@ -15,14 +16,12 @@ import (
 
 // tmuxSessionImpl implements Session interface with tmux backend
 type tmuxSessionImpl struct {
-	info              *Info
-	store             Store
-	tmuxAdapter       tmux.Adapter
-	workspace         *workspace.Workspace
-	logger            logger.Logger
-	mu                sync.RWMutex
-	lastOutputTime    time.Time
-	lastOutputContent string
+	info        *Info
+	store       Store
+	tmuxAdapter tmux.Adapter
+	workspace   *workspace.Workspace
+	logger      logger.Logger
+	mu          sync.RWMutex
 }
 
 // TmuxSessionOption is a function that configures a tmux session
@@ -38,12 +37,11 @@ func WithTmuxLogger(log logger.Logger) TmuxSessionOption {
 // NewTmuxSession creates a new tmux-backed session
 func NewTmuxSession(info *Info, store Store, tmuxAdapter tmux.Adapter, workspace *workspace.Workspace, opts ...TmuxSessionOption) Session {
 	s := &tmuxSessionImpl{
-		info:           info,
-		store:          store,
-		tmuxAdapter:    tmuxAdapter,
-		workspace:      workspace,
-		logger:         logger.Nop(), // Default to no-op logger
-		lastOutputTime: time.Now(),
+		info:        info,
+		store:       store,
+		tmuxAdapter: tmuxAdapter,
+		workspace:   workspace,
+		logger:      logger.Nop(), // Default to no-op logger
 	}
 
 	// Apply options
@@ -51,9 +49,12 @@ func NewTmuxSession(info *Info, store Store, tmuxAdapter tmux.Adapter, workspace
 		opt(s)
 	}
 
-	// Initialize StatusChangedAt if not set (e.g., when loading from store)
-	if s.info.StatusChangedAt.IsZero() {
-		s.info.StatusChangedAt = time.Now()
+	// Initialize StatusState if not set (e.g., when loading from store)
+	if s.info.StatusState.StatusChangedAt.IsZero() {
+		s.info.StatusState.StatusChangedAt = time.Now()
+	}
+	if s.info.StatusState.LastOutputTime.IsZero() {
+		s.info.StatusState.LastOutputTime = time.Now()
 	}
 
 	return s
@@ -75,7 +76,7 @@ func (s *tmuxSessionImpl) Status() Status {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	return s.info.Status
+	return s.info.StatusState.Status
 }
 
 func (s *tmuxSessionImpl) Info() *Info {
@@ -91,7 +92,7 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.info.Status.IsRunning() {
+	if s.info.StatusState.Status.IsRunning() {
 		return ErrSessionAlreadyRunning{ID: s.info.ID}
 	}
 
@@ -169,12 +170,13 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 
 	// Update session info
 	now := time.Now()
-	s.info.Status = StatusWorking // Initially working when started
+	s.info.StatusState.Status = StatusWorking // Initially working when started
+	s.info.StatusState.StatusChangedAt = now
+	s.info.StatusState.LastOutputTime = now // Reset output tracking
+	s.info.StatusState.LastOutputHash = 0   // Reset hash
 	s.info.StartedAt = &now
-	s.info.StatusChangedAt = now
 	s.info.TmuxSession = tmuxSession
 	s.info.PID = pid
-	s.lastOutputTime = now // Reset output tracking
 
 	if err := s.store.Save(s.info); err != nil {
 		// Clean up on failure
@@ -191,7 +193,7 @@ func (s *tmuxSessionImpl) Stop() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if !s.info.Status.IsRunning() {
+	if !s.info.StatusState.Status.IsRunning() {
 		return ErrSessionNotRunning{ID: s.info.ID}
 	}
 
@@ -205,9 +207,9 @@ func (s *tmuxSessionImpl) Stop() error {
 
 	// Update status
 	now := time.Now()
-	s.info.Status = StatusStopped
+	s.info.StatusState.Status = StatusStopped
+	s.info.StatusState.StatusChangedAt = now
 	s.info.StoppedAt = &now
-	s.info.StatusChangedAt = now
 
 	if err := s.store.Save(s.info); err != nil {
 		return fmt.Errorf("failed to save session: %w", err)
@@ -220,7 +222,7 @@ func (s *tmuxSessionImpl) Attach() error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	if !s.info.Status.IsRunning() {
+	if !s.info.StatusState.Status.IsRunning() {
 		return ErrSessionNotRunning{ID: s.info.ID}
 	}
 
@@ -236,7 +238,7 @@ func (s *tmuxSessionImpl) SendInput(input string) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	if !s.info.Status.IsRunning() {
+	if !s.info.StatusState.Status.IsRunning() {
 		return ErrSessionNotRunning{ID: s.info.ID}
 	}
 
@@ -251,7 +253,7 @@ func (s *tmuxSessionImpl) GetOutput(maxLines int) ([]byte, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	if !s.info.Status.IsRunning() {
+	if !s.info.StatusState.Status.IsRunning() {
 		return nil, ErrSessionNotRunning{ID: s.info.ID}
 	}
 
@@ -290,27 +292,32 @@ func (s *tmuxSessionImpl) UpdateStatus() error {
 	defer s.mu.Unlock()
 
 	// Only update if session is running
-	if !s.info.Status.IsRunning() {
+	if !s.info.StatusState.Status.IsRunning() {
 		return nil
 	}
 
-	// Get current output
-	output, err := s.tmuxAdapter.CapturePaneWithOptions(s.info.TmuxSession, 0)
+	// Get last 20 lines of output for status checking
+	// This is sufficient to detect activity without fetching entire buffer
+	const statusCheckLines = 20
+	output, err := s.tmuxAdapter.CapturePaneWithOptions(s.info.TmuxSession, statusCheckLines)
 	if err != nil {
 		return fmt.Errorf("failed to capture pane: %w", err)
 	}
 
-	outputStr := string(output)
+	// Calculate hash of output for efficient comparison
+	h := fnv.New32a()
+	h.Write([]byte(output))
+	currentHash := h.Sum32()
 	now := time.Now()
 
 	// Check if output changed
-	if outputStr != s.lastOutputContent {
+	if currentHash != s.info.StatusState.LastOutputHash {
 		// Output changed, agent is working
-		s.lastOutputContent = outputStr
-		s.lastOutputTime = now
-		if s.info.Status != StatusWorking {
-			s.info.Status = StatusWorking
-			s.info.StatusChangedAt = now
+		s.info.StatusState.LastOutputHash = currentHash
+		s.info.StatusState.LastOutputTime = now
+		if s.info.StatusState.Status != StatusWorking {
+			s.info.StatusState.Status = StatusWorking
+			s.info.StatusState.StatusChangedAt = now
 			// Save status change
 			if err := s.store.Save(s.info); err != nil {
 				return fmt.Errorf("failed to save status change: %w", err)
@@ -318,13 +325,13 @@ func (s *tmuxSessionImpl) UpdateStatus() error {
 		}
 	} else {
 		// No output change, check if we should transition to idle
-		timeSinceLastOutput := time.Since(s.lastOutputTime)
+		timeSinceLastOutput := time.Since(s.info.StatusState.LastOutputTime)
 		const idleThreshold = 3 * time.Second
 
-		if timeSinceLastOutput >= idleThreshold && s.info.Status == StatusWorking {
+		if timeSinceLastOutput >= idleThreshold && s.info.StatusState.Status == StatusWorking {
 			// Transition to idle
-			s.info.Status = StatusIdle
-			s.info.StatusChangedAt = now
+			s.info.StatusState.Status = StatusIdle
+			s.info.StatusState.StatusChangedAt = now
 			// Save status change
 			if err := s.store.Save(s.info); err != nil {
 				return fmt.Errorf("failed to save status change: %w", err)

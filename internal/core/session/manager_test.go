@@ -424,12 +424,17 @@ func TestFileStore_Operations(t *testing.T) {
 	}
 
 	// Test Save and Load
+	now := time.Now()
 	info := &Info{
 		ID:          "test-session",
 		WorkspaceID: "test-workspace",
 		AgentID:     "claude",
-		Status:      StatusCreated,
-		CreatedAt:   time.Now(),
+		StatusState: StatusState{
+			Status:          StatusCreated,
+			StatusChangedAt: now,
+			LastOutputTime:  now,
+		},
+		CreatedAt: now,
 	}
 
 	if err := store.Save(info); err != nil {

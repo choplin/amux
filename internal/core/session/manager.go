@@ -95,15 +95,18 @@ func (m *Manager) CreateSession(opts Options) (Session, error) {
 
 	now := time.Now()
 	info := &Info{
-		ID:              sessionID,
-		WorkspaceID:     ws.ID,
-		AgentID:         opts.AgentID,
-		Status:          StatusCreated,
-		Command:         opts.Command,
-		Environment:     opts.Environment,
-		InitialPrompt:   opts.InitialPrompt,
-		CreatedAt:       now,
-		StatusChangedAt: now,
+		ID:          sessionID,
+		WorkspaceID: ws.ID,
+		AgentID:     opts.AgentID,
+		StatusState: StatusState{
+			Status:          StatusCreated,
+			StatusChangedAt: now,
+			LastOutputTime:  now,
+		},
+		Command:       opts.Command,
+		Environment:   opts.Environment,
+		InitialPrompt: opts.InitialPrompt,
+		CreatedAt:     now,
 	}
 
 	// Save session info to store
