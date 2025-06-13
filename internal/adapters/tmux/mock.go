@@ -246,6 +246,7 @@ func (m *MockAdapter) AppendSessionOutput(sessionName string, output string) err
 	session.output = append(session.output, output)
 	return nil
 }
+
 // CapturePaneWithOptions captures the content with specified options
 func (m *MockAdapter) CapturePaneWithOptions(sessionName string, lines int) (string, error) {
 	m.mu.RLock()
