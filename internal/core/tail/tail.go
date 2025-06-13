@@ -28,7 +28,7 @@ type Options struct {
 // DefaultOptions returns default tail options
 func DefaultOptions() Options {
 	return Options{
-		PollInterval: 5 * time.Second, // 5 seconds is sufficient for monitoring
+		PollInterval: 1 * time.Second, // 1 second for responsive monitoring
 		RefreshMode:  true,            // Default to refresh mode for better AI agent output
 		MaxLines:     0,               // 0 means auto-detect based on terminal size
 	}

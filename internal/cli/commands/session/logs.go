@@ -31,7 +31,7 @@ Use -f/--follow to continuously stream new output.`,
 
 	// Logs command flags
 	cmd.Flags().BoolVarP(&followLogs, "follow", "f", false, "Follow log output (tail -f behavior)")
-	cmd.Flags().StringVar(&followInterval, "interval", "5s", "Refresh interval when following logs")
+	cmd.Flags().StringVar(&followInterval, "interval", "1s", "Refresh interval when following logs")
 
 	return cmd
 }
