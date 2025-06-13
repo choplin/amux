@@ -43,6 +43,7 @@ func createAutoWorkspace(wsManager *workspace.Manager, sessionID session.ID) (*w
 		Name:        name,
 		Description: fmt.Sprintf("Auto-created workspace for session %s", sessionID.Short()),
 		BaseBranch:  "main",
+		AutoCreated: true,
 	}
 
 	ws, err := wsManager.Create(opts)
