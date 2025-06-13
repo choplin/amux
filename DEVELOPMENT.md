@@ -340,11 +340,96 @@ cat .amux/workspaces/workspace-*.yaml
 
 ## Release Process
 
-1. Update version in code
-2. Run `just all` to ensure quality
-3. Create git tag: `git tag v0.1.0`
-4. Push tag: `git push origin v0.1.0`
-5. GitHub Actions builds releases
+### Prerequisites
+
+- Ensure you have push access to the repository
+- Ensure all tests pass: `just test`
+- Ensure code quality checks pass: `just check`
+- Ensure no uncommitted changes: `git status`
+
+### Creating a Release
+
+1. **Update CHANGELOG.md**
+   - Move items from "Unreleased" to the new version section
+   - Add the release date
+   - Update the comparison links at the bottom
+
+2. **Commit the changelog**
+
+   ```bash
+   git add CHANGELOG.md
+   git commit -m "chore: prepare release v0.1.0"
+   ```
+
+3. **Create and push the tag**
+
+   ```bash
+   # Create annotated tag
+   git tag -a v0.1.0 -m "Release version 0.1.0"
+
+   # Push the tag to trigger release workflow
+   git push origin v0.1.0
+   ```
+
+4. **GitHub Actions will automatically**
+   - Build binaries for multiple platforms
+   - Create a GitHub release with the binaries
+   - Use the CHANGELOG entries for release notes
+
+### Version Information
+
+The version information is embedded at build time using ldflags:
+
+- **Version**: From `git describe --tags --always --dirty`
+- **Commit**: Current git commit hash
+- **Date**: Build timestamp
+- **Go Version**: Compiler version
+- **OS/Arch**: Target platform
+
+To check version information:
+
+```bash
+amux version
+```
+
+### Semantic Versioning
+
+This project follows [Semantic Versioning](https://semver.org/):
+
+- **MAJOR**: Incompatible API changes
+- **MINOR**: New functionality in a backward-compatible manner
+- **PATCH**: Backward-compatible bug fixes
+
+### Pre-release Versions
+
+For pre-release versions:
+
+```bash
+git tag -a v0.2.0-beta.1 -m "Pre-release version 0.2.0-beta.1"
+```
+
+### Emergency Patches
+
+If you need to create a patch for an older version:
+
+1. Create a branch from the tag:
+
+   ```bash
+   git checkout -b release-0.1.x v0.1.0
+   ```
+
+2. Cherry-pick the fixes:
+
+   ```bash
+   git cherry-pick <commit-hash>
+   ```
+
+3. Update CHANGELOG.md and create the patch release:
+
+   ```bash
+   git tag -a v0.1.1 -m "Patch release v0.1.1"
+   git push origin v0.1.1
+   ```
 
 ## Contributing
 
