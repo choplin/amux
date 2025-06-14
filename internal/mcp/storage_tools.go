@@ -253,7 +253,9 @@ func (s *ServerV2) handleStorageList(ctx context.Context, request mcp.CallToolRe
 	if subPath != "" {
 		listPath = filepath.Join(storagePath, subPath)
 		// Ensure the path is within the storage directory
-		if !filepath.HasPrefix(listPath, storagePath) {
+		cleanListPath := filepath.Clean(listPath)
+		cleanStoragePath := filepath.Clean(storagePath)
+		if !strings.HasPrefix(cleanListPath, cleanStoragePath) {
 			return nil, fmt.Errorf("path traversal attempt detected")
 		}
 	}
