@@ -111,10 +111,13 @@ func listSessions(cmd *cobra.Command, args []string) error {
 			displayID = info.Index
 		}
 
-		// Use session name or "-" if not set
+		// Format session name with description
 		sessionName := info.Name
 		if sessionName == "" {
 			sessionName = "-"
+		} else if info.Description != "" {
+			// Add description on a new line with dim styling
+			sessionName = fmt.Sprintf("%s\n  %s", sessionName, ui.DimStyle.Render(info.Description))
 		}
 
 		tbl.AddRow(displayID, sessionName, info.AgentID, wsName, statusStr, inStatusStr, totalTime)
