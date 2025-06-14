@@ -164,6 +164,16 @@ amux version
 - Log tailing (`amux tail`)
 - Session status tracking
 
+## Important: Directory-Specific Instructions
+
+**Always check for CLAUDE.md files in subdirectories** before working in them. These contain specific instructions that override general guidelines.
+
+For example:
+- `docs/adr/CLAUDE.md` - Instructions for writing ADRs
+- Other directories may have their own CLAUDE.md files
+
+**Always read and follow these directory-specific instructions carefully!**
+
 ## Troubleshooting
 
 ### MCP Connection Issues
