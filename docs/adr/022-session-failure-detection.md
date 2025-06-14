@@ -79,6 +79,21 @@ When removing a session (via `amux session remove`), any remaining tmux session 
 - This ensures no orphaned tmux sessions are left behind
 - Applies to all terminal states: `completed`, `stopped`, and `failed`
 - Prevents accumulation of unused tmux sessions after session removal
+- The cleanup happens automatically in `Manager.Remove()` method
+
+### Session Lifecycle and State Persistence
+
+Once a session reaches a terminal state (`completed`, `stopped`, or `failed`), its status is preserved:
+
+- `StatusCompleted`: Command finished successfully (exit code 0)
+- `StatusFailed`: Command failed (non-zero exit code) or session crashed
+- `StatusStopped`: User explicitly stopped the session
+
+The status remains unchanged even if the underlying tmux session is closed. This design choice:
+
+- Preserves important information about command execution results
+- Simplifies state management by avoiding additional state transitions
+- Allows users to see the final outcome of their sessions in history
 
 ## Consequences
 
