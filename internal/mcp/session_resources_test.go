@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aki/amux/internal/adapters/tmux"
 	"github.com/aki/amux/internal/core/session"
 	"github.com/mark3labs/mcp-go/mcp"
 )
@@ -74,6 +75,12 @@ func TestSessionResources(t *testing.T) {
 	})
 
 	t.Run("session with name and description", func(t *testing.T) {
+		// Skip if tmux is not available
+		tmuxAdapter, err := tmux.NewAdapter()
+		if err != nil || !tmuxAdapter.IsAvailable() {
+			t.Skip("tmux not available on this system")
+		}
+
 		// Create a workspace for the session
 		workspaceResult, err := testServer.handleWorkspaceCreate(context.Background(), mcp.CallToolRequest{
 			Params: mcp.CallToolParams{

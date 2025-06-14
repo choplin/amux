@@ -15,7 +15,9 @@ import (
 func TestWorkspaceRemovalSafetyCheck(t *testing.T) {
 	// Create test repository
 	repoDir := helpers.CreateTestRepo(t)
-	defer os.RemoveAll(repoDir)
+	t.Cleanup(func() {
+		os.RemoveAll(repoDir)
+	})
 
 	// Initialize Amux
 	configManager := config.NewManager(repoDir)
@@ -42,11 +44,14 @@ func TestWorkspaceRemovalSafetyCheck(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create workspace: %v", err)
 	}
-	defer func() {
+	// Ensure cleanup happens after all subtests complete
+	t.Cleanup(func() {
 		// Clean up: change to repo dir first, then remove workspace
 		os.Chdir(repoDir)
-		manager.Remove(ws.ID)
-	}()
+		if err := manager.Remove(ws.ID); err != nil {
+			t.Logf("Failed to remove workspace %s: %v", ws.ID, err)
+		}
+	})
 
 	// Test the safety check logic directly
 	t.Run("SafetyCheckLogic", func(t *testing.T) {
@@ -133,7 +138,9 @@ func TestWorkspaceRemovalSafetyCheck(t *testing.T) {
 func TestWorkspaceCdCommand(t *testing.T) {
 	// Create test repository
 	repoDir := helpers.CreateTestRepo(t)
-	defer os.RemoveAll(repoDir)
+	t.Cleanup(func() {
+		os.RemoveAll(repoDir)
+	})
 
 	// Initialize Amux
 	configManager := config.NewManager(repoDir)
@@ -160,7 +167,12 @@ func TestWorkspaceCdCommand(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create workspace: %v", err)
 	}
-	defer manager.Remove(ws.ID)
+	// Ensure cleanup happens after all subtests complete
+	t.Cleanup(func() {
+		if err := manager.Remove(ws.ID); err != nil {
+			t.Logf("Failed to remove workspace %s: %v", ws.ID, err)
+		}
+	})
 
 	// Test workspace resolution by name
 	t.Run("ResolveByName", func(t *testing.T) {
@@ -207,8 +219,21 @@ func TestWorkspaceCdCommand(t *testing.T) {
 
 	// Test workspace path exists
 	t.Run("WorkspacePathExists", func(t *testing.T) {
-		if _, err := os.Stat(ws.Path); os.IsNotExist(err) {
+		// Verify the workspace was created successfully
+		if ws == nil {
+			t.Fatal("Workspace is nil")
+		}
+
+		// Log workspace details for debugging
+		t.Logf("Checking workspace path: %s", ws.Path)
+
+		// Check if the path exists
+		if info, err := os.Stat(ws.Path); os.IsNotExist(err) {
 			t.Errorf("Workspace path does not exist: %s", ws.Path)
+		} else if err != nil {
+			t.Errorf("Error checking workspace path: %v", err)
+		} else {
+			t.Logf("Workspace path exists: %s (IsDir: %v)", ws.Path, info.IsDir())
 		}
 	})
 }

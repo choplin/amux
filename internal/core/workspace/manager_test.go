@@ -15,7 +15,9 @@ import (
 func TestManager_CreateWithExistingBranch(t *testing.T) {
 	// Create test repository
 	repoDir := helpers.CreateTestRepo(t)
-	defer os.RemoveAll(repoDir)
+	t.Cleanup(func() {
+		os.RemoveAll(repoDir)
+	})
 
 	// Initialize Amux
 	configManager := config.NewManager(repoDir)
@@ -81,7 +83,9 @@ func TestManager_CreateWithExistingBranch(t *testing.T) {
 func TestManager_CreateWithNewBranch(t *testing.T) {
 	// Create test repository
 	repoDir := helpers.CreateTestRepo(t)
-	defer os.RemoveAll(repoDir)
+	t.Cleanup(func() {
+		os.RemoveAll(repoDir)
+	})
 
 	// Initialize Amux
 	configManager := config.NewManager(repoDir)
@@ -131,7 +135,9 @@ func TestManager_CreateWithNewBranch(t *testing.T) {
 func TestManager_RemoveWithManuallyDeletedWorktree(t *testing.T) {
 	// Create test repository
 	repoDir := helpers.CreateTestRepo(t)
-	defer os.RemoveAll(repoDir)
+	t.Cleanup(func() {
+		os.RemoveAll(repoDir)
+	})
 
 	// Initialize Amux
 	configManager := config.NewManager(repoDir)
@@ -198,7 +204,9 @@ func TestManager_RemoveWithManuallyDeletedWorktree(t *testing.T) {
 func TestManager_ConsistencyChecking(t *testing.T) {
 	// Create test repository
 	repoDir := helpers.CreateTestRepo(t)
-	defer os.RemoveAll(repoDir)
+	t.Cleanup(func() {
+		os.RemoveAll(repoDir)
+	})
 
 	// Initialize Amux
 	configManager := config.NewManager(repoDir)
@@ -226,7 +234,11 @@ func TestManager_ConsistencyChecking(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to create workspace: %v", err)
 		}
-		defer manager.Remove(ws.ID)
+		t.Cleanup(func() {
+			if err := manager.Remove(ws.ID); err != nil {
+				t.Logf("Failed to remove workspace %s: %v", ws.ID, err)
+			}
+		})
 
 		// Get workspace and check consistency
 		retrieved, err := manager.Get(ws.ID)
@@ -261,7 +273,11 @@ func TestManager_ConsistencyChecking(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to create workspace: %v", err)
 		}
-		defer manager.Remove(ws.ID)
+		t.Cleanup(func() {
+			if err := manager.Remove(ws.ID); err != nil {
+				t.Logf("Failed to remove workspace %s: %v", ws.ID, err)
+			}
+		})
 
 		// Manually delete the folder
 		err = os.RemoveAll(ws.Path)
@@ -388,7 +404,9 @@ func TestManager_ConsistencyChecking(t *testing.T) {
 func TestManager_CreateSetsContextPath(t *testing.T) {
 	// Create test repository
 	repoDir := helpers.CreateTestRepo(t)
-	defer os.RemoveAll(repoDir)
+	t.Cleanup(func() {
+		os.RemoveAll(repoDir)
+	})
 
 	// Initialize Amux
 	configManager := config.NewManager(repoDir)
