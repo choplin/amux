@@ -1,6 +1,8 @@
 package session
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -205,6 +207,106 @@ func TestSessionFailureDetection(t *testing.T) {
 		// Should remain working
 		assert.Equal(t, StatusWorking, sess.Status())
 		assert.Empty(t, sess.Info().Error)
+	})
+
+	t.Run("Session marked as failed when exit status is non-zero", func(t *testing.T) {
+		// Create mock adapter and process checker
+		mockAdapter := tmux.NewMockAdapter()
+		mockProcessChecker := NewMockProcessChecker()
+
+		// Create temp storage directory
+		storageDir := t.TempDir()
+
+		// Create session info with storage path
+		info := &Info{
+			ID:          "test-session-exit-failed",
+			WorkspaceID: ws.ID,
+			AgentID:     "test-agent",
+			StatusState: StatusState{
+				Status:          StatusWorking,
+				StatusChangedAt: time.Now(),
+			},
+			TmuxSession: "test-tmux-session-exit-failed",
+			PID:         12350,
+			StoragePath: storageDir,
+		}
+
+		// Create session with mock process checker
+		sess := NewTmuxSession(info, store, mockAdapter, ws, WithProcessChecker(mockProcessChecker))
+
+		// Create tmux session
+		err := mockAdapter.CreateSession(info.TmuxSession, ws.Path)
+		require.NoError(t, err)
+
+		// Set mock to return "1" when we capture pane output
+		mockAdapter.SetPaneContent(info.TmuxSession, "1")
+
+		// Set process to have no children
+		mockProcessChecker.SetHasChildren(info.PID, false)
+
+		// Update status
+		err = sess.UpdateStatus()
+		require.NoError(t, err)
+
+		// Should be marked as failed
+		assert.Equal(t, StatusFailed, sess.Status())
+		assert.Equal(t, "command exited with code 1", sess.Info().Error)
+
+		// Verify exit status was saved
+		exitStatusPath := filepath.Join(storageDir, "exit_status")
+		data, err := os.ReadFile(exitStatusPath)
+		assert.NoError(t, err)
+		assert.Equal(t, "1", string(data))
+	})
+
+	t.Run("Session marked as completed when exit status is zero", func(t *testing.T) {
+		// Create mock adapter and process checker
+		mockAdapter := tmux.NewMockAdapter()
+		mockProcessChecker := NewMockProcessChecker()
+
+		// Create temp storage directory
+		storageDir := t.TempDir()
+
+		// Create session info with storage path
+		info := &Info{
+			ID:          "test-session-exit-success",
+			WorkspaceID: ws.ID,
+			AgentID:     "test-agent",
+			StatusState: StatusState{
+				Status:          StatusWorking,
+				StatusChangedAt: time.Now(),
+			},
+			TmuxSession: "test-tmux-session-exit-success",
+			PID:         12351,
+			StoragePath: storageDir,
+		}
+
+		// Create session with mock process checker
+		sess := NewTmuxSession(info, store, mockAdapter, ws, WithProcessChecker(mockProcessChecker))
+
+		// Create tmux session
+		err := mockAdapter.CreateSession(info.TmuxSession, ws.Path)
+		require.NoError(t, err)
+
+		// Set mock to return "0" when we capture pane output
+		mockAdapter.SetPaneContent(info.TmuxSession, "0")
+
+		// Set process to have no children
+		mockProcessChecker.SetHasChildren(info.PID, false)
+
+		// Update status
+		err = sess.UpdateStatus()
+		require.NoError(t, err)
+
+		// Should be marked as completed
+		assert.Equal(t, StatusCompleted, sess.Status())
+		assert.Empty(t, sess.Info().Error)
+
+		// Verify exit status was saved
+		exitStatusPath := filepath.Join(storageDir, "exit_status")
+		data, err := os.ReadFile(exitStatusPath)
+		assert.NoError(t, err)
+		assert.Equal(t, "0", string(data))
 	})
 
 	t.Run("Session with running command transitions to completed", func(t *testing.T) {

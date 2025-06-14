@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	"hash/fnv"
+	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -362,10 +365,23 @@ func (s *tmuxSessionImpl) UpdateStatus() error {
 			// Log error but continue
 			s.logger.Warn("failed to check child processes", "error", err, "pid", s.info.PID)
 		} else if !hasChildren {
-			// No child processes - command has completed
+			// No child processes - capture exit status from shell
+			exitCode, err := s.captureExitStatus()
+			if err != nil {
+				// Failed to capture exit status - log but continue
+				s.logger.Warn("failed to capture exit status", "error", err)
+			}
+
+			// Determine final status based on exit code
 			now := time.Now()
-			s.info.StatusState.Status = StatusCompleted
+			if exitCode != 0 {
+				s.info.StatusState.Status = StatusFailed
+				s.info.Error = fmt.Sprintf("command exited with code %d", exitCode)
+			} else {
+				s.info.StatusState.Status = StatusCompleted
+			}
 			s.info.StatusState.StatusChangedAt = now
+
 			if err := s.store.Save(s.info); err != nil {
 				return fmt.Errorf("failed to save status change: %w", err)
 			}
@@ -420,4 +436,40 @@ func (s *tmuxSessionImpl) UpdateStatus() error {
 	}
 
 	return nil
+}
+
+// captureExitStatus captures the exit status from the shell and saves it to storage
+func (s *tmuxSessionImpl) captureExitStatus() (int, error) {
+	// Send command to get exit status
+	if err := s.tmuxAdapter.SendKeys(s.info.TmuxSession, "echo $?"); err != nil {
+		return 0, fmt.Errorf("failed to send echo command: %w", err)
+	}
+
+	// Wait a bit for the command to execute
+	time.Sleep(100 * time.Millisecond)
+
+	// Capture the output (last few lines should contain the exit code)
+	output, err := s.tmuxAdapter.CapturePaneWithOptions(s.info.TmuxSession, 5)
+	if err != nil {
+		return 0, fmt.Errorf("failed to capture pane: %w", err)
+	}
+
+	// Parse the output to find the exit code
+	// Look for a line that contains just a number
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	for i := len(lines) - 1; i >= 0; i-- {
+		line := strings.TrimSpace(lines[i])
+		if exitCode, err := strconv.Atoi(line); err == nil {
+			// Save to storage if available
+			if s.info.StoragePath != "" {
+				exitStatusPath := filepath.Join(s.info.StoragePath, "exit_status")
+				if err := os.WriteFile(exitStatusPath, []byte(line), 0o644); err != nil {
+					s.logger.Warn("failed to save exit status", "error", err)
+				}
+			}
+			return exitCode, nil
+		}
+	}
+
+	return 0, fmt.Errorf("could not parse exit status from output")
 }

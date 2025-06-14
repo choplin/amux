@@ -41,11 +41,23 @@ Add `StatusCompleted` as a new state and implement failure detection based on pr
    - If shell has no child processes → `StatusCompleted`
    - Otherwise continue with existing working/idle detection
 
+### Exit Status Tracking
+
+Implemented automatic exit status capture:
+
+- When no child processes remain, we send `echo $?` to the shell
+- Parse the output to get the exit code
+- Save to `{storage}/exit_status` for record keeping
+- Exit code 0 → `StatusCompleted`
+- Non-zero exit code → `StatusFailed` with "command exited with code N" error
+
+This provides accurate exit status tracking without requiring agent modifications.
+
 We will not attempt to:
 
 - Distinguish between different types of failures (crash vs error)
-- Detect command exit codes (technically complex and not necessary)
 - Detect command launch failures (too heuristic)
+- Parse shell output for exit codes (fragile and shell-dependent)
 
 ## Consequences
 
