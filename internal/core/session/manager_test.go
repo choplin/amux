@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/aki/amux/internal/adapters/tmux"
+	"github.com/aki/amux/internal/core/idmap"
 	"github.com/aki/amux/internal/core/workspace"
 )
 
@@ -29,8 +30,14 @@ func TestManager_CreateSession(t *testing.T) {
 		t.Fatalf("Failed to create session store: %v", err)
 	}
 
-	// Create session manager (nil ID mapper and mailbox manager for tests)
-	manager := NewManager(store, wsManager, nil, nil)
+	// Create ID mapper
+	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	if err != nil {
+		t.Fatalf("Failed to create ID mapper: %v", err)
+	}
+
+	// Create session manager
+	manager := NewManager(store, wsManager, idMapper)
 
 	// Use mock adapter for consistent testing across platforms
 	mockAdapter := tmux.NewMockAdapter()
@@ -94,8 +101,14 @@ func TestManager_CreateSessionWithInitialPrompt(t *testing.T) {
 		t.Fatalf("Failed to create session store: %v", err)
 	}
 
+	// Create ID mapper
+	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	if err != nil {
+		t.Fatalf("Failed to create ID mapper: %v", err)
+	}
+
 	// Create session manager
-	manager := NewManager(store, wsManager, nil, nil)
+	manager := NewManager(store, wsManager, idMapper)
 
 	// Use mock adapter for consistent testing
 	mockAdapter := tmux.NewMockAdapter()
@@ -148,7 +161,13 @@ func TestManager_GetSession(t *testing.T) {
 		t.Fatalf("Failed to create store: %v", err)
 	}
 
-	manager := NewManager(store, wsManager, nil, nil)
+	// Create ID mapper
+	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	if err != nil {
+		t.Fatalf("Failed to create ID mapper: %v", err)
+	}
+
+	manager := NewManager(store, wsManager, idMapper)
 
 	// Use mock adapter for consistent testing across platforms
 	mockAdapter := tmux.NewMockAdapter()
@@ -202,7 +221,13 @@ func TestManager_ListSessions(t *testing.T) {
 		t.Logf("Warning: Found %d existing sessions before test", len(existingSessions))
 	}
 
-	manager := NewManager(store, wsManager, nil, nil)
+	// Create ID mapper
+	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	if err != nil {
+		t.Fatalf("Failed to create ID mapper: %v", err)
+	}
+
+	manager := NewManager(store, wsManager, idMapper)
 
 	// Use mock adapter for consistent testing across platforms
 	mockAdapter := tmux.NewMockAdapter()
@@ -280,7 +305,13 @@ func TestManager_RemoveSession(t *testing.T) {
 		t.Fatalf("Failed to create store: %v", err)
 	}
 
-	manager := NewManager(store, wsManager, nil, nil)
+	// Create ID mapper
+	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	if err != nil {
+		t.Fatalf("Failed to create ID mapper: %v", err)
+	}
+
+	manager := NewManager(store, wsManager, idMapper)
 
 	// Use mock adapter for consistent testing across platforms
 	mockAdapter := tmux.NewMockAdapter()
@@ -343,7 +374,13 @@ func TestManager_CreateSessionWithoutTmux(t *testing.T) {
 	}
 
 	// Create session manager without tmux adapter
-	manager := NewManager(store, wsManager, nil, nil)
+	// Create ID mapper
+	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	if err != nil {
+		t.Fatalf("Failed to create ID mapper: %v", err)
+	}
+
+	manager := NewManager(store, wsManager, idMapper)
 	manager.SetTmuxAdapter(nil) // Explicitly set to nil to simulate no tmux
 
 	// Test creating a session without tmux
@@ -384,7 +421,13 @@ func TestManager_GetSessionWithoutTmux(t *testing.T) {
 	}
 
 	// First create a session with tmux available
-	manager := NewManager(store, wsManager, nil, nil)
+	// Create ID mapper
+	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	if err != nil {
+		t.Fatalf("Failed to create ID mapper: %v", err)
+	}
+
+	manager := NewManager(store, wsManager, idMapper)
 	mockAdapter := tmux.NewMockAdapter()
 	manager.SetTmuxAdapter(mockAdapter)
 
@@ -401,7 +444,7 @@ func TestManager_GetSessionWithoutTmux(t *testing.T) {
 
 	// Create a new manager without tmux to simulate fresh start
 	// This tests the case where sessions are persisted but tmux is not available on restart
-	manager2 := NewManager(store, wsManager, nil, nil)
+	manager2 := NewManager(store, wsManager, idMapper)
 	manager2.SetTmuxAdapter(nil)
 
 	// Try to get the session without tmux

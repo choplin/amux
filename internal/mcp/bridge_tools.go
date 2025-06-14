@@ -53,7 +53,7 @@ func (s *ServerV2) getWorkspaceList() ([]workspaceInfo, error) {
 			Branch:      ws.Branch,
 			BaseBranch:  ws.BaseBranch,
 			Description: ws.Description,
-			ContextPath: ws.ContextPath,
+			ContextPath: ws.GetContextPath(),
 			CreatedAt:   ws.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 			UpdatedAt:   ws.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		}
@@ -87,7 +87,7 @@ func (s *ServerV2) getWorkspaceDetail(workspaceID string) (*workspaceDetail, err
 
 	// Add paths
 	detail.Paths.Worktree = ws.Path
-	detail.Paths.Context = ws.ContextPath
+	detail.Paths.Storage = ws.StoragePath
 
 	// Add resource URIs
 	detail.Resources.Files = fmt.Sprintf("amux://workspace/%s/files", ws.ID)

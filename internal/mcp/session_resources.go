@@ -4,13 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
 
 	"github.com/aki/amux/internal/core/idmap"
-	"github.com/aki/amux/internal/core/mailbox"
 	"github.com/aki/amux/internal/core/session"
 )
 
@@ -47,9 +45,8 @@ type sessionInfo struct {
 }
 
 type sessionResourceURIs struct {
-	Detail  string `json:"detail"`
-	Output  string `json:"output"`
-	Mailbox string `json:"mailbox"`
+	Detail string `json:"detail"`
+	Output string `json:"output"`
 }
 
 // sessionDetail is the full session information for detail resource
@@ -67,22 +64,8 @@ type sessionDetail struct {
 	StartedAt   string              `json:"startedAt,omitempty"`
 	StoppedAt   string              `json:"stoppedAt,omitempty"`
 	Error       string              `json:"error,omitempty"`
+	StoragePath string              `json:"storagePath,omitempty"`
 	Resources   sessionResourceURIs `json:"resources"`
-}
-
-// mailboxInfo represents mailbox state for a session
-type mailboxInfo struct {
-	SessionID string           `json:"sessionId"`
-	Path      string           `json:"path"`
-	Messages  []mailboxMessage `json:"messages"`
-}
-
-type mailboxMessage struct {
-	Name      string            `json:"name"`
-	Direction mailbox.Direction `json:"direction"`
-	Size      int64             `json:"size"`
-	Timestamp string            `json:"timestamp"`
-	Path      string            `json:"path"`
 }
 
 // registerSessionResources registers session-related MCP resources
@@ -113,15 +96,6 @@ func (s *ServerV2) registerSessionResources() error {
 		mcp.WithTemplateMIMEType("text/plain"),
 	)
 	s.mcpServer.AddResourceTemplate(sessionOutputTemplate, s.handleSessionOutputResource)
-
-	// Register session mailbox template
-	sessionMailboxTemplate := mcp.NewResourceTemplate(
-		"amux://session/{id}/mailbox",
-		"Session Mailbox",
-		mcp.WithTemplateDescription("Access session mailbox state and messages"),
-		mcp.WithTemplateMIMEType("application/json"),
-	)
-	s.mcpServer.AddResourceTemplate(sessionMailboxTemplate, s.handleSessionMailboxResource)
 
 	return nil
 }
@@ -166,7 +140,6 @@ func (s *ServerV2) handleSessionListResource(ctx context.Context, request mcp.Re
 		// Add resource URIs
 		sessionInfo.Resources.Detail = fmt.Sprintf("amux://session/%s", info.ID)
 		sessionInfo.Resources.Output = fmt.Sprintf("amux://session/%s/output", info.ID)
-		sessionInfo.Resources.Mailbox = fmt.Sprintf("amux://session/%s/mailbox", info.ID)
 
 		sessionList[i] = sessionInfo
 	}
@@ -223,6 +196,7 @@ func (s *ServerV2) handleSessionDetailResource(ctx context.Context, request mcp.
 		TmuxSession: info.TmuxSession,
 		CreatedAt:   info.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		Error:       info.Error,
+		StoragePath: info.StoragePath,
 	}
 
 	if info.StartedAt != nil {
@@ -235,7 +209,6 @@ func (s *ServerV2) handleSessionDetailResource(ctx context.Context, request mcp.
 	// Add resource URIs
 	detail.Resources.Detail = fmt.Sprintf("amux://session/%s", info.ID)
 	detail.Resources.Output = fmt.Sprintf("amux://session/%s/output", info.ID)
-	detail.Resources.Mailbox = fmt.Sprintf("amux://session/%s/mailbox", info.ID)
 
 	jsonData, err := json.MarshalIndent(detail, "", "  ")
 	if err != nil {
@@ -297,108 +270,6 @@ func (s *ServerV2) handleSessionOutputResource(ctx context.Context, request mcp.
 	}, nil
 }
 
-// handleSessionMailboxResource handles amux://session/{id}/mailbox
-func (s *ServerV2) handleSessionMailboxResource(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
-	// Parse session ID from URI
-	sessionID, err := parseSessionURI(request.Params.URI)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create session manager
-	sessionManager, err := s.createSessionManager()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create session manager: %w", err)
-	}
-
-	// Get session to verify it exists
-	sess, err := sessionManager.GetSession(sessionID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get session: %w", err)
-	}
-
-	// Create mailbox manager
-	mailboxManager := mailbox.NewManager(s.configManager.GetAmuxDir())
-
-	// Get mailbox path
-	mailboxPath := mailboxManager.GetMailboxPath(sess.ID())
-
-	// Get mailbox info
-	mailboxInfo := mailboxInfo{
-		SessionID: sess.ID(),
-		Path:      mailboxPath,
-		Messages:  []mailboxMessage{},
-	}
-
-	// Check if mailbox exists
-	if _, err := os.Stat(mailboxPath); err == nil {
-		// Get incoming messages
-		inOpts := mailbox.Options{
-			SessionID: sess.ID(),
-			Direction: mailbox.DirectionIn,
-			Limit:     0,
-		}
-		inMessages, err := mailboxManager.ListMessages(inOpts)
-		if err == nil {
-			for _, msg := range inMessages {
-				// Get file info for size
-				fileInfo, err := os.Stat(msg.Path)
-				size := int64(0)
-				if err == nil {
-					size = fileInfo.Size()
-				}
-
-				mailboxInfo.Messages = append(mailboxInfo.Messages, mailboxMessage{
-					Name:      msg.Name,
-					Direction: msg.Direction,
-					Size:      size,
-					Timestamp: msg.Timestamp.Format("2006-01-02T15:04:05Z07:00"),
-					Path:      msg.Path,
-				})
-			}
-		}
-
-		// Get outgoing messages
-		outOpts := mailbox.Options{
-			SessionID: sess.ID(),
-			Direction: mailbox.DirectionOut,
-			Limit:     0,
-		}
-		outMessages, err := mailboxManager.ListMessages(outOpts)
-		if err == nil {
-			for _, msg := range outMessages {
-				// Get file info for size
-				fileInfo, err := os.Stat(msg.Path)
-				size := int64(0)
-				if err == nil {
-					size = fileInfo.Size()
-				}
-
-				mailboxInfo.Messages = append(mailboxInfo.Messages, mailboxMessage{
-					Name:      msg.Name,
-					Direction: msg.Direction,
-					Size:      size,
-					Timestamp: msg.Timestamp.Format("2006-01-02T15:04:05Z07:00"),
-					Path:      msg.Path,
-				})
-			}
-		}
-	}
-
-	jsonData, err := json.MarshalIndent(mailboxInfo, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal mailbox info: %w", err)
-	}
-
-	return []mcp.ResourceContents{
-		&mcp.TextResourceContents{
-			URI:      request.Params.URI,
-			MIMEType: "application/json",
-			Text:     string(jsonData),
-		},
-	}, nil
-}
-
 // createSessionManager is a helper to create a session manager with all dependencies
 func (s *ServerV2) createSessionManager() (*session.Manager, error) {
 	// Use existing workspace manager
@@ -416,9 +287,6 @@ func (s *ServerV2) createSessionManager() (*session.Manager, error) {
 		return nil, fmt.Errorf("failed to create session store: %w", err)
 	}
 
-	// Create mailbox manager
-	mailboxManager := mailbox.NewManager(s.configManager.GetAmuxDir())
-
 	// Create session manager
-	return session.NewManager(store, workspaceManager, mailboxManager, idMapper), nil
+	return session.NewManager(store, workspaceManager, idMapper), nil
 }

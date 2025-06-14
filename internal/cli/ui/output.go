@@ -101,8 +101,8 @@ func PrintWorkspace(w *workspace.Workspace) {
 	OutputLine("   %s %s", DimStyle.Render("Branch:"), w.Branch)
 	OutputLine("   %s %s", DimStyle.Render("Path:"), w.Path)
 
-	if w.ContextPath != "" {
-		OutputLine("   %s %s", DimStyle.Render("Context:"), w.ContextPath)
+	if w.StoragePath != "" {
+		OutputLine("   %s %s", DimStyle.Render("Storage:"), w.StoragePath)
 	}
 
 	OutputLine("   %s %s", DimStyle.Render("Created:"), FormatTime(w.CreatedAt))

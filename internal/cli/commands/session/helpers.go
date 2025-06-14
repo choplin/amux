@@ -6,7 +6,6 @@ import (
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/idmap"
 	"github.com/aki/amux/internal/core/logger"
-	"github.com/aki/amux/internal/core/mailbox"
 	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/workspace"
 )
@@ -24,13 +23,10 @@ func createSessionManager(configManager *config.Manager, wsManager *workspace.Ma
 		return nil, fmt.Errorf("failed to create session store: %w", err)
 	}
 
-	// Create mailbox manager
-	mailboxManager := mailbox.NewManager(configManager.GetAmuxDir())
-
 	// Create logger
 	log := logger.Default()
 
-	return session.NewManager(store, wsManager, mailboxManager, idMapper, session.WithLogger(log)), nil
+	return session.NewManager(store, wsManager, idMapper, session.WithLogger(log)), nil
 }
 
 // createAutoWorkspace creates a new workspace with a name based on session ID

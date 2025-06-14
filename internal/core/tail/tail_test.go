@@ -15,7 +15,6 @@ import (
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/idmap"
 	"github.com/aki/amux/internal/core/logger"
-	"github.com/aki/amux/internal/core/mailbox"
 	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/tail"
 	"github.com/aki/amux/internal/core/workspace"
@@ -57,12 +56,11 @@ func TestTailer_Follow(t *testing.T) {
 	// Create dependencies
 	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
 	require.NoError(t, err)
-	mailboxManager := mailbox.NewManager(configManager.GetAmuxDir())
 	store, err := session.NewFileStore(configManager.GetAmuxDir())
 	require.NoError(t, err)
 
 	// Create session manager with mock adapter
-	sessionManager := session.NewManager(store, wsManager, mailboxManager, idMapper, session.WithLogger(logger.Nop()))
+	sessionManager := session.NewManager(store, wsManager, idMapper, session.WithLogger(logger.Nop()))
 
 	// Replace tmux adapter with mock
 	mockAdapter := tmux.NewMockAdapter()
@@ -220,12 +218,11 @@ func TestFollowFunc(t *testing.T) {
 	// Create dependencies
 	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
 	require.NoError(t, err)
-	mailboxManager := mailbox.NewManager(configManager.GetAmuxDir())
 	store, err := session.NewFileStore(configManager.GetAmuxDir())
 	require.NoError(t, err)
 
 	// Create session manager with mock adapter
-	sessionManager := session.NewManager(store, wsManager, mailboxManager, idMapper, session.WithLogger(logger.Nop()))
+	sessionManager := session.NewManager(store, wsManager, idMapper, session.WithLogger(logger.Nop()))
 
 	// Replace tmux adapter with mock
 	mockAdapter := tmux.NewMockAdapter()

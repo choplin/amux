@@ -46,8 +46,7 @@ func (s *ServerV2) registerResourceTemplates() error {
 // workspacePaths contains the actual filesystem paths for a workspace
 type workspacePaths struct {
 	Worktree string `json:"worktree"`
-	Context  string `json:"context"`
-	Mailbox  string `json:"mailbox,omitempty"`
+	Storage  string `json:"storage"`
 }
 
 // workspaceResources contains the MCP resource URIs for a workspace

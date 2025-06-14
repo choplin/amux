@@ -13,7 +13,6 @@ where AI agents can work independently. It's now functionally complete and ready
 - **Git Integration**: Each workspace is a separate git worktree
 - **MCP Server**: Full integration with Claude Code
 - **Short IDs**: Simple numeric IDs (1, 2, 3) instead of UUIDs
-- **Session Mailbox**: Communication system for agents (CLI only for now)
 - **Context Files**: Workspace context files at `.amux/workspaces/{id}/context.md`
 
 ### ✅ New Features
@@ -40,9 +39,9 @@ amux/
 │   ├── workspaces/               # Workspace storage
 │   │   └── workspace-{id}/       # Workspace directories
 │   │       ├── workspace.yaml    # Workspace metadata
-│   │       ├── context.md        # Workspace context (optional)
+│   │       ├── storage/          # Workspace storage (optional)
 │   │       └── worktree/         # Git worktree (clean workspace)
-│   └── mailbox/                  # Agent mailboxes (when using CLI)
+│   └── sessions/                 # Session data and storage
 ├── cmd/amux/                     # CLI entry point
 ├── internal/                     # Core implementation
 ├── docs/                         # Documentation

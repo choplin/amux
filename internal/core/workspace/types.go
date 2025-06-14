@@ -1,6 +1,9 @@
 package workspace
 
-import "time"
+import (
+	"path/filepath"
+	"time"
+)
 
 // ConsistencyStatus represents the consistency state of a workspace
 type ConsistencyStatus int
@@ -69,7 +72,7 @@ type Workspace struct {
 	BaseBranch  string    `yaml:"baseBranch" json:"baseBranch"`
 	Path        string    `yaml:"path" json:"path"`
 	Description string    `yaml:"description,omitempty" json:"description,omitempty"`
-	ContextPath string    `yaml:"contextPath,omitempty" json:"contextPath,omitempty"`
+	StoragePath string    `yaml:"storagePath,omitempty" json:"storagePath,omitempty"`
 	CreatedAt   time.Time `yaml:"createdAt" json:"createdAt"`
 	UpdatedAt   time.Time `yaml:"-" json:"updatedAt"` // Dynamically populated from filesystem
 	AutoCreated bool      `yaml:"autoCreated,omitempty" json:"autoCreated,omitempty"`
@@ -78,6 +81,15 @@ type Workspace struct {
 	PathExists     bool              `yaml:"-" json:"pathExists"`
 	WorktreeExists bool              `yaml:"-" json:"worktreeExists"`
 	Status         ConsistencyStatus `yaml:"-" json:"status"`
+}
+
+// GetContextPath returns the path to the context.md file within the storage directory
+// This provides backward compatibility for code expecting context.md
+func (w *Workspace) GetContextPath() string {
+	if w.StoragePath == "" {
+		return ""
+	}
+	return filepath.Join(w.StoragePath, "context.md")
 }
 
 // CreateOptions represents options for creating a new workspace

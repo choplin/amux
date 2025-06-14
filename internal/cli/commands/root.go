@@ -115,9 +115,6 @@ func init() {
 	// Add tail command alias
 	rootCmd.AddCommand(session.TailCommand())
 
-	// Add mailbox command
-	rootCmd.AddCommand(mailboxCmd)
-
 	// Add hooks command
 	rootCmd.AddCommand(hooksCmd)
 }

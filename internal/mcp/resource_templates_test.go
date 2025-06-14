@@ -114,7 +114,7 @@ func TestHandleWorkspaceDetailResource(t *testing.T) {
 	paths, ok := detail["paths"].(map[string]interface{})
 	require.True(t, ok, "paths field should be present")
 	assert.NotEmpty(t, paths["worktree"])
-	assert.NotEmpty(t, paths["context"])
+	assert.NotEmpty(t, paths["storage"])
 
 	// Check resources are included
 	resources, ok := detail["resources"].(map[string]interface{})
