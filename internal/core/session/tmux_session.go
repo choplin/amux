@@ -440,36 +440,33 @@ func (s *tmuxSessionImpl) UpdateStatus() error {
 
 // captureExitStatus captures the exit status from the shell and saves it to storage
 func (s *tmuxSessionImpl) captureExitStatus() (int, error) {
-	// Send command to get exit status
-	if err := s.tmuxAdapter.SendKeys(s.info.TmuxSession, "echo $?"); err != nil {
-		return 0, fmt.Errorf("failed to send echo command: %w", err)
+	if s.info.StoragePath == "" {
+		return 0, fmt.Errorf("no storage path configured")
 	}
 
-	// Wait a bit for the command to execute
+	exitStatusPath := filepath.Join(s.info.StoragePath, "exit_status")
+
+	// Send command to write exit status directly to storage
+	cmd := fmt.Sprintf("echo $? > %s", exitStatusPath)
+	if err := s.tmuxAdapter.SendKeys(s.info.TmuxSession, cmd); err != nil {
+		return 0, fmt.Errorf("failed to send exit status command: %w", err)
+	}
+
+	// Wait for the file to be written
 	time.Sleep(100 * time.Millisecond)
 
-	// Capture the output (last few lines should contain the exit code)
-	output, err := s.tmuxAdapter.CapturePaneWithOptions(s.info.TmuxSession, 5)
+	// Read the exit status from the file
+	data, err := os.ReadFile(exitStatusPath)
 	if err != nil {
-		return 0, fmt.Errorf("failed to capture pane: %w", err)
+		return 0, fmt.Errorf("failed to read exit status: %w", err)
 	}
 
-	// Parse the output to find the exit code
-	// Look for a line that contains just a number
-	lines := strings.Split(strings.TrimSpace(output), "\n")
-	for i := len(lines) - 1; i >= 0; i-- {
-		line := strings.TrimSpace(lines[i])
-		if exitCode, err := strconv.Atoi(line); err == nil {
-			// Save to storage if available
-			if s.info.StoragePath != "" {
-				exitStatusPath := filepath.Join(s.info.StoragePath, "exit_status")
-				if err := os.WriteFile(exitStatusPath, []byte(line), 0o644); err != nil {
-					s.logger.Warn("failed to save exit status", "error", err)
-				}
-			}
-			return exitCode, nil
-		}
+	// Parse the exit code
+	exitCodeStr := strings.TrimSpace(string(data))
+	exitCode, err := strconv.Atoi(exitCodeStr)
+	if err != nil {
+		return 0, fmt.Errorf("invalid exit status format: %s", exitCodeStr)
 	}
 
-	return 0, fmt.Errorf("could not parse exit status from output")
+	return exitCode, nil
 }

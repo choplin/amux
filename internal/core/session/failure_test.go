@@ -238,8 +238,10 @@ func TestSessionFailureDetection(t *testing.T) {
 		err := mockAdapter.CreateSession(info.TmuxSession, ws.Path)
 		require.NoError(t, err)
 
-		// Set mock to return "1" when we capture pane output
-		mockAdapter.SetPaneContent(info.TmuxSession, "1")
+		// Pre-create exit status file since mock doesn't execute shell commands
+		exitStatusPath := filepath.Join(storageDir, "exit_status")
+		err = os.WriteFile(exitStatusPath, []byte("1\n"), 0o644)
+		require.NoError(t, err)
 
 		// Set process to have no children
 		mockProcessChecker.SetHasChildren(info.PID, false)
@@ -251,12 +253,6 @@ func TestSessionFailureDetection(t *testing.T) {
 		// Should be marked as failed
 		assert.Equal(t, StatusFailed, sess.Status())
 		assert.Equal(t, "command exited with code 1", sess.Info().Error)
-
-		// Verify exit status was saved
-		exitStatusPath := filepath.Join(storageDir, "exit_status")
-		data, err := os.ReadFile(exitStatusPath)
-		assert.NoError(t, err)
-		assert.Equal(t, "1", string(data))
 	})
 
 	t.Run("Session marked as completed when exit status is zero", func(t *testing.T) {
@@ -288,8 +284,10 @@ func TestSessionFailureDetection(t *testing.T) {
 		err := mockAdapter.CreateSession(info.TmuxSession, ws.Path)
 		require.NoError(t, err)
 
-		// Set mock to return "0" when we capture pane output
-		mockAdapter.SetPaneContent(info.TmuxSession, "0")
+		// Pre-create exit status file since mock doesn't execute shell commands
+		exitStatusPath := filepath.Join(storageDir, "exit_status")
+		err = os.WriteFile(exitStatusPath, []byte("0\n"), 0o644)
+		require.NoError(t, err)
 
 		// Set process to have no children
 		mockProcessChecker.SetHasChildren(info.PID, false)
@@ -301,12 +299,6 @@ func TestSessionFailureDetection(t *testing.T) {
 		// Should be marked as completed
 		assert.Equal(t, StatusCompleted, sess.Status())
 		assert.Empty(t, sess.Info().Error)
-
-		// Verify exit status was saved
-		exitStatusPath := filepath.Join(storageDir, "exit_status")
-		data, err := os.ReadFile(exitStatusPath)
-		assert.NoError(t, err)
-		assert.Equal(t, "0", string(data))
 	})
 
 	t.Run("Session with running command transitions to completed", func(t *testing.T) {
