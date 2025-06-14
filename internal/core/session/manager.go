@@ -320,13 +320,23 @@ func (m *Manager) ResolveSession(identifier Identifier) (Session, error) {
 // UpdateAllStatuses updates the status of multiple sessions in parallel for better performance
 func (m *Manager) UpdateAllStatuses(sessions []Session) {
 	// Use goroutines to update statuses in parallel
+	// This is beneficial because:
+	// 1. Each session has its own mutex, so different sessions can update concurrently
+	// 2. The main bottleneck is external process calls (tmux, pgrep), not the mutex
+	// 3. I/O wait time can be utilized to process other sessions
 	var wg sync.WaitGroup
+
+	// Limit concurrency to avoid overwhelming the system with too many process calls
+	semaphore := make(chan struct{}, 10) // Max 10 concurrent updates
+
 	for _, sess := range sessions {
 		if sess.Status().IsRunning() {
 			wg.Add(1)
 			go func(s Session) {
 				defer wg.Done()
-				_ = s.UpdateStatus() // Ignore errors, just use current status if update fails
+				semaphore <- struct{}{}        // Acquire
+				defer func() { <-semaphore }() // Release
+				_ = s.UpdateStatus()           // Ignore errors, just use current status if update fails
 			}(sess)
 		}
 	}
