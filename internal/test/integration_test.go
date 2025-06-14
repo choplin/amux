@@ -59,7 +59,6 @@ func TestIntegration_FullWorkflow(t *testing.T) {
 	ws, err := wsManager.Create(workspace.CreateOptions{
 		Name:        "integration-test",
 		BaseBranch:  "main",
-		AgentID:     "test-agent",
 		Description: "Integration test workspace",
 	})
 	if err != nil {
@@ -258,8 +257,7 @@ func TestIntegration_MultipleAgents(t *testing.T) {
 	for _, agentID := range agents {
 		// Create workspace
 		ws, err := wsManager.Create(workspace.CreateOptions{
-			Name:    "workspace-" + agentID,
-			AgentID: agentID,
+			Name: "workspace-" + agentID,
 		})
 		if err != nil {
 			t.Fatalf("Failed to create workspace for %s: %v", agentID, err)

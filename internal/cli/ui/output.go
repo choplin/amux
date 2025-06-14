@@ -105,10 +105,6 @@ func PrintWorkspace(w *workspace.Workspace) {
 		OutputLine("   %s %s", DimStyle.Render("Context:"), w.ContextPath)
 	}
 
-	if w.AgentID != "" {
-		OutputLine("   %s %s", DimStyle.Render("Agent:"), w.AgentID)
-	}
-
 	OutputLine("   %s %s", DimStyle.Render("Created:"), FormatTime(w.CreatedAt))
 	OutputLine("   %s %s", DimStyle.Render("Updated:"), FormatTime(w.UpdatedAt))
 

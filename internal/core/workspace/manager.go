@@ -98,7 +98,6 @@ func (m *Manager) Create(opts CreateOptions) (*Workspace, error) {
 		Branch:      branch,
 		BaseBranch:  baseBranch,
 		Path:        worktreePath,
-		AgentID:     opts.AgentID,
 		Description: opts.Description,
 		ContextPath: filepath.Join(workspaceDir, "context.md"),
 		CreatedAt:   time.Now(),

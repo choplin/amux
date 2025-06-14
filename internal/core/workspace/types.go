@@ -68,7 +68,6 @@ type Workspace struct {
 	Branch      string    `yaml:"branch" json:"branch"`
 	BaseBranch  string    `yaml:"baseBranch" json:"baseBranch"`
 	Path        string    `yaml:"path" json:"path"`
-	AgentID     string    `yaml:"agentId,omitempty" json:"agentId,omitempty"`
 	Description string    `yaml:"description,omitempty" json:"description,omitempty"`
 	ContextPath string    `yaml:"contextPath,omitempty" json:"contextPath,omitempty"`
 	CreatedAt   time.Time `yaml:"createdAt" json:"createdAt"`
@@ -86,7 +85,6 @@ type CreateOptions struct {
 	Name        string
 	BaseBranch  string
 	Branch      string // Specify existing branch to use
-	AgentID     string
 	Description string
 	AutoCreated bool // Internal: whether workspace was auto-created by session
 }
