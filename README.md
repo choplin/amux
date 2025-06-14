@@ -104,6 +104,7 @@ amux attach session-abc123
 amux workspace create <name>    # alias: amux ws create
 amux workspace list            # alias: amux ws list
 amux workspace show <id>       # alias: amux ws show
+amux workspace cd <id>         # alias: amux ws cd
 amux workspace remove <id>     # alias: amux ws remove
 amux workspace prune           # alias: amux ws prune
 
@@ -143,6 +144,10 @@ amux ws show workspace-abc123
 
 # List all workspaces
 amux ws list
+
+# Enter a workspace directory in a subshell
+amux ws cd feature-auth
+# Exit the subshell to return to original directory
 
 # Remove a workspace
 amux ws remove workspace-abc123 --force
