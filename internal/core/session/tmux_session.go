@@ -20,14 +20,19 @@ import (
 
 // tmuxSessionImpl implements Session interface with tmux backend
 type tmuxSessionImpl struct {
-	info           *Info
-	store          Store
-	tmuxAdapter    tmux.Adapter
-	workspace      *workspace.Workspace
-	logger         logger.Logger
-	processChecker process.Checker
-	mu             sync.RWMutex
+	info            *Info
+	store           Store
+	tmuxAdapter     tmux.Adapter
+	workspace       *workspace.Workspace
+	logger          logger.Logger
+	processChecker  process.Checker
+	mu              sync.RWMutex
+	lastStatusCheck time.Time
 }
+
+// statusCacheDuration defines how long to cache status before rechecking
+// This should be shorter than idleThreshold to ensure idle detection works properly
+const statusCacheDuration = 2 * time.Second
 
 // TmuxSessionOption is a function that configures a tmux session
 type TmuxSessionOption func(*tmuxSessionImpl)
@@ -327,6 +332,12 @@ func (s *tmuxSessionImpl) UpdateStatus() error {
 	if !s.info.StatusState.Status.IsRunning() {
 		return nil
 	}
+
+	// Check cache - skip update if checked recently
+	if time.Since(s.lastStatusCheck) < statusCacheDuration {
+		return nil
+	}
+	s.lastStatusCheck = time.Now()
 
 	// Check if tmux session still exists
 	if !s.tmuxAdapter.SessionExists(s.info.TmuxSession) {

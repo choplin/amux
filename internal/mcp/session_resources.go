@@ -117,12 +117,11 @@ func (s *ServerV2) handleSessionListResource(ctx context.Context, request mcp.Re
 		return nil, fmt.Errorf("failed to list sessions: %w", err)
 	}
 
+	// Update all session statuses in batch for better performance
+	sessionManager.UpdateAllStatuses(sessions)
+
 	sessionList := make([]sessionInfo, len(sessions))
 	for i, sess := range sessions {
-		// Update status for running sessions
-		if sess.Status().IsRunning() {
-			_ = sess.UpdateStatus() // Ignore errors, use current status if update fails
-		}
 
 		info := sess.Info()
 		sessionInfo := sessionInfo{

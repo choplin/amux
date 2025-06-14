@@ -335,6 +335,11 @@ func TestSessionFailureDetection(t *testing.T) {
 		// Initially has children
 		mockProcessChecker.SetHasChildren(info.PID, true)
 
+		// Reset cache to ensure update runs
+		if tmuxSess, ok := sess.(*tmuxSessionImpl); ok {
+			tmuxSess.lastStatusCheck = time.Time{}
+		}
+
 		// Update status - should remain working
 		err = sess.UpdateStatus()
 		require.NoError(t, err)
@@ -342,6 +347,11 @@ func TestSessionFailureDetection(t *testing.T) {
 
 		// Now simulate command completion - no more children
 		mockProcessChecker.SetHasChildren(info.PID, false)
+
+		// Reset cache again to ensure update runs
+		if tmuxSess, ok := sess.(*tmuxSessionImpl); ok {
+			tmuxSess.lastStatusCheck = time.Time{}
+		}
 
 		// Update status - should transition to completed
 		err = sess.UpdateStatus()

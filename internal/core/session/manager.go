@@ -316,3 +316,19 @@ func (m *Manager) ResolveSession(identifier Identifier) (Session, error) {
 		return nil, fmt.Errorf("multiple sessions found with name '%s', please use ID instead", identifier)
 	}
 }
+
+// UpdateAllStatuses updates the status of multiple sessions in parallel for better performance
+func (m *Manager) UpdateAllStatuses(sessions []Session) {
+	// Use goroutines to update statuses in parallel
+	var wg sync.WaitGroup
+	for _, sess := range sessions {
+		if sess.Status().IsRunning() {
+			wg.Add(1)
+			go func(s Session) {
+				defer wg.Done()
+				_ = s.UpdateStatus() // Ignore errors, just use current status if update fails
+			}(sess)
+		}
+	}
+	wg.Wait()
+}
