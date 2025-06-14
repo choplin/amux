@@ -93,6 +93,8 @@ func listSessions(cmd *cobra.Command, args []string) error {
 			statusStr = ui.SuccessStyle.Render(statusStr)
 		case session.StatusIdle:
 			statusStr = ui.DimStyle.Render(statusStr)
+		case session.StatusCompleted:
+			statusStr = ui.InfoStyle.Render(statusStr)
 		case session.StatusStopped:
 			statusStr = ui.DimStyle.Render(statusStr)
 		case session.StatusFailed:

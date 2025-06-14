@@ -14,4 +14,5 @@ type Adapter interface {
 	SetEnvironment(sessionName string, env map[string]string) error
 	ResizeWindow(sessionName string, width, height int) error
 	CapturePaneWithOptions(sessionName string, lines int) (string, error)
+	IsPaneDead(sessionName string) (bool, error)
 }

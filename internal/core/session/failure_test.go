@@ -1,0 +1,251 @@
+package session
+
+import (
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/aki/amux/internal/adapters/tmux"
+	"github.com/aki/amux/internal/core/workspace"
+)
+
+// MockProcessChecker implements process.Checker for testing
+type MockProcessChecker struct {
+	hasChildren map[int]bool
+}
+
+func NewMockProcessChecker() *MockProcessChecker {
+	return &MockProcessChecker{
+		hasChildren: make(map[int]bool),
+	}
+}
+
+func (m *MockProcessChecker) HasChildren(pid int) (bool, error) {
+	if val, ok := m.hasChildren[pid]; ok {
+		return val, nil
+	}
+	return true, nil // Default to having children
+}
+
+func (m *MockProcessChecker) SetHasChildren(pid int, hasChildren bool) {
+	m.hasChildren[pid] = hasChildren
+}
+
+func TestSessionFailureDetection(t *testing.T) {
+	// Setup test environment
+	_, wsManager, configManager := setupTestEnvironment(t)
+
+	// Create workspace
+	ws, err := wsManager.Create(workspace.CreateOptions{
+		Name: "test-workspace",
+	})
+	if err != nil {
+		t.Fatalf("Failed to create workspace: %v", err)
+	}
+
+	// Create store
+	store, err := NewFileStore(configManager.GetAmuxDir())
+	if err != nil {
+		t.Fatalf("Failed to create store: %v", err)
+	}
+
+	t.Run("Session marked as failed when tmux session doesn't exist", func(t *testing.T) {
+		// Create mock adapter
+		mockAdapter := tmux.NewMockAdapter()
+
+		// Create session info
+		info := &Info{
+			ID:          "test-session-1",
+			WorkspaceID: ws.ID,
+			AgentID:     "test-agent",
+			StatusState: StatusState{
+				Status:          StatusWorking,
+				StatusChangedAt: time.Now(),
+			},
+			TmuxSession: "test-tmux-session",
+			PID:         12345,
+		}
+
+		// Create session
+		sess := NewTmuxSession(info, store, mockAdapter, ws)
+
+		// Create tmux session first
+		err := mockAdapter.CreateSession(info.TmuxSession, ws.Path)
+		require.NoError(t, err)
+
+		// Verify session is working
+		assert.Equal(t, StatusWorking, sess.Status())
+
+		// Kill the tmux session
+		err = mockAdapter.KillSession(info.TmuxSession)
+		require.NoError(t, err)
+
+		// Update status
+		err = sess.UpdateStatus()
+		require.NoError(t, err)
+
+		// Should be marked as failed
+		assert.Equal(t, StatusFailed, sess.Status())
+		assert.Equal(t, "tmux session no longer exists", sess.Info().Error)
+	})
+
+	t.Run("Session marked as failed when shell process is dead", func(t *testing.T) {
+		// Create mock adapter
+		mockAdapter := tmux.NewMockAdapter()
+
+		// Create session info
+		info := &Info{
+			ID:          "test-session-2",
+			WorkspaceID: ws.ID,
+			AgentID:     "test-agent",
+			StatusState: StatusState{
+				Status:          StatusWorking,
+				StatusChangedAt: time.Now(),
+			},
+			TmuxSession: "test-tmux-session-2",
+			PID:         12346,
+		}
+
+		// Create session
+		sess := NewTmuxSession(info, store, mockAdapter, ws)
+
+		// Create tmux session
+		err := mockAdapter.CreateSession(info.TmuxSession, ws.Path)
+		require.NoError(t, err)
+
+		// Mark pane as dead
+		err = mockAdapter.SetPaneDead(info.TmuxSession, true)
+		require.NoError(t, err)
+
+		// Update status
+		err = sess.UpdateStatus()
+		require.NoError(t, err)
+
+		// Should be marked as failed
+		assert.Equal(t, StatusFailed, sess.Status())
+		assert.Equal(t, "shell process exited", sess.Info().Error)
+	})
+
+	t.Run("Session marked as completed when no child processes", func(t *testing.T) {
+		// Create mock adapter and process checker
+		mockAdapter := tmux.NewMockAdapter()
+		mockProcessChecker := NewMockProcessChecker()
+
+		// Create session info
+		info := &Info{
+			ID:          "test-session-completed",
+			WorkspaceID: ws.ID,
+			AgentID:     "test-agent",
+			StatusState: StatusState{
+				Status:          StatusWorking,
+				StatusChangedAt: time.Now(),
+			},
+			TmuxSession: "test-tmux-session-completed",
+			PID:         12348,
+		}
+
+		// Create session with mock process checker
+		sess := NewTmuxSession(info, store, mockAdapter, ws, WithProcessChecker(mockProcessChecker))
+
+		// Create tmux session
+		err := mockAdapter.CreateSession(info.TmuxSession, ws.Path)
+		require.NoError(t, err)
+
+		// Set process to have no children
+		mockProcessChecker.SetHasChildren(info.PID, false)
+
+		// Update status
+		err = sess.UpdateStatus()
+		require.NoError(t, err)
+
+		// Should be marked as completed
+		assert.Equal(t, StatusCompleted, sess.Status())
+		assert.Empty(t, sess.Info().Error)
+	})
+
+	t.Run("Session remains working when all checks pass", func(t *testing.T) {
+		// Create mock adapter and process checker
+		mockAdapter := tmux.NewMockAdapter()
+		mockProcessChecker := NewMockProcessChecker()
+
+		// Create session info
+		info := &Info{
+			ID:          "test-session-3",
+			WorkspaceID: ws.ID,
+			AgentID:     "test-agent",
+			StatusState: StatusState{
+				Status:          StatusWorking,
+				StatusChangedAt: time.Now(),
+				LastOutputHash:  12345,
+				LastOutputTime:  time.Now(),
+			},
+			TmuxSession: "test-tmux-session-3",
+			PID:         12347,
+		}
+
+		// Create session with mock process checker
+		sess := NewTmuxSession(info, store, mockAdapter, ws, WithProcessChecker(mockProcessChecker))
+
+		// Create tmux session
+		err := mockAdapter.CreateSession(info.TmuxSession, ws.Path)
+		require.NoError(t, err)
+
+		// Set some output
+		mockAdapter.SetPaneContent(info.TmuxSession, "test output")
+
+		// Process has children (default behavior)
+		mockProcessChecker.SetHasChildren(info.PID, true)
+
+		// Update status
+		err = sess.UpdateStatus()
+		require.NoError(t, err)
+
+		// Should remain working
+		assert.Equal(t, StatusWorking, sess.Status())
+		assert.Empty(t, sess.Info().Error)
+	})
+
+	t.Run("Session with running command transitions to completed", func(t *testing.T) {
+		// Create mock adapter and process checker
+		mockAdapter := tmux.NewMockAdapter()
+		mockProcessChecker := NewMockProcessChecker()
+
+		// Create session info
+		info := &Info{
+			ID:          "test-session-transition",
+			WorkspaceID: ws.ID,
+			AgentID:     "test-agent",
+			StatusState: StatusState{
+				Status:          StatusWorking,
+				StatusChangedAt: time.Now(),
+			},
+			TmuxSession: "test-tmux-session-transition",
+			PID:         12349,
+		}
+
+		// Create session with mock process checker
+		sess := NewTmuxSession(info, store, mockAdapter, ws, WithProcessChecker(mockProcessChecker))
+
+		// Create tmux session
+		err := mockAdapter.CreateSession(info.TmuxSession, ws.Path)
+		require.NoError(t, err)
+
+		// Initially has children
+		mockProcessChecker.SetHasChildren(info.PID, true)
+
+		// Update status - should remain working
+		err = sess.UpdateStatus()
+		require.NoError(t, err)
+		assert.Equal(t, StatusWorking, sess.Status())
+
+		// Now simulate command completion - no more children
+		mockProcessChecker.SetHasChildren(info.PID, false)
+
+		// Update status - should transition to completed
+		err = sess.UpdateStatus()
+		require.NoError(t, err)
+		assert.Equal(t, StatusCompleted, sess.Status())
+	})
+}

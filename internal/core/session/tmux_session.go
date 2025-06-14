@@ -10,18 +10,20 @@ import (
 
 	"github.com/aki/amux/internal/adapters/tmux"
 	"github.com/aki/amux/internal/core/logger"
+	"github.com/aki/amux/internal/core/process"
 	"github.com/aki/amux/internal/core/terminal"
 	"github.com/aki/amux/internal/core/workspace"
 )
 
 // tmuxSessionImpl implements Session interface with tmux backend
 type tmuxSessionImpl struct {
-	info        *Info
-	store       Store
-	tmuxAdapter tmux.Adapter
-	workspace   *workspace.Workspace
-	logger      logger.Logger
-	mu          sync.RWMutex
+	info           *Info
+	store          Store
+	tmuxAdapter    tmux.Adapter
+	workspace      *workspace.Workspace
+	logger         logger.Logger
+	processChecker process.Checker
+	mu             sync.RWMutex
 }
 
 // TmuxSessionOption is a function that configures a tmux session
@@ -34,14 +36,22 @@ func WithTmuxLogger(log logger.Logger) TmuxSessionOption {
 	}
 }
 
+// WithProcessChecker sets the process checker for the tmux session
+func WithProcessChecker(checker process.Checker) TmuxSessionOption {
+	return func(s *tmuxSessionImpl) {
+		s.processChecker = checker
+	}
+}
+
 // NewTmuxSession creates a new tmux-backed session
 func NewTmuxSession(info *Info, store Store, tmuxAdapter tmux.Adapter, workspace *workspace.Workspace, opts ...TmuxSessionOption) Session {
 	s := &tmuxSessionImpl{
-		info:        info,
-		store:       store,
-		tmuxAdapter: tmuxAdapter,
-		workspace:   workspace,
-		logger:      logger.Nop(), // Default to no-op logger
+		info:           info,
+		store:          store,
+		tmuxAdapter:    tmuxAdapter,
+		workspace:      workspace,
+		logger:         logger.Nop(),    // Default to no-op logger
+		processChecker: process.Default, // Default to system process checker
 	}
 
 	// Apply options
@@ -314,6 +324,57 @@ func (s *tmuxSessionImpl) UpdateStatus() error {
 	if !s.info.StatusState.Status.IsRunning() {
 		return nil
 	}
+
+	// Check if tmux session still exists
+	if !s.tmuxAdapter.SessionExists(s.info.TmuxSession) {
+		// Session doesn't exist anymore - mark as failed
+		now := time.Now()
+		s.info.StatusState.Status = StatusFailed
+		s.info.StatusState.StatusChangedAt = now
+		s.info.Error = "tmux session no longer exists"
+		if err := s.store.Save(s.info); err != nil {
+			return fmt.Errorf("failed to save status change: %w", err)
+		}
+		return nil
+	}
+
+	// Check if shell process is dead
+	isDead, err := s.tmuxAdapter.IsPaneDead(s.info.TmuxSession)
+	if err != nil {
+		// Log error but continue - don't fail the entire status update
+		s.logger.Warn("failed to check pane status", "error", err)
+	} else if isDead {
+		// Shell process is dead - mark as failed
+		now := time.Now()
+		s.info.StatusState.Status = StatusFailed
+		s.info.StatusState.StatusChangedAt = now
+		s.info.Error = "shell process exited"
+		if err := s.store.Save(s.info); err != nil {
+			return fmt.Errorf("failed to save status change: %w", err)
+		}
+		return nil
+	}
+
+	// Check if shell has child processes
+	if s.info.PID > 0 && s.processChecker != nil {
+		hasChildren, err := s.processChecker.HasChildren(s.info.PID)
+		if err != nil {
+			// Log error but continue
+			s.logger.Warn("failed to check child processes", "error", err, "pid", s.info.PID)
+		} else if !hasChildren {
+			// No child processes - command has completed
+			now := time.Now()
+			s.info.StatusState.Status = StatusCompleted
+			s.info.StatusState.StatusChangedAt = now
+			if err := s.store.Save(s.info); err != nil {
+				return fmt.Errorf("failed to save status change: %w", err)
+			}
+			return nil
+		}
+	}
+
+	// If we get here, session is running with active processes
+	// Continue with existing working/idle detection logic
 
 	// Get last 20 lines of output for status checking
 	// This is sufficient to detect activity without fetching entire buffer

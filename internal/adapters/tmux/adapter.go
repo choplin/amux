@@ -195,3 +195,17 @@ func (a *RealAdapter) CapturePaneWithOptions(sessionName string, lines int) (str
 	}
 	return string(output), nil
 }
+
+// IsPaneDead checks if the pane's process has exited
+func (a *RealAdapter) IsPaneDead(sessionName string) (bool, error) {
+	// Get pane_dead status - returns "1" if dead, "0" if alive
+	cmd := exec.Command(a.tmuxPath, "list-panes", "-t", sessionName, "-F", "#{pane_dead}")
+	output, err := cmd.Output()
+	if err != nil {
+		return false, fmt.Errorf("failed to check pane status: %w", err)
+	}
+
+	// Parse output
+	result := strings.TrimSpace(string(output))
+	return result == "1", nil
+}
