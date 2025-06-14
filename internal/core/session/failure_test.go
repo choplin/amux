@@ -36,6 +36,12 @@ func (m *MockProcessChecker) SetHasChildren(pid int, hasChildren bool) {
 }
 
 func TestSessionFailureDetection(t *testing.T) {
+	// Skip if tmux not available
+	tmuxAdapter, err := tmux.NewAdapter()
+	if err != nil || !tmuxAdapter.IsAvailable() {
+		t.Skip("tmux not available")
+	}
+
 	// Setup test environment
 	_, wsManager, configManager := setupTestEnvironment(t)
 
