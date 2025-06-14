@@ -155,6 +155,11 @@ func (m *Manager) Get(id ID) (Session, error) {
 	// Load from store
 	info, err := m.store.Load(string(id))
 	if err != nil {
+		// If not found in store, it means the session doesn't exist
+		// (even if it might have been in cache before)
+		if _, ok := err.(ErrSessionNotFound); ok {
+			return nil, err
+		}
 		return nil, fmt.Errorf("failed to load session: %w", err)
 	}
 
