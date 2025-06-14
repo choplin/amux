@@ -44,7 +44,7 @@ Keep tools strictly for operations that modify state:
 ```typescript
 workspace_create(name, baseBranch, description?, agentId?)
 workspace_remove(workspace_id)
-// Future: session_start, session_stop enhancements
+// Future: session_start, session_stop, mailbox_send
 ```
 
 ### 3. Prompts (Guided Workflows)
@@ -65,7 +65,7 @@ The `amux://conventions` resource will return:
   "paths": {
     "workspace_root": ".amux/workspaces/{workspace-id}/worktree/",
     "workspace_context": ".amux/workspaces/{workspace-id}/context.md",
-    "session_storage": ".amux/sessions/{session-id}/storage/"
+    "session_mailbox": ".amux/mailbox/{session-id}/"
   },
   "patterns": {
     "branch_name": "amux/workspace-{name}-{timestamp}-{hash}",
