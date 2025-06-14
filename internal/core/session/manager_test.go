@@ -421,6 +421,90 @@ func TestManager_Remove(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error getting removed session")
 	}
+
+	// Verify tmux session was killed
+	tmuxSession := session.Info().TmuxSession
+	if mockAdapter.SessionExists(tmuxSession) {
+		t.Error("Expected tmux session to be killed after removal")
+	}
+}
+
+func TestManager_RemoveCompletedSession(t *testing.T) {
+	// Setup
+	_, wsManager, configManager := setupTestEnvironment(t)
+
+	ws, err := wsManager.Create(workspace.CreateOptions{
+		Name: "test-workspace-completed",
+	})
+	if err != nil {
+		t.Fatalf("Failed to create workspace: %v", err)
+	}
+
+	store, err := NewFileStore(configManager.GetAmuxDir())
+	if err != nil {
+		t.Fatalf("Failed to create store: %v", err)
+	}
+
+	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	if err != nil {
+		t.Fatalf("Failed to create ID mapper: %v", err)
+	}
+
+	manager := NewManager(store, wsManager, idMapper)
+
+	// Use mock adapter
+	mockAdapter := tmux.NewMockAdapter()
+	manager.SetTmuxAdapter(mockAdapter)
+
+	// Create and start a session
+	session, err := manager.CreateSession(Options{
+		WorkspaceID: ws.ID,
+		AgentID:     "claude",
+	})
+	if err != nil {
+		t.Fatalf("Failed to create session: %v", err)
+	}
+
+	ctx := context.Background()
+	if err := session.Start(ctx); err != nil {
+		t.Fatalf("Failed to start session: %v", err)
+	}
+
+	// Manually set status to completed (simulating command completion)
+	// We need to update the session's internal state, not just the store
+	// Cast to internal type to access internal methods
+	tmuxSess := session.(*tmuxSessionImpl)
+	tmuxSess.mu.Lock()
+	tmuxSess.info.StatusState.Status = StatusCompleted
+	tmuxSess.info.StatusState.StatusChangedAt = time.Now()
+	tmuxSessionName := tmuxSess.info.TmuxSession
+	tmuxSess.mu.Unlock()
+
+	// Save to store
+	if err := store.Save(tmuxSess.info); err != nil {
+		t.Fatalf("Failed to save completed status: %v", err)
+	}
+
+	// Ensure tmux session exists before removal
+	if !mockAdapter.SessionExists(tmuxSessionName) {
+		t.Fatal("Expected tmux session to exist before removal")
+	}
+
+	// Remove completed session
+	if err := manager.Remove(ID(session.ID())); err != nil {
+		t.Fatalf("Failed to remove completed session: %v", err)
+	}
+
+	// Verify session is gone
+	_, err = manager.Get(ID(session.ID()))
+	if err == nil {
+		t.Error("Expected error getting removed session")
+	}
+
+	// Verify tmux session was killed
+	if mockAdapter.SessionExists(tmuxSessionName) {
+		t.Error("Expected tmux session to be killed after removing completed session")
+	}
 }
 
 func TestManager_CreateSessionWithoutTmux(t *testing.T) {

@@ -55,15 +55,14 @@ func listSessions(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
+	// Update all session statuses in batch for better performance
+	sessionManager.UpdateAllStatuses(sessions)
+
 	// Create table
 	tbl := ui.NewTable("SESSION", "NAME", "DESCRIPTION", "AGENT", "WORKSPACE", "STATUS", "IN STATUS", "TOTAL TIME")
 
 	// Add rows
 	for _, sess := range sessions {
-		// Update status for running sessions
-		if sess.Status().IsRunning() {
-			_ = sess.UpdateStatus() // Ignore errors, just use current status if update fails
-		}
 
 		info := sess.Info()
 
@@ -93,6 +92,8 @@ func listSessions(cmd *cobra.Command, args []string) error {
 			statusStr = ui.SuccessStyle.Render(statusStr)
 		case session.StatusIdle:
 			statusStr = ui.DimStyle.Render(statusStr)
+		case session.StatusCompleted:
+			statusStr = ui.InfoStyle.Render(statusStr)
 		case session.StatusStopped:
 			statusStr = ui.DimStyle.Render(statusStr)
 		case session.StatusFailed:

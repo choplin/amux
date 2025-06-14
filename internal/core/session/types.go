@@ -55,9 +55,9 @@ func (s Status) IsRunning() bool {
 	return s == StatusWorking || s == StatusIdle
 }
 
-// IsTerminal returns true if the session is in a terminal state (stopped or failed)
+// IsTerminal returns true if the session is in a terminal state (completed, stopped or failed)
 func (s Status) IsTerminal() bool {
-	return s == StatusStopped || s == StatusFailed
+	return s == StatusCompleted || s == StatusStopped || s == StatusFailed
 }
 
 const (
@@ -67,6 +67,8 @@ const (
 	StatusWorking Status = "working"
 	// StatusIdle indicates a session is waiting for input (no recent output)
 	StatusIdle Status = "idle"
+	// StatusCompleted indicates a session command has finished successfully
+	StatusCompleted Status = "completed"
 	// StatusStopped indicates a session has been stopped normally
 	StatusStopped Status = "stopped"
 	// StatusFailed indicates a session has failed or crashed

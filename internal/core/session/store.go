@@ -116,11 +116,30 @@ func (s *FileStore) Delete(id string) error {
 	defer s.mu.Unlock()
 
 	path := s.sessionPath(id)
-	if err := os.Remove(path); err != nil {
+
+	// First check if file exists
+	if _, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
 			return ErrSessionNotFound{ID: id}
 		}
+		return fmt.Errorf("failed to check session file: %w", err)
+	}
+
+	// Delete the file
+	if err := os.Remove(path); err != nil {
+		if os.IsNotExist(err) {
+			// File was deleted between check and remove - still treat as not found
+			return ErrSessionNotFound{ID: id}
+		}
 		return fmt.Errorf("failed to delete session file: %w", err)
+	}
+
+	// Also remove the session storage directory if it exists
+	sessionDir := filepath.Join(s.basePath, id)
+	if err := os.RemoveAll(sessionDir); err != nil && !os.IsNotExist(err) {
+		// Log error but don't fail the delete operation
+		// The session is already deleted from a functional perspective
+		fmt.Printf("Warning: failed to remove session storage directory: %v\n", err)
 	}
 
 	return nil
