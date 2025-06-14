@@ -56,6 +56,11 @@ func TestDefaultChecker_HasChildren(t *testing.T) {
 }
 
 func TestHasChildren(t *testing.T) {
+	// This test needs platform-specific commands
+	if runtime.GOOS == "windows" {
+		t.Skip("Test not implemented for Windows")
+	}
+
 	// Test the convenience function
 	hasChildren, err := HasChildren(os.Getpid())
 	if err != nil {
