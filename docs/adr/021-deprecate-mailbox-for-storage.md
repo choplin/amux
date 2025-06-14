@@ -1,4 +1,4 @@
-# 17. Deprecate Mailbox in Favor of General Storage
+# 21. Deprecate Mailbox in Favor of General Storage
 
 Date: 2025-06-14
 
