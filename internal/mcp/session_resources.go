@@ -35,6 +35,8 @@ func parseSessionURI(uri string) (string, error) {
 type sessionInfo struct {
 	ID          string              `json:"id"`
 	Index       string              `json:"index,omitempty"`
+	Name        string              `json:"name,omitempty"`
+	Description string              `json:"description,omitempty"`
 	WorkspaceID string              `json:"workspaceId"`
 	AgentID     string              `json:"agentId"`
 	Status      session.Status      `json:"status"`
@@ -53,6 +55,8 @@ type sessionResourceURIs struct {
 type sessionDetail struct {
 	ID          string              `json:"id"`
 	Index       string              `json:"index,omitempty"`
+	Name        string              `json:"name,omitempty"`
+	Description string              `json:"description,omitempty"`
 	WorkspaceID string              `json:"workspaceId"`
 	AgentID     string              `json:"agentId"`
 	Status      session.Status      `json:"status"`
@@ -124,6 +128,8 @@ func (s *ServerV2) handleSessionListResource(ctx context.Context, request mcp.Re
 		sessionInfo := sessionInfo{
 			ID:          info.ID,
 			Index:       info.Index,
+			Name:        info.Name,
+			Description: info.Description,
 			WorkspaceID: info.WorkspaceID,
 			AgentID:     info.AgentID,
 			Status:      info.StatusState.Status,
@@ -187,6 +193,8 @@ func (s *ServerV2) handleSessionDetailResource(ctx context.Context, request mcp.
 	detail := sessionDetail{
 		ID:          info.ID,
 		Index:       info.Index,
+		Name:        info.Name,
+		Description: info.Description,
 		WorkspaceID: info.WorkspaceID,
 		AgentID:     info.AgentID,
 		Status:      info.StatusState.Status,

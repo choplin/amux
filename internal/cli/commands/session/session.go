@@ -7,10 +7,14 @@ import (
 
 var (
 	// Flags for session run
-	runWorkspace     string
-	runCommand       string
-	runEnv           []string
-	runInitialPrompt string
+	runWorkspace          string
+	runCommand            string
+	runEnv                []string
+	runInitialPrompt      string
+	runName               string
+	runDescription        string
+	runSessionName        string
+	runSessionDescription string
 
 	// Flags for session logs
 	followLogs     bool

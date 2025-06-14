@@ -90,6 +90,77 @@ func TestSessionRun(t *testing.T) {
 		} else if status != string(session.StatusWorking) && status != string(session.StatusIdle) {
 			t.Errorf("expected status to be working or idle, got %v", status)
 		}
+
+		// Clean up - stop the session
+		sessionID := response["id"].(string)
+		sessionManager, _ := testServer.createSessionManager()
+		sess, _ := sessionManager.GetSession(sessionID)
+		if sess != nil {
+			_ = sess.Stop()
+		}
+	})
+
+	t.Run("creates session with name and description", func(t *testing.T) {
+		// Use different workspace to avoid conflicts
+		wsOpts2 := workspace.CreateOptions{
+			Name:        "test-workspace-2",
+			Description: "Test workspace for named session",
+		}
+		ws2, err := testServer.workspaceManager.Create(wsOpts2)
+		if err != nil {
+			t.Fatalf("failed to create workspace: %v", err)
+		}
+
+		req := mcp.CallToolRequest{
+			Params: mcp.CallToolParams{
+				Name: "session_run",
+				Arguments: map[string]interface{}{
+					"workspace_id": ws2.ID,
+					"agent_id":     "test-agent",
+					"name":         "Named Test Session",
+					"description":  "Session with custom name and description",
+					"command":      "sleep 1",
+				},
+			},
+		}
+
+		result, err := testServer.handleSessionRun(context.Background(), req)
+		if err != nil {
+			t.Fatalf("expected success, got error: %v", err)
+		}
+
+		// Extract response from text content
+		textContent, ok := result.Content[0].(mcp.TextContent)
+		if !ok {
+			t.Fatalf("expected TextContent, got %T", result.Content[0])
+		}
+
+		// Parse JSON response
+		text := textContent.Text
+		jsonStart := strings.Index(text, "{")
+		if jsonStart == -1 {
+			t.Fatalf("no JSON found in response: %s", text)
+		}
+		var response map[string]interface{}
+		if err := json.Unmarshal([]byte(text[jsonStart:]), &response); err != nil {
+			t.Fatalf("failed to parse response JSON: %v", err)
+		}
+
+		// Verify name and description
+		if response["name"] != "Named Test Session" {
+			t.Errorf("expected name 'Named Test Session', got %v", response["name"])
+		}
+		if response["description"] != "Session with custom name and description" {
+			t.Errorf("expected description 'Session with custom name and description', got %v", response["description"])
+		}
+
+		// Clean up - stop the session
+		sessionID := response["id"].(string)
+		sessionManager, _ := testServer.createSessionManager()
+		sess, _ := sessionManager.GetSession(sessionID)
+		if sess != nil {
+			_ = sess.Stop()
+		}
 	})
 
 	t.Run("fails with invalid workspace", func(t *testing.T) {
