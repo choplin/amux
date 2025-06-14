@@ -10,7 +10,7 @@ import (
 
 // WorkspaceBrowseParams contains parameters for resource_workspace_browse tool
 type WorkspaceBrowseParams struct {
-	WorkspaceID string `json:"workspace_id" jsonschema:"required,description=Workspace name or ID"`
+	WorkspaceID string `json:"workspace_identifier" jsonschema:"required,description=Workspace ID, index, or name"`
 	Path        string `json:"path,omitempty" jsonschema:"description=Path within the workspace to browse (optional)"`
 }
 

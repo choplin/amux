@@ -7,6 +7,7 @@ import (
 
 	"github.com/aki/amux/internal/cli/ui"
 	"github.com/aki/amux/internal/core/config"
+	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/workspace"
 )
 
@@ -58,7 +59,7 @@ func removeSession(cmd *cobra.Command, args []string, keepWorkspace bool) error 
 	}
 
 	// Get session to check its status
-	sess, err := sessionManager.GetSession(sessionID)
+	sess, err := sessionManager.ResolveSession(session.Identifier(sessionID))
 	if err != nil {
 		return fmt.Errorf("failed to get session: %w", err)
 	}
@@ -73,7 +74,7 @@ func removeSession(cmd *cobra.Command, args []string, keepWorkspace bool) error 
 	workspaceID := sessionInfo.WorkspaceID
 
 	// Remove the session
-	if err := sessionManager.RemoveSession(sessionID); err != nil {
+	if err := sessionManager.Remove(session.ID(sess.ID())); err != nil {
 		return fmt.Errorf("failed to remove session: %w", err)
 	}
 
@@ -82,7 +83,7 @@ func removeSession(cmd *cobra.Command, args []string, keepWorkspace bool) error 
 	// Check if workspace was auto-created and --keep-workspace was not specified
 	if !keepWorkspace && workspaceID != "" {
 		// Get workspace to check if it was auto-created
-		ws, err := wsManager.ResolveWorkspace(workspaceID)
+		ws, err := wsManager.ResolveWorkspace(workspace.Identifier(workspaceID))
 		if err != nil {
 			// Workspace might already be removed or not found, skip auto-removal
 			return nil //nolint:nilerr // Workspace not found is not an error in this context
@@ -108,7 +109,7 @@ func removeSession(cmd *cobra.Command, args []string, keepWorkspace bool) error 
 
 			if !workspaceInUse {
 				// Remove the workspace
-				if err := wsManager.Remove(workspaceID); err != nil {
+				if err := wsManager.Remove(workspace.Identifier(workspaceID)); err != nil {
 					ui.Warning("Failed to remove auto-created workspace %s: %v", ws.Name, err)
 				} else {
 					ui.Success("Removed auto-created workspace: '%s'", ws.Name)

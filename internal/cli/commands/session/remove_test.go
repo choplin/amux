@@ -141,7 +141,7 @@ func TestRemoveSession(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verify workspace exists before removal
-		_, err = wsManager.ResolveWorkspace(wsAuto.ID)
+		_, err = wsManager.ResolveWorkspace(workspace.Identifier(wsAuto.ID))
 		require.NoError(t, err)
 
 		// Remove the session
@@ -151,7 +151,7 @@ func TestRemoveSession(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Verify workspace was removed
-		_, err = wsManager.ResolveWorkspace(wsAuto.ID)
+		_, err = wsManager.ResolveWorkspace(workspace.Identifier(wsAuto.ID))
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "workspace not found")
 	})
@@ -185,7 +185,7 @@ func TestRemoveSession(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Verify workspace still exists
-		_, err = wsManager.ResolveWorkspace(ws2.ID)
+		_, err = wsManager.ResolveWorkspace(workspace.Identifier(ws2.ID))
 		assert.NoError(t, err)
 	})
 
@@ -201,8 +201,8 @@ func TestRemoveSession(t *testing.T) {
 		// Ensure workspace cleanup happens after all operations
 		t.Cleanup(func() {
 			// Try to remove workspace if it still exists
-			if _, err := wsManager.ResolveWorkspace(ws3.ID); err == nil {
-				_ = wsManager.Remove(ws3.ID)
+			if _, err := wsManager.ResolveWorkspace(workspace.Identifier(ws3.ID)); err == nil {
+				_ = wsManager.Remove(workspace.Identifier(ws3.ID))
 			}
 		})
 
@@ -254,7 +254,7 @@ func TestRemoveSession(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Verify workspace still exists (because sess2 is using it)
-		_, err = wsManager.ResolveWorkspace(ws3.ID)
+		_, err = wsManager.ResolveWorkspace(workspace.Identifier(ws3.ID))
 		assert.NoError(t, err, "Workspace should still exist after removing first session")
 
 		// Verify only one session remains
@@ -275,7 +275,7 @@ func TestRemoveSession(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Workspace should be removed now (it was auto-created and no sessions are using it)
-		_, err = wsManager.ResolveWorkspace(ws3.ID)
+		_, err = wsManager.ResolveWorkspace(workspace.Identifier(ws3.ID))
 		assert.Error(t, err, "Workspace should be removed after removing last session")
 		if err != nil {
 			assert.Contains(t, err.Error(), "workspace not found")
@@ -311,7 +311,7 @@ func TestRemoveSession(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Verify workspace still exists
-		_, err = wsManager.ResolveWorkspace(ws4.ID)
+		_, err = wsManager.ResolveWorkspace(workspace.Identifier(ws4.ID))
 		assert.NoError(t, err)
 	})
 }

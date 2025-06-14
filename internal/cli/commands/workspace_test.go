@@ -45,7 +45,7 @@ func TestWorkspaceRemovalSafetyCheck(t *testing.T) {
 	t.Cleanup(func() {
 		// Clean up: change to repo dir first, then remove workspace
 		os.Chdir(repoDir)
-		if err := manager.Remove(ws.ID); err != nil {
+		if err := manager.Remove(workspace.Identifier(ws.ID)); err != nil {
 			t.Logf("Failed to remove workspace %s: %v", ws.ID, err)
 		}
 	})
@@ -163,7 +163,7 @@ func TestWorkspaceCdCommand(t *testing.T) {
 	}
 	// Ensure cleanup happens after all subtests complete
 	t.Cleanup(func() {
-		if err := manager.Remove(ws.ID); err != nil {
+		if err := manager.Remove(workspace.Identifier(ws.ID)); err != nil {
 			t.Logf("Failed to remove workspace %s: %v", ws.ID, err)
 		}
 	})
@@ -181,7 +181,7 @@ func TestWorkspaceCdCommand(t *testing.T) {
 
 	// Test workspace resolution by ID
 	t.Run("ResolveByID", func(t *testing.T) {
-		resolved, err := manager.ResolveWorkspace(ws.ID)
+		resolved, err := manager.ResolveWorkspace(workspace.Identifier(ws.ID))
 		if err != nil {
 			t.Errorf("Failed to resolve workspace by ID: %v", err)
 		}
@@ -193,7 +193,7 @@ func TestWorkspaceCdCommand(t *testing.T) {
 	// Test workspace resolution by index
 	t.Run("ResolveByIndex", func(t *testing.T) {
 		if ws.Index != "" {
-			resolved, err := manager.ResolveWorkspace(ws.Index)
+			resolved, err := manager.ResolveWorkspace(workspace.Identifier(ws.Index))
 			if err != nil {
 				t.Errorf("Failed to resolve workspace by index: %v", err)
 			}

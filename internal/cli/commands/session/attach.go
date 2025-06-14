@@ -11,6 +11,7 @@ import (
 	"github.com/aki/amux/internal/cli/ui"
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/logger"
+	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/terminal"
 	"github.com/aki/amux/internal/core/workspace"
 )
@@ -51,7 +52,7 @@ func attachSession(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get session
-	sess, err := sessionManager.GetSession(sessionID)
+	sess, err := sessionManager.ResolveSession(session.Identifier(sessionID))
 	if err != nil {
 		return fmt.Errorf("failed to get session: %w", err)
 	}

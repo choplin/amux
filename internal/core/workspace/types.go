@@ -4,6 +4,18 @@ import (
 	"time"
 )
 
+// ID is the full UUID of a workspace
+type ID string
+
+// Index is the short numeric identifier (1, 2, 3...)
+type Index string
+
+// Name is the human-readable name
+type Name string
+
+// Identifier can be any of: ID, Index, or Name
+type Identifier string
+
 // ConsistencyStatus represents the consistency state of a workspace
 type ConsistencyStatus int
 

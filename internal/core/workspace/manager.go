@@ -52,7 +52,7 @@ func NewManager(configManager *config.Manager) (*Manager, error) {
 // Create creates a new workspace
 func (m *Manager) Create(opts CreateOptions) (*Workspace, error) {
 	// Generate workspace ID
-	id := generateWorkspaceID(opts.Name)
+	id := generateID(opts.Name)
 
 	// Determine base branch
 	baseBranch := opts.BaseBranch
@@ -135,15 +135,9 @@ func (m *Manager) Create(opts CreateOptions) (*Workspace, error) {
 	return workspace, nil
 }
 
-// Get retrieves a workspace by ID
-func (m *Manager) Get(id string) (*Workspace, error) {
-	// Check if this is an index
-	fullID := id
-	if fullIDFromShort, exists := m.idMapper.GetWorkspaceFull(id); exists {
-		fullID = fullIDFromShort
-	}
-
-	workspaceMetaPath := filepath.Join(m.workspacesDir, fullID, "workspace.yaml")
+// Get retrieves a workspace by its full ID
+func (m *Manager) Get(id ID) (*Workspace, error) {
+	workspaceMetaPath := filepath.Join(m.workspacesDir, string(id), "workspace.yaml")
 
 	data, err := os.ReadFile(workspaceMetaPath)
 	if err != nil {
@@ -265,14 +259,22 @@ func (m *Manager) getLastModified(workspacePath string) time.Time {
 }
 
 // ResolveWorkspace finds a workspace by index, full ID, or name
-func (m *Manager) ResolveWorkspace(identifier string) (*Workspace, error) {
-	// First, try to get by ID (supports both index and full IDs)
-	ws, err := m.Get(identifier)
+func (m *Manager) ResolveWorkspace(identifier Identifier) (*Workspace, error) {
+	// 1. Try as full ID
+	ws, err := m.Get(ID(identifier))
 	if err == nil {
 		return ws, nil
 	}
 
-	// If not found by ID, search by name
+	// 2. Try as index
+	if fullID, exists := m.idMapper.GetWorkspaceFull(string(identifier)); exists {
+		ws, err = m.Get(ID(fullID))
+		if err == nil {
+			return ws, nil
+		}
+	}
+
+	// 3. Try as name
 	workspaces, err := m.List(ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list workspaces: %w", err)
@@ -280,7 +282,7 @@ func (m *Manager) ResolveWorkspace(identifier string) (*Workspace, error) {
 
 	var matches []*Workspace
 	for _, ws := range workspaces {
-		if ws.Name == identifier {
+		if ws.Name == string(identifier) {
 			matches = append(matches, ws)
 		}
 	}
@@ -292,13 +294,13 @@ func (m *Manager) ResolveWorkspace(identifier string) (*Workspace, error) {
 		return matches[0], nil
 	default:
 		// Multiple workspaces with the same name
-		return nil, fmt.Errorf("multiple workspaces found with name '%s', please use ID instead", identifier)
+		return nil, fmt.Errorf("multiple workspaces found with name '%s', please use ID or index instead", identifier)
 	}
 }
 
-// Remove deletes a workspace
-func (m *Manager) Remove(id string) error {
-	workspace, err := m.Get(id)
+// Remove deletes a workspace by identifier (ID, index, or name)
+func (m *Manager) Remove(identifier Identifier) error {
+	workspace, err := m.ResolveWorkspace(identifier)
 	if err != nil {
 		return err
 	}
@@ -368,7 +370,7 @@ func (m *Manager) Cleanup(opts CleanupOptions) ([]string, error) {
 	for _, workspace := range workspaces {
 		if workspace.UpdatedAt.Before(cutoff) {
 			if !opts.DryRun {
-				if err := m.Remove(workspace.ID); err != nil {
+				if err := m.Remove(Identifier(workspace.ID)); err != nil {
 					// Log error but continue with other workspaces
 					fmt.Fprintf(os.Stderr, "Failed to remove workspace %s: %v\n", workspace.ID, err)
 					continue
@@ -468,8 +470,8 @@ func (m *Manager) saveWorkspace(workspace *Workspace) error {
 	return nil
 }
 
-// generateWorkspaceID generates a unique workspace ID
-func generateWorkspaceID(name string) string {
+// generateID generates a unique workspace ID
+func generateID(name string) string {
 	// Sanitize name for use in ID
 	safeName := strings.ToLower(name)
 	safeName = strings.ReplaceAll(safeName, " ", "-")

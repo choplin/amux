@@ -178,8 +178,8 @@ func (s *ServerV2) handleSessionDetailResource(ctx context.Context, request mcp.
 		return nil, fmt.Errorf("failed to create session manager: %w", err)
 	}
 
-	// Get session
-	sess, err := sessionManager.GetSession(sessionID)
+	// Get session (supports ID, index, or name)
+	sess, err := sessionManager.ResolveSession(session.Identifier(sessionID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
@@ -246,8 +246,8 @@ func (s *ServerV2) handleSessionOutputResource(ctx context.Context, request mcp.
 		return nil, fmt.Errorf("failed to create session manager: %w", err)
 	}
 
-	// Get session
-	sess, err := sessionManager.GetSession(sessionID)
+	// Get session (supports ID, index, or name)
+	sess, err := sessionManager.ResolveSession(session.Identifier(sessionID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}

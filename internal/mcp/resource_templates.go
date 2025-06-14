@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/aki/amux/internal/core/workspace"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
@@ -135,7 +136,7 @@ func (s *ServerV2) handleWorkspaceFilesResource(ctx context.Context, request mcp
 		subPath = strings.TrimPrefix(subPath, "files/")
 	}
 
-	ws, err := s.workspaceManager.Get(workspaceID)
+	ws, err := s.workspaceManager.Get(workspace.ID(workspaceID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get workspace: %w", err)
 	}
@@ -240,7 +241,7 @@ func (s *ServerV2) handleWorkspaceContextResource(ctx context.Context, request m
 		return nil, err
 	}
 
-	ws, err := s.workspaceManager.Get(workspaceID)
+	ws, err := s.workspaceManager.Get(workspace.ID(workspaceID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get workspace: %w", err)
 	}

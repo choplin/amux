@@ -214,7 +214,7 @@ func TestManager_CreateSessionWithInitialPrompt(t *testing.T) {
 	}
 }
 
-func TestManager_GetSession(t *testing.T) {
+func TestManager_Get(t *testing.T) {
 	// Setup
 	_, wsManager, configManager := setupTestEnvironment(t)
 
@@ -252,7 +252,7 @@ func TestManager_GetSession(t *testing.T) {
 	}
 
 	// Get the session
-	retrieved, err := manager.GetSession(session.ID())
+	retrieved, err := manager.Get(ID(session.ID()))
 	if err != nil {
 		t.Fatalf("Failed to get session: %v", err)
 	}
@@ -262,7 +262,7 @@ func TestManager_GetSession(t *testing.T) {
 	}
 
 	// Test getting non-existent session
-	_, err = manager.GetSession("non-existent")
+	_, err = manager.Get(ID("non-existent"))
 	if err == nil {
 		t.Error("Expected error for non-existent session")
 	}
@@ -358,7 +358,7 @@ func TestManager_ListSessions(t *testing.T) {
 	}
 }
 
-func TestManager_RemoveSession(t *testing.T) {
+func TestManager_Remove(t *testing.T) {
 	// Setup
 	_, wsManager, configManager := setupTestEnvironment(t)
 
@@ -401,7 +401,7 @@ func TestManager_RemoveSession(t *testing.T) {
 		t.Fatalf("Failed to start session: %v", err)
 	}
 
-	err = manager.RemoveSession(session.ID())
+	err = manager.Remove(ID(session.ID()))
 	if err == nil {
 		t.Error("Expected error removing running session")
 	}
@@ -412,12 +412,12 @@ func TestManager_RemoveSession(t *testing.T) {
 	}
 
 	// Now should be able to remove
-	if err := manager.RemoveSession(session.ID()); err != nil {
+	if err := manager.Remove(ID(session.ID())); err != nil {
 		t.Fatalf("Failed to remove stopped session: %v", err)
 	}
 
 	// Verify session is gone
-	_, err = manager.GetSession(session.ID())
+	_, err = manager.Get(ID(session.ID()))
 	if err == nil {
 		t.Error("Expected error getting removed session")
 	}
@@ -470,7 +470,7 @@ func TestManager_CreateSessionWithoutTmux(t *testing.T) {
 	}
 }
 
-func TestManager_GetSessionWithoutTmux(t *testing.T) {
+func TestManager_GetWithoutTmux(t *testing.T) {
 	// Setup test environment
 	_, wsManager, configManager := setupTestEnvironment(t)
 
@@ -517,7 +517,7 @@ func TestManager_GetSessionWithoutTmux(t *testing.T) {
 	manager2.SetTmuxAdapter(nil)
 
 	// Try to get the session without tmux
-	_, err = manager2.GetSession(sessionID)
+	_, err = manager2.Get(ID(sessionID))
 	if err == nil {
 		t.Fatal("Expected error when getting session without tmux")
 	}

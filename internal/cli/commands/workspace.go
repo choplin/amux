@@ -279,7 +279,7 @@ func runShowWorkspace(cmd *cobra.Command, args []string) error {
 	}
 
 	// Resolve workspace by name or ID
-	ws, err := manager.ResolveWorkspace(identifier)
+	ws, err := manager.ResolveWorkspace(workspace.Identifier(identifier))
 	if err != nil {
 		return fmt.Errorf("failed to resolve workspace: %w", err)
 	}
@@ -305,7 +305,7 @@ func runRemoveWorkspace(cmd *cobra.Command, args []string) error {
 
 	// Resolve workspace by name or ID
 
-	ws, err := manager.ResolveWorkspace(identifier)
+	ws, err := manager.ResolveWorkspace(workspace.Identifier(identifier))
 	if err != nil {
 		return fmt.Errorf("failed to resolve workspace: %w", err)
 	}
@@ -356,7 +356,7 @@ func runRemoveWorkspace(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	if err := manager.Remove(ws.ID); err != nil {
+	if err := manager.Remove(workspace.Identifier(ws.ID)); err != nil {
 		return fmt.Errorf("failed to remove workspace: %w", err)
 	}
 
@@ -412,7 +412,7 @@ func runCdWorkspace(cmd *cobra.Command, args []string) error {
 	}
 
 	// Resolve workspace by name or ID
-	ws, err := manager.ResolveWorkspace(identifier)
+	ws, err := manager.ResolveWorkspace(workspace.Identifier(identifier))
 	if err != nil {
 		return fmt.Errorf("failed to resolve workspace: %w", err)
 	}

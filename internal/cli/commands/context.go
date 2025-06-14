@@ -66,7 +66,7 @@ func showContext(cmd *cobra.Command, args []string) error {
 	// Get workspace
 	var ws *workspace.Workspace
 	if len(args) > 0 {
-		ws, err = wsManager.ResolveWorkspace(args[0])
+		ws, err = wsManager.ResolveWorkspace(workspace.Identifier(args[0]))
 		if err != nil {
 			return fmt.Errorf("failed to resolve workspace: %w", err)
 		}
@@ -141,7 +141,7 @@ func initContext(cmd *cobra.Command, args []string) error {
 	// Get workspace
 	var ws *workspace.Workspace
 	if len(args) > 0 {
-		ws, err = wsManager.ResolveWorkspace(args[0])
+		ws, err = wsManager.ResolveWorkspace(workspace.Identifier(args[0]))
 		if err != nil {
 			return fmt.Errorf("failed to resolve workspace: %w", err)
 		}
