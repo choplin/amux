@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **BREAKING**: Removed mailbox feature in favor of generalized storage directories
+  - Session mailbox system has been deprecated
+  - Workspaces now have a general-purpose `storage/` directory
+  - Sessions now have a general-purpose `storage/` directory
+  - MCP tools `storage_read`, `storage_write`, and `storage_list` added for storage access
+
+### Changed
+
+- Workspace context is now stored in the storage directory (`storage/context.md`)
+- Session and workspace metadata now include storage paths
+
 ## [0.1.0] - 2025-06-13
 
 ### Added

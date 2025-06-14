@@ -43,16 +43,6 @@ func (s *ServerV2) registerSessionBridgeTools() error {
 	}
 	s.mcpServer.AddTool(mcp.NewTool("resource_session_output", outputOpts...), s.handleResourceSessionOutput)
 
-	// resource_session_mailbox - Bridge to amux://session/{id}/mailbox
-	mailboxOpts, err := WithStructOptions(
-		"Access session mailbox state (bridge to amux://session/{id}/mailbox resource). Returns mailbox messages and metadata.",
-		SessionIDParams{},
-	)
-	if err != nil {
-		return fmt.Errorf("failed to create resource_session_mailbox options: %w", err)
-	}
-	s.mcpServer.AddTool(mcp.NewTool("resource_session_mailbox", mailboxOpts...), s.handleResourceSessionMailbox)
-
 	return nil
 }
 
@@ -97,7 +87,6 @@ func (s *ServerV2) handleResourceSessionList(ctx context.Context, request mcp.Ca
 		// Add resource URIs
 		sessionInfo.Resources.Detail = fmt.Sprintf("amux://session/%s", info.ID)
 		sessionInfo.Resources.Output = fmt.Sprintf("amux://session/%s/output", info.ID)
-		sessionInfo.Resources.Mailbox = fmt.Sprintf("amux://session/%s/mailbox", info.ID)
 
 		sessionList[i] = sessionInfo
 	}
@@ -171,45 +160,6 @@ func (s *ServerV2) handleResourceSessionOutput(ctx context.Context, request mcp.
 	}
 
 	resources, err := s.handleSessionOutputResource(ctx, resourceRequest)
-	if err != nil {
-		return nil, err
-	}
-
-	// Extract text from first resource
-	if len(resources) == 0 {
-		return nil, fmt.Errorf("no resource returned")
-	}
-
-	textResource, ok := resources[0].(*mcp.TextResourceContents)
-	if !ok {
-		return nil, fmt.Errorf("unexpected resource type")
-	}
-
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: textResource.Text,
-			},
-		},
-	}, nil
-}
-
-func (s *ServerV2) handleResourceSessionMailbox(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	args := request.GetArguments()
-	sessionID, ok := args["session_id"].(string)
-	if !ok {
-		return nil, fmt.Errorf("invalid or missing session_id argument")
-	}
-
-	// Create a proper ReadResourceRequest
-	resourceRequest := mcp.ReadResourceRequest{
-		Params: mcp.ReadResourceParams{
-			URI: fmt.Sprintf("amux://session/%s/mailbox", sessionID),
-		},
-	}
-
-	resources, err := s.handleSessionMailboxResource(ctx, resourceRequest)
 	if err != nil {
 		return nil, err
 	}

@@ -121,6 +121,11 @@ func (s *ServerV2) registerTools() error {
 		return fmt.Errorf("failed to register session tools: %w", err)
 	}
 
+	// Register storage tools
+	if err := s.registerStorageTools(); err != nil {
+		return fmt.Errorf("failed to register storage tools: %w", err)
+	}
+
 	return nil
 }
 

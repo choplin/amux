@@ -416,15 +416,20 @@ func TestManager_CreateSetsContextPath(t *testing.T) {
 		t.Fatalf("Failed to create workspace: %v", err)
 	}
 
-	// Verify context path is set
-	if ws.ContextPath == "" {
-		t.Error("Expected ContextPath to be set, but it was empty")
+	// Verify storage path is set
+	if ws.StoragePath == "" {
+		t.Error("Expected StoragePath to be set, but it was empty")
 	}
 
-	// Verify context path follows expected pattern
-	expectedContextPath := filepath.Join(configManager.GetWorkspacesDir(), ws.ID, "context.md")
-	if ws.ContextPath != expectedContextPath {
-		t.Errorf("Expected context path %s, got %s", expectedContextPath, ws.ContextPath)
+	// Verify storage path follows expected pattern
+	expectedStoragePath := filepath.Join(configManager.GetWorkspacesDir(), ws.ID, "storage")
+	if ws.StoragePath != expectedStoragePath {
+		t.Errorf("Expected storage path %s, got %s", expectedStoragePath, ws.StoragePath)
+	}
+
+	// Verify storage directory was created
+	if _, err := os.Stat(ws.StoragePath); os.IsNotExist(err) {
+		t.Error("Expected storage directory to be created, but it doesn't exist")
 	}
 
 	// Verify we can retrieve the workspace with context path
@@ -433,9 +438,9 @@ func TestManager_CreateSetsContextPath(t *testing.T) {
 		t.Fatalf("Failed to retrieve workspace: %v", err)
 	}
 
-	if retrievedWs.ContextPath != ws.ContextPath {
-		t.Errorf("Retrieved workspace context path mismatch: got %s, want %s",
-			retrievedWs.ContextPath, ws.ContextPath)
+	if retrievedWs.StoragePath != ws.StoragePath {
+		t.Errorf("Retrieved workspace storage path mismatch: got %s, want %s",
+			retrievedWs.StoragePath, ws.StoragePath)
 	}
 
 	// Clean up

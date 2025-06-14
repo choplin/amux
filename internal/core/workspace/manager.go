@@ -99,9 +99,17 @@ func (m *Manager) Create(opts CreateOptions) (*Workspace, error) {
 		BaseBranch:  baseBranch,
 		Path:        worktreePath,
 		Description: opts.Description,
-		ContextPath: filepath.Join(workspaceDir, "context.md"),
+		StoragePath: filepath.Join(workspaceDir, "storage"),
 		CreatedAt:   time.Now(),
 		AutoCreated: opts.AutoCreated,
+	}
+
+	// Create storage directory
+	if err := os.MkdirAll(workspace.StoragePath, 0o755); err != nil {
+		// Cleanup on failure
+		_ = m.gitOps.RemoveWorktree(worktreePath)
+		_ = m.gitOps.DeleteBranch(branch)
+		return nil, fmt.Errorf("failed to create storage directory: %w", err)
 	}
 
 	// Save workspace metadata

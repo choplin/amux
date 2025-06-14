@@ -100,7 +100,7 @@ func TestIntegration_FullWorkflow(t *testing.T) {
 		t.Fatalf("Failed to create session store: %v", err)
 	}
 
-	sessionManager := session.NewManager(store, wsManager, nil, nil)
+	sessionManager := session.NewManager(store, wsManager, nil)
 
 	// Use mock adapter for predictable testing
 	mockAdapter := tmux.NewMockAdapter()
@@ -246,7 +246,7 @@ func TestIntegration_MultipleAgents(t *testing.T) {
 		t.Fatalf("Failed to create session store: %v", err)
 	}
 
-	sessionManager := session.NewManager(store, wsManager, nil, nil)
+	sessionManager := session.NewManager(store, wsManager, nil)
 	mockAdapter := tmux.NewMockAdapter()
 	sessionManager.SetTmuxAdapter(mockAdapter)
 

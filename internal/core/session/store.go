@@ -130,3 +130,13 @@ func (s *FileStore) Delete(id string) error {
 func (s *FileStore) sessionPath(id string) string {
 	return filepath.Join(s.basePath, fmt.Sprintf("session-%s.yaml", id))
 }
+
+// CreateSessionStorage creates a storage directory for a session and returns the path
+func (s *FileStore) CreateSessionStorage(sessionID string) (string, error) {
+	// Create storage directory under sessions/{sessionID}/storage
+	storagePath := filepath.Join(s.basePath, sessionID, "storage")
+	if err := os.MkdirAll(storagePath, 0o755); err != nil {
+		return "", fmt.Errorf("failed to create session storage directory: %w", err)
+	}
+	return storagePath, nil
+}

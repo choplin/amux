@@ -8,7 +8,6 @@ import (
 	"github.com/aki/amux/internal/adapters/tmux"
 	"github.com/aki/amux/internal/core/idmap"
 	"github.com/aki/amux/internal/core/logger"
-	"github.com/aki/amux/internal/core/mailbox"
 	"github.com/aki/amux/internal/core/workspace"
 )
 
@@ -16,7 +15,6 @@ import (
 type Manager struct {
 	store            Store
 	workspaceManager *workspace.Manager
-	mailboxManager   *mailbox.Manager
 	tmuxAdapter      tmux.Adapter
 	sessions         map[string]Session
 	idMapper         *idmap.IDMapper
@@ -35,14 +33,13 @@ func WithLogger(log logger.Logger) ManagerOption {
 }
 
 // NewManager creates a new session manager
-func NewManager(store Store, workspaceManager *workspace.Manager, mailboxManager *mailbox.Manager, idMapper *idmap.IDMapper, opts ...ManagerOption) *Manager {
+func NewManager(store Store, workspaceManager *workspace.Manager, idMapper *idmap.IDMapper, opts ...ManagerOption) *Manager {
 	// Try to create tmux adapter, but don't fail if unavailable
 	tmuxAdapter, _ := tmux.NewAdapter()
 
 	m := &Manager{
 		store:            store,
 		workspaceManager: workspaceManager,
-		mailboxManager:   mailboxManager,
 		idMapper:         idMapper,
 		tmuxAdapter:      tmuxAdapter,
 		sessions:         make(map[string]Session),
@@ -94,6 +91,14 @@ func (m *Manager) CreateSession(opts Options) (Session, error) {
 	}
 
 	now := time.Now()
+
+	// Create session storage directory
+	storagePath, err := m.store.CreateSessionStorage(sessionID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create session storage: %w", err)
+	}
+
+	// Create session info
 	info := &Info{
 		ID:          sessionID,
 		WorkspaceID: ws.ID,
@@ -107,6 +112,7 @@ func (m *Manager) CreateSession(opts Options) (Session, error) {
 		Environment:   opts.Environment,
 		InitialPrompt: opts.InitialPrompt,
 		CreatedAt:     now,
+		StoragePath:   storagePath,
 	}
 
 	// Save session info to store

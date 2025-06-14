@@ -98,6 +98,7 @@ type Info struct {
 	StartedAt     *time.Time        `yaml:"started_at,omitempty"`
 	StoppedAt     *time.Time        `yaml:"stopped_at,omitempty"`
 	Error         string            `yaml:"error,omitempty"`
+	StoragePath   string            `yaml:"storage_path,omitempty"`
 }
 
 // Session represents an active or inactive agent session
@@ -149,4 +150,7 @@ type Store interface {
 
 	// Delete deletes session info
 	Delete(id string) error
+
+	// CreateSessionStorage creates a storage directory for a session
+	CreateSessionStorage(sessionID string) (string, error)
 }

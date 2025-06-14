@@ -1,6 +1,8 @@
 package workspace
 
-import "time"
+import (
+	"time"
+)
 
 // ConsistencyStatus represents the consistency state of a workspace
 type ConsistencyStatus int
@@ -69,7 +71,7 @@ type Workspace struct {
 	BaseBranch  string    `yaml:"baseBranch" json:"baseBranch"`
 	Path        string    `yaml:"path" json:"path"`
 	Description string    `yaml:"description,omitempty" json:"description,omitempty"`
-	ContextPath string    `yaml:"contextPath,omitempty" json:"contextPath,omitempty"`
+	StoragePath string    `yaml:"storagePath,omitempty" json:"storagePath,omitempty"`
 	CreatedAt   time.Time `yaml:"createdAt" json:"createdAt"`
 	UpdatedAt   time.Time `yaml:"-" json:"updatedAt"` // Dynamically populated from filesystem
 	AutoCreated bool      `yaml:"autoCreated,omitempty" json:"autoCreated,omitempty"`

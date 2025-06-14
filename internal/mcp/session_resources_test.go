@@ -69,19 +69,6 @@ func TestSessionResources(t *testing.T) {
 			t.Error("expected error for non-existent session, got nil")
 		}
 	})
-
-	t.Run("session mailbox resource returns error for non-existent session", func(t *testing.T) {
-		req := mcp.ReadResourceRequest{
-			Params: mcp.ReadResourceParams{
-				URI: "amux://session/non-existent/mailbox",
-			},
-		}
-
-		_, err := testServer.handleSessionMailboxResource(context.Background(), req)
-		if err == nil {
-			t.Error("expected error for non-existent session, got nil")
-		}
-	})
 }
 
 func TestSessionResourceRegistration(t *testing.T) {
