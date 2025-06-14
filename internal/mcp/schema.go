@@ -184,8 +184,6 @@ type WorkspaceCreateParams struct {
 
 	Branch string `json:"branch,omitempty" description:"Use existing branch (optional)"`
 
-	AgentID string `json:"agentId,omitempty" description:"Agent ID (optional)"`
-
 	Description string `json:"description,omitempty" description:"Description (optional)"`
 }
 

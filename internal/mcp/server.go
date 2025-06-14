@@ -149,10 +149,6 @@ func (s *ServerV2) handleWorkspaceCreate(ctx context.Context, request mcp.CallTo
 		opts.Branch = branch
 	}
 
-	if agentID, ok := args["agentId"].(string); ok {
-		opts.AgentID = agentID
-	}
-
 	if description, ok := args["description"].(string); ok {
 		opts.Description = description
 	}

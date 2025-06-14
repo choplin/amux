@@ -19,7 +19,7 @@ func TestStructToToolOptions(t *testing.T) {
 
 			structType: WorkspaceCreateParams{},
 
-			checkFields: []string{"name", "baseBranch", "branch", "agentId", "description"},
+			checkFields: []string{"name", "baseBranch", "branch", "description"},
 		},
 
 		{

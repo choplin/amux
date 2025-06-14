@@ -34,8 +34,6 @@ var (
 
 	createBranch string
 
-	createAgentID string
-
 	createDescription string
 
 	createNoHooks bool
@@ -75,8 +73,6 @@ func init() {
 	createWorkspaceCmd.Flags().StringVarP(&createBaseBranch, "base-branch", "b", "", "Base branch to create workspace from")
 
 	createWorkspaceCmd.Flags().StringVar(&createBranch, "branch", "", "Use existing branch instead of creating new one")
-
-	createWorkspaceCmd.Flags().StringVarP(&createAgentID, "agent", "a", "", "Agent ID to assign to workspace")
 
 	createWorkspaceCmd.Flags().StringVarP(&createDescription, "description", "d", "", "Description of the workspace")
 
@@ -176,8 +172,6 @@ func runCreateWorkspace(cmd *cobra.Command, args []string) error {
 
 		Branch: createBranch,
 
-		AgentID: createAgentID,
-
 		Description: createDescription,
 	}
 
@@ -197,10 +191,6 @@ func runCreateWorkspace(cmd *cobra.Command, args []string) error {
 	ui.Info("Branch: %s", ws.Branch)
 
 	ui.Info("Path: %s", ws.Path)
-
-	if ws.AgentID != "" {
-		ui.Info("Assigned to agent: %s", ws.AgentID)
-	}
 
 	// Execute hooks unless --no-hooks was specified
 	if !createNoHooks {
@@ -461,10 +451,6 @@ func executeWorkspaceHooks(ws *workspace.Workspace, event hooks.Event) error {
 		"AMUX_EVENT_TIME":            time.Now().Format(time.RFC3339),
 		"AMUX_PROJECT_ROOT":          projectRoot,
 		"AMUX_CONFIG_DIR":            configDir,
-	}
-
-	if ws.AgentID != "" {
-		env["AMUX_AGENT_ID"] = ws.AgentID
 	}
 
 	// Execute hooks
