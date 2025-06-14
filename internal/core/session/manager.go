@@ -239,6 +239,18 @@ func (m *Manager) Remove(id ID) error {
 		return fmt.Errorf("cannot remove running session")
 	}
 
+	// Clean up any remaining tmux session
+	info := sess.Info()
+	if info.TmuxSession != "" && m.tmuxAdapter != nil && m.tmuxAdapter.IsAvailable() {
+		// Check if tmux session exists before trying to kill it
+		if m.tmuxAdapter.SessionExists(info.TmuxSession) {
+			if err := m.tmuxAdapter.KillSession(info.TmuxSession); err != nil {
+				// Log error but continue with removal
+				m.logger.Warn("failed to kill tmux session during removal", "error", err, "session", info.TmuxSession)
+			}
+		}
+	}
+
 	// Remove from store
 	if err := m.store.Delete(string(id)); err != nil {
 		return fmt.Errorf("failed to delete session: %w", err)

@@ -72,6 +72,14 @@ We will not attempt to:
 1. **Windows Support**: Tests that require tmux or pgrep are skipped on Windows
 2. **Process Detection**: Uses platform-specific process checking (pgrep on Unix-like systems)
 
+### Session Cleanup on Removal
+
+When removing a session (via `amux session remove`), any remaining tmux session is also cleaned up:
+
+- This ensures no orphaned tmux sessions are left behind
+- Applies to all terminal states: `completed`, `stopped`, and `failed`
+- Prevents accumulation of unused tmux sessions after session removal
+
 ## Consequences
 
 This approach provides clear session state visibility without complex heuristics. Users can see when
