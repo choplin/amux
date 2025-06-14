@@ -45,13 +45,13 @@ Add `StatusCompleted` as a new state and implement failure detection based on pr
 
 Implemented automatic exit status capture:
 
-- When no child processes remain, we send `echo $?` to the shell
-- Parse the output to get the exit code
-- Save to `{storage}/exit_status` for record keeping
+- When no child processes remain, we send `echo $? > {storage}/exit_status` to the shell
+- This writes the exit code directly to a file, avoiding shell prompt parsing
+- Read the exit status from the file
 - Exit code 0 → `StatusCompleted`
 - Non-zero exit code → `StatusFailed` with "command exited with code N" error
 
-This provides accurate exit status tracking without requiring agent modifications.
+This provides robust exit status tracking without depending on shell prompt format.
 
 We will not attempt to:
 
