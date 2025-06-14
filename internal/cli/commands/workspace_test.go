@@ -128,3 +128,87 @@ func TestWorkspaceRemovalSafetyCheck(t *testing.T) {
 		t.Logf("Changed to repo dir: cwd=%s", cwd)
 	})
 }
+
+// TestWorkspaceCdCommand tests the workspace cd command functionality
+func TestWorkspaceCdCommand(t *testing.T) {
+	// Create test repository
+	repoDir := helpers.CreateTestRepo(t)
+	defer os.RemoveAll(repoDir)
+
+	// Initialize Amux
+	configManager := config.NewManager(repoDir)
+	cfg := config.DefaultConfig()
+	err := configManager.Save(cfg)
+	if err != nil {
+		t.Fatalf("Failed to initialize: %v", err)
+	}
+
+	// Create workspace manager
+	manager, err := workspace.NewManager(configManager)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
+
+	// Create a test workspace
+	opts := workspace.CreateOptions{
+		Name:        "test-cd",
+		BaseBranch:  "main",
+		Description: "Test workspace cd command",
+	}
+
+	ws, err := manager.Create(opts)
+	if err != nil {
+		t.Fatalf("Failed to create workspace: %v", err)
+	}
+	defer manager.Remove(ws.ID)
+
+	// Test workspace resolution by name
+	t.Run("ResolveByName", func(t *testing.T) {
+		resolved, err := manager.ResolveWorkspace("test-cd")
+		if err != nil {
+			t.Errorf("Failed to resolve workspace by name: %v", err)
+		}
+		if resolved.ID != ws.ID {
+			t.Errorf("Resolved wrong workspace: got %s, want %s", resolved.ID, ws.ID)
+		}
+	})
+
+	// Test workspace resolution by ID
+	t.Run("ResolveByID", func(t *testing.T) {
+		resolved, err := manager.ResolveWorkspace(ws.ID)
+		if err != nil {
+			t.Errorf("Failed to resolve workspace by ID: %v", err)
+		}
+		if resolved.ID != ws.ID {
+			t.Errorf("Resolved wrong workspace: got %s, want %s", resolved.ID, ws.ID)
+		}
+	})
+
+	// Test workspace resolution by index
+	t.Run("ResolveByIndex", func(t *testing.T) {
+		if ws.Index != "" {
+			resolved, err := manager.ResolveWorkspace(ws.Index)
+			if err != nil {
+				t.Errorf("Failed to resolve workspace by index: %v", err)
+			}
+			if resolved.ID != ws.ID {
+				t.Errorf("Resolved wrong workspace: got %s, want %s", resolved.ID, ws.ID)
+			}
+		}
+	})
+
+	// Test invalid workspace
+	t.Run("InvalidWorkspace", func(t *testing.T) {
+		_, err := manager.ResolveWorkspace("non-existent")
+		if err == nil {
+			t.Error("Expected error for non-existent workspace, got nil")
+		}
+	})
+
+	// Test workspace path exists
+	t.Run("WorkspacePathExists", func(t *testing.T) {
+		if _, err := os.Stat(ws.Path); os.IsNotExist(err) {
+			t.Errorf("Workspace path does not exist: %s", ws.Path)
+		}
+	})
+}
