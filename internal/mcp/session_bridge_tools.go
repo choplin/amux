@@ -71,6 +71,8 @@ func (s *ServerV2) handleResourceSessionList(ctx context.Context, request mcp.Ca
 		sessionInfo := sessionInfo{
 			ID:          info.ID,
 			Index:       info.Index,
+			Name:        info.Name,
+			Description: info.Description,
 			WorkspaceID: info.WorkspaceID,
 			AgentID:     info.AgentID,
 			Status:      info.StatusState.Status,

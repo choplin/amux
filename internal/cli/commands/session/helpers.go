@@ -30,14 +30,24 @@ func createSessionManager(configManager *config.Manager, wsManager *workspace.Ma
 }
 
 // createAutoWorkspace creates a new workspace with a name based on session ID
-func createAutoWorkspace(wsManager *workspace.Manager, sessionID session.ID) (*workspace.Workspace, error) {
-	// Use first 8 chars of session ID for workspace name
-	name := fmt.Sprintf("session-%s", sessionID.Short())
+func createAutoWorkspace(wsManager *workspace.Manager, sessionID session.ID, customName, customDescription string) (*workspace.Workspace, error) {
+	// Use custom name if provided, otherwise use session ID
+	name := customName
+	if name == "" {
+		// Use first 8 chars of session ID for workspace name
+		name = fmt.Sprintf("session-%s", sessionID.Short())
+	}
+
+	// Use custom description if provided, otherwise use default
+	description := customDescription
+	if description == "" {
+		description = fmt.Sprintf("Auto-created workspace for session %s", sessionID.Short())
+	}
 
 	// Create the workspace
 	opts := workspace.CreateOptions{
 		Name:        name,
-		Description: fmt.Sprintf("Auto-created workspace for session %s", sessionID.Short()),
+		Description: description,
 		BaseBranch:  "main",
 		AutoCreated: true,
 	}

@@ -56,7 +56,7 @@ func listSessions(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create table
-	tbl := ui.NewTable("SESSION", "AGENT", "WORKSPACE", "STATUS", "IN STATUS", "TOTAL TIME")
+	tbl := ui.NewTable("SESSION", "NAME", "DESCRIPTION", "AGENT", "WORKSPACE", "STATUS", "IN STATUS", "TOTAL TIME")
 
 	// Add rows
 	for _, sess := range sessions {
@@ -111,7 +111,16 @@ func listSessions(cmd *cobra.Command, args []string) error {
 			displayID = info.Index
 		}
 
-		tbl.AddRow(displayID, info.AgentID, wsName, statusStr, inStatusStr, totalTime)
+		// Format session name
+		sessionName := info.Name
+
+		// Format description with truncation
+		description := info.Description
+		if len(description) > 30 {
+			description = description[:27] + "..."
+		}
+
+		tbl.AddRow(displayID, sessionName, description, info.AgentID, wsName, statusStr, inStatusStr, totalTime)
 	}
 
 	// Print with header

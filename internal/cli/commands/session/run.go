@@ -26,6 +26,8 @@ with a name based on the session ID (e.g., session-f47ac10b).
 Examples:
   # Run Claude with auto-created workspace
   amux session run claude
+  # Run Claude with custom workspace name and description
+  amux session run claude --name feature-auth --description "Implementing authentication"
   # Run Claude in a specific workspace
   amux session run claude --workspace feature-auth
   # Run with custom command
@@ -43,6 +45,10 @@ Examples:
 	cmd.Flags().StringVarP(&runCommand, "command", "c", "", "Override agent command")
 	cmd.Flags().StringSliceVarP(&runEnv, "env", "e", []string{}, "Environment variables (KEY=VALUE)")
 	cmd.Flags().StringVarP(&runInitialPrompt, "initial-prompt", "p", "", "Initial prompt to send to the agent after starting")
+	cmd.Flags().StringVarP(&runSessionName, "session-name", "", "", "Human-readable name for the session")
+	cmd.Flags().StringVarP(&runSessionDescription, "session-description", "", "", "Description of the session purpose")
+	cmd.Flags().StringVarP(&runName, "name", "n", "", "Name for the auto-created workspace (only used when --workspace is not specified)")
+	cmd.Flags().StringVarP(&runDescription, "description", "d", "", "Description for the auto-created workspace (only used when --workspace is not specified)")
 
 	return cmd
 }
@@ -75,7 +81,7 @@ func runSession(cmd *cobra.Command, args []string) error {
 		}
 	} else {
 		// Auto-create a new workspace using session ID
-		ws, err = createAutoWorkspace(wsManager, sessionID)
+		ws, err = createAutoWorkspace(wsManager, sessionID, runName, runDescription)
 		if err != nil {
 			return fmt.Errorf("failed to create auto-workspace: %w", err)
 		}
@@ -128,6 +134,8 @@ func runSession(cmd *cobra.Command, args []string) error {
 		Command:       command,
 		Environment:   env,
 		InitialPrompt: runInitialPrompt,
+		Name:          runSessionName,
+		Description:   runSessionDescription,
 	}
 
 	sess, err := sessionManager.CreateSession(opts)

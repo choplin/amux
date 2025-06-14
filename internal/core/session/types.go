@@ -80,6 +80,8 @@ type Options struct {
 	Command       string            // Optional: override agent command
 	Environment   map[string]string // Optional: additional env vars
 	InitialPrompt string            // Optional: initial prompt to send after starting
+	Name          string            // Optional: human-readable name for the session
+	Description   string            // Optional: description of session purpose
 }
 
 // Info contains metadata about a session
@@ -99,6 +101,8 @@ type Info struct {
 	StoppedAt     *time.Time        `yaml:"stopped_at,omitempty"`
 	Error         string            `yaml:"error,omitempty"`
 	StoragePath   string            `yaml:"storage_path,omitempty"`
+	Name          string            `yaml:"name,omitempty"`
+	Description   string            `yaml:"description,omitempty"`
 }
 
 // Session represents an active or inactive agent session

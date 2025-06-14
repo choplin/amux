@@ -113,6 +113,8 @@ func (m *Manager) CreateSession(opts Options) (Session, error) {
 		InitialPrompt: opts.InitialPrompt,
 		CreatedAt:     now,
 		StoragePath:   storagePath,
+		Name:          opts.Name,
+		Description:   opts.Description,
 	}
 
 	// Save session info to store

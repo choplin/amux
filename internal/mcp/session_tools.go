@@ -14,6 +14,8 @@ import (
 type SessionRunParams struct {
 	WorkspaceID string            `json:"workspace_id" jsonschema:"required,description=Workspace ID or name to run the session in"`
 	AgentID     string            `json:"agent_id" jsonschema:"required,description=Agent ID to run (e.g. 'claude' 'gpt')"`
+	Name        string            `json:"name,omitempty" jsonschema:"description=Human-readable name for the session"`
+	Description string            `json:"description,omitempty" jsonschema:"description=Description of the session purpose"`
 	Command     string            `json:"command,omitempty" jsonschema:"description=Override the agent's default command"`
 	Environment map[string]string `json:"environment,omitempty" jsonschema:"description=Additional environment variables"`
 }
@@ -91,6 +93,16 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 		AgentID:     agentID,
 	}
 
+	// Optional name
+	if name, ok := args["name"].(string); ok && name != "" {
+		opts.Name = name
+	}
+
+	// Optional description
+	if description, ok := args["description"].(string); ok && description != "" {
+		opts.Description = description
+	}
+
 	// Optional command
 	if command, ok := args["command"].(string); ok && command != "" {
 		opts.Command = command
@@ -130,6 +142,8 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 	response := map[string]interface{}{
 		"id":             info.ID,
 		"index":          info.Index,
+		"name":           info.Name,
+		"description":    info.Description,
 		"workspace_id":   info.WorkspaceID,
 		"workspace_name": ws.Name,
 		"agent_id":       info.AgentID,

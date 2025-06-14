@@ -82,6 +82,69 @@ func TestManager_CreateSession(t *testing.T) {
 	}
 }
 
+func TestManager_CreateSessionWithNameAndDescription(t *testing.T) {
+	// Setup test environment
+	_, wsManager, configManager := setupTestEnvironment(t)
+
+	// Create a test workspace
+	ws, err := wsManager.Create(workspace.CreateOptions{
+		Name:       "test-workspace-named",
+		BaseBranch: "main",
+	})
+	if err != nil {
+		t.Fatalf("Failed to create test workspace: %v", err)
+	}
+
+	// Create session store
+	store, err := NewFileStore(configManager.GetAmuxDir())
+	if err != nil {
+		t.Fatalf("Failed to create session store: %v", err)
+	}
+
+	// Create session manager (nil ID mapper and mailbox manager for tests)
+	manager := NewManager(store, wsManager, nil, nil)
+
+	// Use mock adapter for consistent testing across platforms
+	mockAdapter := tmux.NewMockAdapter()
+	manager.SetTmuxAdapter(mockAdapter)
+
+	// Test creating a session with name and description
+	opts := Options{
+		WorkspaceID: ws.ID,
+		AgentID:     "claude",
+		Command:     "claude code",
+		Name:        "debug-session",
+		Description: "Debugging authentication issues",
+	}
+
+	session, err := manager.CreateSession(opts)
+	if err != nil {
+		t.Fatalf("Failed to create session: %v", err)
+	}
+
+	// Verify session properties
+	info := session.Info()
+	if info.Name != "debug-session" {
+		t.Errorf("Expected name 'debug-session', got %s", info.Name)
+	}
+	if info.Description != "Debugging authentication issues" {
+		t.Errorf("Expected description 'Debugging authentication issues', got %s", info.Description)
+	}
+
+	// Verify session was saved to store with name and description
+	loaded, err := store.Load(session.ID())
+	if err != nil {
+		t.Fatalf("Failed to load session from store: %v", err)
+	}
+
+	if loaded.Name != "debug-session" {
+		t.Errorf("Loaded session name mismatch: expected 'debug-session', got %s", loaded.Name)
+	}
+	if loaded.Description != "Debugging authentication issues" {
+		t.Errorf("Loaded session description mismatch")
+	}
+}
+
 func TestManager_CreateSessionWithInitialPrompt(t *testing.T) {
 	// Setup test environment
 	_, wsManager, configManager := setupTestEnvironment(t)
@@ -477,7 +540,9 @@ func TestFileStore_Operations(t *testing.T) {
 			StatusChangedAt: now,
 			LastOutputTime:  now,
 		},
-		CreatedAt: now,
+		CreatedAt:   now,
+		Name:        "test-session-name",
+		Description: "Test session description",
 	}
 
 	if err := store.Save(info); err != nil {
@@ -491,6 +556,12 @@ func TestFileStore_Operations(t *testing.T) {
 
 	if loaded.ID != info.ID {
 		t.Errorf("Loaded ID mismatch: expected %s, got %s", info.ID, loaded.ID)
+	}
+	if loaded.Name != info.Name {
+		t.Errorf("Loaded Name mismatch: expected %s, got %s", info.Name, loaded.Name)
+	}
+	if loaded.Description != info.Description {
+		t.Errorf("Loaded Description mismatch: expected %s, got %s", info.Description, loaded.Description)
 	}
 
 	// Test List
