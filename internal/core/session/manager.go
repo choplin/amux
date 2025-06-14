@@ -288,6 +288,12 @@ func (m *Manager) ResolveSession(identifier Identifier) (Session, error) {
 		return session, nil
 	}
 
+	// Store the original error for ID lookup
+	var idErr error
+	if _, ok := err.(ErrSessionNotFound); ok {
+		idErr = err
+	}
+
 	// 2. Try as index (short ID)
 	if m.idMapper != nil {
 		if fullID, exists := m.idMapper.GetSessionFull(string(identifier)); exists {
@@ -313,6 +319,10 @@ func (m *Manager) ResolveSession(identifier Identifier) (Session, error) {
 
 	switch len(matches) {
 	case 0:
+		// If we had a clear "not found" error from ID lookup, return that
+		if idErr != nil {
+			return nil, idErr
+		}
 		return nil, fmt.Errorf("session not found: %s", identifier)
 	case 1:
 		return matches[0], nil
