@@ -1,7 +1,6 @@
 package workspace
 
 import (
-	"path/filepath"
 	"time"
 )
 
@@ -81,15 +80,6 @@ type Workspace struct {
 	PathExists     bool              `yaml:"-" json:"pathExists"`
 	WorktreeExists bool              `yaml:"-" json:"worktreeExists"`
 	Status         ConsistencyStatus `yaml:"-" json:"status"`
-}
-
-// GetContextPath returns the path to the context.md file within the storage directory
-// This provides backward compatibility for code expecting context.md
-func (w *Workspace) GetContextPath() string {
-	if w.StoragePath == "" {
-		return ""
-	}
-	return filepath.Join(w.StoragePath, "context.md")
 }
 
 // CreateOptions represents options for creating a new workspace

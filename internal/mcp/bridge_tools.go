@@ -53,7 +53,7 @@ func (s *ServerV2) getWorkspaceList() ([]workspaceInfo, error) {
 			Branch:      ws.Branch,
 			BaseBranch:  ws.BaseBranch,
 			Description: ws.Description,
-			ContextPath: ws.GetContextPath(),
+			StoragePath: ws.StoragePath,
 			CreatedAt:   ws.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 			UpdatedAt:   ws.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		}

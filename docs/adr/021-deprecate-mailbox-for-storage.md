@@ -101,11 +101,6 @@ type Workspace struct {
 type Workspace struct {
     StoragePath string `json:"storagePath,omitempty"`
 }
-
-// Backward compatibility
-func (w *Workspace) GetContextPath() string {
-    return filepath.Join(w.StoragePath, "context.md")
-}
 ```
 
 #### MCP Storage Tools

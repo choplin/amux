@@ -245,10 +245,8 @@ func (s *ServerV2) handleWorkspaceContextResource(ctx context.Context, request m
 		return nil, fmt.Errorf("failed to get workspace: %w", err)
 	}
 
-	// In the new structure, context.md will be at:
-	// .amux/workspaces/{workspace-id}/context.md
-	// But for now, it might be in the worktree
-	contextPath := filepath.Join(ws.Path, "context.md")
+	// Context.md is now in the storage directory
+	contextPath := filepath.Join(ws.StoragePath, "context.md")
 
 	// Check if context.md exists
 	if _, err := os.Stat(contextPath); os.IsNotExist(err) {
