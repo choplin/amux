@@ -75,7 +75,7 @@ func runSession(cmd *cobra.Command, args []string) error {
 	// Get or select workspace
 	var ws *workspace.Workspace
 	if runWorkspace != "" {
-		ws, err = wsManager.ResolveWorkspace(runWorkspace)
+		ws, err = wsManager.ResolveWorkspace(workspace.Identifier(runWorkspace))
 		if err != nil {
 			return fmt.Errorf("failed to resolve workspace: %w", err)
 		}

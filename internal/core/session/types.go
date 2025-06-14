@@ -7,8 +7,17 @@ import (
 	"github.com/google/uuid"
 )
 
-// ID represents a unique session identifier
+// ID is the full UUID of a session
 type ID string
+
+// Index is the short numeric identifier (1, 2, 3...)
+type Index string
+
+// Name is the human-readable name
+type Name string
+
+// Identifier can be any of: ID, Index, or Name
+type Identifier string
 
 // GenerateID generates a new unique session ID
 func GenerateID() ID {

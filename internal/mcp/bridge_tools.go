@@ -68,7 +68,7 @@ func (s *ServerV2) getWorkspaceList() ([]workspaceInfo, error) {
 
 // Shared logic for getting workspace details
 func (s *ServerV2) getWorkspaceDetail(workspaceID string) (*workspaceDetail, error) {
-	ws, err := s.workspaceManager.Get(workspaceID)
+	ws, err := s.workspaceManager.ResolveWorkspace(workspace.Identifier(workspaceID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get workspace: %w", err)
 	}
@@ -127,8 +127,8 @@ func (s *ServerV2) getRegisteredPrompts() []mcp.Prompt {
 			Description: "Guide through preparing a pull request. Helps ensure all tests pass and code is properly formatted before creating a PR",
 			Arguments: []mcp.PromptArgument{
 				{
-					Name:        "workspace_id",
-					Description: "Workspace ID or name to prepare PR from",
+					Name:        "workspace_identifier",
+					Description: "Workspace ID, index, or name to prepare PR from",
 					Required:    true,
 				},
 				{
@@ -148,8 +148,8 @@ func (s *ServerV2) getRegisteredPrompts() []mcp.Prompt {
 			Description: "Analyze workspace state and suggest next steps. Helps AI agents understand what work remains to be done",
 			Arguments: []mcp.PromptArgument{
 				{
-					Name:        "workspace_id",
-					Description: "Workspace ID or name to review",
+					Name:        "workspace_identifier",
+					Description: "Workspace ID, index, or name to review",
 					Required:    true,
 				},
 			},

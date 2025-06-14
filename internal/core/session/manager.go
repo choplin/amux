@@ -64,7 +64,7 @@ func (m *Manager) SetTmuxAdapter(adapter tmux.Adapter) {
 // CreateSession creates a new session
 func (m *Manager) CreateSession(opts Options) (Session, error) {
 	// Validate workspace exists
-	ws, err := m.workspaceManager.ResolveWorkspace(opts.WorkspaceID)
+	ws, err := m.workspaceManager.ResolveWorkspace(workspace.Identifier(opts.WorkspaceID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 	}
@@ -75,11 +75,11 @@ func (m *Manager) CreateSession(opts Options) (Session, error) {
 	}
 
 	// Use provided ID or generate a new one
-	var sessionID string
+	var sessionID ID
 	if !opts.ID.IsEmpty() {
-		sessionID = opts.ID.String()
+		sessionID = opts.ID
 	} else {
-		sessionID = GenerateID().String()
+		sessionID = GenerateID()
 	}
 
 	// Set defaults
@@ -93,14 +93,14 @@ func (m *Manager) CreateSession(opts Options) (Session, error) {
 	now := time.Now()
 
 	// Create session storage directory
-	storagePath, err := m.store.CreateSessionStorage(sessionID)
+	storagePath, err := m.store.CreateSessionStorage(sessionID.String())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session storage: %w", err)
 	}
 
 	// Create session info
 	info := &Info{
-		ID:          sessionID,
+		ID:          sessionID.String(),
 		WorkspaceID: ws.ID,
 		AgentID:     opts.AgentID,
 		StatusState: StatusState{
@@ -136,30 +136,24 @@ func (m *Manager) CreateSession(opts Options) (Session, error) {
 	// Create and cache session
 	sess := NewTmuxSession(info, m.store, m.tmuxAdapter, ws)
 	m.mu.Lock()
-	m.sessions[sessionID] = sess
+	m.sessions[sessionID.String()] = sess
 	m.mu.Unlock()
 
 	return sess, nil
 }
 
-// GetSession retrieves a session by ID
-func (m *Manager) GetSession(idOrIndex string) (Session, error) {
-	// Resolve to full ID
-	fullID, err := m.resolveSessionID(idOrIndex)
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve session ID: %w", err)
-	}
-
+// Get retrieves a session by its full ID
+func (m *Manager) Get(id ID) (Session, error) {
 	// Check cache
 	m.mu.RLock()
-	if sess, ok := m.sessions[fullID]; ok {
+	if sess, ok := m.sessions[string(id)]; ok {
 		m.mu.RUnlock()
 		return sess, nil
 	}
 	m.mu.RUnlock()
 
 	// Load from store
-	info, err := m.store.Load(fullID)
+	info, err := m.store.Load(string(id))
 	if err != nil {
 		return nil, fmt.Errorf("failed to load session: %w", err)
 	}
@@ -172,7 +166,7 @@ func (m *Manager) GetSession(idOrIndex string) (Session, error) {
 
 	// Cache and return
 	m.mu.Lock()
-	m.sessions[fullID] = sess
+	m.sessions[string(id)] = sess
 	m.mu.Unlock()
 
 	return sess, nil
@@ -227,16 +221,10 @@ func (m *Manager) ListSessions() ([]Session, error) {
 	return sessions, nil
 }
 
-// RemoveSession removes a session
-func (m *Manager) RemoveSession(idOrIndex string) error {
-	// Resolve to full ID
-	fullID, err := m.resolveSessionID(idOrIndex)
-	if err != nil {
-		return fmt.Errorf("failed to resolve session ID: %w", err)
-	}
-
+// Remove removes a session by its full ID
+func (m *Manager) Remove(id ID) error {
 	// Get session to check status
-	sess, err := m.GetSession(fullID)
+	sess, err := m.Get(id)
 	if err != nil {
 		return fmt.Errorf("failed to get session: %w", err)
 	}
@@ -247,18 +235,18 @@ func (m *Manager) RemoveSession(idOrIndex string) error {
 	}
 
 	// Remove from store
-	if err := m.store.Delete(fullID); err != nil {
+	if err := m.store.Delete(string(id)); err != nil {
 		return fmt.Errorf("failed to delete session: %w", err)
 	}
 
 	// Remove short ID mapping
 	if m.idMapper != nil {
-		_ = m.idMapper.RemoveSession(fullID)
+		_ = m.idMapper.RemoveSession(string(id))
 	}
 
 	// Remove from cache
 	m.mu.Lock()
-	delete(m.sessions, fullID)
+	delete(m.sessions, string(id))
 	m.mu.Unlock()
 
 	return nil
@@ -279,7 +267,7 @@ func (m *Manager) createSessionFromInfo(info *Info) (Session, error) {
 	}
 
 	// Get workspace for tmux session
-	ws, err := m.workspaceManager.ResolveWorkspace(info.WorkspaceID)
+	ws, err := m.workspaceManager.ResolveWorkspace(workspace.Identifier(info.WorkspaceID))
 	if err != nil {
 		return nil, fmt.Errorf("workspace not found for session: %w", err)
 	}
@@ -287,14 +275,44 @@ func (m *Manager) createSessionFromInfo(info *Info) (Session, error) {
 	return NewTmuxSession(info, m.store, m.tmuxAdapter, ws), nil
 }
 
-// resolveSessionID resolves a short index or ID to full session ID
-func (m *Manager) resolveSessionID(idOrIndex string) (string, error) {
-	// Check if this is a short ID
-	fullID := idOrIndex
+// ResolveSession resolves a session identifier (ID, index, or name) to a Session
+func (m *Manager) ResolveSession(identifier Identifier) (Session, error) {
+	// 1. Try as full ID
+	session, err := m.Get(ID(identifier))
+	if err == nil {
+		return session, nil
+	}
+
+	// 2. Try as index (short ID)
 	if m.idMapper != nil {
-		if fullIDFromShort, exists := m.idMapper.GetSessionFull(idOrIndex); exists {
-			fullID = fullIDFromShort
+		if fullID, exists := m.idMapper.GetSessionFull(string(identifier)); exists {
+			session, err := m.Get(ID(fullID))
+			if err == nil {
+				return session, nil
+			}
 		}
 	}
-	return fullID, nil
+
+	// 3. Try as name
+	sessions, err := m.ListSessions()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list sessions: %w", err)
+	}
+
+	var matches []Session
+	for _, s := range sessions {
+		if s.Info().Name == string(identifier) {
+			matches = append(matches, s)
+		}
+	}
+
+	switch len(matches) {
+	case 0:
+		return nil, fmt.Errorf("session not found: %s", identifier)
+	case 1:
+		return matches[0], nil
+	default:
+		// Multiple sessions with the same name
+		return nil, fmt.Errorf("multiple sessions found with name '%s', please use ID instead", identifier)
+	}
 }

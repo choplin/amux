@@ -7,28 +7,30 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/aki/amux/internal/core/session"
+	"github.com/aki/amux/internal/core/workspace"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
 // StorageReadParams represents parameters for reading storage files
 type StorageReadParams struct {
-	WorkspaceID string `json:"workspace_id" jsonschema:"title=Workspace ID,description=ID or name of the workspace"`
-	SessionID   string `json:"session_id" jsonschema:"title=Session ID,description=ID of the session"`
+	WorkspaceID string `json:"workspace_identifier" jsonschema:"title=Workspace Identifier,description=Workspace ID, index, or name"`
+	SessionID   string `json:"session_identifier" jsonschema:"title=Session Identifier,description=Session ID, index, or name"`
 	Path        string `json:"path" jsonschema:"title=Path,description=Relative path within storage directory"`
 }
 
 // StorageWriteParams represents parameters for writing storage files
 type StorageWriteParams struct {
-	WorkspaceID string `json:"workspace_id" jsonschema:"title=Workspace ID,description=ID or name of the workspace"`
-	SessionID   string `json:"session_id" jsonschema:"title=Session ID,description=ID of the session"`
+	WorkspaceID string `json:"workspace_identifier" jsonschema:"title=Workspace Identifier,description=Workspace ID, index, or name"`
+	SessionID   string `json:"session_identifier" jsonschema:"title=Session Identifier,description=Session ID, index, or name"`
 	Path        string `json:"path" jsonschema:"title=Path,description=Relative path within storage directory"`
 	Content     string `json:"content" jsonschema:"title=Content,description=Content to write to the file"`
 }
 
 // StorageListParams represents parameters for listing storage contents
 type StorageListParams struct {
-	WorkspaceID string `json:"workspace_id" jsonschema:"title=Workspace ID,description=ID or name of the workspace"`
-	SessionID   string `json:"session_id" jsonschema:"title=Session ID,description=ID of the session"`
+	WorkspaceID string `json:"workspace_identifier" jsonschema:"title=Workspace Identifier,description=Workspace ID, index, or name"`
+	SessionID   string `json:"session_identifier" jsonschema:"title=Session Identifier,description=Session ID, index, or name"`
 	Path        string `json:"path,omitempty" jsonschema:"title=Path,description=Relative path within storage directory (optional)"`
 }
 
@@ -86,7 +88,7 @@ func (s *ServerV2) handleStorageRead(ctx context.Context, request mcp.CallToolRe
 	var storagePath string
 	if workspaceID != "" {
 		// Get workspace storage path
-		ws, err := s.workspaceManager.ResolveWorkspace(workspaceID)
+		ws, err := s.workspaceManager.ResolveWorkspace(workspace.Identifier(workspaceID))
 		if err != nil {
 			return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 		}
@@ -97,7 +99,7 @@ func (s *ServerV2) handleStorageRead(ctx context.Context, request mcp.CallToolRe
 		if err != nil {
 			return nil, fmt.Errorf("failed to create session manager: %w", err)
 		}
-		sess, err := sessionManager.GetSession(sessionID)
+		sess, err := sessionManager.ResolveSession(session.Identifier(sessionID))
 		if err != nil {
 			return nil, fmt.Errorf("failed to get session: %w", err)
 		}
@@ -154,7 +156,7 @@ func (s *ServerV2) handleStorageWrite(ctx context.Context, request mcp.CallToolR
 	var storagePath string
 	if workspaceID != "" {
 		// Get workspace storage path
-		ws, err := s.workspaceManager.ResolveWorkspace(workspaceID)
+		ws, err := s.workspaceManager.ResolveWorkspace(workspace.Identifier(workspaceID))
 		if err != nil {
 			return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 		}
@@ -165,7 +167,7 @@ func (s *ServerV2) handleStorageWrite(ctx context.Context, request mcp.CallToolR
 		if err != nil {
 			return nil, fmt.Errorf("failed to create session manager: %w", err)
 		}
-		sess, err := sessionManager.GetSession(sessionID)
+		sess, err := sessionManager.ResolveSession(session.Identifier(sessionID))
 		if err != nil {
 			return nil, fmt.Errorf("failed to get session: %w", err)
 		}
@@ -226,7 +228,7 @@ func (s *ServerV2) handleStorageList(ctx context.Context, request mcp.CallToolRe
 	var storagePath string
 	if workspaceID != "" {
 		// Get workspace storage path
-		ws, err := s.workspaceManager.ResolveWorkspace(workspaceID)
+		ws, err := s.workspaceManager.ResolveWorkspace(workspace.Identifier(workspaceID))
 		if err != nil {
 			return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 		}
@@ -237,7 +239,7 @@ func (s *ServerV2) handleStorageList(ctx context.Context, request mcp.CallToolRe
 		if err != nil {
 			return nil, fmt.Errorf("failed to create session manager: %w", err)
 		}
-		sess, err := sessionManager.GetSession(sessionID)
+		sess, err := sessionManager.ResolveSession(session.Identifier(sessionID))
 		if err != nil {
 			return nil, fmt.Errorf("failed to get session: %w", err)
 		}

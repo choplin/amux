@@ -153,7 +153,7 @@ func (s *ServerV2) handlePreparePRPrompt(ctx context.Context, request mcp.GetPro
 	}
 
 	// Resolve workspace by ID or name
-	ws, err := s.workspaceManager.ResolveWorkspace(workspaceID)
+	ws, err := s.workspaceManager.ResolveWorkspace(workspace.Identifier(workspaceID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get workspace: %w", err)
 	}
@@ -276,7 +276,7 @@ func (s *ServerV2) handleReviewWorkspacePrompt(ctx context.Context, request mcp.
 	}
 
 	// Resolve workspace by ID or name
-	ws, err := s.workspaceManager.ResolveWorkspace(workspaceID)
+	ws, err := s.workspaceManager.ResolveWorkspace(workspace.Identifier(workspaceID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get workspace: %w", err)
 	}

@@ -94,7 +94,7 @@ func TestSessionRun(t *testing.T) {
 		// Clean up - stop the session
 		sessionID := response["id"].(string)
 		sessionManager, _ := testServer.createSessionManager()
-		sess, _ := sessionManager.GetSession(sessionID)
+		sess, _ := sessionManager.ResolveSession(session.Identifier(sessionID))
 		if sess != nil {
 			_ = sess.Stop()
 		}
@@ -157,7 +157,7 @@ func TestSessionRun(t *testing.T) {
 		// Clean up - stop the session
 		sessionID := response["id"].(string)
 		sessionManager, _ := testServer.createSessionManager()
-		sess, _ := sessionManager.GetSession(sessionID)
+		sess, _ := sessionManager.ResolveSession(session.Identifier(sessionID))
 		if sess != nil {
 			_ = sess.Stop()
 		}

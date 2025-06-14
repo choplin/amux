@@ -189,5 +189,5 @@ type WorkspaceCreateParams struct {
 
 // WorkspaceIDParams defines parameters for workspace operations requiring an ID
 type WorkspaceIDParams struct {
-	WorkspaceID string `json:"workspace_id" mcp:"required" description:"Workspace name or ID"`
+	WorkspaceID string `json:"workspace_identifier" mcp:"required" description:"Workspace ID, index, or name"`
 }

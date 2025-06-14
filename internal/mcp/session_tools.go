@@ -8,11 +8,12 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 
 	"github.com/aki/amux/internal/core/session"
+	"github.com/aki/amux/internal/core/workspace"
 )
 
 // SessionRunParams contains parameters for session_run tool
 type SessionRunParams struct {
-	WorkspaceID string            `json:"workspace_id" jsonschema:"required,description=Workspace ID or name to run the session in"`
+	WorkspaceID string            `json:"workspace_identifier" jsonschema:"required,description=Workspace ID, index, or name to run the session in"`
 	AgentID     string            `json:"agent_id" jsonschema:"required,description=Agent ID to run (e.g. 'claude' 'gpt')"`
 	Name        string            `json:"name,omitempty" jsonschema:"description=Human-readable name for the session"`
 	Description string            `json:"description,omitempty" jsonschema:"description=Description of the session purpose"`
@@ -22,12 +23,12 @@ type SessionRunParams struct {
 
 // SessionIDParams contains parameters for session operations
 type SessionIDParams struct {
-	SessionID string `json:"session_id" jsonschema:"required,description=Session ID or short ID"`
+	SessionID string `json:"session_identifier" jsonschema:"required,description=Session ID, index, or name"`
 }
 
 // SessionSendInputParams contains parameters for session_send_input tool
 type SessionSendInputParams struct {
-	SessionID string `json:"session_id" jsonschema:"required,description=Session ID or short ID"`
+	SessionID string `json:"session_identifier" jsonschema:"required,description=Session ID, index, or name"`
 	Input     string `json:"input" jsonschema:"required,description=Input text to send to the session"`
 }
 
@@ -82,7 +83,7 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 	}
 
 	// Resolve workspace
-	ws, err := s.workspaceManager.ResolveWorkspace(workspaceID)
+	ws, err := s.workspaceManager.ResolveWorkspace(workspace.Identifier(workspaceID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 	}
@@ -198,7 +199,7 @@ func (s *ServerV2) handleSessionStop(ctx context.Context, request mcp.CallToolRe
 	}
 
 	// Get session
-	sess, err := sessionManager.GetSession(sessionID)
+	sess, err := sessionManager.ResolveSession(session.Identifier(sessionID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
@@ -243,7 +244,7 @@ func (s *ServerV2) handleSessionSendInput(ctx context.Context, request mcp.CallT
 	}
 
 	// Get session
-	sess, err := sessionManager.GetSession(sessionID)
+	sess, err := sessionManager.ResolveSession(session.Identifier(sessionID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
