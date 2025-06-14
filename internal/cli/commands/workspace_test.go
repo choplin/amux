@@ -15,9 +15,6 @@ import (
 func TestWorkspaceRemovalSafetyCheck(t *testing.T) {
 	// Create test repository
 	repoDir := helpers.CreateTestRepo(t)
-	t.Cleanup(func() {
-		os.RemoveAll(repoDir)
-	})
 
 	// Initialize Amux
 	configManager := config.NewManager(repoDir)
@@ -138,9 +135,6 @@ func TestWorkspaceRemovalSafetyCheck(t *testing.T) {
 func TestWorkspaceCdCommand(t *testing.T) {
 	// Create test repository
 	repoDir := helpers.CreateTestRepo(t)
-	t.Cleanup(func() {
-		os.RemoveAll(repoDir)
-	})
 
 	// Initialize Amux
 	configManager := config.NewManager(repoDir)

@@ -26,7 +26,6 @@ func TestRemoveSession(t *testing.T) {
 
 	// Create test repository
 	repoDir := helpers.CreateTestRepo(t)
-	defer os.RemoveAll(repoDir)
 
 	// Change to test directory to ensure commands work correctly
 	oldWd, err := os.Getwd()

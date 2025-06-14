@@ -2,7 +2,6 @@ package session
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,7 +16,6 @@ import (
 func TestCreateAutoWorkspace(t *testing.T) {
 	// Create test repository
 	repoDir := helpers.CreateTestRepo(t)
-	defer os.RemoveAll(repoDir)
 
 	// Initialize Amux
 	configManager := config.NewManager(repoDir)
@@ -48,7 +46,6 @@ func TestCreateAutoWorkspace(t *testing.T) {
 func TestCreateAutoWorkspaceUniqueness(t *testing.T) {
 	// Create test repository
 	repoDir := helpers.CreateTestRepo(t)
-	defer os.RemoveAll(repoDir)
 
 	// Initialize Amux
 	configManager := config.NewManager(repoDir)
@@ -79,7 +76,6 @@ func TestCreateAutoWorkspaceUniqueness(t *testing.T) {
 func TestCreateAutoWorkspaceWithCustomNameAndDescription(t *testing.T) {
 	// Create test repository
 	repoDir := helpers.CreateTestRepo(t)
-	defer os.RemoveAll(repoDir)
 
 	// Initialize Amux
 	configManager := config.NewManager(repoDir)
@@ -110,7 +106,6 @@ func TestCreateAutoWorkspaceWithCustomNameAndDescription(t *testing.T) {
 func TestCreateAutoWorkspaceWithCustomNameOnly(t *testing.T) {
 	// Create test repository
 	repoDir := helpers.CreateTestRepo(t)
-	defer os.RemoveAll(repoDir)
 
 	// Initialize Amux
 	configManager := config.NewManager(repoDir)
