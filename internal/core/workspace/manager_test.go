@@ -15,9 +15,6 @@ import (
 func TestManager_CreateWithExistingBranch(t *testing.T) {
 	// Create test repository
 	repoDir := helpers.CreateTestRepo(t)
-	t.Cleanup(func() {
-		os.RemoveAll(repoDir)
-	})
 
 	// Initialize Amux
 	configManager := config.NewManager(repoDir)
@@ -83,9 +80,6 @@ func TestManager_CreateWithExistingBranch(t *testing.T) {
 func TestManager_CreateWithNewBranch(t *testing.T) {
 	// Create test repository
 	repoDir := helpers.CreateTestRepo(t)
-	t.Cleanup(func() {
-		os.RemoveAll(repoDir)
-	})
 
 	// Initialize Amux
 	configManager := config.NewManager(repoDir)
@@ -135,9 +129,6 @@ func TestManager_CreateWithNewBranch(t *testing.T) {
 func TestManager_RemoveWithManuallyDeletedWorktree(t *testing.T) {
 	// Create test repository
 	repoDir := helpers.CreateTestRepo(t)
-	t.Cleanup(func() {
-		os.RemoveAll(repoDir)
-	})
 
 	// Initialize Amux
 	configManager := config.NewManager(repoDir)
@@ -204,9 +195,6 @@ func TestManager_RemoveWithManuallyDeletedWorktree(t *testing.T) {
 func TestManager_ConsistencyChecking(t *testing.T) {
 	// Create test repository
 	repoDir := helpers.CreateTestRepo(t)
-	t.Cleanup(func() {
-		os.RemoveAll(repoDir)
-	})
 
 	// Initialize Amux
 	configManager := config.NewManager(repoDir)
@@ -404,9 +392,6 @@ func TestManager_ConsistencyChecking(t *testing.T) {
 func TestManager_CreateSetsContextPath(t *testing.T) {
 	// Create test repository
 	repoDir := helpers.CreateTestRepo(t)
-	t.Cleanup(func() {
-		os.RemoveAll(repoDir)
-	})
 
 	// Initialize Amux
 	configManager := config.NewManager(repoDir)

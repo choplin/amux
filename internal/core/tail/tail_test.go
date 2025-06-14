@@ -3,7 +3,6 @@ package tail_test
 import (
 	"bytes"
 	"context"
-	"os"
 	"sync"
 	"testing"
 	"time"
@@ -33,9 +32,6 @@ func (w *writerFunc) Write(p []byte) (int, error) {
 func TestTailer_Follow(t *testing.T) {
 	// Create test repository
 	repoDir := helpers.CreateTestRepo(t)
-	defer func() {
-		_ = os.RemoveAll(repoDir)
-	}()
 
 	// Initialize Amux
 	configManager := config.NewManager(repoDir)
@@ -195,9 +191,6 @@ func TestTailer_Follow(t *testing.T) {
 func TestFollowFunc(t *testing.T) {
 	// Create test repository
 	repoDir := helpers.CreateTestRepo(t)
-	defer func() {
-		_ = os.RemoveAll(repoDir)
-	}()
 
 	// Initialize Amux
 	configManager := config.NewManager(repoDir)
