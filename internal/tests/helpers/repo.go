@@ -45,7 +45,7 @@ func CreateTestRepo(t *testing.T) string {
 
 	// Register cleanup for the temporary directory
 	t.Cleanup(func() {
-		os.RemoveAll(tmpDir)
+		_ = os.RemoveAll(tmpDir)
 	})
 
 	// Initialize git repo with explicit settings
