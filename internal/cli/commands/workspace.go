@@ -430,7 +430,7 @@ func runCdWorkspace(cmd *cobra.Command, args []string) error {
 	// Get user's shell
 	shell := os.Getenv("SHELL")
 	if shell == "" {
-		shell = "/bin/sh"
+		shell = "/bin/bash"
 	}
 
 	// Create a new shell process
