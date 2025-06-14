@@ -113,15 +113,10 @@ func listSessions(cmd *cobra.Command, args []string) error {
 
 		// Format session name
 		sessionName := info.Name
-		if sessionName == "" {
-			sessionName = "-"
-		}
 
 		// Format description with truncation
 		description := info.Description
-		if description == "" {
-			description = "-"
-		} else if len(description) > 30 {
+		if len(description) > 30 {
 			description = description[:27] + "..."
 		}
 
