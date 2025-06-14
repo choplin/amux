@@ -101,8 +101,14 @@ func TestManager_CreateSessionWithNameAndDescription(t *testing.T) {
 		t.Fatalf("Failed to create session store: %v", err)
 	}
 
-	// Create session manager (nil ID mapper and mailbox manager for tests)
-	manager := NewManager(store, wsManager, nil, nil)
+	// Create ID mapper
+	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	if err != nil {
+		t.Fatalf("Failed to create ID mapper: %v", err)
+	}
+
+	// Create session manager
+	manager := NewManager(store, wsManager, idMapper)
 
 	// Use mock adapter for consistent testing across platforms
 	mockAdapter := tmux.NewMockAdapter()
