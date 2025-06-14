@@ -38,8 +38,16 @@ Add `StatusCompleted` as a new state and implement failure detection based on pr
 2. In `UpdateStatus()` check in order:
    - If tmux session doesn't exist → `StatusFailed`
    - If shell process is dead (using `pane_dead`) → `StatusFailed`
-   - If shell has no child processes → `StatusCompleted`
+   - If shell has no child processes → Check for exit status
    - Otherwise continue with existing working/idle detection
+
+### Performance Optimizations
+
+To improve performance when listing many sessions:
+
+1. **Status Caching**: Added 2-second cache to `UpdateStatus` to avoid redundant checks
+2. **Batch Updates**: Implemented `UpdateAllStatuses` for parallel status updates
+3. **Efficient Session List**: Uses batch updates in `amux ps` and MCP resources
 
 ### Exit Status Tracking
 
@@ -59,8 +67,16 @@ We will not attempt to:
 - Detect command launch failures (too heuristic)
 - Parse shell output for exit codes (fragile and shell-dependent)
 
+### Platform-Specific Considerations
+
+1. **Windows Support**: Tests that require tmux or pgrep are skipped on Windows
+2. **Process Detection**: Uses platform-specific process checking (pgrep on Unix-like systems)
+
 ## Consequences
 
 This approach provides clear session state visibility without complex heuristics. Users can see when
 their agents have completed work versus failed. The implementation remains simple by relying on
 process hierarchy rather than trying to parse output or track exit codes.
+
+The performance optimizations ensure that the status updates don't impact the responsiveness of
+list operations, even with many sessions.
