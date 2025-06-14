@@ -2,9 +2,11 @@ package session
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -43,9 +45,9 @@ func TestRemoveSession(t *testing.T) {
 	wsManager, err := workspace.NewManager(configManager)
 	require.NoError(t, err)
 
-	// Create a workspace
+	// Create a workspace with unique name
 	ws, err := wsManager.Create(workspace.CreateOptions{
-		Name: "test-workspace",
+		Name: fmt.Sprintf("test-workspace-%s", uuid.New().String()[:8]),
 	})
 	require.NoError(t, err)
 
@@ -118,9 +120,9 @@ func TestRemoveSession(t *testing.T) {
 	})
 
 	t.Run("auto-removes workspace when session is removed", func(t *testing.T) {
-		// Create a new workspace marked as auto-created
+		// Create a new workspace marked as auto-created with unique name
 		wsAuto, err := wsManager.Create(workspace.CreateOptions{
-			Name:        "test-workspace-auto",
+			Name:        fmt.Sprintf("test-workspace-auto-%s", uuid.New().String()[:8]),
 			AutoCreated: true,
 		})
 		require.NoError(t, err)
@@ -156,9 +158,9 @@ func TestRemoveSession(t *testing.T) {
 	})
 
 	t.Run("keeps workspace when --keep-workspace flag is used", func(t *testing.T) {
-		// Create a new workspace marked as auto-created
+		// Create a new workspace marked as auto-created with unique name
 		ws2, err := wsManager.Create(workspace.CreateOptions{
-			Name:        "test-workspace-2",
+			Name:        fmt.Sprintf("test-workspace-keep-%s", uuid.New().String()[:8]),
 			AutoCreated: true,
 		})
 		require.NoError(t, err)
@@ -189,12 +191,21 @@ func TestRemoveSession(t *testing.T) {
 	})
 
 	t.Run("does not remove workspace when used by other sessions", func(t *testing.T) {
-		// Create a new workspace marked as auto-created
+		// Create a new workspace marked as auto-created with unique name
+		wsName := fmt.Sprintf("test-workspace-multi-%s", uuid.New().String()[:8])
 		ws3, err := wsManager.Create(workspace.CreateOptions{
-			Name:        "test-workspace-3",
+			Name:        wsName,
 			AutoCreated: true,
 		})
 		require.NoError(t, err)
+
+		// Ensure workspace cleanup happens after all operations
+		t.Cleanup(func() {
+			// Try to remove workspace if it still exists
+			if _, err := wsManager.ResolveWorkspace(ws3.ID); err == nil {
+				_ = wsManager.Remove(ws3.ID)
+			}
+		})
 
 		// Create first session in the auto-created workspace
 		sess1, err := sessionManager.CreateSession(session.Options{
@@ -226,6 +237,17 @@ func TestRemoveSession(t *testing.T) {
 		sess1ID := sess1.ID()
 		sess2ID := sess2.ID()
 
+		// Verify both sessions exist before removal
+		sessions, err := sessionManager.ListSessions()
+		require.NoError(t, err)
+		sessionCount := 0
+		for _, s := range sessions {
+			if s.Info().WorkspaceID == ws3.ID {
+				sessionCount++
+			}
+		}
+		assert.Equal(t, 2, sessionCount, "Expected 2 sessions in workspace before removal")
+
 		// Remove the first session
 		cmd := removeCmd()
 		cmd.SetArgs([]string{sess1ID})
@@ -234,7 +256,18 @@ func TestRemoveSession(t *testing.T) {
 
 		// Verify workspace still exists (because sess2 is using it)
 		_, err = wsManager.ResolveWorkspace(ws3.ID)
-		assert.NoError(t, err)
+		assert.NoError(t, err, "Workspace should still exist after removing first session")
+
+		// Verify only one session remains
+		sessions, err = sessionManager.ListSessions()
+		require.NoError(t, err)
+		sessionCount = 0
+		for _, s := range sessions {
+			if s.Info().WorkspaceID == ws3.ID {
+				sessionCount++
+			}
+		}
+		assert.Equal(t, 1, sessionCount, "Expected 1 session in workspace after first removal")
 
 		// Remove the second session
 		cmd2 := removeCmd()
@@ -244,16 +277,16 @@ func TestRemoveSession(t *testing.T) {
 
 		// Workspace should be removed now (it was auto-created and no sessions are using it)
 		_, err = wsManager.ResolveWorkspace(ws3.ID)
-		assert.Error(t, err)
+		assert.Error(t, err, "Workspace should be removed after removing last session")
 		if err != nil {
 			assert.Contains(t, err.Error(), "workspace not found")
 		}
 	})
 
 	t.Run("does not remove manually created workspace", func(t *testing.T) {
-		// Create a new workspace WITHOUT auto-created flag
+		// Create a new workspace WITHOUT auto-created flag with unique name
 		ws4, err := wsManager.Create(workspace.CreateOptions{
-			Name:        "test-workspace-4",
+			Name:        fmt.Sprintf("test-workspace-manual-%s", uuid.New().String()[:8]),
 			AutoCreated: false, // explicitly not auto-created
 		})
 		require.NoError(t, err)
