@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/gofrs/flock"
 	"gopkg.in/yaml.v3"
 )
 
@@ -49,6 +48,14 @@ func NewManagerWithTimeout[T any](timeout time.Duration) *Manager[T] {
 	}
 }
 
+// getLockPath returns the path to the lock file for the given file path.
+// On Windows, we use a separate lock file to avoid issues with file handle conflicts.
+func getLockPath(path string) string {
+	dir := filepath.Dir(path)
+	base := filepath.Base(path)
+	return filepath.Join(dir, "."+base+".lock")
+}
+
 // Read reads a file with a shared lock
 func (m *Manager[T]) Read(ctx context.Context, path string) (*T, *FileInfo, error) {
 	// Check if file exists first
@@ -57,7 +64,7 @@ func (m *Manager[T]) Read(ctx context.Context, path string) (*T, *FileInfo, erro
 	}
 
 	// Create a file lock
-	lock := flock.New(path)
+	lock := createLock(path)
 
 	// Try to acquire shared lock with timeout
 	lockCtx, cancel := context.WithTimeout(ctx, m.lockTimeout)
@@ -108,7 +115,7 @@ func (m *Manager[T]) Write(ctx context.Context, path string, data *T) error {
 	}
 
 	// Create a file lock
-	lock := flock.New(path)
+	lock := createLock(path)
 
 	// Try to acquire exclusive lock with timeout
 	lockCtx, cancel := context.WithTimeout(ctx, m.lockTimeout)
@@ -153,6 +160,9 @@ func (m *Manager[T]) Write(ctx context.Context, path string, data *T) error {
 		return fmt.Errorf("failed to rename file: %w", err)
 	}
 
+	// Clean up lock file on Windows
+	cleanupLockFile(path)
+
 	return nil
 }
 
@@ -165,7 +175,7 @@ func (m *Manager[T]) WriteWithCAS(ctx context.Context, path string, data *T, exp
 	}
 
 	// Create a file lock
-	lock := flock.New(path)
+	lock := createLock(path)
 
 	// Try to acquire exclusive lock with timeout
 	lockCtx, cancel := context.WithTimeout(ctx, m.lockTimeout)
@@ -227,6 +237,9 @@ func (m *Manager[T]) WriteWithCAS(ctx context.Context, path string, data *T, exp
 		return fmt.Errorf("failed to rename file: %w", err)
 	}
 
+	// Clean up lock file on Windows
+	cleanupLockFile(path)
+
 	return nil
 }
 
@@ -286,7 +299,7 @@ func (m *Manager[T]) Delete(ctx context.Context, path string) error {
 	}
 
 	// Create a file lock
-	lock := flock.New(path)
+	lock := createLock(path)
 
 	// Try to acquire exclusive lock with timeout
 	lockCtx, cancel := context.WithTimeout(ctx, m.lockTimeout)
@@ -309,6 +322,9 @@ func (m *Manager[T]) Delete(ctx context.Context, path string) error {
 	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to remove file: %w", err)
 	}
+
+	// Clean up lock file on Windows
+	cleanupLockFile(path)
 
 	return nil
 }
