@@ -125,7 +125,7 @@ func (m *Manager[T]) Write(ctx context.Context, path string, data *T) error {
 	// Marshal the data
 	yamlData, err := yaml.Marshal(data)
 	if err != nil {
-		lock.Unlock()
+		_ = lock.Unlock()
 		return fmt.Errorf("failed to marshal yaml: %w", err)
 	}
 
@@ -133,7 +133,7 @@ func (m *Manager[T]) Write(ctx context.Context, path string, data *T) error {
 	// Use a unique temp file name to avoid conflicts on Windows
 	tempFile := fmt.Sprintf("%s.%d.%d.tmp", path, os.Getpid(), time.Now().UnixNano())
 	if err := os.WriteFile(tempFile, yamlData, 0o644); err != nil {
-		lock.Unlock()
+		_ = lock.Unlock()
 		return fmt.Errorf("failed to write temp file: %w", err)
 	}
 
@@ -145,7 +145,7 @@ func (m *Manager[T]) Write(ctx context.Context, path string, data *T) error {
 	}
 
 	// Release lock before rename to avoid Windows file handle issues
-	lock.Unlock()
+	_ = lock.Unlock()
 
 	// Atomic rename
 	if err := atomicRename(tempFile, path); err != nil {
@@ -183,14 +183,14 @@ func (m *Manager[T]) WriteWithCAS(ctx context.Context, path string, data *T, exp
 	if expectedInfo != nil {
 		stat, err := os.Stat(path)
 		if err != nil && !os.IsNotExist(err) {
-			lock.Unlock()
+			_ = lock.Unlock()
 			return fmt.Errorf("failed to stat file: %w", err)
 		}
 
 		// If file exists, check modification time and size
 		if err == nil {
 			if !stat.ModTime().Equal(expectedInfo.ModTime) || stat.Size() != expectedInfo.Size {
-				lock.Unlock()
+				_ = lock.Unlock()
 				return ErrConcurrentModification
 			}
 		}
@@ -199,7 +199,7 @@ func (m *Manager[T]) WriteWithCAS(ctx context.Context, path string, data *T, exp
 	// Marshal the data
 	yamlData, err := yaml.Marshal(data)
 	if err != nil {
-		lock.Unlock()
+		_ = lock.Unlock()
 		return fmt.Errorf("failed to marshal yaml: %w", err)
 	}
 
@@ -207,7 +207,7 @@ func (m *Manager[T]) WriteWithCAS(ctx context.Context, path string, data *T, exp
 	// Use a unique temp file name to avoid conflicts on Windows
 	tempFile := fmt.Sprintf("%s.%d.%d.tmp", path, os.Getpid(), time.Now().UnixNano())
 	if err := os.WriteFile(tempFile, yamlData, 0o644); err != nil {
-		lock.Unlock()
+		_ = lock.Unlock()
 		return fmt.Errorf("failed to write temp file: %w", err)
 	}
 
@@ -219,7 +219,7 @@ func (m *Manager[T]) WriteWithCAS(ctx context.Context, path string, data *T, exp
 	}
 
 	// Release lock before rename to avoid Windows file handle issues
-	lock.Unlock()
+	_ = lock.Unlock()
 
 	// Atomic rename
 	if err := atomicRename(tempFile, path); err != nil {
