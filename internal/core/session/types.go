@@ -186,6 +186,9 @@ type Store interface {
 	// Delete deletes session info
 	Delete(id string) error
 
+	// Update safely updates session info using CAS
+	Update(id string, updateFunc func(info *Info) error) error
+
 	// CreateSessionStorage creates a storage directory for a session
 	CreateSessionStorage(sessionID string) (string, error)
 }

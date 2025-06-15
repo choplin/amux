@@ -10,11 +10,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gopkg.in/yaml.v3"
 
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/git"
 	"github.com/aki/amux/internal/core/idmap"
+	"github.com/aki/amux/internal/filemanager"
 )
 
 // Manager manages Amux workspaces
@@ -23,6 +23,7 @@ type Manager struct {
 	gitOps        *git.Operations
 	workspacesDir string
 	idMapper      *idmap.IDMapper
+	fm            *filemanager.Manager[Workspace]
 }
 
 // NewManager creates a new workspace manager
@@ -46,6 +47,7 @@ func NewManager(configManager *config.Manager) (*Manager, error) {
 		gitOps:        gitOps,
 		workspacesDir: workspacesDir,
 		idMapper:      idMapper,
+		fm:            filemanager.NewManager[Workspace](),
 	}, nil
 }
 
@@ -139,17 +141,12 @@ func (m *Manager) Create(opts CreateOptions) (*Workspace, error) {
 func (m *Manager) Get(id ID) (*Workspace, error) {
 	workspaceMetaPath := filepath.Join(m.workspacesDir, string(id), "workspace.yaml")
 
-	data, err := os.ReadFile(workspaceMetaPath)
+	workspace, _, err := m.fm.Read(workspaceMetaPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, fmt.Errorf("workspace not found: %s", id)
 		}
 		return nil, fmt.Errorf("failed to read workspace: %w", err)
-	}
-
-	var workspace Workspace
-	if err := yaml.Unmarshal(data, &workspace); err != nil {
-		return nil, fmt.Errorf("failed to parse workspace: %w", err)
 	}
 
 	// Get last modified time from filesystem
@@ -161,9 +158,9 @@ func (m *Manager) Get(id ID) (*Workspace, error) {
 	}
 
 	// Check consistency status
-	m.CheckConsistency(&workspace)
+	m.CheckConsistency(workspace)
 
-	return &workspace, nil
+	return workspace, nil
 }
 
 // List returns all workspaces
@@ -186,15 +183,11 @@ func (m *Manager) List(opts ListOptions) ([]*Workspace, error) {
 
 		// Look for workspace.yaml inside the directory
 		workspaceMetaPath := filepath.Join(m.workspacesDir, file.Name(), "workspace.yaml")
-		data, err := os.ReadFile(workspaceMetaPath)
+		workspacePtr, _, err := m.fm.Read(workspaceMetaPath)
 		if err != nil {
 			continue
 		}
-
-		var workspace Workspace
-		if err := yaml.Unmarshal(data, &workspace); err != nil {
-			continue
-		}
+		workspace := *workspacePtr
 
 		// Get last modified time from filesystem
 		workspace.UpdatedAt = m.getLastModified(workspace.Path)
@@ -447,13 +440,8 @@ func (m *Manager) CheckConsistency(workspace *Workspace) {
 	}
 }
 
-// saveWorkspace saves workspace metadata to disk
+// saveWorkspace saves workspace metadata to disk with file locking
 func (m *Manager) saveWorkspace(workspace *Workspace) error {
-	data, err := yaml.Marshal(workspace)
-	if err != nil {
-		return fmt.Errorf("failed to marshal workspace: %w", err)
-	}
-
 	// Save workspace.yaml inside the workspace directory (not in the worktree)
 	workspaceDir := filepath.Join(m.workspacesDir, workspace.ID)
 	workspaceMetaPath := filepath.Join(workspaceDir, "workspace.yaml")
@@ -463,11 +451,7 @@ func (m *Manager) saveWorkspace(workspace *Workspace) error {
 		return fmt.Errorf("failed to create workspace directory: %w", err)
 	}
 
-	if err := os.WriteFile(workspaceMetaPath, data, 0o644); err != nil {
-		return fmt.Errorf("failed to write workspace metadata: %w", err)
-	}
-
-	return nil
+	return m.fm.Write(workspaceMetaPath, workspace)
 }
 
 // generateID generates a unique workspace ID

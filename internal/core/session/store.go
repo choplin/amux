@@ -6,13 +6,14 @@ import (
 	"path/filepath"
 	"sync"
 
-	"gopkg.in/yaml.v3"
+	"github.com/aki/amux/internal/filemanager"
 )
 
-// FileStore implements Store using YAML files
+// FileStore implements Store using YAML files with concurrent access safety
 type FileStore struct {
 	basePath string
-	mu       sync.RWMutex
+	mu       sync.RWMutex // For in-process coordination
+	fm       *filemanager.Manager[Info]
 }
 
 // NewFileStore creates a new file-based session store
@@ -25,41 +26,26 @@ func NewFileStore(basePath string) (*FileStore, error) {
 
 	return &FileStore{
 		basePath: sessionsDir,
+		fm:       filemanager.NewManager[Info](),
 	}, nil
 }
 
-// Save saves session info to a YAML file
+// Save saves session info to a YAML file with file locking
 func (s *FileStore) Save(info *Info) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	data, err := yaml.Marshal(info)
-	if err != nil {
-		return fmt.Errorf("failed to marshal session info: %w", err)
-	}
-
 	path := s.sessionPath(info.ID)
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		return fmt.Errorf("failed to write session file: %w", err)
-	}
-
-	// Ensure file is synced to disk (important for Windows)
-	file, err := os.Open(path)
-	if err == nil {
-		_ = file.Sync()
-		_ = file.Close()
-	}
-
-	return nil
+	return s.fm.Write(path, info)
 }
 
-// Load loads session info from a YAML file
+// Load loads session info from a YAML file with shared lock
 func (s *FileStore) Load(id string) (*Info, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	path := s.sessionPath(id)
-	data, err := os.ReadFile(path)
+	info, _, err := s.fm.Read(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, ErrSessionNotFound{ID: id}
@@ -67,12 +53,7 @@ func (s *FileStore) Load(id string) (*Info, error) {
 		return nil, fmt.Errorf("failed to read session file: %w", err)
 	}
 
-	var info Info
-	if err := yaml.Unmarshal(data, &info); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal session info: %w", err)
-	}
-
-	return &info, nil
+	return info, nil
 }
 
 // List lists all session infos
@@ -110,7 +91,7 @@ func (s *FileStore) List() ([]*Info, error) {
 	return sessions, nil
 }
 
-// Delete deletes a session info file
+// Delete deletes a session info file with exclusive lock
 func (s *FileStore) Delete(id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -125,8 +106,8 @@ func (s *FileStore) Delete(id string) error {
 		return fmt.Errorf("failed to check session file: %w", err)
 	}
 
-	// Delete the file
-	if err := os.Remove(path); err != nil {
+	// Delete the file with file locking
+	if err := s.fm.Delete(path); err != nil {
 		if os.IsNotExist(err) {
 			// File was deleted between check and remove - still treat as not found
 			return ErrSessionNotFound{ID: id}
@@ -143,6 +124,19 @@ func (s *FileStore) Delete(id string) error {
 	}
 
 	return nil
+}
+
+// Update safely updates a session info using CAS
+func (s *FileStore) Update(id string, updateFunc func(info *Info) error) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	path := s.sessionPath(id)
+	return s.fm.Update(path, func(info *Info) error {
+		// Ensure ID is preserved
+		info.ID = id
+		return updateFunc(info)
+	})
 }
 
 // sessionPath returns the file path for a session
