@@ -18,15 +18,15 @@ func createSessionManager(configManager *config.Manager, wsManager *workspace.Ma
 		return nil, fmt.Errorf("failed to create ID mapper: %w", err)
 	}
 
-	store, err := session.NewFileStore(configManager.GetAmuxDir())
-	if err != nil {
-		return nil, fmt.Errorf("failed to create session store: %w", err)
-	}
-
 	// Create logger
 	log := logger.Default()
 
-	return session.NewManager(store, wsManager, idMapper, session.WithLogger(log)), nil
+	manager, err := session.NewManager(configManager.GetAmuxDir(), wsManager, idMapper, session.WithLogger(log))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create session manager: %w", err)
+	}
+
+	return manager, nil
 }
 
 // createAutoWorkspace creates a new workspace with a name based on session ID

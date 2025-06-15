@@ -303,12 +303,11 @@ func (s *ServerV2) createSessionManager() (*session.Manager, error) {
 		return nil, fmt.Errorf("failed to create ID mapper: %w", err)
 	}
 
-	// Create session store
-	store, err := session.NewFileStore(s.configManager.GetAmuxDir())
+	// Create session manager
+	manager, err := session.NewManager(s.configManager.GetAmuxDir(), workspaceManager, idMapper)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create session store: %w", err)
+		return nil, fmt.Errorf("failed to create session manager: %w", err)
 	}
 
-	// Create session manager
-	return session.NewManager(store, workspaceManager, idMapper), nil
+	return manager, nil
 }

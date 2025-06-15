@@ -2,6 +2,8 @@ package session
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -9,11 +11,13 @@ import (
 	"github.com/aki/amux/internal/core/idmap"
 	"github.com/aki/amux/internal/core/logger"
 	"github.com/aki/amux/internal/core/workspace"
+	"github.com/aki/amux/internal/filemanager"
 )
 
 // Manager implements Manager interface
 type Manager struct {
-	store            Store
+	sessionsDir      string
+	fileManager      *filemanager.Manager[Info]
 	workspaceManager *workspace.Manager
 	tmuxAdapter      tmux.Adapter
 	sessions         map[string]Session
@@ -33,12 +37,19 @@ func WithLogger(log logger.Logger) ManagerOption {
 }
 
 // NewManager creates a new session manager
-func NewManager(store Store, workspaceManager *workspace.Manager, idMapper *idmap.IDMapper, opts ...ManagerOption) *Manager {
+func NewManager(basePath string, workspaceManager *workspace.Manager, idMapper *idmap.IDMapper, opts ...ManagerOption) (*Manager, error) {
+	// Ensure sessions directory exists
+	sessionsDir := filepath.Join(basePath, "sessions")
+	if err := os.MkdirAll(sessionsDir, 0o755); err != nil {
+		return nil, fmt.Errorf("failed to create sessions directory: %w", err)
+	}
+
 	// Try to create tmux adapter, but don't fail if unavailable
 	tmuxAdapter, _ := tmux.NewAdapter()
 
 	m := &Manager{
-		store:            store,
+		sessionsDir:      sessionsDir,
+		fileManager:      filemanager.NewManager[Info](),
 		workspaceManager: workspaceManager,
 		idMapper:         idMapper,
 		tmuxAdapter:      tmuxAdapter,
@@ -51,7 +62,7 @@ func NewManager(store Store, workspaceManager *workspace.Manager, idMapper *idma
 		opt(m)
 	}
 
-	return m
+	return m, nil
 }
 
 // SetTmuxAdapter sets a custom tmux adapter (useful for testing)
@@ -105,8 +116,8 @@ func (m *Manager) CreateSession(opts Options) (Session, error) {
 	now := time.Now()
 
 	// Create session storage directory
-	storagePath, err := m.store.CreateSessionStorage(sessionID.String())
-	if err != nil {
+	storagePath := filepath.Join(m.sessionsDir, sessionID.String(), "storage")
+	if err := os.MkdirAll(storagePath, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create session storage: %w", err)
 	}
 
@@ -130,8 +141,8 @@ func (m *Manager) CreateSession(opts Options) (Session, error) {
 		Description:   opts.Description,
 	}
 
-	// Save session info to store
-	if err := m.store.Save(info); err != nil {
+	// Save session info to file
+	if err := m.saveSessionInfo(info); err != nil {
 		return nil, fmt.Errorf("failed to save session: %w", err)
 	}
 
@@ -147,7 +158,7 @@ func (m *Manager) CreateSession(opts Options) (Session, error) {
 	}
 
 	// Create and cache session
-	sess := NewTmuxSession(info, m.store, m.tmuxAdapter, ws)
+	sess := NewTmuxSession(info, m, m.tmuxAdapter, ws)
 	m.mu.Lock()
 	m.sessions[sessionID.String()] = sess
 	m.mu.Unlock()
@@ -165,13 +176,13 @@ func (m *Manager) Get(id ID) (Session, error) {
 	}
 	m.mu.RUnlock()
 
-	// Load from store
-	info, err := m.store.Load(string(id))
+	// Load from file
+	info, err := m.loadSessionInfo(string(id))
 	if err != nil {
-		// If not found in store, it means the session doesn't exist
+		// If not found in file, it means the session doesn't exist
 		// (even if it might have been in cache before)
-		if _, ok := err.(ErrSessionNotFound); ok {
-			return nil, err
+		if os.IsNotExist(err) {
+			return nil, ErrSessionNotFound{ID: string(id)}
 		}
 		return nil, fmt.Errorf("failed to load session: %w", err)
 	}
@@ -192,8 +203,8 @@ func (m *Manager) Get(id ID) (Session, error) {
 
 // ListSessions returns all sessions
 func (m *Manager) ListSessions() ([]Session, error) {
-	// Get all session infos from store
-	infos, err := m.store.List()
+	// List all session infos
+	infos, err := m.listSessionInfos()
 	if err != nil {
 		return nil, fmt.Errorf("failed to list sessions: %w", err)
 	}
@@ -264,8 +275,8 @@ func (m *Manager) Remove(id ID) error {
 		}
 	}
 
-	// Remove from store
-	if err := m.store.Delete(string(id)); err != nil {
+	// Remove session info file
+	if err := m.deleteSessionInfo(string(id)); err != nil {
 		return fmt.Errorf("failed to delete session: %w", err)
 	}
 
@@ -310,7 +321,7 @@ func (m *Manager) createSessionFromInfo(info *Info) (Session, error) {
 			return nil, fmt.Errorf("workspace not found for session: %w", err)
 		}
 
-		return NewTmuxSession(info, m.store, m.tmuxAdapter, ws), nil
+		return NewTmuxSession(info, m, m.tmuxAdapter, ws), nil
 
 	default:
 		return nil, fmt.Errorf("unsupported session type: %s", info.Type)
@@ -397,4 +408,111 @@ func (m *Manager) UpdateAllStatuses(sessions []Session) {
 		}
 	}
 	wg.Wait()
+}
+
+// Helper methods for file operations
+
+// saveSessionInfo saves session info to file
+func (m *Manager) saveSessionInfo(info *Info) error {
+	path := m.getSessionPath(info.ID)
+	return m.fileManager.Write(path, info)
+}
+
+// loadSessionInfo loads session info from file
+func (m *Manager) loadSessionInfo(id string) (*Info, error) {
+	path := m.getSessionPath(id)
+	info, _, err := m.fileManager.Read(path)
+	if err != nil {
+		return nil, err
+	}
+	return info, nil
+}
+
+// listSessionInfos lists all session infos
+func (m *Manager) listSessionInfos() ([]*Info, error) {
+	entries, err := os.ReadDir(m.sessionsDir)
+	if err != nil {
+		return nil, err
+	}
+
+	var infos []*Info
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		// Try to load session info
+		info, err := m.loadSessionInfo(entry.Name())
+		if err != nil {
+			// Skip invalid sessions
+			continue
+		}
+		infos = append(infos, info)
+	}
+
+	return infos, nil
+}
+
+// deleteSessionInfo deletes session info and storage
+func (m *Manager) deleteSessionInfo(id string) error {
+	// Remove session info file
+	path := m.getSessionPath(id)
+	if err := m.fileManager.Delete(path); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
+	// Remove session directory
+	sessionDir := filepath.Join(m.sessionsDir, id)
+	if err := os.RemoveAll(sessionDir); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to remove session directory: %w", err)
+	}
+
+	return nil
+}
+
+// updateSessionInfo safely updates session info using CAS
+func (m *Manager) updateSessionInfo(id string, updateFunc func(info *Info) error) error {
+	path := m.getSessionPath(id)
+	return m.fileManager.Update(path, updateFunc)
+}
+
+// getSessionPath returns the path to a session's info file
+func (m *Manager) getSessionPath(id string) string {
+	return filepath.Join(m.sessionsDir, id, "session.yaml")
+}
+
+// Implement Store interface methods for backward compatibility
+
+// Save implements Store.Save
+func (m *Manager) Save(info *Info) error {
+	return m.saveSessionInfo(info)
+}
+
+// Load implements Store.Load
+func (m *Manager) Load(id string) (*Info, error) {
+	return m.loadSessionInfo(id)
+}
+
+// List implements Store.List
+func (m *Manager) List() ([]*Info, error) {
+	return m.listSessionInfos()
+}
+
+// Delete implements Store.Delete
+func (m *Manager) Delete(id string) error {
+	return m.deleteSessionInfo(id)
+}
+
+// Update implements Store.Update
+func (m *Manager) Update(id string, updateFunc func(info *Info) error) error {
+	return m.updateSessionInfo(id, updateFunc)
+}
+
+// CreateSessionStorage implements Store.CreateSessionStorage
+func (m *Manager) CreateSessionStorage(sessionID string) (string, error) {
+	storagePath := filepath.Join(m.sessionsDir, sessionID, "storage")
+	if err := os.MkdirAll(storagePath, 0o755); err != nil {
+		return "", err
+	}
+	return storagePath, nil
 }

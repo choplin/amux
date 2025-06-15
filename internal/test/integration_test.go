@@ -95,12 +95,10 @@ func TestIntegration_FullWorkflow(t *testing.T) {
 	}
 
 	// Create session manager with mock adapter
-	store, err := session.NewFileStore(configManager.GetAmuxDir())
+	sessionManager, err := session.NewManager(configManager.GetAmuxDir(), wsManager, nil)
 	if err != nil {
-		t.Fatalf("Failed to create session store: %v", err)
+		t.Fatalf("Failed to create session manager: %v", err)
 	}
-
-	sessionManager := session.NewManager(store, wsManager, nil)
 
 	// Use mock adapter for predictable testing
 	mockAdapter := tmux.NewMockAdapter()
@@ -247,12 +245,10 @@ func TestIntegration_MultipleAgents(t *testing.T) {
 	}
 
 	// Create session manager with mock
-	store, err := session.NewFileStore(configManager.GetAmuxDir())
+	sessionManager, err := session.NewManager(configManager.GetAmuxDir(), wsManager, nil)
 	if err != nil {
-		t.Fatalf("Failed to create session store: %v", err)
+		t.Fatalf("Failed to create session manager: %v", err)
 	}
-
-	sessionManager := session.NewManager(store, wsManager, nil)
 	mockAdapter := tmux.NewMockAdapter()
 	sessionManager.SetTmuxAdapter(mockAdapter)
 

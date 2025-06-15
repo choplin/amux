@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/aki/amux/internal/adapters/tmux"
+	"github.com/aki/amux/internal/core/idmap"
 	"github.com/aki/amux/internal/core/workspace"
 )
 
@@ -28,10 +29,16 @@ func TestTmuxSession_StartStop(t *testing.T) {
 		t.Fatalf("Failed to create workspace: %v", err)
 	}
 
-	// Create store
-	store, err := NewFileStore(configManager.GetAmuxDir())
+	// Create ID mapper
+	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
 	if err != nil {
-		t.Fatalf("Failed to create store: %v", err)
+		t.Fatalf("Failed to create ID mapper: %v", err)
+	}
+
+	// Create manager
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, idMapper)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
 	}
 
 	// Create session info
@@ -50,12 +57,12 @@ func TestTmuxSession_StartStop(t *testing.T) {
 	}
 
 	// Save info
-	if err := store.Save(info); err != nil {
+	if err := manager.Save(info); err != nil {
 		t.Fatalf("Failed to save session info: %v", err)
 	}
 
 	// Create tmux session
-	session := NewTmuxSession(info, store, tmuxAdapter, ws)
+	session := NewTmuxSession(info, manager, tmuxAdapter, ws)
 
 	// Start session
 	ctx := context.Background()
@@ -108,10 +115,16 @@ func TestTmuxSession_WithInitialPrompt(t *testing.T) {
 		t.Fatalf("Failed to create workspace: %v", err)
 	}
 
-	// Create store
-	store, err := NewFileStore(configManager.GetAmuxDir())
+	// Create ID mapper
+	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
 	if err != nil {
-		t.Fatalf("Failed to create store: %v", err)
+		t.Fatalf("Failed to create ID mapper: %v", err)
+	}
+
+	// Create manager
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, idMapper)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
 	}
 
 	// Create session info with initial prompt
@@ -132,12 +145,12 @@ func TestTmuxSession_WithInitialPrompt(t *testing.T) {
 	}
 
 	// Save info
-	if err := store.Save(info); err != nil {
+	if err := manager.Save(info); err != nil {
 		t.Fatalf("Failed to save session info: %v", err)
 	}
 
 	// Create tmux session
-	session := NewTmuxSession(info, store, tmuxAdapter, ws)
+	session := NewTmuxSession(info, manager, tmuxAdapter, ws)
 
 	// Start session
 	ctx := context.Background()
@@ -191,10 +204,16 @@ func TestTmuxSession_StatusTracking(t *testing.T) {
 		t.Fatalf("Failed to create workspace: %v", err)
 	}
 
-	// Create store
-	store, err := NewFileStore(configManager.GetAmuxDir())
+	// Create ID mapper
+	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
 	if err != nil {
-		t.Fatalf("Failed to create store: %v", err)
+		t.Fatalf("Failed to create ID mapper: %v", err)
+	}
+
+	// Create manager
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, idMapper)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
 	}
 
 	// Create session info
@@ -213,12 +232,12 @@ func TestTmuxSession_StatusTracking(t *testing.T) {
 	}
 
 	// Save info
-	if err := store.Save(info); err != nil {
+	if err := manager.Save(info); err != nil {
 		t.Fatalf("Failed to save session info: %v", err)
 	}
 
 	// Create tmux session
-	session := NewTmuxSession(info, store, tmuxAdapter, ws)
+	session := NewTmuxSession(info, manager, tmuxAdapter, ws)
 
 	// Initial status should be created
 	if status := session.Status(); status != StatusCreated {

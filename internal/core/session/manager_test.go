@@ -24,12 +24,6 @@ func TestManager_CreateSession(t *testing.T) {
 		t.Fatalf("Failed to create test workspace: %v", err)
 	}
 
-	// Create session store
-	store, err := NewFileStore(configManager.GetAmuxDir())
-	if err != nil {
-		t.Fatalf("Failed to create session store: %v", err)
-	}
-
 	// Create ID mapper
 	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
 	if err != nil {
@@ -37,7 +31,10 @@ func TestManager_CreateSession(t *testing.T) {
 	}
 
 	// Create session manager
-	manager := NewManager(store, wsManager, idMapper)
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, idMapper)
+	if err != nil {
+		t.Fatalf("Failed to create session manager: %v", err)
+	}
 
 	// Use mock adapter for consistent testing across platforms
 	mockAdapter := tmux.NewMockAdapter()
@@ -71,10 +68,10 @@ func TestManager_CreateSession(t *testing.T) {
 		t.Errorf("Expected status %s, got %s", StatusCreated, session.Status())
 	}
 
-	// Verify session was saved to store
-	loaded, err := store.Load(session.ID())
+	// Verify session was saved to manager
+	loaded, err := manager.Load(session.ID())
 	if err != nil {
-		t.Fatalf("Failed to load session from store: %v", err)
+		t.Fatalf("Failed to load session from manager: %v", err)
 	}
 
 	if loaded.ID != session.ID() {
@@ -95,12 +92,6 @@ func TestManager_CreateSessionWithNameAndDescription(t *testing.T) {
 		t.Fatalf("Failed to create test workspace: %v", err)
 	}
 
-	// Create session store
-	store, err := NewFileStore(configManager.GetAmuxDir())
-	if err != nil {
-		t.Fatalf("Failed to create session store: %v", err)
-	}
-
 	// Create ID mapper
 	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
 	if err != nil {
@@ -108,7 +99,10 @@ func TestManager_CreateSessionWithNameAndDescription(t *testing.T) {
 	}
 
 	// Create session manager
-	manager := NewManager(store, wsManager, idMapper)
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, idMapper)
+	if err != nil {
+		t.Fatalf("Failed to create session manager: %v", err)
+	}
 
 	// Use mock adapter for consistent testing across platforms
 	mockAdapter := tmux.NewMockAdapter()
@@ -137,10 +131,10 @@ func TestManager_CreateSessionWithNameAndDescription(t *testing.T) {
 		t.Errorf("Expected description 'Debugging authentication issues', got %s", info.Description)
 	}
 
-	// Verify session was saved to store with name and description
-	loaded, err := store.Load(session.ID())
+	// Verify session was saved to manager with name and description
+	loaded, err := manager.Load(session.ID())
 	if err != nil {
-		t.Fatalf("Failed to load session from store: %v", err)
+		t.Fatalf("Failed to load session from manager: %v", err)
 	}
 
 	if loaded.Name != "debug-session" {
@@ -164,12 +158,6 @@ func TestManager_CreateSessionWithInitialPrompt(t *testing.T) {
 		t.Fatalf("Failed to create test workspace: %v", err)
 	}
 
-	// Create session store
-	store, err := NewFileStore(configManager.GetAmuxDir())
-	if err != nil {
-		t.Fatalf("Failed to create session store: %v", err)
-	}
-
 	// Create ID mapper
 	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
 	if err != nil {
@@ -177,7 +165,10 @@ func TestManager_CreateSessionWithInitialPrompt(t *testing.T) {
 	}
 
 	// Create session manager
-	manager := NewManager(store, wsManager, idMapper)
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, idMapper)
+	if err != nil {
+		t.Fatalf("Failed to create session manager: %v", err)
+	}
 
 	// Use mock adapter for consistent testing
 	mockAdapter := tmux.NewMockAdapter()
@@ -204,9 +195,9 @@ func TestManager_CreateSessionWithInitialPrompt(t *testing.T) {
 	}
 
 	// Verify session was saved with initial prompt
-	loaded, err := store.Load(session.ID())
+	loaded, err := manager.Load(session.ID())
 	if err != nil {
-		t.Fatalf("Failed to load session from store: %v", err)
+		t.Fatalf("Failed to load session from manager: %v", err)
 	}
 
 	if loaded.InitialPrompt != testPrompt {
@@ -225,18 +216,16 @@ func TestManager_Get(t *testing.T) {
 		t.Fatalf("Failed to create workspace: %v", err)
 	}
 
-	store, err := NewFileStore(configManager.GetAmuxDir())
-	if err != nil {
-		t.Fatalf("Failed to create store: %v", err)
-	}
-
 	// Create ID mapper
 	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		t.Fatalf("Failed to create ID mapper: %v", err)
 	}
 
-	manager := NewManager(store, wsManager, idMapper)
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, idMapper)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
 
 	// Use mock adapter for consistent testing across platforms
 	mockAdapter := tmux.NewMockAdapter()
@@ -279,24 +268,22 @@ func TestManager_ListSessions(t *testing.T) {
 		t.Fatalf("Failed to create workspace: %v", err)
 	}
 
-	store, err := NewFileStore(configManager.GetAmuxDir())
-	if err != nil {
-		t.Fatalf("Failed to create store: %v", err)
-	}
-
-	// Ensure we start with a clean slate - list existing sessions
-	existingSessions, _ := store.List()
-	if len(existingSessions) > 0 {
-		t.Logf("Warning: Found %d existing sessions before test", len(existingSessions))
-	}
-
 	// Create ID mapper
 	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		t.Fatalf("Failed to create ID mapper: %v", err)
 	}
 
-	manager := NewManager(store, wsManager, idMapper)
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, idMapper)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
+
+	// Ensure we start with a clean slate - list existing sessions
+	existingSessions, _ := manager.List()
+	if len(existingSessions) > 0 {
+		t.Logf("Warning: Found %d existing sessions before test", len(existingSessions))
+	}
 
 	// Use mock adapter for consistent testing across platforms
 	mockAdapter := tmux.NewMockAdapter()
@@ -315,7 +302,7 @@ func TestManager_ListSessions(t *testing.T) {
 		sessionIDs = append(sessionIDs, session.ID())
 
 		// Verify session was saved
-		savedInfo, err := store.Load(session.ID())
+		savedInfo, err := manager.Load(session.ID())
 		if err != nil {
 			t.Fatalf("Failed to load session %d after creation: %v", i, err)
 		}
@@ -324,8 +311,8 @@ func TestManager_ListSessions(t *testing.T) {
 		}
 
 		// Debug: List sessions after each creation
-		currentSessions, _ := store.List()
-		t.Logf("After creating session %d: found %d sessions in store", i, len(currentSessions))
+		currentSessions, _ := manager.List()
+		t.Logf("After creating session %d: found %d sessions in manager", i, len(currentSessions))
 
 		// Small delay to ensure file system operations complete on Windows
 		time.Sleep(10 * time.Millisecond)
@@ -369,18 +356,16 @@ func TestManager_Remove(t *testing.T) {
 		t.Fatalf("Failed to create workspace: %v", err)
 	}
 
-	store, err := NewFileStore(configManager.GetAmuxDir())
-	if err != nil {
-		t.Fatalf("Failed to create store: %v", err)
-	}
-
 	// Create ID mapper
 	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		t.Fatalf("Failed to create ID mapper: %v", err)
 	}
 
-	manager := NewManager(store, wsManager, idMapper)
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, idMapper)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
 
 	// Use mock adapter for consistent testing across platforms
 	mockAdapter := tmux.NewMockAdapter()
@@ -440,17 +425,15 @@ func TestManager_RemoveCompletedSession(t *testing.T) {
 		t.Fatalf("Failed to create workspace: %v", err)
 	}
 
-	store, err := NewFileStore(configManager.GetAmuxDir())
-	if err != nil {
-		t.Fatalf("Failed to create store: %v", err)
-	}
-
 	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		t.Fatalf("Failed to create ID mapper: %v", err)
 	}
 
-	manager := NewManager(store, wsManager, idMapper)
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, idMapper)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
 
 	// Use mock adapter
 	mockAdapter := tmux.NewMockAdapter()
@@ -480,8 +463,8 @@ func TestManager_RemoveCompletedSession(t *testing.T) {
 	tmuxSessionName := tmuxSess.info.TmuxSession
 	tmuxSess.mu.Unlock()
 
-	// Save to store
-	if err := store.Save(tmuxSess.info); err != nil {
+	// Save to manager
+	if err := manager.Save(tmuxSess.info); err != nil {
 		t.Fatalf("Failed to save completed status: %v", err)
 	}
 
@@ -520,20 +503,17 @@ func TestManager_CreateSessionWithoutTmux(t *testing.T) {
 		t.Fatalf("Failed to create test workspace: %v", err)
 	}
 
-	// Create session store
-	store, err := NewFileStore(configManager.GetAmuxDir())
-	if err != nil {
-		t.Fatalf("Failed to create session store: %v", err)
-	}
-
-	// Create session manager without tmux adapter
 	// Create ID mapper
 	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		t.Fatalf("Failed to create ID mapper: %v", err)
 	}
 
-	manager := NewManager(store, wsManager, idMapper)
+	// Create session manager without tmux adapter
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, idMapper)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
 	manager.SetTmuxAdapter(nil) // Explicitly set to nil to simulate no tmux
 
 	// Test creating a session without tmux
@@ -567,20 +547,17 @@ func TestManager_GetWithoutTmux(t *testing.T) {
 		t.Fatalf("Failed to create test workspace: %v", err)
 	}
 
-	// Create session store
-	store, err := NewFileStore(configManager.GetAmuxDir())
-	if err != nil {
-		t.Fatalf("Failed to create session store: %v", err)
-	}
-
-	// First create a session with tmux available
 	// Create ID mapper
 	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		t.Fatalf("Failed to create ID mapper: %v", err)
 	}
 
-	manager := NewManager(store, wsManager, idMapper)
+	// First create a session with tmux available
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, idMapper)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
 	mockAdapter := tmux.NewMockAdapter()
 	manager.SetTmuxAdapter(mockAdapter)
 
@@ -597,7 +574,10 @@ func TestManager_GetWithoutTmux(t *testing.T) {
 
 	// Create a new manager without tmux to simulate fresh start
 	// This tests the case where sessions are persisted but tmux is not available on restart
-	manager2 := NewManager(store, wsManager, idMapper)
+	manager2, err := NewManager(configManager.GetAmuxDir(), wsManager, idMapper)
+	if err != nil {
+		t.Fatalf("Failed to create second manager: %v", err)
+	}
 	manager2.SetTmuxAdapter(nil)
 
 	// Try to get the session without tmux
@@ -612,11 +592,20 @@ func TestManager_GetWithoutTmux(t *testing.T) {
 	}
 }
 
-func TestFileStore_Operations(t *testing.T) {
-	tmpDir := t.TempDir()
-	store, err := NewFileStore(tmpDir)
+func TestManager_StoreOperations(t *testing.T) {
+	// Setup test environment
+	_, wsManager, configManager := setupTestEnvironment(t)
+
+	// Create ID mapper
+	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
 	if err != nil {
-		t.Fatalf("Failed to create store: %v", err)
+		t.Fatalf("Failed to create ID mapper: %v", err)
+	}
+
+	// Create manager
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, idMapper)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
 	}
 
 	// Test Save and Load
@@ -635,11 +624,11 @@ func TestFileStore_Operations(t *testing.T) {
 		Description: "Test session description",
 	}
 
-	if err := store.Save(info); err != nil {
+	if err := manager.Save(info); err != nil {
 		t.Fatalf("Failed to save session info: %v", err)
 	}
 
-	loaded, err := store.Load(info.ID)
+	loaded, err := manager.Load(info.ID)
 	if err != nil {
 		t.Fatalf("Failed to load session info: %v", err)
 	}
@@ -655,7 +644,7 @@ func TestFileStore_Operations(t *testing.T) {
 	}
 
 	// Test List
-	infos, err := store.List()
+	infos, err := manager.List()
 	if err != nil {
 		t.Fatalf("Failed to list sessions: %v", err)
 	}
@@ -665,12 +654,12 @@ func TestFileStore_Operations(t *testing.T) {
 	}
 
 	// Test Delete
-	if err := store.Delete(info.ID); err != nil {
+	if err := manager.Delete(info.ID); err != nil {
 		t.Fatalf("Failed to delete session: %v", err)
 	}
 
 	// Verify deleted
-	_, err = store.Load(info.ID)
+	_, err = manager.Load(info.ID)
 	if err == nil {
 		t.Error("Expected error loading deleted session")
 	}
