@@ -136,7 +136,8 @@ func (m *Manager[T]) Write(path string, data *T) error {
 	}
 
 	// Sync to ensure data is written to disk
-	if f, err := os.Open(tempFile); err == nil {
+	// We need to open for write to be able to sync
+	if f, err := os.OpenFile(tempFile, os.O_RDWR, 0o644); err == nil {
 		_ = f.Sync()
 		_ = f.Close()
 	}
@@ -202,7 +203,8 @@ func (m *Manager[T]) WriteWithCAS(path string, data *T, expectedInfo *FileInfo) 
 	}
 
 	// Sync to ensure data is written to disk
-	if f, err := os.Open(tempFile); err == nil {
+	// We need to open for write to be able to sync
+	if f, err := os.OpenFile(tempFile, os.O_RDWR, 0o644); err == nil {
 		_ = f.Sync()
 		_ = f.Close()
 	}
