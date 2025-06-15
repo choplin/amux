@@ -48,14 +48,6 @@ func NewManagerWithTimeout[T any](timeout time.Duration) *Manager[T] {
 	}
 }
 
-// getLockPath returns the path to the lock file for the given file path.
-// On Windows, we use a separate lock file to avoid issues with file handle conflicts.
-func getLockPath(path string) string {
-	dir := filepath.Dir(path)
-	base := filepath.Base(path)
-	return filepath.Join(dir, "."+base+".lock")
-}
-
 // Read reads a file with a shared lock
 func (m *Manager[T]) Read(ctx context.Context, path string) (*T, *FileInfo, error) {
 	// Check if file exists first

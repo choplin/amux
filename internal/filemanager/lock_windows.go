@@ -10,6 +10,14 @@ import (
 	"github.com/gofrs/flock"
 )
 
+// getLockPath returns the path to the lock file for the given file path.
+// On Windows, we use a separate lock file to avoid issues with file handle conflicts.
+func getLockPath(path string) string {
+	dir := filepath.Dir(path)
+	base := filepath.Base(path)
+	return filepath.Join(dir, "."+base+".lock")
+}
+
 // createLock creates a file lock for the given path.
 // On Windows, we use a separate lock file to avoid conflicts with rename operations.
 func createLock(path string) *flock.Flock {
