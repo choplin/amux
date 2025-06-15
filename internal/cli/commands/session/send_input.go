@@ -74,8 +74,14 @@ func sendInputToSession(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("session %s is not running (current status: %s)", sessionID, sess.Status())
 	}
 
+	// Type assert to TerminalSession
+	terminalSess, ok := sess.(session.TerminalSession)
+	if !ok {
+		return fmt.Errorf("session does not support terminal operations")
+	}
+
 	// Send input to the session
-	if err := sess.SendInput(inputText); err != nil {
+	if err := terminalSess.SendInput(inputText); err != nil {
 		return fmt.Errorf("failed to send input to session: %w", err)
 	}
 

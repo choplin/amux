@@ -70,8 +70,14 @@ func viewSessionLogs(cmd *cobra.Command, args []string) error {
 		return streamSessionLogs(sess)
 	}
 
+	// Type assert to TerminalSession
+	terminalSess, ok := sess.(session.TerminalSession)
+	if !ok {
+		return fmt.Errorf("session does not support terminal operations")
+	}
+
 	// Get snapshot of output (0 = all lines for non-follow mode)
-	output, err := sess.GetOutput(0)
+	output, err := terminalSess.GetOutput(0)
 	if err != nil {
 		return fmt.Errorf("failed to get session output: %w", err)
 	}
@@ -121,6 +127,9 @@ func streamSessionLogs(sess session.Session) error {
 
 	// Use the tail package to follow logs
 	tailer := tail.New(sess, opts)
+	if tailer == nil {
+		return fmt.Errorf("session does not support terminal operations")
+	}
 	err = tailer.Follow(ctx)
 
 	if err == context.Canceled {

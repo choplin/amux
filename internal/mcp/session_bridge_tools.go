@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/aki/amux/internal/core/session"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
@@ -61,7 +62,10 @@ func (s *ServerV2) handleResourceSessionList(ctx context.Context, request mcp.Ca
 	for i, sess := range sessions {
 		// Update status for running sessions
 		if sess.Status().IsRunning() {
-			_ = sess.UpdateStatus() // Ignore errors, use current status if update fails
+			// Try to update status if session supports terminal operations
+			if terminalSess, ok := sess.(session.TerminalSession); ok {
+				_ = terminalSess.UpdateStatus() // Ignore errors, use current status if update fails
+			}
 		}
 
 		info := sess.Info()

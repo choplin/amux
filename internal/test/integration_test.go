@@ -158,13 +158,19 @@ func TestIntegration_FullWorkflow(t *testing.T) {
 		}
 	}
 
+	// Type assert to TerminalSession for terminal operations
+	terminalSess, ok := sess.(session.TerminalSession)
+	if !ok {
+		t.Fatal("Session does not support terminal operations")
+	}
+
 	// Send some input
-	if err := sess.SendInput("echo 'Integration test complete'"); err != nil {
+	if err := terminalSess.SendInput("echo 'Integration test complete'"); err != nil {
 		t.Errorf("Failed to send input: %v", err)
 	}
 
 	// Get output
-	output, err := sess.GetOutput(0)
+	output, err := terminalSess.GetOutput(0)
 	if err != nil {
 		t.Errorf("Failed to get output: %v", err)
 	}
@@ -302,8 +308,14 @@ func TestIntegration_MultipleAgents(t *testing.T) {
 
 	// Send different input to each session
 	for i, sess := range sessions {
+		// Type assert to TerminalSession
+		terminalSess, ok := sess.(session.TerminalSession)
+		if !ok {
+			t.Errorf("Session %d does not support terminal operations", i)
+			continue
+		}
 		input := "echo 'Output from session " + sess.ID() + "'"
-		if err := sess.SendInput(input); err != nil {
+		if err := terminalSess.SendInput(input); err != nil {
 			t.Errorf("Failed to send input to session %d: %v", i, err)
 		}
 	}

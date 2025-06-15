@@ -18,7 +18,7 @@ import (
 	"github.com/aki/amux/internal/core/workspace"
 )
 
-// tmuxSessionImpl implements Session interface with tmux backend
+// tmuxSessionImpl implements both Session and TerminalSession interfaces with tmux backend
 type tmuxSessionImpl struct {
 	info           *Info
 	store          Store
@@ -53,7 +53,7 @@ func WithProcessChecker(checker process.Checker) TmuxSessionOption {
 }
 
 // NewTmuxSession creates a new tmux-backed session
-func NewTmuxSession(info *Info, store Store, tmuxAdapter tmux.Adapter, workspace *workspace.Workspace, opts ...TmuxSessionOption) Session {
+func NewTmuxSession(info *Info, store Store, tmuxAdapter tmux.Adapter, workspace *workspace.Workspace, opts ...TmuxSessionOption) TerminalSession {
 	s := &tmuxSessionImpl{
 		info:           info,
 		store:          store,
@@ -76,6 +76,11 @@ func NewTmuxSession(info *Info, store Store, tmuxAdapter tmux.Adapter, workspace
 		s.info.StatusState.LastOutputTime = time.Now()
 	}
 
+	// Ensure type is set
+	if s.info.Type == "" {
+		s.info.Type = SessionTypeTmux
+	}
+
 	return s
 }
 
@@ -89,6 +94,10 @@ func (s *tmuxSessionImpl) WorkspaceID() string {
 
 func (s *tmuxSessionImpl) AgentID() string {
 	return s.info.AgentID
+}
+
+func (s *tmuxSessionImpl) Type() SessionType {
+	return SessionTypeTmux
 }
 
 func (s *tmuxSessionImpl) Status() Status {
