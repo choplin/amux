@@ -4,25 +4,36 @@ import (
 	"context"
 	"fmt"
 	"hash/fnv"
+	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/aki/amux/internal/adapters/tmux"
 	"github.com/aki/amux/internal/core/logger"
+	"github.com/aki/amux/internal/core/process"
 	"github.com/aki/amux/internal/core/terminal"
 	"github.com/aki/amux/internal/core/workspace"
 )
 
 // tmuxSessionImpl implements Session interface with tmux backend
 type tmuxSessionImpl struct {
-	info        *Info
-	store       Store
-	tmuxAdapter tmux.Adapter
-	workspace   *workspace.Workspace
-	logger      logger.Logger
-	mu          sync.RWMutex
+	info           *Info
+	store          Store
+	tmuxAdapter    tmux.Adapter
+	workspace      *workspace.Workspace
+	logger         logger.Logger
+	processChecker process.Checker
+	mu             sync.RWMutex
 }
+
+// statusCacheDuration defines how long to cache status before rechecking.
+// This is set to 1 second to balance performance with idle detection accuracy.
+// With a 3-second idle threshold, this ensures we can detect idle state within
+// 3-4 seconds rather than up to 5 seconds (which would happen with 2-second cache).
+const statusCacheDuration = 1 * time.Second
 
 // TmuxSessionOption is a function that configures a tmux session
 type TmuxSessionOption func(*tmuxSessionImpl)
@@ -34,14 +45,22 @@ func WithTmuxLogger(log logger.Logger) TmuxSessionOption {
 	}
 }
 
+// WithProcessChecker sets the process checker for the tmux session
+func WithProcessChecker(checker process.Checker) TmuxSessionOption {
+	return func(s *tmuxSessionImpl) {
+		s.processChecker = checker
+	}
+}
+
 // NewTmuxSession creates a new tmux-backed session
 func NewTmuxSession(info *Info, store Store, tmuxAdapter tmux.Adapter, workspace *workspace.Workspace, opts ...TmuxSessionOption) Session {
 	s := &tmuxSessionImpl{
-		info:        info,
-		store:       store,
-		tmuxAdapter: tmuxAdapter,
-		workspace:   workspace,
-		logger:      logger.Nop(), // Default to no-op logger
+		info:           info,
+		store:          store,
+		tmuxAdapter:    tmuxAdapter,
+		workspace:      workspace,
+		logger:         logger.Nop(),    // Default to no-op logger
+		processChecker: process.Default, // Default to system process checker
 	}
 
 	// Apply options
@@ -315,6 +334,75 @@ func (s *tmuxSessionImpl) UpdateStatus() error {
 		return nil
 	}
 
+	// Check cache - skip update if checked recently
+	if time.Since(s.info.StatusState.LastStatusCheck) < statusCacheDuration {
+		return nil
+	}
+
+	// Update last check time
+	s.info.StatusState.LastStatusCheck = time.Now()
+
+	// Defer saving the session info at the end (single save point)
+	defer func() {
+		if err := s.store.Save(s.info); err != nil {
+			s.logger.Warn("failed to save session state", "error", err)
+		}
+	}()
+
+	// Check if tmux session still exists
+	if !s.tmuxAdapter.SessionExists(s.info.TmuxSession) {
+		// Session doesn't exist anymore - mark as failed
+		now := time.Now()
+		s.info.StatusState.Status = StatusFailed
+		s.info.StatusState.StatusChangedAt = now
+		s.info.Error = "tmux session no longer exists"
+		return nil
+	}
+
+	// Check if shell process is dead
+	isDead, err := s.tmuxAdapter.IsPaneDead(s.info.TmuxSession)
+	if err != nil {
+		// Log error but continue - don't fail the entire status update
+		s.logger.Warn("failed to check pane status", "error", err)
+	} else if isDead {
+		// Shell process is dead - mark as failed
+		now := time.Now()
+		s.info.StatusState.Status = StatusFailed
+		s.info.StatusState.StatusChangedAt = now
+		s.info.Error = "shell process exited"
+		return nil
+	}
+
+	// Check if shell has child processes
+	if s.info.PID > 0 && s.processChecker != nil {
+		hasChildren, err := s.processChecker.HasChildren(s.info.PID)
+		if err != nil {
+			// Log error but continue
+			s.logger.Warn("failed to check child processes", "error", err, "pid", s.info.PID)
+		} else if !hasChildren {
+			// No child processes - capture exit status from shell
+			exitCode, err := s.captureExitStatus()
+			if err != nil {
+				// Failed to capture exit status - log but continue
+				s.logger.Warn("failed to capture exit status", "error", err)
+			}
+
+			// Determine final status based on exit code
+			now := time.Now()
+			if exitCode != 0 {
+				s.info.StatusState.Status = StatusFailed
+				s.info.Error = fmt.Sprintf("command exited with code %d", exitCode)
+			} else {
+				s.info.StatusState.Status = StatusCompleted
+			}
+			s.info.StatusState.StatusChangedAt = now
+			return nil
+		}
+	}
+
+	// If we get here, session is running with active processes
+	// Continue with existing working/idle detection logic
+
 	// Get last 20 lines of output for status checking
 	// This is sufficient to detect activity without fetching entire buffer
 	const statusCheckLines = 20
@@ -338,12 +426,10 @@ func (s *tmuxSessionImpl) UpdateStatus() error {
 			s.info.StatusState.Status = StatusWorking
 			s.info.StatusState.StatusChangedAt = now
 		}
-		// Always save when hash changes to persist the new hash
-		if err := s.store.Save(s.info); err != nil {
-			return fmt.Errorf("failed to save status change: %w", err)
-		}
 	} else {
-		// No output change, check if we should transition to idle
+		// No output change, check if we should transition to idle.
+		// With 1-second cache duration and 3-second idle threshold,
+		// idle detection happens within 3-4 seconds of last activity.
 		timeSinceLastOutput := time.Since(s.info.StatusState.LastOutputTime)
 		const idleThreshold = 3 * time.Second
 
@@ -351,12 +437,41 @@ func (s *tmuxSessionImpl) UpdateStatus() error {
 			// Transition to idle
 			s.info.StatusState.Status = StatusIdle
 			s.info.StatusState.StatusChangedAt = now
-			// Save status change
-			if err := s.store.Save(s.info); err != nil {
-				return fmt.Errorf("failed to save status change: %w", err)
-			}
 		}
 	}
 
 	return nil
+}
+
+// captureExitStatus captures the exit status from the shell and saves it to storage
+func (s *tmuxSessionImpl) captureExitStatus() (int, error) {
+	if s.info.StoragePath == "" {
+		return 0, fmt.Errorf("no storage path configured")
+	}
+
+	exitStatusPath := filepath.Join(s.info.StoragePath, "exit_status")
+
+	// Send command to write exit status directly to storage
+	cmd := fmt.Sprintf("echo $? > %s", exitStatusPath)
+	if err := s.tmuxAdapter.SendKeys(s.info.TmuxSession, cmd); err != nil {
+		return 0, fmt.Errorf("failed to send exit status command: %w", err)
+	}
+
+	// Wait for the file to be written
+	time.Sleep(100 * time.Millisecond)
+
+	// Read the exit status from the file
+	data, err := os.ReadFile(exitStatusPath)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read exit status: %w", err)
+	}
+
+	// Parse the exit code
+	exitCodeStr := strings.TrimSpace(string(data))
+	exitCode, err := strconv.Atoi(exitCodeStr)
+	if err != nil {
+		return 0, fmt.Errorf("invalid exit status format: %s", exitCodeStr)
+	}
+
+	return exitCode, nil
 }

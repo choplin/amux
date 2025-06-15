@@ -21,6 +21,7 @@ type MockSession struct {
 	environment map[string]string
 	output      []string
 	pid         int
+	paneDead    bool // For simulating dead panes
 }
 
 // NewMockAdapter creates a new mock adapter
@@ -281,4 +282,27 @@ func (m *MockAdapter) SetPaneContent(sessionName string, content string) {
 	if session, exists := m.sessions[sessionName]; exists {
 		session.output = []string{content}
 	}
+}
+
+// IsPaneDead checks if the pane's process has exited
+func (m *MockAdapter) IsPaneDead(sessionName string) (bool, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if sess, exists := m.sessions[sessionName]; exists {
+		return sess.paneDead, nil
+	}
+	return false, fmt.Errorf("session does not exist: %s", sessionName)
+}
+
+// SetPaneDead sets whether a pane is dead for testing
+func (m *MockAdapter) SetPaneDead(sessionName string, dead bool) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if sess, exists := m.sessions[sessionName]; exists {
+		sess.paneDead = dead
+		return nil
+	}
+	return fmt.Errorf("session does not exist: %s", sessionName)
 }

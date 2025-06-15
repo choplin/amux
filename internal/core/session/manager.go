@@ -155,6 +155,11 @@ func (m *Manager) Get(id ID) (Session, error) {
 	// Load from store
 	info, err := m.store.Load(string(id))
 	if err != nil {
+		// If not found in store, it means the session doesn't exist
+		// (even if it might have been in cache before)
+		if _, ok := err.(ErrSessionNotFound); ok {
+			return nil, err
+		}
 		return nil, fmt.Errorf("failed to load session: %w", err)
 	}
 
@@ -234,6 +239,18 @@ func (m *Manager) Remove(id ID) error {
 		return fmt.Errorf("cannot remove running session")
 	}
 
+	// Clean up any remaining tmux session
+	info := sess.Info()
+	if info.TmuxSession != "" && m.tmuxAdapter != nil && m.tmuxAdapter.IsAvailable() {
+		// Check if tmux session exists before trying to kill it
+		if m.tmuxAdapter.SessionExists(info.TmuxSession) {
+			if err := m.tmuxAdapter.KillSession(info.TmuxSession); err != nil {
+				// Log error but continue with removal
+				m.logger.Warn("failed to kill tmux session during removal", "error", err, "session", info.TmuxSession)
+			}
+		}
+	}
+
 	// Remove from store
 	if err := m.store.Delete(string(id)); err != nil {
 		return fmt.Errorf("failed to delete session: %w", err)
@@ -283,6 +300,12 @@ func (m *Manager) ResolveSession(identifier Identifier) (Session, error) {
 		return session, nil
 	}
 
+	// Store the original error for ID lookup
+	var idErr error
+	if _, ok := err.(ErrSessionNotFound); ok {
+		idErr = err
+	}
+
 	// 2. Try as index (short ID)
 	if m.idMapper != nil {
 		if fullID, exists := m.idMapper.GetSessionFull(string(identifier)); exists {
@@ -308,6 +331,10 @@ func (m *Manager) ResolveSession(identifier Identifier) (Session, error) {
 
 	switch len(matches) {
 	case 0:
+		// If we had a clear "not found" error from ID lookup, return that
+		if idErr != nil {
+			return nil, idErr
+		}
 		return nil, fmt.Errorf("session not found: %s", identifier)
 	case 1:
 		return matches[0], nil
@@ -315,4 +342,30 @@ func (m *Manager) ResolveSession(identifier Identifier) (Session, error) {
 		// Multiple sessions with the same name
 		return nil, fmt.Errorf("multiple sessions found with name '%s', please use ID instead", identifier)
 	}
+}
+
+// UpdateAllStatuses updates the status of multiple sessions in parallel for better performance
+func (m *Manager) UpdateAllStatuses(sessions []Session) {
+	// Use goroutines to update statuses in parallel
+	// This is beneficial because:
+	// 1. Each session has its own mutex, so different sessions can update concurrently
+	// 2. The main bottleneck is external process calls (tmux, pgrep), not the mutex
+	// 3. I/O wait time can be utilized to process other sessions
+	var wg sync.WaitGroup
+
+	// Limit concurrency to avoid overwhelming the system with too many process calls
+	semaphore := make(chan struct{}, 10) // Max 10 concurrent updates
+
+	for _, sess := range sessions {
+		if sess.Status().IsRunning() {
+			wg.Add(1)
+			go func(s Session) {
+				defer wg.Done()
+				semaphore <- struct{}{}        // Acquire
+				defer func() { <-semaphore }() // Release
+				_ = s.UpdateStatus()           // Ignore errors, just use current status if update fails
+			}(sess)
+		}
+	}
+	wg.Wait()
 }
