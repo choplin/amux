@@ -185,7 +185,10 @@ func (s *ServerV2) handleSessionDetailResource(ctx context.Context, request mcp.
 
 	// Update status for running sessions before returning details
 	if sess.Status().IsRunning() {
-		_ = sess.UpdateStatus() // Ignore errors, use current status if update fails
+		// Try to update status if session supports terminal operations
+		if terminalSess, ok := sess.(session.TerminalSession); ok {
+			_ = terminalSess.UpdateStatus() // Ignore errors, use current status if update fails
+		}
 	}
 
 	info := sess.Info()
@@ -262,8 +265,20 @@ func (s *ServerV2) handleSessionOutputResource(ctx context.Context, request mcp.
 		}, nil
 	}
 
+	// Type assert to TerminalSession
+	terminalSess, ok := sess.(session.TerminalSession)
+	if !ok {
+		return []mcp.ResourceContents{
+			&mcp.TextResourceContents{
+				URI:      request.Params.URI,
+				MIMEType: "text/plain",
+				Text:     "Session does not support terminal operations",
+			},
+		}, nil
+	}
+
 	// Get output (0 = all lines for resource access)
-	output, err := sess.GetOutput(0)
+	output, err := terminalSess.GetOutput(0)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get session output: %w", err)
 	}

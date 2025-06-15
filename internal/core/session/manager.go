@@ -69,6 +69,18 @@ func (m *Manager) CreateSession(opts Options) (Session, error) {
 		return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 	}
 
+	// Set default session type if not specified
+	sessionType := opts.Type
+	if sessionType == "" {
+		sessionType = TypeTmux
+	}
+
+	// For now, we only support tmux sessions
+	// In the future, this will be type-based
+	if sessionType != TypeTmux {
+		return nil, fmt.Errorf("unsupported session type: %s", sessionType)
+	}
+
 	// Check if tmux is available
 	if m.tmuxAdapter == nil || !m.tmuxAdapter.IsAvailable() {
 		return nil, ErrTmuxNotAvailable{}
@@ -101,6 +113,7 @@ func (m *Manager) CreateSession(opts Options) (Session, error) {
 	// Create session info
 	info := &Info{
 		ID:          sessionID.String(),
+		Type:        sessionType,
 		WorkspaceID: ws.ID,
 		AgentID:     opts.AgentID,
 		StatusState: StatusState{
@@ -278,18 +291,30 @@ func (m *Manager) CleanupOrphaned() error {
 
 // createSessionFromInfo creates the appropriate session implementation from stored info
 func (m *Manager) createSessionFromInfo(info *Info) (Session, error) {
-	// Check if tmux is available
-	if m.tmuxAdapter == nil || !m.tmuxAdapter.IsAvailable() {
-		return nil, ErrTmuxNotAvailable{}
+	// Default to tmux if type not set (for backward compatibility)
+	if info.Type == "" {
+		info.Type = TypeTmux
 	}
 
-	// Get workspace for tmux session
-	ws, err := m.workspaceManager.ResolveWorkspace(workspace.Identifier(info.WorkspaceID))
-	if err != nil {
-		return nil, fmt.Errorf("workspace not found for session: %w", err)
-	}
+	// Create session based on type
+	switch info.Type {
+	case TypeTmux:
+		// Check if tmux is available
+		if m.tmuxAdapter == nil || !m.tmuxAdapter.IsAvailable() {
+			return nil, ErrTmuxNotAvailable{}
+		}
 
-	return NewTmuxSession(info, m.store, m.tmuxAdapter, ws), nil
+		// Get workspace for tmux session
+		ws, err := m.workspaceManager.ResolveWorkspace(workspace.Identifier(info.WorkspaceID))
+		if err != nil {
+			return nil, fmt.Errorf("workspace not found for session: %w", err)
+		}
+
+		return NewTmuxSession(info, m.store, m.tmuxAdapter, ws), nil
+
+	default:
+		return nil, fmt.Errorf("unsupported session type: %s", info.Type)
+	}
 }
 
 // ResolveSession resolves a session identifier (ID, index, or name) to a Session
@@ -363,7 +388,11 @@ func (m *Manager) UpdateAllStatuses(sessions []Session) {
 				defer wg.Done()
 				semaphore <- struct{}{}        // Acquire
 				defer func() { <-semaphore }() // Release
-				_ = s.UpdateStatus()           // Ignore errors, just use current status if update fails
+
+				// Try to update status if session supports terminal operations
+				if terminalSess, ok := s.(TerminalSession); ok {
+					_ = terminalSess.UpdateStatus() // Ignore errors, just use current status if update fails
+				}
 			}(sess)
 		}
 	}

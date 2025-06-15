@@ -254,8 +254,14 @@ func (s *ServerV2) handleSessionSendInput(ctx context.Context, request mcp.CallT
 		return nil, fmt.Errorf("session is not running (status: %s)", sess.Status())
 	}
 
+	// Type assert to TerminalSession
+	terminalSession, ok := sess.(session.TerminalSession)
+	if !ok {
+		return nil, fmt.Errorf("session does not support terminal operations")
+	}
+
 	// Send input
-	if err := sess.SendInput(input); err != nil {
+	if err := terminalSession.SendInput(input); err != nil {
 		return nil, fmt.Errorf("failed to send input: %w", err)
 	}
 

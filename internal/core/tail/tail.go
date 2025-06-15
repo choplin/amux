@@ -33,7 +33,7 @@ func DefaultOptions() Options {
 
 // Tailer handles streaming session output
 type Tailer struct {
-	session session.Session
+	session session.TerminalSession
 	opts    Options
 }
 
@@ -42,8 +42,16 @@ func New(sess session.Session, opts Options) *Tailer {
 	if opts.PollInterval == 0 {
 		opts.PollInterval = DefaultOptions().PollInterval
 	}
+
+	// Type assert to TerminalSession
+	terminalSess, ok := sess.(session.TerminalSession)
+	if !ok {
+		// Return nil if session doesn't support terminal operations
+		return nil
+	}
+
 	return &Tailer{
-		session: sess,
+		session: terminalSess,
 		opts:    opts,
 	}
 }
