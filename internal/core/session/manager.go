@@ -72,12 +72,12 @@ func (m *Manager) CreateSession(opts Options) (Session, error) {
 	// Set default session type if not specified
 	sessionType := opts.Type
 	if sessionType == "" {
-		sessionType = SessionTypeTmux
+		sessionType = TypeTmux
 	}
 
 	// For now, we only support tmux sessions
 	// In the future, this will be type-based
-	if sessionType != SessionTypeTmux {
+	if sessionType != TypeTmux {
 		return nil, fmt.Errorf("unsupported session type: %s", sessionType)
 	}
 
@@ -293,12 +293,12 @@ func (m *Manager) CleanupOrphaned() error {
 func (m *Manager) createSessionFromInfo(info *Info) (Session, error) {
 	// Default to tmux if type not set (for backward compatibility)
 	if info.Type == "" {
-		info.Type = SessionTypeTmux
+		info.Type = TypeTmux
 	}
 
 	// Create session based on type
 	switch info.Type {
-	case SessionTypeTmux:
+	case TypeTmux:
 		// Check if tmux is available
 		if m.tmuxAdapter == nil || !m.tmuxAdapter.IsAvailable() {
 			return nil, ErrTmuxNotAvailable{}
@@ -388,7 +388,11 @@ func (m *Manager) UpdateAllStatuses(sessions []Session) {
 				defer wg.Done()
 				semaphore <- struct{}{}        // Acquire
 				defer func() { <-semaphore }() // Release
-				_ = s.UpdateStatus()           // Ignore errors, just use current status if update fails
+
+				// Try to update status if session supports terminal operations
+				if terminalSess, ok := s.(TerminalSession); ok {
+					_ = terminalSess.UpdateStatus() // Ignore errors, just use current status if update fails
+				}
 			}(sess)
 		}
 	}

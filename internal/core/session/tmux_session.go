@@ -78,7 +78,7 @@ func NewTmuxSession(info *Info, store Store, tmuxAdapter tmux.Adapter, workspace
 
 	// Ensure type is set
 	if s.info.Type == "" {
-		s.info.Type = SessionTypeTmux
+		s.info.Type = TypeTmux
 	}
 
 	return s
@@ -96,8 +96,8 @@ func (s *tmuxSessionImpl) AgentID() string {
 	return s.info.AgentID
 }
 
-func (s *tmuxSessionImpl) Type() SessionType {
-	return SessionTypeTmux
+func (s *tmuxSessionImpl) Type() Type {
+	return TypeTmux
 }
 
 func (s *tmuxSessionImpl) Status() Status {

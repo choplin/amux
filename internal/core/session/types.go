@@ -42,13 +42,13 @@ func (id ID) IsEmpty() bool {
 	return id == ""
 }
 
-// SessionType represents the type of session backend
-type SessionType string
+// Type represents the type of session backend
+type Type string
 
 const (
-	// SessionTypeTmux indicates a tmux-based terminal session
-	SessionTypeTmux SessionType = "tmux"
-	// Future: SessionTypeClaudeCode, etc.
+	// TypeTmux indicates a tmux-based terminal session
+	TypeTmux Type = "tmux"
+	// Future: TypeClaudeCode, etc.
 )
 
 // Status represents the current state of a session
@@ -96,7 +96,7 @@ type StatusState struct {
 // Options contains options for creating a new session
 type Options struct {
 	ID            ID                // Optional: pre-generated session ID
-	Type          SessionType       // Optional: session type (defaults to tmux)
+	Type          Type              // Optional: session type (defaults to tmux)
 	WorkspaceID   string            // Required: workspace to run in
 	AgentID       string            // Required: agent to run
 	Command       string            // Optional: override agent command
@@ -110,7 +110,7 @@ type Options struct {
 type Info struct {
 	ID            string            `yaml:"id"`
 	Index         string            `yaml:"-"` // Populated from ID mapper, not persisted
-	Type          SessionType       `yaml:"type"`
+	Type          Type              `yaml:"type"`
 	WorkspaceID   string            `yaml:"workspace_id"`
 	AgentID       string            `yaml:"agent_id"`
 	StatusState   StatusState       `yaml:"statusState"`
@@ -140,7 +140,7 @@ type Session interface {
 	AgentID() string
 
 	// Type returns the session type
-	Type() SessionType
+	Type() Type
 
 	// Status returns the current session status
 	Status() Status
