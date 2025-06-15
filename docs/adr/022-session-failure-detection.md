@@ -1,6 +1,6 @@
 # 22. Session Failure Detection
 
-Date: 2025-06-14
+Date: 2025-06-15
 
 ## Status
 
@@ -56,11 +56,29 @@ Implemented automatic exit status capture:
 
 - When no child processes remain, we send `echo $? > {storage}/exit_status` to the shell
 - This writes the exit code directly to a file, avoiding shell prompt parsing
-- Read the exit status from the file
+- Read the exit status from the file after a 100ms delay
 - Exit code 0 → `StatusCompleted`
 - Non-zero exit code → `StatusFailed` with "command exited with code N" error
+- If exit status capture fails, the session still transitions to `StatusCompleted` (assumes success)
 
 This provides robust exit status tracking without depending on shell prompt format.
+
+### Update Behavior
+
+The `UpdateStatus()` method has specific behaviors:
+
+- Only runs when session is in a running state (`StatusWorking` or `StatusIdle`)
+- Once a session reaches a terminal state (`StatusCompleted`, `StatusStopped`, `StatusFailed`), no further updates occur
+- Uses a 2-second cache to prevent excessive external process calls
+- Updates are thread-safe using mutex locking
+
+### Idle Detection
+
+Sessions transition from `StatusWorking` to `StatusIdle` when:
+
+- The session has child processes running
+- No output change is detected for 3 seconds (idleThreshold)
+- Output comparison uses FNV-1a hash for efficiency
 
 We will not attempt to:
 
