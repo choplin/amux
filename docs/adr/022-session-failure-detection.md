@@ -24,13 +24,14 @@ Add `StatusCompleted` as a new state and implement failure detection based on pr
 
 ### State Mapping
 
-| Tmux Session | Shell | Command | Session Status |
-|--------------|-------|---------|----------------|
-| Closed | - | - | `StatusFailed` |
-| Open | Exited | - | `StatusFailed` |
-| Open | Running | No children | `StatusCompleted` |
-| Open | Running | Has children + output changing | `StatusWorking` |
-| Open | Running | Has children + no output change | `StatusIdle` |
+| Tmux Session | Shell Process | Child Processes | Exit Status | Session Status |
+|--------------|---------------|-----------------|-------------|----------------|
+| Closed | - | - | - | `StatusFailed` (error: "tmux session no longer exists") |
+| Open | Dead | - | - | `StatusFailed` (error: "shell process exited") |
+| Open | Running | No children | 0 | `StatusCompleted` |
+| Open | Running | No children | Non-zero | `StatusFailed` (error: "command exited with code N") |
+| Open | Running | Has children | - | `StatusWorking` (if output changing) |
+| Open | Running | Has children | - | `StatusIdle` (if no output change for 3s) |
 
 ### Implementation
 
