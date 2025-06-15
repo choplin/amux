@@ -30,9 +30,11 @@ type tmuxSessionImpl struct {
 	lastStatusCheck time.Time
 }
 
-// statusCacheDuration defines how long to cache status before rechecking
-// This should be shorter than idleThreshold to ensure idle detection works properly
-const statusCacheDuration = 2 * time.Second
+// statusCacheDuration defines how long to cache status before rechecking.
+// This is set to 1 second to balance performance with idle detection accuracy.
+// With a 3-second idle threshold, this ensures we can detect idle state within
+// 3-4 seconds rather than up to 5 seconds (which would happen with 2-second cache).
+const statusCacheDuration = 1 * time.Second
 
 // TmuxSessionOption is a function that configures a tmux session
 type TmuxSessionOption func(*tmuxSessionImpl)
@@ -431,7 +433,9 @@ func (s *tmuxSessionImpl) UpdateStatus() error {
 			return fmt.Errorf("failed to save status change: %w", err)
 		}
 	} else {
-		// No output change, check if we should transition to idle
+		// No output change, check if we should transition to idle.
+		// With 1-second cache duration and 3-second idle threshold,
+		// idle detection happens within 3-4 seconds of last activity.
 		timeSinceLastOutput := time.Since(s.info.StatusState.LastOutputTime)
 		const idleThreshold = 3 * time.Second
 

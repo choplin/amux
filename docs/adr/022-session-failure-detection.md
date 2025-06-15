@@ -46,9 +46,13 @@ Add `StatusCompleted` as a new state and implement failure detection based on pr
 
 To improve performance when listing many sessions:
 
-1. **Status Caching**: Added 2-second cache to `UpdateStatus` to avoid redundant checks
+1. **Status Caching**: Added 1-second cache to `UpdateStatus` to avoid redundant checks
 2. **Batch Updates**: Implemented `UpdateAllStatuses` for parallel status updates
 3. **Efficient Session List**: Uses batch updates in `amux ps` and MCP resources
+
+The cache duration is set to 1 second (rather than longer) to ensure timely idle detection.
+With a 3-second idle threshold, this configuration detects idle state within 3-4 seconds
+of last activity, providing a good balance between performance and responsiveness.
 
 ### Exit Status Tracking
 
@@ -69,7 +73,7 @@ The `UpdateStatus()` method has specific behaviors:
 
 - Only runs when session is in a running state (`StatusWorking` or `StatusIdle`)
 - Once a session reaches a terminal state (`StatusCompleted`, `StatusStopped`, `StatusFailed`), no further updates occur
-- Uses a 2-second cache to prevent excessive external process calls
+- Uses a 1-second cache to prevent excessive external process calls
 - Updates are thread-safe using mutex locking
 
 ### Idle Detection
