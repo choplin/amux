@@ -20,14 +20,13 @@ import (
 
 // tmuxSessionImpl implements Session interface with tmux backend
 type tmuxSessionImpl struct {
-	info            *Info
-	store           Store
-	tmuxAdapter     tmux.Adapter
-	workspace       *workspace.Workspace
-	logger          logger.Logger
-	processChecker  process.Checker
-	mu              sync.RWMutex
-	lastStatusCheck time.Time
+	info           *Info
+	store          Store
+	tmuxAdapter    tmux.Adapter
+	workspace      *workspace.Workspace
+	logger         logger.Logger
+	processChecker process.Checker
+	mu             sync.RWMutex
 }
 
 // statusCacheDuration defines how long to cache status before rechecking.
@@ -336,10 +335,19 @@ func (s *tmuxSessionImpl) UpdateStatus() error {
 	}
 
 	// Check cache - skip update if checked recently
-	if time.Since(s.lastStatusCheck) < statusCacheDuration {
+	if time.Since(s.info.StatusState.LastStatusCheck) < statusCacheDuration {
 		return nil
 	}
-	s.lastStatusCheck = time.Now()
+
+	// Update last check time
+	s.info.StatusState.LastStatusCheck = time.Now()
+
+	// Defer saving the session info at the end (single save point)
+	defer func() {
+		if err := s.store.Save(s.info); err != nil {
+			s.logger.Warn("failed to save session state", "error", err)
+		}
+	}()
 
 	// Check if tmux session still exists
 	if !s.tmuxAdapter.SessionExists(s.info.TmuxSession) {
@@ -348,9 +356,6 @@ func (s *tmuxSessionImpl) UpdateStatus() error {
 		s.info.StatusState.Status = StatusFailed
 		s.info.StatusState.StatusChangedAt = now
 		s.info.Error = "tmux session no longer exists"
-		if err := s.store.Save(s.info); err != nil {
-			return fmt.Errorf("failed to save status change: %w", err)
-		}
 		return nil
 	}
 
@@ -365,9 +370,6 @@ func (s *tmuxSessionImpl) UpdateStatus() error {
 		s.info.StatusState.Status = StatusFailed
 		s.info.StatusState.StatusChangedAt = now
 		s.info.Error = "shell process exited"
-		if err := s.store.Save(s.info); err != nil {
-			return fmt.Errorf("failed to save status change: %w", err)
-		}
 		return nil
 	}
 
@@ -394,10 +396,6 @@ func (s *tmuxSessionImpl) UpdateStatus() error {
 				s.info.StatusState.Status = StatusCompleted
 			}
 			s.info.StatusState.StatusChangedAt = now
-
-			if err := s.store.Save(s.info); err != nil {
-				return fmt.Errorf("failed to save status change: %w", err)
-			}
 			return nil
 		}
 	}
@@ -428,10 +426,6 @@ func (s *tmuxSessionImpl) UpdateStatus() error {
 			s.info.StatusState.Status = StatusWorking
 			s.info.StatusState.StatusChangedAt = now
 		}
-		// Always save when hash changes to persist the new hash
-		if err := s.store.Save(s.info); err != nil {
-			return fmt.Errorf("failed to save status change: %w", err)
-		}
 	} else {
 		// No output change, check if we should transition to idle.
 		// With 1-second cache duration and 3-second idle threshold,
@@ -443,10 +437,6 @@ func (s *tmuxSessionImpl) UpdateStatus() error {
 			// Transition to idle
 			s.info.StatusState.Status = StatusIdle
 			s.info.StatusState.StatusChangedAt = now
-			// Save status change
-			if err := s.store.Save(s.info); err != nil {
-				return fmt.Errorf("failed to save status change: %w", err)
-			}
 		}
 	}
 

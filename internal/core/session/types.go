@@ -81,6 +81,7 @@ type StatusState struct {
 	StatusChangedAt time.Time `yaml:"statusChangedAt"`
 	LastOutputHash  uint32    `yaml:"lastOutputHash,omitempty"`
 	LastOutputTime  time.Time `yaml:"lastOutputTime,omitempty"`
+	LastStatusCheck time.Time `yaml:"lastStatusCheck,omitempty"`
 }
 
 // Options contains options for creating a new session

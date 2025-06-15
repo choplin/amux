@@ -73,8 +73,9 @@ The `UpdateStatus()` method has specific behaviors:
 
 - Only runs when session is in a running state (`StatusWorking` or `StatusIdle`)
 - Once a session reaches a terminal state (`StatusCompleted`, `StatusStopped`, `StatusFailed`), no further updates occur
-- Uses a 1-second cache to prevent excessive external process calls
+- Uses a 1-second cache to prevent excessive external process calls (LastStatusCheck is persisted in session file)
 - Updates are thread-safe using mutex locking
+- Saves session state only once at the end of the method for efficiency
 
 ### Idle Detection
 

@@ -337,7 +337,7 @@ func TestSessionFailureDetection(t *testing.T) {
 
 		// Reset cache to ensure update runs
 		if tmuxSess, ok := sess.(*tmuxSessionImpl); ok {
-			tmuxSess.lastStatusCheck = time.Time{}
+			tmuxSess.info.StatusState.LastStatusCheck = time.Time{}
 		}
 
 		// Update status - should remain working
@@ -350,7 +350,7 @@ func TestSessionFailureDetection(t *testing.T) {
 
 		// Reset cache again to ensure update runs
 		if tmuxSess, ok := sess.(*tmuxSessionImpl); ok {
-			tmuxSess.lastStatusCheck = time.Time{}
+			tmuxSess.info.StatusState.LastStatusCheck = time.Time{}
 		}
 
 		// Update status - should transition to completed

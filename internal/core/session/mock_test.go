@@ -324,7 +324,7 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 				mockAdapter.SetPaneContent("test-session", "idle test output")
 
 				// Reset the lastStatusCheck to ensure cache doesn't interfere
-				session.lastStatusCheck = time.Time{}
+				session.info.StatusState.LastStatusCheck = time.Time{}
 
 				// First ensure we have current state by calling UpdateStatus
 				// This will capture the current output and set lastOutputContent
@@ -337,7 +337,7 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 				time.Sleep(3500 * time.Millisecond) // Well over 3 seconds
 
 				// Reset the lastStatusCheck again to ensure second update runs
-				session.lastStatusCheck = time.Time{}
+				session.info.StatusState.LastStatusCheck = time.Time{}
 
 				// Update status again - should detect idle since output hasn't changed
 				err = session.UpdateStatus()
