@@ -50,7 +50,7 @@ func NewManagerWithTimeout[T any](timeout time.Duration) *Manager[T] {
 }
 
 // Read reads a file with a shared lock
-func (m *Manager[T]) Read(path string) (*T, *FileInfo, error) {
+func (m *Manager[T]) Read(ctx context.Context, path string) (*T, *FileInfo, error) {
 	// Check if file exists first
 	if _, err := os.Stat(path); err != nil {
 		return nil, nil, err
@@ -60,10 +60,10 @@ func (m *Manager[T]) Read(path string) (*T, *FileInfo, error) {
 	lock := flock.New(path)
 
 	// Try to acquire shared lock with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), m.lockTimeout)
+	lockCtx, cancel := context.WithTimeout(ctx, m.lockTimeout)
 	defer cancel()
 
-	locked, err := lock.TryRLockContext(ctx, 100*time.Millisecond)
+	locked, err := lock.TryRLockContext(lockCtx, 100*time.Millisecond)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to acquire read lock: %w", err)
 	}
@@ -100,7 +100,7 @@ func (m *Manager[T]) Read(path string) (*T, *FileInfo, error) {
 }
 
 // Write writes a file with an exclusive lock (no CAS check)
-func (m *Manager[T]) Write(path string, data *T) error {
+func (m *Manager[T]) Write(ctx context.Context, path string, data *T) error {
 	// Ensure directory exists
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -111,10 +111,10 @@ func (m *Manager[T]) Write(path string, data *T) error {
 	lock := flock.New(path)
 
 	// Try to acquire exclusive lock with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), m.lockTimeout)
+	lockCtx, cancel := context.WithTimeout(ctx, m.lockTimeout)
 	defer cancel()
 
-	locked, err := lock.TryLockContext(ctx, 100*time.Millisecond)
+	locked, err := lock.TryLockContext(lockCtx, 100*time.Millisecond)
 	if err != nil {
 		return fmt.Errorf("failed to acquire write lock: %w", err)
 	}
@@ -153,7 +153,7 @@ func (m *Manager[T]) Write(path string, data *T) error {
 }
 
 // WriteWithCAS writes a file only if it hasn't changed since the provided FileInfo
-func (m *Manager[T]) WriteWithCAS(path string, data *T, expectedInfo *FileInfo) error {
+func (m *Manager[T]) WriteWithCAS(ctx context.Context, path string, data *T, expectedInfo *FileInfo) error {
 	// Ensure directory exists
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -164,10 +164,10 @@ func (m *Manager[T]) WriteWithCAS(path string, data *T, expectedInfo *FileInfo) 
 	lock := flock.New(path)
 
 	// Try to acquire exclusive lock with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), m.lockTimeout)
+	lockCtx, cancel := context.WithTimeout(ctx, m.lockTimeout)
 	defer cancel()
 
-	locked, err := lock.TryLockContext(ctx, 100*time.Millisecond)
+	locked, err := lock.TryLockContext(lockCtx, 100*time.Millisecond)
 	if err != nil {
 		return fmt.Errorf("failed to acquire write lock: %w", err)
 	}
@@ -221,12 +221,12 @@ func (m *Manager[T]) WriteWithCAS(path string, data *T, expectedInfo *FileInfo) 
 }
 
 // Update reads a file, applies an update function, and writes it back with CAS
-func (m *Manager[T]) Update(path string, updateFunc UpdateFunc[T]) error {
+func (m *Manager[T]) Update(ctx context.Context, path string, updateFunc UpdateFunc[T]) error {
 	const maxRetries = 10
 
 	for i := 0; i < maxRetries; i++ {
 		// Read current data
-		data, info, err := m.Read(path)
+		data, info, err := m.Read(ctx, path)
 		if err != nil {
 			if os.IsNotExist(err) {
 				// File doesn't exist, create new
@@ -234,7 +234,7 @@ func (m *Manager[T]) Update(path string, updateFunc UpdateFunc[T]) error {
 				if err := updateFunc(&newData); err != nil {
 					return fmt.Errorf("update function failed: %w", err)
 				}
-				if err := m.Write(path, &newData); err != nil {
+				if err := m.Write(ctx, path, &newData); err != nil {
 					if errors.Is(err, ErrConcurrentModification) {
 						continue // Retry
 					}
@@ -251,7 +251,7 @@ func (m *Manager[T]) Update(path string, updateFunc UpdateFunc[T]) error {
 		}
 
 		// Try to write with CAS
-		if err := m.WriteWithCAS(path, data, info); err != nil {
+		if err := m.WriteWithCAS(ctx, path, data, info); err != nil {
 			if errors.Is(err, ErrConcurrentModification) {
 				// Retry on concurrent modification
 				continue
@@ -266,7 +266,7 @@ func (m *Manager[T]) Update(path string, updateFunc UpdateFunc[T]) error {
 }
 
 // Delete removes a file with an exclusive lock
-func (m *Manager[T]) Delete(path string) error {
+func (m *Manager[T]) Delete(ctx context.Context, path string) error {
 	// Check if file exists first
 	if _, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
@@ -279,10 +279,10 @@ func (m *Manager[T]) Delete(path string) error {
 	lock := flock.New(path)
 
 	// Try to acquire exclusive lock with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), m.lockTimeout)
+	lockCtx, cancel := context.WithTimeout(ctx, m.lockTimeout)
 	defer cancel()
 
-	locked, err := lock.TryLockContext(ctx, 100*time.Millisecond)
+	locked, err := lock.TryLockContext(lockCtx, 100*time.Millisecond)
 	if err != nil {
 		return fmt.Errorf("failed to acquire write lock: %w", err)
 	}

@@ -1,6 +1,7 @@
 package filemanager
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -27,13 +28,13 @@ func TestManager_ReadWrite(t *testing.T) {
 		Value: 42,
 	}
 
-	err := mgr.Write(testFile, data)
+	err := mgr.Write(context.Background(), testFile, data)
 	if err != nil {
 		t.Fatalf("Write failed: %v", err)
 	}
 
 	// Test read
-	readData, info, err := mgr.Read(testFile)
+	readData, info, err := mgr.Read(context.Background(), testFile)
 	if err != nil {
 		t.Fatalf("Read failed: %v", err)
 	}
@@ -58,20 +59,20 @@ func TestManager_CAS(t *testing.T) {
 		Name:  "test",
 		Value: 1,
 	}
-	err := mgr.Write(testFile, data)
+	err := mgr.Write(context.Background(), testFile, data)
 	if err != nil {
 		t.Fatalf("Initial write failed: %v", err)
 	}
 
 	// Read to get file info
-	_, info, err := mgr.Read(testFile)
+	_, info, err := mgr.Read(context.Background(), testFile)
 	if err != nil {
 		t.Fatalf("Read failed: %v", err)
 	}
 
 	// CAS write should succeed
 	data.Value = 2
-	err = mgr.WriteWithCAS(testFile, data, info)
+	err = mgr.WriteWithCAS(context.Background(), testFile, data, info)
 	if err != nil {
 		t.Fatalf("CAS write failed: %v", err)
 	}
@@ -82,7 +83,7 @@ func TestManager_CAS(t *testing.T) {
 
 	// CAS write should fail
 	data.Value = 3
-	err = mgr.WriteWithCAS(testFile, data, info)
+	err = mgr.WriteWithCAS(context.Background(), testFile, data, info)
 	if !errors.Is(err, ErrConcurrentModification) {
 		t.Errorf("Expected ErrConcurrentModification, got: %v", err)
 	}
@@ -95,7 +96,7 @@ func TestManager_Update(t *testing.T) {
 	mgr := NewManager[TestData]()
 
 	// Test update on non-existent file
-	err := mgr.Update(testFile, func(data *TestData) error {
+	err := mgr.Update(context.Background(), testFile, func(data *TestData) error {
 		data.Name = "created"
 		data.Value = 100
 		return nil
@@ -105,7 +106,7 @@ func TestManager_Update(t *testing.T) {
 	}
 
 	// Verify file was created
-	readData, _, err := mgr.Read(testFile)
+	readData, _, err := mgr.Read(context.Background(), testFile)
 	if err != nil {
 		t.Fatalf("Read after create failed: %v", err)
 	}
@@ -114,7 +115,7 @@ func TestManager_Update(t *testing.T) {
 	}
 
 	// Test update on existing file
-	err = mgr.Update(testFile, func(data *TestData) error {
+	err = mgr.Update(context.Background(), testFile, func(data *TestData) error {
 		data.Value = 200
 		data.Updated = true
 		return nil
@@ -124,7 +125,7 @@ func TestManager_Update(t *testing.T) {
 	}
 
 	// Verify update
-	readData, _, err = mgr.Read(testFile)
+	readData, _, err = mgr.Read(context.Background(), testFile)
 	if err != nil {
 		t.Fatalf("Read after update failed: %v", err)
 	}
@@ -140,7 +141,7 @@ func TestManager_ConcurrentUpdates(t *testing.T) {
 	mgr := NewManager[TestData]()
 
 	// Initial data
-	err := mgr.Write(testFile, &TestData{Value: 0})
+	err := mgr.Write(context.Background(), testFile, &TestData{Value: 0})
 	if err != nil {
 		t.Fatalf("Initial write failed: %v", err)
 	}
@@ -156,7 +157,7 @@ func TestManager_ConcurrentUpdates(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for j := 0; j < incrementsPerGoroutine; j++ {
-				err := mgr.Update(testFile, func(data *TestData) error {
+				err := mgr.Update(context.Background(), testFile, func(data *TestData) error {
 					data.Value++
 					return nil
 				})
@@ -170,7 +171,7 @@ func TestManager_ConcurrentUpdates(t *testing.T) {
 	wg.Wait()
 
 	// Verify final value
-	readData, _, err := mgr.Read(testFile)
+	readData, _, err := mgr.Read(context.Background(), testFile)
 	if err != nil {
 		t.Fatalf("Final read failed: %v", err)
 	}
@@ -188,25 +189,25 @@ func TestManager_Delete(t *testing.T) {
 	mgr := NewManager[TestData]()
 
 	// Create file
-	err := mgr.Write(testFile, &TestData{Name: "test"})
+	err := mgr.Write(context.Background(), testFile, &TestData{Name: "test"})
 	if err != nil {
 		t.Fatalf("Write failed: %v", err)
 	}
 
 	// Delete file
-	err = mgr.Delete(testFile)
+	err = mgr.Delete(context.Background(), testFile)
 	if err != nil {
 		t.Fatalf("Delete failed: %v", err)
 	}
 
 	// Verify file is gone
-	_, _, err = mgr.Read(testFile)
+	_, _, err = mgr.Read(context.Background(), testFile)
 	if err == nil || !os.IsNotExist(err) {
 		t.Errorf("Expected file not exist error, got: %v", err)
 	}
 
 	// Delete non-existent file should not error
-	err = mgr.Delete(testFile)
+	err = mgr.Delete(context.Background(), testFile)
 	if err != nil {
 		t.Errorf("Delete non-existent file failed: %v", err)
 	}
@@ -225,7 +226,7 @@ func TestManager_Timeout(t *testing.T) {
 	mgr := NewManagerWithTimeout[TestData](10 * time.Millisecond)
 
 	// Create initial file
-	err := mgr.Write(testFile, &TestData{Name: "test"})
+	err := mgr.Write(context.Background(), testFile, &TestData{Name: "test"})
 	if err != nil {
 		t.Fatalf("Initial write failed: %v", err)
 	}
@@ -244,14 +245,14 @@ func TestManager_UpdateError(t *testing.T) {
 	mgr := NewManager[TestData]()
 
 	// Create initial file
-	err := mgr.Write(testFile, &TestData{Name: "test"})
+	err := mgr.Write(context.Background(), testFile, &TestData{Name: "test"})
 	if err != nil {
 		t.Fatalf("Initial write failed: %v", err)
 	}
 
 	// Test update function that returns error
 	testErr := errors.New("update error")
-	err = mgr.Update(testFile, func(data *TestData) error {
+	err = mgr.Update(context.Background(), testFile, func(data *TestData) error {
 		return testErr
 	})
 

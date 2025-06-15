@@ -1,6 +1,7 @@
 package session
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -415,13 +416,13 @@ func (m *Manager) UpdateAllStatuses(sessions []Session) {
 // saveSessionInfo saves session info to file
 func (m *Manager) saveSessionInfo(info *Info) error {
 	path := m.getSessionPath(info.ID)
-	return m.fileManager.Write(path, info)
+	return m.fileManager.Write(context.TODO(), path, info)
 }
 
 // loadSessionInfo loads session info from file
 func (m *Manager) loadSessionInfo(id string) (*Info, error) {
 	path := m.getSessionPath(id)
-	info, _, err := m.fileManager.Read(path)
+	info, _, err := m.fileManager.Read(context.TODO(), path)
 	if err != nil {
 		return nil, err
 	}
@@ -457,7 +458,7 @@ func (m *Manager) listSessionInfos() ([]*Info, error) {
 func (m *Manager) deleteSessionInfo(id string) error {
 	// Remove session info file
 	path := m.getSessionPath(id)
-	if err := m.fileManager.Delete(path); err != nil && !os.IsNotExist(err) {
+	if err := m.fileManager.Delete(context.TODO(), path); err != nil && !os.IsNotExist(err) {
 		return err
 	}
 
@@ -484,7 +485,7 @@ func (m *Manager) deleteSessionInfo(id string) error {
 // updateSessionInfo safely updates session info using CAS
 func (m *Manager) updateSessionInfo(id string, updateFunc func(info *Info) error) error {
 	path := m.getSessionPath(id)
-	return m.fileManager.Update(path, updateFunc)
+	return m.fileManager.Update(context.TODO(), path, updateFunc)
 }
 
 // getSessionPath returns the path to a session's info file

@@ -2,6 +2,7 @@
 package workspace
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -141,7 +142,7 @@ func (m *Manager) Create(opts CreateOptions) (*Workspace, error) {
 func (m *Manager) Get(id ID) (*Workspace, error) {
 	workspaceMetaPath := filepath.Join(m.workspacesDir, string(id), "workspace.yaml")
 
-	workspace, _, err := m.fm.Read(workspaceMetaPath)
+	workspace, _, err := m.fm.Read(context.TODO(), workspaceMetaPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, fmt.Errorf("workspace not found: %s", id)
@@ -183,7 +184,7 @@ func (m *Manager) List(opts ListOptions) ([]*Workspace, error) {
 
 		// Look for workspace.yaml inside the directory
 		workspaceMetaPath := filepath.Join(m.workspacesDir, file.Name(), "workspace.yaml")
-		workspacePtr, _, err := m.fm.Read(workspaceMetaPath)
+		workspacePtr, _, err := m.fm.Read(context.TODO(), workspaceMetaPath)
 		if err != nil {
 			continue
 		}
@@ -451,7 +452,7 @@ func (m *Manager) saveWorkspace(workspace *Workspace) error {
 		return fmt.Errorf("failed to create workspace directory: %w", err)
 	}
 
-	return m.fm.Write(workspaceMetaPath, workspace)
+	return m.fm.Write(context.TODO(), workspaceMetaPath, workspace)
 }
 
 // generateID generates a unique workspace ID
