@@ -143,7 +143,7 @@ func (m *Manager[T]) Write(path string, data *T) error {
 	}
 
 	// Atomic rename
-	if err := os.Rename(tempFile, path); err != nil {
+	if err := atomicRename(tempFile, path); err != nil {
 		_ = os.Remove(tempFile) // Clean up on failure
 		return fmt.Errorf("failed to rename file: %w", err)
 	}
@@ -210,7 +210,7 @@ func (m *Manager[T]) WriteWithCAS(path string, data *T, expectedInfo *FileInfo) 
 	}
 
 	// Atomic rename
-	if err := os.Rename(tempFile, path); err != nil {
+	if err := atomicRename(tempFile, path); err != nil {
 		_ = os.Remove(tempFile) // Clean up on failure
 		return fmt.Errorf("failed to rename file: %w", err)
 	}
