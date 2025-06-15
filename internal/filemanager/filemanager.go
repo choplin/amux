@@ -130,7 +130,8 @@ func (m *Manager[T]) Write(path string, data *T) error {
 	}
 
 	// Write atomically using temp file + rename
-	tempFile := path + ".tmp"
+	// Use a unique temp file name to avoid conflicts on Windows
+	tempFile := fmt.Sprintf("%s.%d.%d.tmp", path, os.Getpid(), time.Now().UnixNano())
 	if err := os.WriteFile(tempFile, yamlData, 0o644); err != nil {
 		return fmt.Errorf("failed to write temp file: %w", err)
 	}
@@ -197,7 +198,8 @@ func (m *Manager[T]) WriteWithCAS(path string, data *T, expectedInfo *FileInfo) 
 	}
 
 	// Write atomically using temp file + rename
-	tempFile := path + ".tmp"
+	// Use a unique temp file name to avoid conflicts on Windows
+	tempFile := fmt.Sprintf("%s.%d.%d.tmp", path, os.Getpid(), time.Now().UnixNano())
 	if err := os.WriteFile(tempFile, yamlData, 0o644); err != nil {
 		return fmt.Errorf("failed to write temp file: %w", err)
 	}
@@ -265,6 +267,14 @@ func (m *Manager[T]) Update(path string, updateFunc UpdateFunc[T]) error {
 
 // Delete removes a file with an exclusive lock
 func (m *Manager[T]) Delete(path string) error {
+	// Check if file exists first
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return nil // Already deleted
+		}
+		return fmt.Errorf("failed to stat file: %w", err)
+	}
+
 	// Create a file lock
 	lock := flock.New(path)
 
@@ -279,7 +289,11 @@ func (m *Manager[T]) Delete(path string) error {
 	if !locked {
 		return ErrLockTimeout
 	}
-	defer func() { _ = lock.Unlock() }()
+
+	// Unlock before removing on Windows to avoid file handle issues
+	if err := lock.Unlock(); err != nil {
+		return fmt.Errorf("failed to unlock file: %w", err)
+	}
 
 	// Remove the file
 	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {

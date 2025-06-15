@@ -461,8 +461,19 @@ func (m *Manager) deleteSessionInfo(id string) error {
 		return err
 	}
 
-	// Remove session directory
+	// Remove session directory with retry for Windows
 	sessionDir := filepath.Join(m.sessionsDir, id)
+	for i := 0; i < 3; i++ {
+		err := os.RemoveAll(sessionDir)
+		if err == nil || os.IsNotExist(err) {
+			return nil
+		}
+		// On Windows, files may still be locked, wait a bit before retry
+		if i < 2 {
+			time.Sleep(50 * time.Millisecond)
+		}
+	}
+	// Final attempt
 	if err := os.RemoveAll(sessionDir); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to remove session directory: %w", err)
 	}
