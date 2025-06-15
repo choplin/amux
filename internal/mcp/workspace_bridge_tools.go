@@ -53,7 +53,7 @@ func (s *ServerV2) registerWorkspaceBridgeTools() error {
 
 func (s *ServerV2) handleResourceWorkspaceList(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	// Use shared logic with resource handler
-	workspaceList, err := s.getWorkspaceList()
+	workspaceList, err := s.getWorkspaceList(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +81,7 @@ func (s *ServerV2) handleResourceWorkspaceShow(ctx context.Context, request mcp.
 	}
 
 	// Use shared logic with resource handler
-	detail, err := s.getWorkspaceDetail(workspaceID)
+	detail, err := s.getWorkspaceDetail(ctx, workspaceID)
 	if err != nil {
 		return nil, err
 	}

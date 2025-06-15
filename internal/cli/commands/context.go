@@ -66,13 +66,13 @@ func showContext(cmd *cobra.Command, args []string) error {
 	// Get workspace
 	var ws *workspace.Workspace
 	if len(args) > 0 {
-		ws, err = wsManager.ResolveWorkspace(workspace.Identifier(args[0]))
+		ws, err = wsManager.ResolveWorkspace(cmd.Context(), workspace.Identifier(args[0]))
 		if err != nil {
 			return fmt.Errorf("failed to resolve workspace: %w", err)
 		}
 	} else {
 		// Get the most recent workspace
-		workspaces, err := wsManager.List(workspace.ListOptions{})
+		workspaces, err := wsManager.List(cmd.Context(), workspace.ListOptions{})
 		if err != nil {
 			return fmt.Errorf("failed to list workspaces: %w", err)
 		}
@@ -141,13 +141,13 @@ func initContext(cmd *cobra.Command, args []string) error {
 	// Get workspace
 	var ws *workspace.Workspace
 	if len(args) > 0 {
-		ws, err = wsManager.ResolveWorkspace(workspace.Identifier(args[0]))
+		ws, err = wsManager.ResolveWorkspace(cmd.Context(), workspace.Identifier(args[0]))
 		if err != nil {
 			return fmt.Errorf("failed to resolve workspace: %w", err)
 		}
 	} else {
 		// Get the most recent workspace
-		workspaces, err := wsManager.List(workspace.ListOptions{})
+		workspaces, err := wsManager.List(cmd.Context(), workspace.ListOptions{})
 		if err != nil {
 			return fmt.Errorf("failed to list workspaces: %w", err)
 		}

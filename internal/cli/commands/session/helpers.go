@@ -1,6 +1,7 @@
 package session
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/aki/amux/internal/core/config"
@@ -30,7 +31,7 @@ func createSessionManager(configManager *config.Manager, wsManager *workspace.Ma
 }
 
 // createAutoWorkspace creates a new workspace with a name based on session ID
-func createAutoWorkspace(wsManager *workspace.Manager, sessionID session.ID, customName, customDescription string) (*workspace.Workspace, error) {
+func createAutoWorkspace(ctx context.Context, wsManager *workspace.Manager, sessionID session.ID, customName, customDescription string) (*workspace.Workspace, error) {
 	// Use custom name if provided, otherwise use session ID
 	name := customName
 	if name == "" {
@@ -52,7 +53,7 @@ func createAutoWorkspace(wsManager *workspace.Manager, sessionID session.ID, cus
 		AutoCreated: true,
 	}
 
-	ws, err := wsManager.Create(opts)
+	ws, err := wsManager.Create(ctx, opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create workspace: %w", err)
 	}

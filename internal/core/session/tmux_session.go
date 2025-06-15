@@ -206,7 +206,7 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 	s.info.TmuxSession = tmuxSession
 	s.info.PID = pid
 
-	if err := s.manager.Save(s.info); err != nil {
+	if err := s.manager.Save(ctx, s.info); err != nil {
 		// Clean up on failure
 		if killErr := s.tmuxAdapter.KillSession(tmuxSession); killErr != nil {
 			s.logger.Warn("failed to kill tmux session during cleanup", "error", killErr, "session", tmuxSession)
@@ -239,7 +239,7 @@ func (s *tmuxSessionImpl) Stop() error {
 	s.info.StatusState.StatusChangedAt = now
 	s.info.StoppedAt = &now
 
-	if err := s.manager.Save(s.info); err != nil {
+	if err := s.manager.Save(context.TODO(), s.info); err != nil {
 		return fmt.Errorf("failed to save session: %w", err)
 	}
 
@@ -285,7 +285,7 @@ func (s *tmuxSessionImpl) SendInput(input string) error {
 		s.info.StatusState.Status = StatusWorking
 		s.info.StatusState.StatusChangedAt = now
 		// Save status change
-		if err := s.manager.Save(s.info); err != nil {
+		if err := s.manager.Save(context.TODO(), s.info); err != nil {
 			// Log error but don't fail the input operation
 			s.logger.Warn("failed to save status change after input", "error", err)
 		}
@@ -353,7 +353,7 @@ func (s *tmuxSessionImpl) UpdateStatus() error {
 
 	// Defer saving the session info at the end (single save point)
 	defer func() {
-		if err := s.manager.Save(s.info); err != nil {
+		if err := s.manager.Save(context.TODO(), s.info); err != nil {
 			s.logger.Warn("failed to save session state", "error", err)
 		}
 	}()

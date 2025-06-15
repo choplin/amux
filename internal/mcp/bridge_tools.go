@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/aki/amux/internal/core/workspace"
@@ -38,8 +39,8 @@ func (s *ServerV2) registerBridgeTools() error {
 }
 
 // Shared logic for getting workspace list
-func (s *ServerV2) getWorkspaceList() ([]workspaceInfo, error) {
-	workspaces, err := s.workspaceManager.List(workspace.ListOptions{})
+func (s *ServerV2) getWorkspaceList(ctx context.Context) ([]workspaceInfo, error) {
+	workspaces, err := s.workspaceManager.List(ctx, workspace.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list workspaces: %w", err)
 	}
@@ -67,8 +68,8 @@ func (s *ServerV2) getWorkspaceList() ([]workspaceInfo, error) {
 }
 
 // Shared logic for getting workspace details
-func (s *ServerV2) getWorkspaceDetail(workspaceID string) (*workspaceDetail, error) {
-	ws, err := s.workspaceManager.ResolveWorkspace(workspace.Identifier(workspaceID))
+func (s *ServerV2) getWorkspaceDetail(ctx context.Context, workspaceID string) (*workspaceDetail, error) {
+	ws, err := s.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(workspaceID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get workspace: %w", err)
 	}

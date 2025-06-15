@@ -20,7 +20,7 @@ func TestTmuxSession_WithMock(t *testing.T) {
 	_, wsManager, configManager := setupTestEnvironment(t)
 
 	// Create workspace
-	ws, err := wsManager.Create(workspace.CreateOptions{
+	ws, err := wsManager.Create(context.Background(), workspace.CreateOptions{
 		Name: "test-workspace",
 	})
 	if err != nil {
@@ -61,7 +61,7 @@ func TestTmuxSession_WithMock(t *testing.T) {
 	}
 
 	// Save info
-	if err := manager.Save(info); err != nil {
+	if err := manager.Save(context.Background(), info); err != nil {
 		t.Fatalf("Failed to save session info: %v", err)
 	}
 
@@ -127,7 +127,7 @@ func TestManager_WithMockAdapter(t *testing.T) {
 	_, wsManager, configManager := setupTestEnvironment(t)
 
 	// Create workspace
-	ws, err := wsManager.Create(workspace.CreateOptions{
+	ws, err := wsManager.Create(context.Background(), workspace.CreateOptions{
 		Name: "test-workspace",
 	})
 	if err != nil {
@@ -160,7 +160,7 @@ func TestManager_WithMockAdapter(t *testing.T) {
 		},
 	}
 
-	session, err := manager.CreateSession(opts)
+	session, err := manager.CreateSession(context.Background(), opts)
 	if err != nil {
 		t.Fatalf("Failed to create session: %v", err)
 	}
@@ -187,7 +187,7 @@ func TestManager_WithUnavailableTmux(t *testing.T) {
 	_, wsManager, configManager := setupTestEnvironment(t)
 
 	// Create workspace
-	ws, err := wsManager.Create(workspace.CreateOptions{
+	ws, err := wsManager.Create(context.Background(), workspace.CreateOptions{
 		Name: "test-workspace",
 	})
 	if err != nil {
@@ -217,7 +217,7 @@ func TestManager_WithUnavailableTmux(t *testing.T) {
 		AgentID:     "test-agent",
 	}
 
-	_, err = manager.CreateSession(opts)
+	_, err = manager.CreateSession(context.Background(), opts)
 	if err == nil {
 		t.Fatal("Expected error when creating session with unavailable tmux")
 	}
@@ -233,7 +233,7 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 	_, wsManager, configManager := setupTestEnvironment(t)
 
 	// Create workspace
-	ws, err := wsManager.Create(workspace.CreateOptions{
+	ws, err := wsManager.Create(context.Background(), workspace.CreateOptions{
 		Name: "test-workspace-status-mock",
 	})
 	if err != nil {
@@ -271,7 +271,7 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 	}
 
 	// Save info
-	if err := manager.Save(info); err != nil {
+	if err := manager.Save(context.Background(), info); err != nil {
 		t.Fatalf("Failed to save session info: %v", err)
 	}
 

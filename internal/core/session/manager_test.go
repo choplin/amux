@@ -16,7 +16,7 @@ func TestManager_CreateSession(t *testing.T) {
 	_, wsManager, configManager := setupTestEnvironment(t)
 
 	// Create a test workspace
-	ws, err := wsManager.Create(workspace.CreateOptions{
+	ws, err := wsManager.Create(context.Background(), workspace.CreateOptions{
 		Name:       "test-workspace",
 		BaseBranch: "main",
 	})
@@ -50,7 +50,7 @@ func TestManager_CreateSession(t *testing.T) {
 		},
 	}
 
-	session, err := manager.CreateSession(opts)
+	session, err := manager.CreateSession(context.Background(), opts)
 	if err != nil {
 		t.Fatalf("Failed to create session: %v", err)
 	}
@@ -69,7 +69,7 @@ func TestManager_CreateSession(t *testing.T) {
 	}
 
 	// Verify session was saved to manager
-	loaded, err := manager.Load(session.ID())
+	loaded, err := manager.Load(context.Background(), session.ID())
 	if err != nil {
 		t.Fatalf("Failed to load session from manager: %v", err)
 	}
@@ -84,7 +84,7 @@ func TestManager_CreateSessionWithNameAndDescription(t *testing.T) {
 	_, wsManager, configManager := setupTestEnvironment(t)
 
 	// Create a test workspace
-	ws, err := wsManager.Create(workspace.CreateOptions{
+	ws, err := wsManager.Create(context.Background(), workspace.CreateOptions{
 		Name:       "test-workspace-named",
 		BaseBranch: "main",
 	})
@@ -117,7 +117,7 @@ func TestManager_CreateSessionWithNameAndDescription(t *testing.T) {
 		Description: "Debugging authentication issues",
 	}
 
-	session, err := manager.CreateSession(opts)
+	session, err := manager.CreateSession(context.Background(), opts)
 	if err != nil {
 		t.Fatalf("Failed to create session: %v", err)
 	}
@@ -132,7 +132,7 @@ func TestManager_CreateSessionWithNameAndDescription(t *testing.T) {
 	}
 
 	// Verify session was saved to manager with name and description
-	loaded, err := manager.Load(session.ID())
+	loaded, err := manager.Load(context.Background(), session.ID())
 	if err != nil {
 		t.Fatalf("Failed to load session from manager: %v", err)
 	}
@@ -150,7 +150,7 @@ func TestManager_CreateSessionWithInitialPrompt(t *testing.T) {
 	_, wsManager, configManager := setupTestEnvironment(t)
 
 	// Create a test workspace
-	ws, err := wsManager.Create(workspace.CreateOptions{
+	ws, err := wsManager.Create(context.Background(), workspace.CreateOptions{
 		Name:       "test-workspace-prompt",
 		BaseBranch: "main",
 	})
@@ -183,7 +183,7 @@ func TestManager_CreateSessionWithInitialPrompt(t *testing.T) {
 		InitialPrompt: testPrompt,
 	}
 
-	session, err := manager.CreateSession(opts)
+	session, err := manager.CreateSession(context.Background(), opts)
 	if err != nil {
 		t.Fatalf("Failed to create session: %v", err)
 	}
@@ -195,7 +195,7 @@ func TestManager_CreateSessionWithInitialPrompt(t *testing.T) {
 	}
 
 	// Verify session was saved with initial prompt
-	loaded, err := manager.Load(session.ID())
+	loaded, err := manager.Load(context.Background(), session.ID())
 	if err != nil {
 		t.Fatalf("Failed to load session from manager: %v", err)
 	}
@@ -209,7 +209,7 @@ func TestManager_Get(t *testing.T) {
 	// Setup
 	_, wsManager, configManager := setupTestEnvironment(t)
 
-	ws, err := wsManager.Create(workspace.CreateOptions{
+	ws, err := wsManager.Create(context.Background(), workspace.CreateOptions{
 		Name: "test-workspace",
 	})
 	if err != nil {
@@ -232,7 +232,7 @@ func TestManager_Get(t *testing.T) {
 	manager.SetTmuxAdapter(mockAdapter)
 
 	// Create a session
-	session, err := manager.CreateSession(Options{
+	session, err := manager.CreateSession(context.Background(), Options{
 		WorkspaceID: ws.ID,
 		AgentID:     "claude",
 	})
@@ -241,7 +241,7 @@ func TestManager_Get(t *testing.T) {
 	}
 
 	// Get the session
-	retrieved, err := manager.Get(ID(session.ID()))
+	retrieved, err := manager.Get(context.Background(), ID(session.ID()))
 	if err != nil {
 		t.Fatalf("Failed to get session: %v", err)
 	}
@@ -251,7 +251,7 @@ func TestManager_Get(t *testing.T) {
 	}
 
 	// Test getting non-existent session
-	_, err = manager.Get(ID("non-existent"))
+	_, err = manager.Get(context.Background(), ID("non-existent"))
 	if err == nil {
 		t.Error("Expected error for non-existent session")
 	}
@@ -261,7 +261,7 @@ func TestManager_ListSessions(t *testing.T) {
 	// Setup
 	_, wsManager, configManager := setupTestEnvironment(t)
 
-	ws, err := wsManager.Create(workspace.CreateOptions{
+	ws, err := wsManager.Create(context.Background(), workspace.CreateOptions{
 		Name: "test-workspace",
 	})
 	if err != nil {
@@ -280,7 +280,7 @@ func TestManager_ListSessions(t *testing.T) {
 	}
 
 	// Ensure we start with a clean slate - list existing sessions
-	existingSessions, _ := manager.List()
+	existingSessions, _ := manager.List(context.Background())
 	if len(existingSessions) > 0 {
 		t.Logf("Warning: Found %d existing sessions before test", len(existingSessions))
 	}
@@ -292,7 +292,7 @@ func TestManager_ListSessions(t *testing.T) {
 	// Create multiple sessions
 	var sessionIDs []string
 	for i := 0; i < 3; i++ {
-		session, err := manager.CreateSession(Options{
+		session, err := manager.CreateSession(context.Background(), Options{
 			WorkspaceID: ws.ID,
 			AgentID:     fmt.Sprintf("agent-%d", i),
 		})
@@ -302,7 +302,7 @@ func TestManager_ListSessions(t *testing.T) {
 		sessionIDs = append(sessionIDs, session.ID())
 
 		// Verify session was saved
-		savedInfo, err := manager.Load(session.ID())
+		savedInfo, err := manager.Load(context.Background(), session.ID())
 		if err != nil {
 			t.Fatalf("Failed to load session %d after creation: %v", i, err)
 		}
@@ -311,7 +311,7 @@ func TestManager_ListSessions(t *testing.T) {
 		}
 
 		// Debug: List sessions after each creation
-		currentSessions, _ := manager.List()
+		currentSessions, _ := manager.List(context.Background())
 		t.Logf("After creating session %d: found %d sessions in manager", i, len(currentSessions))
 
 		// Small delay to ensure file system operations complete on Windows
@@ -319,7 +319,7 @@ func TestManager_ListSessions(t *testing.T) {
 	}
 
 	// List sessions
-	sessions, err := manager.ListSessions()
+	sessions, err := manager.ListSessions(context.Background())
 	if err != nil {
 		t.Fatalf("Failed to list sessions: %v", err)
 	}
@@ -349,7 +349,7 @@ func TestManager_Remove(t *testing.T) {
 	// Setup
 	_, wsManager, configManager := setupTestEnvironment(t)
 
-	ws, err := wsManager.Create(workspace.CreateOptions{
+	ws, err := wsManager.Create(context.Background(), workspace.CreateOptions{
 		Name: "test-workspace",
 	})
 	if err != nil {
@@ -372,7 +372,7 @@ func TestManager_Remove(t *testing.T) {
 	manager.SetTmuxAdapter(mockAdapter)
 
 	// Create a session
-	session, err := manager.CreateSession(Options{
+	session, err := manager.CreateSession(context.Background(), Options{
 		WorkspaceID: ws.ID,
 		AgentID:     "claude",
 	})
@@ -386,7 +386,7 @@ func TestManager_Remove(t *testing.T) {
 		t.Fatalf("Failed to start session: %v", err)
 	}
 
-	err = manager.Remove(ID(session.ID()))
+	err = manager.Remove(context.Background(), ID(session.ID()))
 	if err == nil {
 		t.Error("Expected error removing running session")
 	}
@@ -397,12 +397,12 @@ func TestManager_Remove(t *testing.T) {
 	}
 
 	// Now should be able to remove
-	if err := manager.Remove(ID(session.ID())); err != nil {
+	if err := manager.Remove(context.Background(), ID(session.ID())); err != nil {
 		t.Fatalf("Failed to remove stopped session: %v", err)
 	}
 
 	// Verify session is gone
-	_, err = manager.Get(ID(session.ID()))
+	_, err = manager.Get(context.Background(), ID(session.ID()))
 	if err == nil {
 		t.Error("Expected error getting removed session")
 	}
@@ -418,7 +418,7 @@ func TestManager_RemoveCompletedSession(t *testing.T) {
 	// Setup
 	_, wsManager, configManager := setupTestEnvironment(t)
 
-	ws, err := wsManager.Create(workspace.CreateOptions{
+	ws, err := wsManager.Create(context.Background(), workspace.CreateOptions{
 		Name: "test-workspace-completed",
 	})
 	if err != nil {
@@ -440,7 +440,7 @@ func TestManager_RemoveCompletedSession(t *testing.T) {
 	manager.SetTmuxAdapter(mockAdapter)
 
 	// Create and start a session
-	session, err := manager.CreateSession(Options{
+	session, err := manager.CreateSession(context.Background(), Options{
 		WorkspaceID: ws.ID,
 		AgentID:     "claude",
 	})
@@ -464,7 +464,7 @@ func TestManager_RemoveCompletedSession(t *testing.T) {
 	tmuxSess.mu.Unlock()
 
 	// Save to manager
-	if err := manager.Save(tmuxSess.info); err != nil {
+	if err := manager.Save(context.Background(), tmuxSess.info); err != nil {
 		t.Fatalf("Failed to save completed status: %v", err)
 	}
 
@@ -474,12 +474,12 @@ func TestManager_RemoveCompletedSession(t *testing.T) {
 	}
 
 	// Remove completed session
-	if err := manager.Remove(ID(session.ID())); err != nil {
+	if err := manager.Remove(context.Background(), ID(session.ID())); err != nil {
 		t.Fatalf("Failed to remove completed session: %v", err)
 	}
 
 	// Verify session is gone
-	_, err = manager.Get(ID(session.ID()))
+	_, err = manager.Get(context.Background(), ID(session.ID()))
 	if err == nil {
 		t.Error("Expected error getting removed session")
 	}
@@ -495,7 +495,7 @@ func TestManager_CreateSessionWithoutTmux(t *testing.T) {
 	_, wsManager, configManager := setupTestEnvironment(t)
 
 	// Create a test workspace
-	ws, err := wsManager.Create(workspace.CreateOptions{
+	ws, err := wsManager.Create(context.Background(), workspace.CreateOptions{
 		Name:       "test-workspace-no-tmux",
 		BaseBranch: "main",
 	})
@@ -523,7 +523,7 @@ func TestManager_CreateSessionWithoutTmux(t *testing.T) {
 		Command:     "claude code",
 	}
 
-	_, err = manager.CreateSession(opts)
+	_, err = manager.CreateSession(context.Background(), opts)
 	if err == nil {
 		t.Fatal("Expected error when creating session without tmux")
 	}
@@ -539,7 +539,7 @@ func TestManager_GetWithoutTmux(t *testing.T) {
 	_, wsManager, configManager := setupTestEnvironment(t)
 
 	// Create a test workspace
-	ws, err := wsManager.Create(workspace.CreateOptions{
+	ws, err := wsManager.Create(context.Background(), workspace.CreateOptions{
 		Name:       "test-workspace-get-no-tmux",
 		BaseBranch: "main",
 	})
@@ -561,7 +561,7 @@ func TestManager_GetWithoutTmux(t *testing.T) {
 	mockAdapter := tmux.NewMockAdapter()
 	manager.SetTmuxAdapter(mockAdapter)
 
-	session, err := manager.CreateSession(Options{
+	session, err := manager.CreateSession(context.Background(), Options{
 		WorkspaceID: ws.ID,
 		AgentID:     "claude",
 		Command:     "claude code",
@@ -581,7 +581,7 @@ func TestManager_GetWithoutTmux(t *testing.T) {
 	manager2.SetTmuxAdapter(nil)
 
 	// Try to get the session without tmux
-	_, err = manager2.Get(ID(sessionID))
+	_, err = manager2.Get(context.Background(), ID(sessionID))
 	if err == nil {
 		t.Fatal("Expected error when getting session without tmux")
 	}
@@ -624,11 +624,11 @@ func TestManager_StoreOperations(t *testing.T) {
 		Description: "Test session description",
 	}
 
-	if err := manager.Save(info); err != nil {
+	if err := manager.Save(context.Background(), info); err != nil {
 		t.Fatalf("Failed to save session info: %v", err)
 	}
 
-	loaded, err := manager.Load(info.ID)
+	loaded, err := manager.Load(context.Background(), info.ID)
 	if err != nil {
 		t.Fatalf("Failed to load session info: %v", err)
 	}
@@ -644,7 +644,7 @@ func TestManager_StoreOperations(t *testing.T) {
 	}
 
 	// Test List
-	infos, err := manager.List()
+	infos, err := manager.List(context.Background())
 	if err != nil {
 		t.Fatalf("Failed to list sessions: %v", err)
 	}
@@ -654,12 +654,12 @@ func TestManager_StoreOperations(t *testing.T) {
 	}
 
 	// Test Delete
-	if err := manager.Delete(info.ID); err != nil {
+	if err := manager.Delete(context.Background(), info.ID); err != nil {
 		t.Fatalf("Failed to delete session: %v", err)
 	}
 
 	// Verify deleted
-	_, err = manager.Load(info.ID)
+	_, err = manager.Load(context.Background(), info.ID)
 	if err == nil {
 		t.Error("Expected error loading deleted session")
 	}

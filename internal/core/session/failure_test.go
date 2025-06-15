@@ -1,6 +1,7 @@
 package session
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -47,7 +48,7 @@ func TestSessionFailureDetection(t *testing.T) {
 	_, wsManager, configManager := setupTestEnvironment(t)
 
 	// Create workspace
-	ws, err := wsManager.Create(workspace.CreateOptions{
+	ws, err := wsManager.Create(context.Background(), workspace.CreateOptions{
 		Name: "test-workspace",
 	})
 	if err != nil {

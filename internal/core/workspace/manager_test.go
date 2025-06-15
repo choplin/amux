@@ -1,6 +1,7 @@
 package workspace_test
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -46,7 +47,7 @@ func TestManager_CreateWithExistingBranch(t *testing.T) {
 		Description: "Test workspace with existing branch",
 	}
 
-	ws, err := manager.Create(opts)
+	ws, err := manager.Create(context.Background(), opts)
 	if err != nil {
 		t.Fatalf("Failed to create workspace: %v", err)
 	}
@@ -62,7 +63,7 @@ func TestManager_CreateWithExistingBranch(t *testing.T) {
 	}
 
 	// Verify we can get the workspace back
-	retrievedWs, err := manager.Get(workspace.ID(ws.ID))
+	retrievedWs, err := manager.Get(context.Background(), workspace.ID(ws.ID))
 	if err != nil {
 		t.Errorf("Failed to retrieve workspace: %v", err)
 	}
@@ -71,7 +72,7 @@ func TestManager_CreateWithExistingBranch(t *testing.T) {
 	}
 
 	// Clean up
-	err = manager.Remove(workspace.Identifier(ws.ID))
+	err = manager.Remove(context.Background(), workspace.Identifier(ws.ID))
 	if err != nil {
 		t.Fatalf("Failed to remove workspace: %v", err)
 	}
@@ -103,7 +104,7 @@ func TestManager_CreateWithNewBranch(t *testing.T) {
 		Description: "Test workspace with new branch",
 	}
 
-	ws, err := manager.Create(opts)
+	ws, err := manager.Create(context.Background(), opts)
 	if err != nil {
 		t.Fatalf("Failed to create workspace: %v", err)
 	}
@@ -120,7 +121,7 @@ func TestManager_CreateWithNewBranch(t *testing.T) {
 	}
 
 	// Clean up
-	err = manager.Remove(workspace.Identifier(ws.ID))
+	err = manager.Remove(context.Background(), workspace.Identifier(ws.ID))
 	if err != nil {
 		t.Fatalf("Failed to remove workspace: %v", err)
 	}
@@ -151,7 +152,7 @@ func TestManager_RemoveWithManuallyDeletedWorktree(t *testing.T) {
 		Description: "Test workspace for manual deletion",
 	}
 
-	ws, err := manager.Create(opts)
+	ws, err := manager.Create(context.Background(), opts)
 	if err != nil {
 		t.Fatalf("Failed to create workspace: %v", err)
 	}
@@ -174,13 +175,13 @@ func TestManager_RemoveWithManuallyDeletedWorktree(t *testing.T) {
 
 	// Now try to remove the workspace through amux
 	// This should succeed and clean up metadata even though worktree is gone
-	err = manager.Remove(workspace.Identifier(ws.ID))
+	err = manager.Remove(context.Background(), workspace.Identifier(ws.ID))
 	if err != nil {
 		t.Fatalf("Failed to remove workspace with manually deleted worktree: %v", err)
 	}
 
 	// Verify workspace is no longer listed
-	workspaces, err := manager.List(workspace.ListOptions{})
+	workspaces, err := manager.List(context.Background(), workspace.ListOptions{})
 	if err != nil {
 		t.Fatalf("Failed to list workspaces: %v", err)
 	}
@@ -218,18 +219,18 @@ func TestManager_ConsistencyChecking(t *testing.T) {
 			Description: "Test consistent workspace",
 		}
 
-		ws, err := manager.Create(opts)
+		ws, err := manager.Create(context.Background(), opts)
 		if err != nil {
 			t.Fatalf("Failed to create workspace: %v", err)
 		}
 		t.Cleanup(func() {
-			if err := manager.Remove(workspace.Identifier(ws.ID)); err != nil {
+			if err := manager.Remove(context.Background(), workspace.Identifier(ws.ID)); err != nil {
 				t.Logf("Failed to remove workspace %s: %v", ws.ID, err)
 			}
 		})
 
 		// Get workspace and check consistency
-		retrieved, err := manager.Get(workspace.ID(ws.ID))
+		retrieved, err := manager.Get(context.Background(), workspace.ID(ws.ID))
 		if err != nil {
 			t.Fatalf("Failed to get workspace: %v", err)
 		}
@@ -257,12 +258,12 @@ func TestManager_ConsistencyChecking(t *testing.T) {
 			Description: "Test folder missing workspace",
 		}
 
-		ws, err := manager.Create(opts)
+		ws, err := manager.Create(context.Background(), opts)
 		if err != nil {
 			t.Fatalf("Failed to create workspace: %v", err)
 		}
 		t.Cleanup(func() {
-			if err := manager.Remove(workspace.Identifier(ws.ID)); err != nil {
+			if err := manager.Remove(context.Background(), workspace.Identifier(ws.ID)); err != nil {
 				t.Logf("Failed to remove workspace %s: %v", ws.ID, err)
 			}
 		})
@@ -274,7 +275,7 @@ func TestManager_ConsistencyChecking(t *testing.T) {
 		}
 
 		// Get workspace and check consistency
-		retrieved, err := manager.Get(workspace.ID(ws.ID))
+		retrieved, err := manager.Get(context.Background(), workspace.ID(ws.ID))
 		if err != nil {
 			t.Fatalf("Failed to get workspace: %v", err)
 		}
@@ -313,7 +314,7 @@ func TestManager_ConsistencyChecking(t *testing.T) {
 			Description: "Temporary workspace",
 		}
 
-		tempWs, err := manager.Create(opts)
+		tempWs, err := manager.Create(context.Background(), opts)
 		if err != nil {
 			t.Fatalf("Failed to create temp workspace: %v", err)
 		}
@@ -326,7 +327,7 @@ func TestManager_ConsistencyChecking(t *testing.T) {
 		}
 
 		// Remove the temp workspace properly
-		manager.Remove(workspace.Identifier(tempWs.ID))
+		manager.Remove(context.Background(), workspace.Identifier(tempWs.ID))
 
 		// Now create the test scenario:
 		// 1. Create workspace directory structure manually
@@ -364,7 +365,7 @@ func TestManager_ConsistencyChecking(t *testing.T) {
 		os.WriteFile(metadataPath, data, 0o644)
 
 		// Get workspace and check consistency
-		retrieved, err := manager.Get(workspace.ID(wsID))
+		retrieved, err := manager.Get(context.Background(), workspace.ID(wsID))
 		if err != nil {
 			t.Fatalf("Failed to get workspace: %v", err)
 		}
@@ -414,7 +415,7 @@ func TestManager_CreateSetsContextPath(t *testing.T) {
 		Description: "Test workspace context path",
 	}
 
-	ws, err := manager.Create(opts)
+	ws, err := manager.Create(context.Background(), opts)
 	if err != nil {
 		t.Fatalf("Failed to create workspace: %v", err)
 	}
@@ -436,7 +437,7 @@ func TestManager_CreateSetsContextPath(t *testing.T) {
 	}
 
 	// Verify we can retrieve the workspace with context path
-	retrievedWs, err := manager.Get(workspace.ID(ws.ID))
+	retrievedWs, err := manager.Get(context.Background(), workspace.ID(ws.ID))
 	if err != nil {
 		t.Fatalf("Failed to retrieve workspace: %v", err)
 	}
@@ -447,7 +448,7 @@ func TestManager_CreateSetsContextPath(t *testing.T) {
 	}
 
 	// Clean up
-	err = manager.Remove(workspace.Identifier(ws.ID))
+	err = manager.Remove(context.Background(), workspace.Identifier(ws.ID))
 	if err != nil {
 		t.Fatalf("Failed to remove workspace: %v", err)
 	}

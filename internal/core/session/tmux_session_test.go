@@ -22,7 +22,7 @@ func TestTmuxSession_StartStop(t *testing.T) {
 	_, wsManager, configManager := setupTestEnvironment(t)
 
 	// Create workspace
-	ws, err := wsManager.Create(workspace.CreateOptions{
+	ws, err := wsManager.Create(context.Background(), workspace.CreateOptions{
 		Name: "test-workspace",
 	})
 	if err != nil {
@@ -57,7 +57,7 @@ func TestTmuxSession_StartStop(t *testing.T) {
 	}
 
 	// Save info
-	if err := manager.Save(info); err != nil {
+	if err := manager.Save(context.Background(), info); err != nil {
 		t.Fatalf("Failed to save session info: %v", err)
 	}
 
@@ -108,7 +108,7 @@ func TestTmuxSession_WithInitialPrompt(t *testing.T) {
 	_, wsManager, configManager := setupTestEnvironment(t)
 
 	// Create workspace
-	ws, err := wsManager.Create(workspace.CreateOptions{
+	ws, err := wsManager.Create(context.Background(), workspace.CreateOptions{
 		Name: "test-workspace-prompt",
 	})
 	if err != nil {
@@ -145,7 +145,7 @@ func TestTmuxSession_WithInitialPrompt(t *testing.T) {
 	}
 
 	// Save info
-	if err := manager.Save(info); err != nil {
+	if err := manager.Save(context.Background(), info); err != nil {
 		t.Fatalf("Failed to save session info: %v", err)
 	}
 
@@ -197,7 +197,7 @@ func TestTmuxSession_StatusTracking(t *testing.T) {
 	_, wsManager, configManager := setupTestEnvironment(t)
 
 	// Create workspace
-	ws, err := wsManager.Create(workspace.CreateOptions{
+	ws, err := wsManager.Create(context.Background(), workspace.CreateOptions{
 		Name: "test-workspace-status",
 	})
 	if err != nil {
@@ -232,7 +232,7 @@ func TestTmuxSession_StatusTracking(t *testing.T) {
 	}
 
 	// Save info
-	if err := manager.Save(info); err != nil {
+	if err := manager.Save(context.Background(), info); err != nil {
 		t.Fatalf("Failed to save session info: %v", err)
 	}
 

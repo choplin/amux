@@ -74,9 +74,9 @@ func (m *Manager) SetTmuxAdapter(adapter tmux.Adapter) {
 }
 
 // CreateSession creates a new session
-func (m *Manager) CreateSession(opts Options) (Session, error) {
+func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, error) {
 	// Validate workspace exists
-	ws, err := m.workspaceManager.ResolveWorkspace(workspace.Identifier(opts.WorkspaceID))
+	ws, err := m.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(opts.WorkspaceID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 	}
@@ -143,7 +143,7 @@ func (m *Manager) CreateSession(opts Options) (Session, error) {
 	}
 
 	// Save session info to file
-	if err := m.saveSessionInfo(info); err != nil {
+	if err := m.saveSessionInfo(ctx, info); err != nil {
 		return nil, fmt.Errorf("failed to save session: %w", err)
 	}
 
@@ -168,7 +168,7 @@ func (m *Manager) CreateSession(opts Options) (Session, error) {
 }
 
 // Get retrieves a session by its full ID
-func (m *Manager) Get(id ID) (Session, error) {
+func (m *Manager) Get(ctx context.Context, id ID) (Session, error) {
 	// Check cache
 	m.mu.RLock()
 	if sess, ok := m.sessions[string(id)]; ok {
@@ -178,7 +178,7 @@ func (m *Manager) Get(id ID) (Session, error) {
 	m.mu.RUnlock()
 
 	// Load from file
-	info, err := m.loadSessionInfo(string(id))
+	info, err := m.loadSessionInfo(ctx, string(id))
 	if err != nil {
 		// If not found in file, it means the session doesn't exist
 		// (even if it might have been in cache before)
@@ -189,7 +189,7 @@ func (m *Manager) Get(id ID) (Session, error) {
 	}
 
 	// Create session from info
-	sess, err := m.createSessionFromInfo(info)
+	sess, err := m.createSessionFromInfo(ctx, info)
 	if err != nil {
 		return nil, err
 	}
@@ -203,9 +203,9 @@ func (m *Manager) Get(id ID) (Session, error) {
 }
 
 // ListSessions returns all sessions
-func (m *Manager) ListSessions() ([]Session, error) {
+func (m *Manager) ListSessions(ctx context.Context) ([]Session, error) {
 	// List all session infos
-	infos, err := m.listSessionInfos()
+	infos, err := m.listSessionInfos(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list sessions: %w", err)
 	}
@@ -233,7 +233,7 @@ func (m *Manager) ListSessions() ([]Session, error) {
 		m.mu.RUnlock()
 
 		// Create session from info
-		session, err := m.createSessionFromInfo(info)
+		session, err := m.createSessionFromInfo(ctx, info)
 		if err != nil {
 			// Log warning but continue
 			m.logger.Warn("Failed to create session", "session_id", info.ID, "error", err)
@@ -252,9 +252,9 @@ func (m *Manager) ListSessions() ([]Session, error) {
 }
 
 // Remove removes a session by its full ID
-func (m *Manager) Remove(id ID) error {
+func (m *Manager) Remove(ctx context.Context, id ID) error {
 	// Get session to check status
-	sess, err := m.Get(id)
+	sess, err := m.Get(ctx, id)
 	if err != nil {
 		return fmt.Errorf("failed to get session: %w", err)
 	}
@@ -277,7 +277,7 @@ func (m *Manager) Remove(id ID) error {
 	}
 
 	// Remove session info file
-	if err := m.deleteSessionInfo(string(id)); err != nil {
+	if err := m.deleteSessionInfo(ctx, string(id)); err != nil {
 		return fmt.Errorf("failed to delete session: %w", err)
 	}
 
@@ -302,7 +302,7 @@ func (m *Manager) CleanupOrphaned() error {
 }
 
 // createSessionFromInfo creates the appropriate session implementation from stored info
-func (m *Manager) createSessionFromInfo(info *Info) (Session, error) {
+func (m *Manager) createSessionFromInfo(ctx context.Context, info *Info) (Session, error) {
 	// Default to tmux if type not set (for backward compatibility)
 	if info.Type == "" {
 		info.Type = TypeTmux
@@ -317,7 +317,7 @@ func (m *Manager) createSessionFromInfo(info *Info) (Session, error) {
 		}
 
 		// Get workspace for tmux session
-		ws, err := m.workspaceManager.ResolveWorkspace(workspace.Identifier(info.WorkspaceID))
+		ws, err := m.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(info.WorkspaceID))
 		if err != nil {
 			return nil, fmt.Errorf("workspace not found for session: %w", err)
 		}
@@ -330,9 +330,9 @@ func (m *Manager) createSessionFromInfo(info *Info) (Session, error) {
 }
 
 // ResolveSession resolves a session identifier (ID, index, or name) to a Session
-func (m *Manager) ResolveSession(identifier Identifier) (Session, error) {
+func (m *Manager) ResolveSession(ctx context.Context, identifier Identifier) (Session, error) {
 	// 1. Try as full ID
-	session, err := m.Get(ID(identifier))
+	session, err := m.Get(ctx, ID(identifier))
 	if err == nil {
 		return session, nil
 	}
@@ -346,7 +346,7 @@ func (m *Manager) ResolveSession(identifier Identifier) (Session, error) {
 	// 2. Try as index (short ID)
 	if m.idMapper != nil {
 		if fullID, exists := m.idMapper.GetSessionFull(string(identifier)); exists {
-			session, err := m.Get(ID(fullID))
+			session, err := m.Get(ctx, ID(fullID))
 			if err == nil {
 				return session, nil
 			}
@@ -354,7 +354,7 @@ func (m *Manager) ResolveSession(identifier Identifier) (Session, error) {
 	}
 
 	// 3. Try as name
-	sessions, err := m.ListSessions()
+	sessions, err := m.ListSessions(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list sessions: %w", err)
 	}
@@ -414,15 +414,15 @@ func (m *Manager) UpdateAllStatuses(sessions []Session) {
 // Helper methods for file operations
 
 // saveSessionInfo saves session info to file
-func (m *Manager) saveSessionInfo(info *Info) error {
+func (m *Manager) saveSessionInfo(ctx context.Context, info *Info) error {
 	path := m.getSessionPath(info.ID)
-	return m.fileManager.Write(context.TODO(), path, info)
+	return m.fileManager.Write(ctx, path, info)
 }
 
 // loadSessionInfo loads session info from file
-func (m *Manager) loadSessionInfo(id string) (*Info, error) {
+func (m *Manager) loadSessionInfo(ctx context.Context, id string) (*Info, error) {
 	path := m.getSessionPath(id)
-	info, _, err := m.fileManager.Read(context.TODO(), path)
+	info, _, err := m.fileManager.Read(ctx, path)
 	if err != nil {
 		return nil, err
 	}
@@ -430,7 +430,7 @@ func (m *Manager) loadSessionInfo(id string) (*Info, error) {
 }
 
 // listSessionInfos lists all session infos
-func (m *Manager) listSessionInfos() ([]*Info, error) {
+func (m *Manager) listSessionInfos(ctx context.Context) ([]*Info, error) {
 	entries, err := os.ReadDir(m.sessionsDir)
 	if err != nil {
 		return nil, err
@@ -443,7 +443,7 @@ func (m *Manager) listSessionInfos() ([]*Info, error) {
 		}
 
 		// Try to load session info
-		info, err := m.loadSessionInfo(entry.Name())
+		info, err := m.loadSessionInfo(ctx, entry.Name())
 		if err != nil {
 			// Skip invalid sessions
 			continue
@@ -455,10 +455,10 @@ func (m *Manager) listSessionInfos() ([]*Info, error) {
 }
 
 // deleteSessionInfo deletes session info and storage
-func (m *Manager) deleteSessionInfo(id string) error {
+func (m *Manager) deleteSessionInfo(ctx context.Context, id string) error {
 	// Remove session info file
 	path := m.getSessionPath(id)
-	if err := m.fileManager.Delete(context.TODO(), path); err != nil && !os.IsNotExist(err) {
+	if err := m.fileManager.Delete(ctx, path); err != nil && !os.IsNotExist(err) {
 		return err
 	}
 
@@ -483,9 +483,9 @@ func (m *Manager) deleteSessionInfo(id string) error {
 }
 
 // updateSessionInfo safely updates session info using CAS
-func (m *Manager) updateSessionInfo(id string, updateFunc func(info *Info) error) error {
+func (m *Manager) updateSessionInfo(ctx context.Context, id string, updateFunc func(info *Info) error) error {
 	path := m.getSessionPath(id)
-	return m.fileManager.Update(context.TODO(), path, updateFunc)
+	return m.fileManager.Update(ctx, path, updateFunc)
 }
 
 // getSessionPath returns the path to a session's info file
@@ -496,28 +496,28 @@ func (m *Manager) getSessionPath(id string) string {
 // Implement Store interface methods for backward compatibility
 
 // Save implements Store.Save
-func (m *Manager) Save(info *Info) error {
-	return m.saveSessionInfo(info)
+func (m *Manager) Save(ctx context.Context, info *Info) error {
+	return m.saveSessionInfo(ctx, info)
 }
 
 // Load implements Store.Load
-func (m *Manager) Load(id string) (*Info, error) {
-	return m.loadSessionInfo(id)
+func (m *Manager) Load(ctx context.Context, id string) (*Info, error) {
+	return m.loadSessionInfo(ctx, id)
 }
 
 // List implements Store.List
-func (m *Manager) List() ([]*Info, error) {
-	return m.listSessionInfos()
+func (m *Manager) List(ctx context.Context) ([]*Info, error) {
+	return m.listSessionInfos(ctx)
 }
 
 // Delete implements Store.Delete
-func (m *Manager) Delete(id string) error {
-	return m.deleteSessionInfo(id)
+func (m *Manager) Delete(ctx context.Context, id string) error {
+	return m.deleteSessionInfo(ctx, id)
 }
 
 // Update implements Store.Update
-func (m *Manager) Update(id string, updateFunc func(info *Info) error) error {
-	return m.updateSessionInfo(id, updateFunc)
+func (m *Manager) Update(ctx context.Context, id string, updateFunc func(info *Info) error) error {
+	return m.updateSessionInfo(ctx, id, updateFunc)
 }
 
 // CreateSessionStorage implements Store.CreateSessionStorage

@@ -116,7 +116,7 @@ func TestSessionResources(t *testing.T) {
 			Description: "A test session for verifying name and description fields",
 		}
 
-		sess, err := sessionManager.CreateSession(opts)
+		sess, err := sessionManager.CreateSession(context.Background(), opts)
 		if err != nil {
 			t.Fatalf("failed to create session: %v", err)
 		}

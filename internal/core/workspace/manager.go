@@ -53,7 +53,7 @@ func NewManager(configManager *config.Manager) (*Manager, error) {
 }
 
 // Create creates a new workspace
-func (m *Manager) Create(opts CreateOptions) (*Workspace, error) {
+func (m *Manager) Create(ctx context.Context, opts CreateOptions) (*Workspace, error) {
 	// Generate workspace ID
 	id := generateID(opts.Name)
 
@@ -116,7 +116,7 @@ func (m *Manager) Create(opts CreateOptions) (*Workspace, error) {
 	}
 
 	// Save workspace metadata
-	if err := m.saveWorkspace(workspace); err != nil {
+	if err := m.saveWorkspace(ctx, workspace); err != nil {
 		// Cleanup on failure
 		_ = m.gitOps.RemoveWorktree(worktreePath)
 		_ = m.gitOps.DeleteBranch(branch)
@@ -139,10 +139,10 @@ func (m *Manager) Create(opts CreateOptions) (*Workspace, error) {
 }
 
 // Get retrieves a workspace by its full ID
-func (m *Manager) Get(id ID) (*Workspace, error) {
+func (m *Manager) Get(ctx context.Context, id ID) (*Workspace, error) {
 	workspaceMetaPath := filepath.Join(m.workspacesDir, string(id), "workspace.yaml")
 
-	workspace, _, err := m.fm.Read(context.TODO(), workspaceMetaPath)
+	workspace, _, err := m.fm.Read(ctx, workspaceMetaPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, fmt.Errorf("workspace not found: %s", id)
@@ -165,7 +165,7 @@ func (m *Manager) Get(id ID) (*Workspace, error) {
 }
 
 // List returns all workspaces
-func (m *Manager) List(opts ListOptions) ([]*Workspace, error) {
+func (m *Manager) List(ctx context.Context, opts ListOptions) ([]*Workspace, error) {
 	// Ensure workspaces directory exists
 	if err := os.MkdirAll(m.workspacesDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create workspaces directory: %w", err)
@@ -184,7 +184,7 @@ func (m *Manager) List(opts ListOptions) ([]*Workspace, error) {
 
 		// Look for workspace.yaml inside the directory
 		workspaceMetaPath := filepath.Join(m.workspacesDir, file.Name(), "workspace.yaml")
-		workspacePtr, _, err := m.fm.Read(context.TODO(), workspaceMetaPath)
+		workspacePtr, _, err := m.fm.Read(ctx, workspaceMetaPath)
 		if err != nil {
 			continue
 		}
@@ -253,23 +253,23 @@ func (m *Manager) getLastModified(workspacePath string) time.Time {
 }
 
 // ResolveWorkspace finds a workspace by index, full ID, or name
-func (m *Manager) ResolveWorkspace(identifier Identifier) (*Workspace, error) {
+func (m *Manager) ResolveWorkspace(ctx context.Context, identifier Identifier) (*Workspace, error) {
 	// 1. Try as full ID
-	ws, err := m.Get(ID(identifier))
+	ws, err := m.Get(ctx, ID(identifier))
 	if err == nil {
 		return ws, nil
 	}
 
 	// 2. Try as index
 	if fullID, exists := m.idMapper.GetWorkspaceFull(string(identifier)); exists {
-		ws, err = m.Get(ID(fullID))
+		ws, err = m.Get(ctx, ID(fullID))
 		if err == nil {
 			return ws, nil
 		}
 	}
 
 	// 3. Try as name
-	workspaces, err := m.List(ListOptions{})
+	workspaces, err := m.List(ctx, ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list workspaces: %w", err)
 	}
@@ -293,8 +293,8 @@ func (m *Manager) ResolveWorkspace(identifier Identifier) (*Workspace, error) {
 }
 
 // Remove deletes a workspace by identifier (ID, index, or name)
-func (m *Manager) Remove(identifier Identifier) error {
-	workspace, err := m.ResolveWorkspace(identifier)
+func (m *Manager) Remove(ctx context.Context, identifier Identifier) error {
+	workspace, err := m.ResolveWorkspace(ctx, identifier)
 	if err != nil {
 		return err
 	}
@@ -352,8 +352,8 @@ func (m *Manager) Remove(identifier Identifier) error {
 }
 
 // Cleanup removes old workspaces based on last modified time
-func (m *Manager) Cleanup(opts CleanupOptions) ([]string, error) {
-	workspaces, err := m.List(ListOptions{})
+func (m *Manager) Cleanup(ctx context.Context, opts CleanupOptions) ([]string, error) {
+	workspaces, err := m.List(ctx, ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -364,7 +364,7 @@ func (m *Manager) Cleanup(opts CleanupOptions) ([]string, error) {
 	for _, workspace := range workspaces {
 		if workspace.UpdatedAt.Before(cutoff) {
 			if !opts.DryRun {
-				if err := m.Remove(Identifier(workspace.ID)); err != nil {
+				if err := m.Remove(ctx, Identifier(workspace.ID)); err != nil {
 					// Log error but continue with other workspaces
 					fmt.Fprintf(os.Stderr, "Failed to remove workspace %s: %v\n", workspace.ID, err)
 					continue
@@ -442,7 +442,7 @@ func (m *Manager) CheckConsistency(workspace *Workspace) {
 }
 
 // saveWorkspace saves workspace metadata to disk with file locking
-func (m *Manager) saveWorkspace(workspace *Workspace) error {
+func (m *Manager) saveWorkspace(ctx context.Context, workspace *Workspace) error {
 	// Save workspace.yaml inside the workspace directory (not in the worktree)
 	workspaceDir := filepath.Join(m.workspacesDir, workspace.ID)
 	workspaceMetaPath := filepath.Join(workspaceDir, "workspace.yaml")
@@ -452,7 +452,7 @@ func (m *Manager) saveWorkspace(workspace *Workspace) error {
 		return fmt.Errorf("failed to create workspace directory: %w", err)
 	}
 
-	return m.fm.Write(context.TODO(), workspaceMetaPath, workspace)
+	return m.fm.Write(ctx, workspaceMetaPath, workspace)
 }
 
 // generateID generates a unique workspace ID
