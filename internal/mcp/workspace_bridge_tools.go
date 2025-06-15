@@ -75,9 +75,9 @@ func (s *ServerV2) handleResourceWorkspaceList(ctx context.Context, request mcp.
 
 func (s *ServerV2) handleResourceWorkspaceShow(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	args := request.GetArguments()
-	workspaceID, ok := args["workspace_id"].(string)
+	workspaceID, ok := args["workspace_identifier"].(string)
 	if !ok || workspaceID == "" {
-		return nil, fmt.Errorf("workspace_id is required")
+		return nil, fmt.Errorf("workspace_identifier is required")
 	}
 
 	// Use shared logic with resource handler
@@ -103,9 +103,9 @@ func (s *ServerV2) handleResourceWorkspaceShow(ctx context.Context, request mcp.
 
 func (s *ServerV2) handleResourceWorkspaceBrowse(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	args := request.GetArguments()
-	workspaceID, ok := args["workspace_id"].(string)
+	workspaceID, ok := args["workspace_identifier"].(string)
 	if !ok || workspaceID == "" {
-		return nil, fmt.Errorf("workspace_id is required")
+		return nil, fmt.Errorf("workspace_identifier is required")
 	}
 
 	path, _ := args["path"].(string)

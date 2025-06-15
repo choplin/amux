@@ -73,16 +73,16 @@ func (s *ServerV2) registerStorageTools() error {
 func (s *ServerV2) handleStorageRead(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	args := request.GetArguments()
 
-	workspaceID, _ := args["workspace_id"].(string)
-	sessionID, _ := args["session_id"].(string)
+	workspaceID, _ := args["workspace_identifier"].(string)
+	sessionID, _ := args["session_identifier"].(string)
 	path, _ := args["path"].(string)
 
 	if workspaceID == "" && sessionID == "" {
-		return nil, fmt.Errorf("either workspace_id or session_id must be provided")
+		return nil, fmt.Errorf("either workspace_identifier or session_identifier must be provided")
 	}
 
 	if workspaceID != "" && sessionID != "" {
-		return nil, fmt.Errorf("only one of workspace_id or session_id should be provided")
+		return nil, fmt.Errorf("only one of workspace_identifier or session_identifier should be provided")
 	}
 
 	var storagePath string
@@ -140,17 +140,17 @@ func (s *ServerV2) handleStorageRead(ctx context.Context, request mcp.CallToolRe
 func (s *ServerV2) handleStorageWrite(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	args := request.GetArguments()
 
-	workspaceID, _ := args["workspace_id"].(string)
-	sessionID, _ := args["session_id"].(string)
+	workspaceID, _ := args["workspace_identifier"].(string)
+	sessionID, _ := args["session_identifier"].(string)
 	path, _ := args["path"].(string)
 	content, _ := args["content"].(string)
 
 	if workspaceID == "" && sessionID == "" {
-		return nil, fmt.Errorf("either workspace_id or session_id must be provided")
+		return nil, fmt.Errorf("either workspace_identifier or session_identifier must be provided")
 	}
 
 	if workspaceID != "" && sessionID != "" {
-		return nil, fmt.Errorf("only one of workspace_id or session_id should be provided")
+		return nil, fmt.Errorf("only one of workspace_identifier or session_identifier should be provided")
 	}
 
 	var storagePath string
@@ -213,16 +213,16 @@ func (s *ServerV2) handleStorageWrite(ctx context.Context, request mcp.CallToolR
 func (s *ServerV2) handleStorageList(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	args := request.GetArguments()
 
-	workspaceID, _ := args["workspace_id"].(string)
-	sessionID, _ := args["session_id"].(string)
+	workspaceID, _ := args["workspace_identifier"].(string)
+	sessionID, _ := args["session_identifier"].(string)
 	subPath, _ := args["path"].(string)
 
 	if workspaceID == "" && sessionID == "" {
-		return nil, fmt.Errorf("either workspace_id or session_id must be provided")
+		return nil, fmt.Errorf("either workspace_identifier or session_identifier must be provided")
 	}
 
 	if workspaceID != "" && sessionID != "" {
-		return nil, fmt.Errorf("only one of workspace_id or session_id should be provided")
+		return nil, fmt.Errorf("only one of workspace_identifier or session_identifier should be provided")
 	}
 
 	var storagePath string

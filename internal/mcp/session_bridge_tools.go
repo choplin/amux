@@ -21,9 +21,6 @@ func (s *ServerV2) registerSessionBridgeTools() error {
 	s.mcpServer.AddTool(mcp.NewTool("resource_session_list", listOpts...), s.handleResourceSessionList)
 
 	// resource_session_show - Bridge to amux://session/{id}
-	type SessionIDParams struct {
-		SessionID string `json:"session_id" jsonschema:"required,description=Session ID or short ID"`
-	}
 	showOpts, err := WithStructOptions(
 		"Get session details (bridge to amux://session/{id} resource). Returns the same data as the session detail resource.",
 		SessionIDParams{},
@@ -110,9 +107,9 @@ func (s *ServerV2) handleResourceSessionList(ctx context.Context, request mcp.Ca
 
 func (s *ServerV2) handleResourceSessionShow(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	args := request.GetArguments()
-	sessionID, ok := args["session_id"].(string)
+	sessionID, ok := args["session_identifier"].(string)
 	if !ok {
-		return nil, fmt.Errorf("invalid or missing session_id argument")
+		return nil, fmt.Errorf("invalid or missing session_identifier argument")
 	}
 
 	// Create a proper ReadResourceRequest
@@ -149,9 +146,9 @@ func (s *ServerV2) handleResourceSessionShow(ctx context.Context, request mcp.Ca
 
 func (s *ServerV2) handleResourceSessionOutput(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	args := request.GetArguments()
-	sessionID, ok := args["session_id"].(string)
+	sessionID, ok := args["session_identifier"].(string)
 	if !ok {
-		return nil, fmt.Errorf("invalid or missing session_id argument")
+		return nil, fmt.Errorf("invalid or missing session_identifier argument")
 	}
 
 	// Create a proper ReadResourceRequest
