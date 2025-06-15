@@ -179,10 +179,10 @@ func (s *ServerV2) handleWorkspaceCreate(ctx context.Context, request mcp.CallTo
 func (s *ServerV2) handleWorkspaceRemove(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	args := request.GetArguments()
 
-	workspaceID, ok := args["workspace_id"].(string)
+	workspaceID, ok := args["workspace_identifier"].(string)
 
 	if !ok {
-		return nil, fmt.Errorf("invalid or missing workspace_id argument")
+		return nil, fmt.Errorf("invalid or missing workspace_identifier argument")
 	}
 
 	// Resolve workspace to get name for better feedback

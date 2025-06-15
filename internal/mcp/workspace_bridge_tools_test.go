@@ -69,7 +69,7 @@ func TestWorkspaceBridgeTools(t *testing.T) {
 			Params: mcp.CallToolParams{
 				Name: "resource_workspace_show",
 				Arguments: map[string]interface{}{
-					"workspace_id": ws1.ID,
+					"workspace_identifier": ws1.ID,
 				},
 			},
 		}
@@ -106,8 +106,8 @@ func TestWorkspaceBridgeTools(t *testing.T) {
 			Params: mcp.CallToolParams{
 				Name: "resource_workspace_browse",
 				Arguments: map[string]interface{}{
-					"workspace_id": ws2.ID,
-					"path":         "",
+					"workspace_identifier": ws2.ID,
+					"path":                 "",
 				},
 			},
 		}

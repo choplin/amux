@@ -37,9 +37,9 @@ func TestSessionRun(t *testing.T) {
 			Params: mcp.CallToolParams{
 				Name: "session_run",
 				Arguments: map[string]interface{}{
-					"workspace_id": ws.ID,
-					"agent_id":     "test-agent",
-					"command":      "echo 'test'",
+					"workspace_identifier": ws.ID,
+					"agent_id":             "test-agent",
+					"command":              "echo 'test'",
 					"environment": map[string]interface{}{
 						"TEST_VAR": "test_value",
 					},
@@ -115,11 +115,11 @@ func TestSessionRun(t *testing.T) {
 			Params: mcp.CallToolParams{
 				Name: "session_run",
 				Arguments: map[string]interface{}{
-					"workspace_id": ws2.ID,
-					"agent_id":     "test-agent",
-					"name":         "Named Test Session",
-					"description":  "Session with custom name and description",
-					"command":      "sleep 1",
+					"workspace_identifier": ws2.ID,
+					"agent_id":             "test-agent",
+					"name":                 "Named Test Session",
+					"description":          "Session with custom name and description",
+					"command":              "sleep 1",
 				},
 			},
 		}
@@ -185,7 +185,7 @@ func TestSessionRun(t *testing.T) {
 			Params: mcp.CallToolParams{
 				Name: "session_run",
 				Arguments: map[string]interface{}{
-					"workspace_id": ws.ID,
+					"workspace_identifier": ws.ID,
 					// missing agent_id
 				},
 			},
@@ -239,7 +239,7 @@ func TestSessionStop(t *testing.T) {
 			Params: mcp.CallToolParams{
 				Name: "session_stop",
 				Arguments: map[string]interface{}{
-					"session_id": sess.ID(),
+					"session_identifier": sess.ID(),
 				},
 			},
 		}
@@ -268,7 +268,7 @@ func TestSessionStop(t *testing.T) {
 			Params: mcp.CallToolParams{
 				Name: "session_stop",
 				Arguments: map[string]interface{}{
-					"session_id": "non-existent",
+					"session_identifier": "non-existent",
 				},
 			},
 		}
@@ -321,8 +321,8 @@ func TestSessionSendInput(t *testing.T) {
 			Params: mcp.CallToolParams{
 				Name: "session_send_input",
 				Arguments: map[string]interface{}{
-					"session_id": sess.ID(),
-					"input":      "test input",
+					"session_identifier": sess.ID(),
+					"input":              "test input",
 				},
 			},
 		}
@@ -356,8 +356,8 @@ func TestSessionSendInput(t *testing.T) {
 			Params: mcp.CallToolParams{
 				Name: "session_send_input",
 				Arguments: map[string]interface{}{
-					"session_id": sess.ID(),
-					"input":      "test input",
+					"session_identifier": sess.ID(),
+					"input":              "test input",
 				},
 			},
 		}

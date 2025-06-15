@@ -72,9 +72,9 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 	args := request.GetArguments()
 
 	// Extract required parameters
-	workspaceID, ok := args["workspace_id"].(string)
+	workspaceID, ok := args["workspace_identifier"].(string)
 	if !ok {
-		return nil, fmt.Errorf("invalid or missing workspace_id argument")
+		return nil, fmt.Errorf("invalid or missing workspace_identifier argument")
 	}
 
 	agentID, ok := args["agent_id"].(string)
@@ -187,9 +187,9 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 func (s *ServerV2) handleSessionStop(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	args := request.GetArguments()
 
-	sessionID, ok := args["session_id"].(string)
+	sessionID, ok := args["session_identifier"].(string)
 	if !ok {
-		return nil, fmt.Errorf("invalid or missing session_id argument")
+		return nil, fmt.Errorf("invalid or missing session_identifier argument")
 	}
 
 	// Create session manager
@@ -227,9 +227,9 @@ func (s *ServerV2) handleSessionStop(ctx context.Context, request mcp.CallToolRe
 func (s *ServerV2) handleSessionSendInput(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	args := request.GetArguments()
 
-	sessionID, ok := args["session_id"].(string)
+	sessionID, ok := args["session_identifier"].(string)
 	if !ok {
-		return nil, fmt.Errorf("invalid or missing session_id argument")
+		return nil, fmt.Errorf("invalid or missing session_identifier argument")
 	}
 
 	input, ok := args["input"].(string)
