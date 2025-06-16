@@ -36,7 +36,7 @@ type SessionSendInputParams struct {
 func (s *ServerV2) registerSessionTools() error {
 	// session_run tool
 	runOpts, err := WithStructOptions(
-		"Run an AI agent session in a workspace. Creates and immediately starts the session.",
+		GetEnhancedDescription("session_run"),
 		SessionRunParams{},
 	)
 	if err != nil {
@@ -46,7 +46,7 @@ func (s *ServerV2) registerSessionTools() error {
 
 	// session_stop tool
 	stopOpts, err := WithStructOptions(
-		"Stop a running agent session gracefully.",
+		GetEnhancedDescription("session_stop"),
 		SessionIDParams{},
 	)
 	if err != nil {
@@ -56,7 +56,7 @@ func (s *ServerV2) registerSessionTools() error {
 
 	// session_send_input tool
 	sendOpts, err := WithStructOptions(
-		"Send input text to a running agent session's stdin.",
+		GetEnhancedDescription("session_send_input"),
 		SessionSendInputParams{},
 	)
 	if err != nil {

@@ -18,7 +18,7 @@ type WorkspaceBrowseParams struct {
 func (s *ServerV2) registerWorkspaceBridgeTools() error {
 	// resource_workspace_list - Bridge to amux://workspace
 	listOpts, err := WithStructOptions(
-		"List all workspaces (bridge to amux://workspace resource). Returns the same data as the workspace resource.",
+		GetEnhancedDescription("resource_workspace_list"),
 		struct{}{},
 	)
 	if err != nil {
@@ -28,7 +28,7 @@ func (s *ServerV2) registerWorkspaceBridgeTools() error {
 
 	// resource_workspace_show - Bridge to amux://workspace/{id}
 	showOpts, err := WithStructOptions(
-		"Get details of a specific workspace (bridge to amux://workspace/{id} resource). Returns the same data as the workspace detail resource.",
+		GetEnhancedDescription("resource_workspace_show"),
 		WorkspaceIDParams{},
 	)
 	if err != nil {
@@ -38,7 +38,7 @@ func (s *ServerV2) registerWorkspaceBridgeTools() error {
 
 	// resource_workspace_browse - Bridge to amux://workspace/{id}/files
 	browseOpts, err := WithStructOptions(
-		"Browse files in a workspace (bridge to amux://workspace/{id}/files resource). Returns directory listings or file contents.",
+		GetEnhancedDescription("resource_workspace_browse"),
 		WorkspaceBrowseParams{},
 	)
 	if err != nil {

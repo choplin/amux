@@ -100,7 +100,7 @@ func NewServerV2(configManager *config.Manager, transport string, httpConfig *co
 func (s *ServerV2) registerTools() error {
 	// workspace_create tool
 
-	createOpts, err := WithStructOptions("Create a new isolated git worktree-based workspace for development. Each workspace has its own branch and can be used for working on separate features or issues", WorkspaceCreateParams{})
+	createOpts, err := WithStructOptions(GetEnhancedDescription("workspace_create"), WorkspaceCreateParams{})
 	if err != nil {
 		return fmt.Errorf("failed to create workspace_create options: %w", err)
 	}
@@ -109,7 +109,7 @@ func (s *ServerV2) registerTools() error {
 
 	// workspace_remove tool
 
-	removeOpts, err := WithStructOptions("Remove a workspace and its associated git worktree. This permanently deletes the workspace directory and cannot be undone", WorkspaceIDParams{})
+	removeOpts, err := WithStructOptions(GetEnhancedDescription("workspace_remove"), WorkspaceIDParams{})
 	if err != nil {
 		return fmt.Errorf("failed to create workspace_remove options: %w", err)
 	}
@@ -163,13 +163,23 @@ func (s *ServerV2) handleWorkspaceCreate(ctx context.Context, request mcp.CallTo
 		return nil, fmt.Errorf("failed to create workspace: %w", err)
 	}
 
-	result, _ := json.MarshalIndent(ws, "", "  ")
+	// Create result with workspace details
+	type WorkspaceResult struct {
+		*workspace.Workspace
+		SuggestedNextTools []map[string]string `json:"suggested_next_tools,omitempty"`
+	}
+
+	enhancedResult := WorkspaceResult{
+		Workspace:          ws,
+		SuggestedNextTools: GetNextToolSuggestions("workspace_create"),
+	}
+
+	result, _ := json.MarshalIndent(enhancedResult, "", "  ")
 
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{
 			mcp.TextContent{
 				Type: "text",
-
 				Text: string(result),
 			},
 		},
@@ -233,6 +243,28 @@ func (s *ServerV2) Start(ctx context.Context) error {
 		return fmt.Errorf("unsupported transport: %s", s.transport)
 
 	}
+}
+
+// getMostRecentWorkspace returns the most recently created workspace
+func (s *ServerV2) getMostRecentWorkspace(ctx context.Context) (*workspace.Workspace, error) {
+	workspaces, err := s.workspaceManager.List(ctx, workspace.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list workspaces: %w", err)
+	}
+
+	if len(workspaces) == 0 {
+		return nil, fmt.Errorf("no workspaces found")
+	}
+
+	// Find the most recent workspace
+	var mostRecent *workspace.Workspace
+	for _, ws := range workspaces {
+		if mostRecent == nil || ws.CreatedAt.After(mostRecent.CreatedAt) {
+			mostRecent = ws
+		}
+	}
+
+	return mostRecent, nil
 }
 
 // startHTTPServer starts the HTTP/SSE server

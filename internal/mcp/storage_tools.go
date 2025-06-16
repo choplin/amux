@@ -38,7 +38,7 @@ type StorageListParams struct {
 func (s *ServerV2) registerStorageTools() error {
 	// Storage read tool
 	readOpts, err := WithStructOptions(
-		"Read a file from workspace or session storage",
+		GetEnhancedDescription("storage_read"),
 		StorageReadParams{},
 	)
 	if err != nil {
@@ -48,7 +48,7 @@ func (s *ServerV2) registerStorageTools() error {
 
 	// Storage write tool
 	writeOpts, err := WithStructOptions(
-		"Write a file to workspace or session storage",
+		GetEnhancedDescription("storage_write"),
 		StorageWriteParams{},
 	)
 	if err != nil {
@@ -58,7 +58,7 @@ func (s *ServerV2) registerStorageTools() error {
 
 	// Storage list tool
 	listOpts, err := WithStructOptions(
-		"List files in workspace or session storage",
+		GetEnhancedDescription("storage_list"),
 		StorageListParams{},
 	)
 	if err != nil {
@@ -77,8 +77,19 @@ func (s *ServerV2) handleStorageRead(ctx context.Context, request mcp.CallToolRe
 	sessionID, _ := args["session_identifier"].(string)
 	path, _ := args["path"].(string)
 
+	// Smart default: if no workspace or session specified, try to use the most recent workspace
 	if workspaceID == "" && sessionID == "" {
-		return nil, fmt.Errorf("either workspace_identifier or session_identifier must be provided")
+		if recentWS, err := s.getMostRecentWorkspace(ctx); err == nil {
+			workspaceID = recentWS.ID
+			// Add a note that we inferred the workspace
+			defer func() {
+				if workspaceID != "" {
+					// We'll add this info to the response later
+				}
+			}()
+		} else {
+			return nil, fmt.Errorf("either workspace_identifier or session_identifier must be provided (no recent workspace found)")
+		}
 	}
 
 	if workspaceID != "" && sessionID != "" {
