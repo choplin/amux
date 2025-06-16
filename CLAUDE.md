@@ -126,7 +126,7 @@ return fmt.Errorf("Workspace not found.")  // Bad
 
 ## Important Notes
 
-1. **MCP Connection**: Always use `--root-dir` flag when starting MCP server
+1. **MCP Connection**: Always use `--git-root` flag when starting MCP server
 2. **Workspace Names**: Use descriptive names with prefixes (fix-, feat-, chore-)
 3. **IDs**: Both names and numeric IDs work for all commands
 4. **Git Integration**: Each workspace is a real git worktree - use git normally
@@ -151,7 +151,7 @@ amux ws show <id-or-name>
 amux ws remove <id-or-name>
 
 # Start MCP server
-amux mcp --root-dir /path/to/project
+amux mcp --git-root /path/to/project
 
 # Check version
 amux version
@@ -181,7 +181,7 @@ For example:
 
 If Claude Code can't connect:
 
-1. Ensure `--root-dir` points to valid git repository
+1. Ensure `--git-root` points to valid git repository
 2. Check amux binary path is absolute in MCP config
 3. Restart Claude Code after config changes
 

@@ -10,7 +10,7 @@ Copy this to CLAUDE.local.md and customize it for your workflow.
   "mcpServers": {
     "amux": {
       "command": "/path/to/your/amux/bin/amux",
-      "args": ["mcp", "--root-dir", "/path/to/your/project"],
+      "args": ["mcp", "--git-root", "/path/to/your/project"],
       "env": {}
     }
   }
