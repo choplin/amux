@@ -88,7 +88,7 @@ func (s *ServerV2) handleStorageRead(ctx context.Context, request mcp.CallToolRe
 	var storagePath string
 	if workspaceID != "" {
 		// Get workspace storage path
-		ws, err := s.workspaceManager.ResolveWorkspace(workspace.Identifier(workspaceID))
+		ws, err := s.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(workspaceID))
 		if err != nil {
 			return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 		}
@@ -99,7 +99,7 @@ func (s *ServerV2) handleStorageRead(ctx context.Context, request mcp.CallToolRe
 		if err != nil {
 			return nil, fmt.Errorf("failed to create session manager: %w", err)
 		}
-		sess, err := sessionManager.ResolveSession(session.Identifier(sessionID))
+		sess, err := sessionManager.ResolveSession(ctx, session.Identifier(sessionID))
 		if err != nil {
 			return nil, fmt.Errorf("failed to get session: %w", err)
 		}
@@ -156,7 +156,7 @@ func (s *ServerV2) handleStorageWrite(ctx context.Context, request mcp.CallToolR
 	var storagePath string
 	if workspaceID != "" {
 		// Get workspace storage path
-		ws, err := s.workspaceManager.ResolveWorkspace(workspace.Identifier(workspaceID))
+		ws, err := s.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(workspaceID))
 		if err != nil {
 			return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 		}
@@ -167,7 +167,7 @@ func (s *ServerV2) handleStorageWrite(ctx context.Context, request mcp.CallToolR
 		if err != nil {
 			return nil, fmt.Errorf("failed to create session manager: %w", err)
 		}
-		sess, err := sessionManager.ResolveSession(session.Identifier(sessionID))
+		sess, err := sessionManager.ResolveSession(ctx, session.Identifier(sessionID))
 		if err != nil {
 			return nil, fmt.Errorf("failed to get session: %w", err)
 		}
@@ -228,7 +228,7 @@ func (s *ServerV2) handleStorageList(ctx context.Context, request mcp.CallToolRe
 	var storagePath string
 	if workspaceID != "" {
 		// Get workspace storage path
-		ws, err := s.workspaceManager.ResolveWorkspace(workspace.Identifier(workspaceID))
+		ws, err := s.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(workspaceID))
 		if err != nil {
 			return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 		}
@@ -239,7 +239,7 @@ func (s *ServerV2) handleStorageList(ctx context.Context, request mcp.CallToolRe
 		if err != nil {
 			return nil, fmt.Errorf("failed to create session manager: %w", err)
 		}
-		sess, err := sessionManager.ResolveSession(session.Identifier(sessionID))
+		sess, err := sessionManager.ResolveSession(ctx, session.Identifier(sessionID))
 		if err != nil {
 			return nil, fmt.Errorf("failed to get session: %w", err)
 		}

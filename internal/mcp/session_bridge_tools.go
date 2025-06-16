@@ -53,7 +53,7 @@ func (s *ServerV2) handleResourceSessionList(ctx context.Context, request mcp.Ca
 		return nil, fmt.Errorf("failed to create session manager: %w", err)
 	}
 
-	sessions, err := sessionManager.ListSessions()
+	sessions, err := sessionManager.ListSessions(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list sessions: %w", err)
 	}

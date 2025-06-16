@@ -18,7 +18,7 @@ func TestWorkspaceBridgeTools(t *testing.T) {
 		Name:        "test-workspace-1",
 		Description: "First test workspace",
 	}
-	ws1, err := testServer.workspaceManager.Create(ws1Opts)
+	ws1, err := testServer.workspaceManager.Create(context.Background(), ws1Opts)
 	if err != nil {
 		t.Fatalf("failed to create workspace 1: %v", err)
 	}
@@ -27,7 +27,7 @@ func TestWorkspaceBridgeTools(t *testing.T) {
 		Name:        "test-workspace-2",
 		Description: "Second test workspace",
 	}
-	ws2, err := testServer.workspaceManager.Create(ws2Opts)
+	ws2, err := testServer.workspaceManager.Create(context.Background(), ws2Opts)
 	if err != nil {
 		t.Fatalf("failed to create workspace 2: %v", err)
 	}

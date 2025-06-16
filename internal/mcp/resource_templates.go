@@ -103,7 +103,7 @@ func (s *ServerV2) handleWorkspaceDetailResource(ctx context.Context, request mc
 		return nil, err
 	}
 
-	detail, err := s.getWorkspaceDetail(workspaceID)
+	detail, err := s.getWorkspaceDetail(ctx, workspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +136,7 @@ func (s *ServerV2) handleWorkspaceFilesResource(ctx context.Context, request mcp
 		subPath = strings.TrimPrefix(subPath, "files/")
 	}
 
-	ws, err := s.workspaceManager.Get(workspace.ID(workspaceID))
+	ws, err := s.workspaceManager.Get(ctx, workspace.ID(workspaceID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get workspace: %w", err)
 	}
@@ -241,7 +241,7 @@ func (s *ServerV2) handleWorkspaceContextResource(ctx context.Context, request m
 		return nil, err
 	}
 
-	ws, err := s.workspaceManager.Get(workspace.ID(workspaceID))
+	ws, err := s.workspaceManager.Get(ctx, workspace.ID(workspaceID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get workspace: %w", err)
 	}

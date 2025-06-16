@@ -52,7 +52,7 @@ func attachSession(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get session
-	sess, err := sessionManager.ResolveSession(session.Identifier(sessionID))
+	sess, err := sessionManager.ResolveSession(cmd.Context(), session.Identifier(sessionID))
 	if err != nil {
 		return fmt.Errorf("failed to get session: %w", err)
 	}

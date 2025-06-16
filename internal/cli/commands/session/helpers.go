@@ -1,6 +1,7 @@
 package session
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/aki/amux/internal/core/config"
@@ -18,19 +19,19 @@ func createSessionManager(configManager *config.Manager, wsManager *workspace.Ma
 		return nil, fmt.Errorf("failed to create ID mapper: %w", err)
 	}
 
-	store, err := session.NewFileStore(configManager.GetAmuxDir())
-	if err != nil {
-		return nil, fmt.Errorf("failed to create session store: %w", err)
-	}
-
 	// Create logger
 	log := logger.Default()
 
-	return session.NewManager(store, wsManager, idMapper, session.WithLogger(log)), nil
+	manager, err := session.NewManager(configManager.GetAmuxDir(), wsManager, idMapper, session.WithLogger(log))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create session manager: %w", err)
+	}
+
+	return manager, nil
 }
 
 // createAutoWorkspace creates a new workspace with a name based on session ID
-func createAutoWorkspace(wsManager *workspace.Manager, sessionID session.ID, customName, customDescription string) (*workspace.Workspace, error) {
+func createAutoWorkspace(ctx context.Context, wsManager *workspace.Manager, sessionID session.ID, customName, customDescription string) (*workspace.Workspace, error) {
 	// Use custom name if provided, otherwise use session ID
 	name := customName
 	if name == "" {
@@ -52,7 +53,7 @@ func createAutoWorkspace(wsManager *workspace.Manager, sessionID session.ID, cus
 		AutoCreated: true,
 	}
 
-	ws, err := wsManager.Create(opts)
+	ws, err := wsManager.Create(ctx, opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create workspace: %w", err)
 	}

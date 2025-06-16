@@ -104,7 +104,7 @@ func TestHandlePreparePRPrompt(t *testing.T) {
 	s := setupTestServer(t)
 
 	// Create a test workspace
-	ws, err := s.workspaceManager.Create(workspace.CreateOptions{
+	ws, err := s.workspaceManager.Create(context.Background(), workspace.CreateOptions{
 		Name:        "test-pr-workspace",
 		Description: "Test workspace for PR prompt",
 		BaseBranch:  "main",
@@ -189,14 +189,14 @@ func TestHandleReviewWorkspacePrompt(t *testing.T) {
 	s := setupTestServer(t)
 
 	// Create test workspaces with different ages
-	newWs, err := s.workspaceManager.Create(workspace.CreateOptions{
+	newWs, err := s.workspaceManager.Create(context.Background(), workspace.CreateOptions{
 		Name:        "new-workspace",
 		Description: "Recently created workspace",
 	})
 	require.NoError(t, err)
 
 	// Create an "old" workspace (we'll just use the same for testing)
-	oldWs, err := s.workspaceManager.Create(workspace.CreateOptions{
+	oldWs, err := s.workspaceManager.Create(context.Background(), workspace.CreateOptions{
 		Name:        "old-workspace",
 		Description: "Old workspace for testing",
 	})
@@ -458,7 +458,7 @@ func TestRegisterPrompts(t *testing.T) {
 	assert.NotNil(t, result)
 
 	// Test prepare-pr prompt exists
-	ws, err := s.workspaceManager.Create(workspace.CreateOptions{
+	ws, err := s.workspaceManager.Create(context.Background(), workspace.CreateOptions{
 		Name: "test-prompt-reg",
 	})
 	require.NoError(t, err)

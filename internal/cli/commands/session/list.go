@@ -45,7 +45,7 @@ func listSessions(cmd *cobra.Command, args []string) error {
 	}
 
 	// List sessions
-	sessions, err := sessionManager.ListSessions()
+	sessions, err := sessionManager.ListSessions(cmd.Context())
 	if err != nil {
 		return fmt.Errorf("failed to list sessions: %w", err)
 	}
@@ -67,7 +67,7 @@ func listSessions(cmd *cobra.Command, args []string) error {
 		info := sess.Info()
 
 		// Get workspace name
-		ws, err := wsManager.ResolveWorkspace(workspace.Identifier(info.WorkspaceID))
+		ws, err := wsManager.ResolveWorkspace(cmd.Context(), workspace.Identifier(info.WorkspaceID))
 		wsName := info.WorkspaceID
 		if err == nil {
 			wsName = ws.Name

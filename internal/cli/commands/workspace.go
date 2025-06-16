@@ -196,7 +196,7 @@ func runCreateWorkspace(cmd *cobra.Command, args []string) error {
 		Description: createDescription,
 	}
 
-	ws, err := manager.Create(opts)
+	ws, err := manager.Create(cmd.Context(), opts)
 	if err != nil {
 		return fmt.Errorf("failed to create workspace: %w", err)
 	}
@@ -232,7 +232,7 @@ func runListWorkspace(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	workspaces, err := manager.List(workspace.ListOptions{})
+	workspaces, err := manager.List(cmd.Context(), workspace.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to list workspaces: %w", err)
 	}
@@ -279,7 +279,7 @@ func runShowWorkspace(cmd *cobra.Command, args []string) error {
 	}
 
 	// Resolve workspace by name or ID
-	ws, err := manager.ResolveWorkspace(workspace.Identifier(identifier))
+	ws, err := manager.ResolveWorkspace(cmd.Context(), workspace.Identifier(identifier))
 	if err != nil {
 		return fmt.Errorf("failed to resolve workspace: %w", err)
 	}
@@ -305,7 +305,7 @@ func runRemoveWorkspace(cmd *cobra.Command, args []string) error {
 
 	// Resolve workspace by name or ID
 
-	ws, err := manager.ResolveWorkspace(workspace.Identifier(identifier))
+	ws, err := manager.ResolveWorkspace(cmd.Context(), workspace.Identifier(identifier))
 	if err != nil {
 		return fmt.Errorf("failed to resolve workspace: %w", err)
 	}
@@ -356,7 +356,7 @@ func runRemoveWorkspace(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	if err := manager.Remove(workspace.Identifier(ws.ID)); err != nil {
+	if err := manager.Remove(cmd.Context(), workspace.Identifier(ws.ID)); err != nil {
 		return fmt.Errorf("failed to remove workspace: %w", err)
 	}
 
@@ -377,7 +377,7 @@ func runPruneWorkspace(cmd *cobra.Command, args []string) error {
 		DryRun: pruneDryRun,
 	}
 
-	removed, err := manager.Cleanup(opts)
+	removed, err := manager.Cleanup(cmd.Context(), opts)
 	if err != nil {
 		return fmt.Errorf("failed to prune workspaces: %w", err)
 	}
@@ -412,7 +412,7 @@ func runCdWorkspace(cmd *cobra.Command, args []string) error {
 	}
 
 	// Resolve workspace by name or ID
-	ws, err := manager.ResolveWorkspace(workspace.Identifier(identifier))
+	ws, err := manager.ResolveWorkspace(cmd.Context(), workspace.Identifier(identifier))
 	if err != nil {
 		return fmt.Errorf("failed to resolve workspace: %w", err)
 	}

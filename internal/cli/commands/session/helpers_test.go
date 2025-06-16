@@ -1,6 +1,7 @@
 package session
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -31,7 +32,7 @@ func TestCreateAutoWorkspace(t *testing.T) {
 	sessionID := session.GenerateID()
 
 	// Test auto workspace creation with default name and description
-	ws, err := createAutoWorkspace(wsManager, sessionID, "", "")
+	ws, err := createAutoWorkspace(context.Background(), wsManager, sessionID, "", "")
 	require.NoError(t, err)
 	assert.NotNil(t, ws)
 
@@ -61,10 +62,10 @@ func TestCreateAutoWorkspaceUniqueness(t *testing.T) {
 	sessionID1 := session.GenerateID()
 	sessionID2 := session.GenerateID()
 
-	ws1, err := createAutoWorkspace(wsManager, sessionID1, "", "")
+	ws1, err := createAutoWorkspace(context.Background(), wsManager, sessionID1, "", "")
 	require.NoError(t, err)
 
-	ws2, err := createAutoWorkspace(wsManager, sessionID2, "", "")
+	ws2, err := createAutoWorkspace(context.Background(), wsManager, sessionID2, "", "")
 	require.NoError(t, err)
 
 	// Ensure workspace names are different
@@ -93,7 +94,7 @@ func TestCreateAutoWorkspaceWithCustomNameAndDescription(t *testing.T) {
 	// Test auto workspace creation with custom name and description
 	customName := "my-custom-workspace"
 	customDescription := "This is a custom workspace for testing"
-	ws, err := createAutoWorkspace(wsManager, sessionID, customName, customDescription)
+	ws, err := createAutoWorkspace(context.Background(), wsManager, sessionID, customName, customDescription)
 	require.NoError(t, err)
 	assert.NotNil(t, ws)
 
@@ -122,7 +123,7 @@ func TestCreateAutoWorkspaceWithCustomNameOnly(t *testing.T) {
 
 	// Test auto workspace creation with custom name only
 	customName := "custom-name-only"
-	ws, err := createAutoWorkspace(wsManager, sessionID, customName, "")
+	ws, err := createAutoWorkspace(context.Background(), wsManager, sessionID, customName, "")
 	require.NoError(t, err)
 	assert.NotNil(t, ws)
 

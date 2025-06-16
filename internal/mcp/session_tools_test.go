@@ -27,7 +27,7 @@ func TestSessionRun(t *testing.T) {
 		Name:        "test-workspace",
 		Description: "Test workspace for session",
 	}
-	ws, err := testServer.workspaceManager.Create(wsOpts)
+	ws, err := testServer.workspaceManager.Create(context.Background(), wsOpts)
 	if err != nil {
 		t.Fatalf("failed to create workspace: %v", err)
 	}
@@ -94,7 +94,7 @@ func TestSessionRun(t *testing.T) {
 		// Clean up - stop the session
 		sessionID := response["id"].(string)
 		sessionManager, _ := testServer.createSessionManager()
-		sess, _ := sessionManager.ResolveSession(session.Identifier(sessionID))
+		sess, _ := sessionManager.ResolveSession(context.Background(), session.Identifier(sessionID))
 		if sess != nil {
 			_ = sess.Stop()
 		}
@@ -106,7 +106,7 @@ func TestSessionRun(t *testing.T) {
 			Name:        "test-workspace-2",
 			Description: "Test workspace for named session",
 		}
-		ws2, err := testServer.workspaceManager.Create(wsOpts2)
+		ws2, err := testServer.workspaceManager.Create(context.Background(), wsOpts2)
 		if err != nil {
 			t.Fatalf("failed to create workspace: %v", err)
 		}
@@ -157,7 +157,7 @@ func TestSessionRun(t *testing.T) {
 		// Clean up - stop the session
 		sessionID := response["id"].(string)
 		sessionManager, _ := testServer.createSessionManager()
-		sess, _ := sessionManager.ResolveSession(session.Identifier(sessionID))
+		sess, _ := sessionManager.ResolveSession(context.Background(), session.Identifier(sessionID))
 		if sess != nil {
 			_ = sess.Stop()
 		}
@@ -211,7 +211,7 @@ func TestSessionStop(t *testing.T) {
 	wsOpts := workspace.CreateOptions{
 		Name: "test-workspace",
 	}
-	ws, err := testServer.workspaceManager.Create(wsOpts)
+	ws, err := testServer.workspaceManager.Create(context.Background(), wsOpts)
 	if err != nil {
 		t.Fatalf("failed to create workspace: %v", err)
 	}
@@ -222,7 +222,7 @@ func TestSessionStop(t *testing.T) {
 		t.Fatalf("failed to create session manager: %v", err)
 	}
 
-	sess, err := sessionManager.CreateSession(session.Options{
+	sess, err := sessionManager.CreateSession(context.Background(), session.Options{
 		WorkspaceID: ws.ID,
 		AgentID:     "test-agent",
 	})
@@ -293,7 +293,7 @@ func TestSessionSendInput(t *testing.T) {
 	wsOpts := workspace.CreateOptions{
 		Name: "test-workspace",
 	}
-	ws, err := testServer.workspaceManager.Create(wsOpts)
+	ws, err := testServer.workspaceManager.Create(context.Background(), wsOpts)
 	if err != nil {
 		t.Fatalf("failed to create workspace: %v", err)
 	}
@@ -304,7 +304,7 @@ func TestSessionSendInput(t *testing.T) {
 		t.Fatalf("failed to create session manager: %v", err)
 	}
 
-	sess, err := sessionManager.CreateSession(session.Options{
+	sess, err := sessionManager.CreateSession(context.Background(), session.Options{
 		WorkspaceID: ws.ID,
 		AgentID:     "test-agent",
 	})

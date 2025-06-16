@@ -1,7 +1,6 @@
 package session
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -75,13 +74,13 @@ func runSession(cmd *cobra.Command, args []string) error {
 	// Get or select workspace
 	var ws *workspace.Workspace
 	if runWorkspace != "" {
-		ws, err = wsManager.ResolveWorkspace(workspace.Identifier(runWorkspace))
+		ws, err = wsManager.ResolveWorkspace(cmd.Context(), workspace.Identifier(runWorkspace))
 		if err != nil {
 			return fmt.Errorf("failed to resolve workspace: %w", err)
 		}
 	} else {
 		// Auto-create a new workspace using session ID
-		ws, err = createAutoWorkspace(wsManager, sessionID, runName, runDescription)
+		ws, err = createAutoWorkspace(cmd.Context(), wsManager, sessionID, runName, runDescription)
 		if err != nil {
 			return fmt.Errorf("failed to create auto-workspace: %w", err)
 		}
@@ -138,7 +137,7 @@ func runSession(cmd *cobra.Command, args []string) error {
 		Description:   runSessionDescription,
 	}
 
-	sess, err := sessionManager.CreateSession(opts)
+	sess, err := sessionManager.CreateSession(cmd.Context(), opts)
 	if err != nil {
 		return fmt.Errorf("failed to create session: %w", err)
 	}
@@ -152,8 +151,7 @@ func runSession(cmd *cobra.Command, args []string) error {
 	ui.Success("Started session: %s in workspace '%s'", displayID, ws.Name)
 
 	// Start session
-	ctx := context.Background()
-	if err := sess.Start(ctx); err != nil {
+	if err := sess.Start(cmd.Context()); err != nil {
 		return fmt.Errorf("failed to start session: %w", err)
 	}
 

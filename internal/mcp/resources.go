@@ -42,7 +42,7 @@ type workspaceInfo struct {
 
 // handleWorkspaceListResource returns a list of all workspaces
 func (s *ServerV2) handleWorkspaceListResource(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
-	workspaceList, err := s.getWorkspaceList()
+	workspaceList, err := s.getWorkspaceList(ctx)
 	if err != nil {
 		return nil, err
 	}
