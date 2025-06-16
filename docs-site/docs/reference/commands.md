@@ -170,17 +170,34 @@ amux run <agent-id> [flags]
 **Flags:**
 
 - `--workspace`, `-w` - Workspace to run in (creates if not exists)
-- `--name`, `-n` - Session name
-- `--detach`, `-d` - Start in background
+- `--name`, `-n` - Name for auto-created workspace
+- `--description`, `-d` - Description for auto-created workspace
+- `--session-name` - Human-readable name for the session
+- `--session-description` - Description of the session purpose
+- `--command`, `-c` - Override agent command
+- `--env`, `-e` - Environment variables (KEY=VALUE)
+- `--initial-prompt`, `-p` - Initial prompt to send after starting
 
 **Examples:**
 
 ```bash
-# Run Claude in specific workspace
+# Run Claude with auto-created workspace
+amux run claude
+
+# Run Claude with custom workspace name and description
+amux run claude --name feature-auth --description "Implementing authentication"
+
+# Run Claude in a specific workspace
 amux run claude --workspace feature-auth
 
-# Run with custom session name
-amux run aider --name "security-review"
+# Run with custom command
+amux run claude --command "claude code --model opus"
+
+# Run with environment variables
+amux run claude --env ANTHROPIC_API_KEY=sk-...
+
+# Run with initial prompt
+amux run claude --initial-prompt "Please analyze the codebase"
 ```
 
 ### `amux session list` (alias: `amux ps`)
@@ -264,10 +281,21 @@ amux session logs -f sess-abc123
 
 ### `amux tail`
 
-Alias for `amux session logs -f`.
+Follow agent session logs in real-time (alias for `amux session logs -f`).
 
 ```bash
 amux tail <session-id>
+```
+
+**Examples:**
+
+```bash
+# Tail session logs
+amux tail sess-abc123
+
+# Works with session ID, index, or name
+amux tail 1
+amux tail my-session
 ```
 
 ## Agent Commands
@@ -290,19 +318,7 @@ Show agent configuration.
 amux agent show <agent-id>
 ```
 
-### `amux agent add`
-
-Add a new agent configuration.
-
-```bash
-amux agent add <agent-id> [flags]
-```
-
-**Flags:**
-
-- `--name`, `-n` - Display name
-- `--command`, `-c` - Command to execute
-- `--env`, `-e` - Environment variables
+**Note:** To add or modify agents, use `amux config edit` to edit the configuration file directly. Agent configurations are defined in the `.amux/config.yaml` file.
 
 ## Configuration Commands
 
@@ -342,6 +358,28 @@ amux config edit
 ```
 
 Uses `$EDITOR` environment variable (defaults to `vi`).
+
+### `amux config validate`
+
+Validate configuration file using JSON Schema.
+
+```bash
+amux config validate
+```
+
+**Flags:**
+
+- `--verbose`, `-v` - Show detailed validation errors
+
+**Examples:**
+
+```bash
+# Validate configuration
+amux config validate
+
+# Validate with verbose output
+amux config validate --verbose
+```
 
 ## MCP Server
 
@@ -384,6 +422,43 @@ amux init
 
 Creates `.amux/` directory structure.
 
+### `amux hooks`
+
+Manage workspace lifecycle hooks that run automatically during workspace events.
+
+```bash
+amux hooks [command]
+```
+
+**Subcommands:**
+
+- `init` - Initialize hooks configuration
+- `list` - List configured hooks
+- `test` - Test hooks for specific event
+- `trust` - Trust hooks in this project
+
+**Examples:**
+
+```bash
+# Initialize hooks
+amux hooks init
+
+# List configured hooks
+amux hooks list
+
+# Test post-create hook
+amux hooks test post-create
+
+# Trust hooks (required before they run)
+amux hooks trust
+```
+
+Hooks allow you to automate tasks like:
+
+- Installing dependencies after workspace creation
+- Setting up development environments
+- Preparing context for AI agents
+
 ### `amux version`
 
 Show version information.
@@ -405,6 +480,27 @@ Displays:
 - Active workspaces count
 - Running sessions
 - System health
+
+### `amux completion`
+
+Generate shell completion scripts.
+
+```bash
+amux completion [bash|zsh|fish|powershell]
+```
+
+**Examples:**
+
+```bash
+# Generate bash completion
+amux completion bash > ~/.bash_completion.d/amux
+
+# Generate zsh completion
+amux completion zsh > ~/.zsh/completions/_amux
+
+# Generate fish completion
+amux completion fish > ~/.config/fish/completions/amux.fish
+```
 
 ## Output Formats
 

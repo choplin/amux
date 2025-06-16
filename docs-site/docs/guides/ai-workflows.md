@@ -45,31 +45,26 @@ amux mcp --git-root /path/to/your/project
 
 ## Available MCP Tools
 
-### Workspace Tools
+### Core Operations (CLI ↔ MCP)
 
-| CLI Command | MCP Tool | Purpose |
-|------------|----------|----------|
-| `amux ws create` | `workspace_create` | Create isolated workspace |
-| `amux ws list` | `resource_workspace_list` | List all workspaces |
-| `amux ws show` | `resource_workspace_show` | Show workspace details |
-| `amux ws remove` | `workspace_remove` | Remove workspace |
+| Operation | CLI Command | MCP Tool |
+|-----------|-------------|----------|
+| Create workspace | `amux ws create <name>` | `workspace_create` |
+| List workspaces | `amux ws list` | `resource_workspace_list` |
+| Show workspace | `amux ws show <id>` | `resource_workspace_show` |
+| Remove workspace | `amux ws remove <id>` | `workspace_remove` |
+| Run agent | `amux run <agent>` | `session_run` |
+| List sessions | `amux ps` | `resource_session_list` |
+| Stop session | `amux session stop <id>` | `session_stop` |
 
-### Session Tools
+### MCP-Only Features
 
-| CLI Command | MCP Tool | Purpose |
-|------------|----------|----------|
-| `amux run` | `session_run` | Start AI agent session |
-| `amux ps` | `resource_session_list` | List running sessions |
-| `amux session stop` | `session_stop` | Stop running session |
-| N/A | `session_send_input` | Send input to session |
-
-### Storage Tools
-
-| CLI Command | MCP Tool | Purpose |
-|------------|----------|----------|
-| N/A | `storage_read` | Read from storage |
-| N/A | `storage_write` | Write to storage |
-| N/A | `storage_list` | List storage contents |
+| Feature | MCP Tool | Purpose |
+|---------|----------|----------|
+| Browse files | `resource_workspace_browse` | Remote file access |
+| Session output | `resource_session_output` | Get logs/output |
+| Send input | `session_send_input` | Interactive control |
+| Storage ops | `storage_read/write/list` | Persistent data |
 
 ## Common Workflow Prompts
 

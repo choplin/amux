@@ -82,6 +82,7 @@ amux ws list --json | jq '.[] | select(.age > 7)'
 #### AI Agent Integration
 
 Configure in Claude Code:
+
 ```json
 {
   "mcpServers": {
@@ -94,6 +95,7 @@ Configure in Claude Code:
 ```
 
 Then use MCP tools:
+
 ```javascript
 workspace_create({ name: "feature-auth" })
 session_run({ agent_id: "claude", workspace_identifier: "1" })
