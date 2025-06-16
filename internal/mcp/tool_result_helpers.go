@@ -10,7 +10,6 @@ import (
 // ToolResultMetadata contains metadata for tool results
 type ToolResultMetadata struct {
 	ToolUsed           string              `json:"tool_used"`
-	InferredParameters map[string]string   `json:"inferred_parameters,omitempty"`
 	SuggestedNextTools []map[string]string `json:"suggested_next_tools,omitempty"`
 }
 
