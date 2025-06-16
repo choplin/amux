@@ -42,7 +42,7 @@ agents:
     name: Claude
     type: tmux
     description: Test agent
-    tmux:
+    params:
       command: claude`,
 			expectedError:  false,
 			expectedOutput: "Configuration is valid",
@@ -55,7 +55,7 @@ project:
 agents:
   claude:
     name: Claude
-    tmux:
+    params:
       command: claude`,
 			expectedError:  true,
 			expectedOutput: "Configuration validation failed",
@@ -68,7 +68,7 @@ project:
 agents:
   claude:
     type: tmux
-    tmux:
+    params:
       command: claude`,
 			expectedError:  true,
 			expectedOutput: "Configuration validation failed",
@@ -82,13 +82,13 @@ agents:
   claude:
     name: Claude
     type: unsupported
-    tmux:
+    params:
       command: claude`,
 			expectedError:  true,
 			expectedOutput: "Configuration validation failed",
 		},
 		{
-			name: "missing tmux command",
+			name: "missing params command",
 			config: `version: "1.0"
 project:
   name: test-project
@@ -96,13 +96,13 @@ agents:
   claude:
     name: Claude
     type: tmux
-    tmux:
+    params:
       shell: /bin/bash`,
 			expectedError:  true,
 			expectedOutput: "Configuration validation failed",
 		},
 		{
-			name: "missing tmux config for tmux type",
+			name: "missing params config for tmux type",
 			config: `version: "1.0"
 project:
   name: test-project
@@ -180,14 +180,14 @@ agents:
     description: Test agent
     environment:
       TEST_VAR: test_value
-    tmux:
+    params:
       command: claude
       shell: /bin/bash
       windowName: claude-window
   aider:
     name: Aider
     type: tmux
-    tmux:
+    params:
       command: aider`
 
 	configPath := filepath.Join(amuxDir, "config.yaml")

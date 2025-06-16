@@ -115,10 +115,12 @@ func (m *Manager) GetDefaultCommand(agentID string) (string, error) {
 
 	// Get command based on agent type
 	switch agent.Type {
-	case "tmux":
-		if agent.Tmux != nil && agent.Tmux.Command != "" {
-			return agent.Tmux.Command, nil
+	case config.AgentTypeTmux:
+		params, err := agent.GetTmuxParams()
+		if err == nil && params.Command != "" {
+			return params.Command, nil
 		}
+	case config.AgentTypeClaudeCode, config.AgentTypeAPI:
 		// Future: handle other types
 	}
 

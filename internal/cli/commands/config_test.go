@@ -32,8 +32,8 @@ func TestConfigShowCommand(t *testing.T) {
 		Agents: map[string]config.Agent{
 			"test-agent": {
 				Name: "Test Agent",
-				Type: "tmux",
-				Tmux: &config.TmuxConfig{
+				Type: config.AgentTypeTmux,
+				Params: &config.TmuxParams{
 					Command: "test-command",
 				},
 			},

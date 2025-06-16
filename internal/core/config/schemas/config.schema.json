@@ -146,30 +146,9 @@
           },
           "uniqueItems": true
         },
-        "tmux": {
+        "params": {
           "type": "object",
-          "description": "Tmux-specific configuration",
-          "required": ["command"],
-          "additionalProperties": false,
-          "properties": {
-            "command": {
-              "type": "string",
-              "description": "Command to execute in the tmux session",
-              "minLength": 1
-            },
-            "shell": {
-              "type": "string",
-              "description": "Shell to use for the session"
-            },
-            "windowName": {
-              "type": "string",
-              "description": "Name for the tmux window"
-            },
-            "detached": {
-              "type": "boolean",
-              "description": "Whether to detach from the session after creation"
-            }
-          }
+          "description": "Type-specific agent parameters"
         }
       },
       "allOf": [
@@ -180,7 +159,33 @@
             }
           },
           "then": {
-            "required": ["tmux"]
+            "required": ["params"],
+            "properties": {
+              "params": {
+                "type": "object",
+                "required": ["command"],
+                "additionalProperties": false,
+                "properties": {
+                  "command": {
+                    "type": "string",
+                    "description": "Command to execute in the tmux session",
+                    "minLength": 1
+                  },
+                  "shell": {
+                    "type": "string",
+                    "description": "Shell to use for the session"
+                  },
+                  "windowName": {
+                    "type": "string",
+                    "description": "Name for the tmux window"
+                  },
+                  "detached": {
+                    "type": "boolean",
+                    "description": "Whether to detach from the session after creation"
+                  }
+                }
+              }
+            }
           }
         }
       ]

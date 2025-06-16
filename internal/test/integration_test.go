@@ -38,11 +38,11 @@ func TestIntegration_FullWorkflow(t *testing.T) {
 	cfg.Project.Name = "test-integration"
 	cfg.Agents["test-agent"] = config.Agent{
 		Name: "Test Agent",
-		Type: "tmux",
+		Type: config.AgentTypeTmux,
 		Environment: map[string]string{
 			"TEST_ENV": "integration",
 		},
-		Tmux: &config.TmuxConfig{
+		Params: &config.TmuxParams{
 			Command: "echo 'Test agent running'",
 		},
 	}
@@ -222,22 +222,22 @@ func TestIntegration_MultipleAgents(t *testing.T) {
 	// Add multiple agents
 	cfg.Agents["agent1"] = config.Agent{
 		Name: "Agent 1",
-		Type: "tmux",
-		Tmux: &config.TmuxConfig{
+		Type: config.AgentTypeTmux,
+		Params: &config.TmuxParams{
 			Command: "echo 'Agent 1'",
 		},
 	}
 	cfg.Agents["agent2"] = config.Agent{
 		Name: "Agent 2",
-		Type: "tmux",
-		Tmux: &config.TmuxConfig{
+		Type: config.AgentTypeTmux,
+		Params: &config.TmuxParams{
 			Command: "echo 'Agent 2'",
 		},
 	}
 	cfg.Agents["agent3"] = config.Agent{
 		Name: "Agent 3",
-		Type: "tmux",
-		Tmux: &config.TmuxConfig{
+		Type: config.AgentTypeTmux,
+		Params: &config.TmuxParams{
 			Command: "echo 'Agent 3'",
 		},
 	}

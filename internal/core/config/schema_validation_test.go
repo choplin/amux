@@ -31,7 +31,7 @@ agents:
     name: Claude
     type: tmux
     description: Test agent
-    tmux:
+    params:
       command: claude`,
 			wantErr: false,
 		},
@@ -43,7 +43,7 @@ agents:
   claude:
     name: Claude
     type: tmux
-    tmux:
+    params:
       command: claude`,
 			wantErr: true,
 			errMsg:  "missing properties: 'version'",
@@ -55,7 +55,7 @@ agents:
   claude:
     name: Claude
     type: tmux
-    tmux:
+    params:
       command: claude`,
 			wantErr: true,
 			errMsg:  "missing properties: 'project'",
@@ -77,7 +77,7 @@ agents:
   claude:
     name: Claude
     type: tmux
-    tmux:
+    params:
       command: claude`,
 			wantErr: true,
 			errMsg:  "value must be \"1.0\"",
@@ -90,7 +90,7 @@ project:
 agents:
   claude:
     type: tmux
-    tmux:
+    params:
       command: claude`,
 			wantErr: true,
 			errMsg:  "missing properties: 'name'",
@@ -103,7 +103,7 @@ project:
 agents:
   claude:
     name: Claude
-    tmux:
+    params:
       command: claude`,
 			wantErr: true,
 			errMsg:  "missing properties: 'type'",
@@ -117,13 +117,13 @@ agents:
   claude:
     name: Claude
     type: docker
-    tmux:
+    params:
       command: claude`,
 			wantErr: true,
 			errMsg:  "value must be \"tmux\"",
 		},
 		{
-			name: "tmux agent missing tmux config",
+			name: "tmux agent missing params config",
 			yaml: `version: "1.0"
 project:
   name: test-project
@@ -132,7 +132,7 @@ agents:
     name: Claude
     type: tmux`,
 			wantErr: true,
-			errMsg:  "missing properties: 'tmux'",
+			errMsg:  "missing properties: 'params'",
 		},
 		{
 			name: "tmux config missing command",
@@ -143,7 +143,7 @@ agents:
   claude:
     name: Claude
     type: tmux
-    tmux:
+    params:
       shell: /bin/bash`,
 			wantErr: true,
 			errMsg:  "missing properties: 'command'",
@@ -158,7 +158,7 @@ agents:
     name: Claude
     type: tmux
     unknown: value
-    tmux:
+    params:
       command: claude`,
 			wantErr: true,
 			errMsg:  "additionalProperties",
@@ -172,7 +172,7 @@ agents:
   "invalid-@-id":
     name: Claude
     type: tmux
-    tmux:
+    params:
       command: claude`,
 			wantErr: true,
 			errMsg:  "additionalProperties 'invalid-@-id' not allowed",
@@ -189,7 +189,7 @@ agents:
   claude:
     name: Claude
     type: tmux
-    tmux:
+    params:
       command: claude`,
 			wantErr: true,
 			errMsg:  "value must be one of \"stdio\", \"http\"",
@@ -220,7 +220,7 @@ agents:
     tags:
       - ai
       - assistant
-    tmux:
+    params:
       command: claude
       shell: /bin/zsh
       windowName: claude-window
@@ -258,7 +258,7 @@ agents:
   claude:
     name: Claude
     type: tmux
-    tmux:
+    params:
       command: claude`
 
 		require.NoError(t, os.WriteFile(configPath, []byte(validConfig), 0o644))
@@ -268,7 +268,13 @@ agents:
 		assert.Equal(t, "1.0", cfg.Version)
 		assert.Equal(t, "test-project", cfg.Project.Name)
 		assert.Equal(t, "Claude", cfg.Agents["claude"].Name)
-		assert.Equal(t, "tmux", cfg.Agents["claude"].Type)
+		assert.Equal(t, AgentTypeTmux, cfg.Agents["claude"].Type)
+
+		// Verify params were properly unmarshaled
+		agent := cfg.Agents["claude"]
+		params, err := agent.GetTmuxParams()
+		require.NoError(t, err)
+		assert.Equal(t, "claude", params.Command)
 	})
 
 	t.Run("invalid configuration", func(t *testing.T) {
@@ -325,7 +331,7 @@ agents:
   claude:
     name: Claude
     type: tmux
-    tmux:
+    params:
       command: claude`
 
 		require.NoError(t, os.WriteFile(configPath, []byte(validConfig), 0o644))
@@ -369,7 +375,7 @@ agents:
   future-agent:
     name: Future Agent
     type: claude-code
-    tmux:
+    params:
       command: some-command`,
 			wantErr: "value must be \"tmux\"",
 		},
@@ -382,7 +388,7 @@ agents:
   tmux-agent:
     name: Tmux Agent
     type: tmux
-    tmux:
+    params:
       command: bash
     claudeCode:
       cliPath: /usr/local/bin/claude`,

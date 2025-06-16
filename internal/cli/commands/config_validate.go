@@ -92,16 +92,18 @@ func validateConfig(cmd *cobra.Command, args []string) error {
 				ui.Info("    Type: %s", agent.Type)
 
 				switch agent.Type {
-				case "tmux":
-					if agent.Tmux != nil {
-						ui.Info("    Command: %s", agent.Tmux.Command)
-						if agent.Tmux.Shell != "" {
-							ui.Info("    Shell: %s", agent.Tmux.Shell)
+				case config.AgentTypeTmux:
+					if params, err := agent.GetTmuxParams(); err == nil {
+						ui.Info("    Command: %s", params.Command)
+						if params.Shell != "" {
+							ui.Info("    Shell: %s", params.Shell)
 						}
-						if agent.Tmux.WindowName != "" {
-							ui.Info("    Window Name: %s", agent.Tmux.WindowName)
+						if params.WindowName != "" {
+							ui.Info("    Window Name: %s", params.WindowName)
 						}
 					}
+				case config.AgentTypeClaudeCode, config.AgentTypeAPI:
+					// Future implementations
 				}
 
 				if agent.Description != "" {
