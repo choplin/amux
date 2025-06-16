@@ -24,6 +24,7 @@ We will enhance MCP tool discoverability through the following improvements:
 ### 1. Enhanced Tool Descriptions
 
 Add comprehensive descriptions to all MCP tools including:
+
 - Clear, detailed descriptions of what each tool does
 - "WHEN TO USE THIS TOOL" sections with specific triggers and use cases
 - Practical examples showing correct parameter usage
@@ -32,6 +33,7 @@ Add comprehensive descriptions to all MCP tools including:
 ### 2. Tool Chaining Hints
 
 Implement response metadata that includes:
+
 - The tool that was used
 - Suggested next tools based on common workflows
 - Contextual hints about what actions typically follow
@@ -39,6 +41,7 @@ Implement response metadata that includes:
 ### 3. Improved Error Messages
 
 Create custom error types that:
+
 - Provide clear error descriptions
 - Suggest alternative tools when appropriate
 - Include actionable recovery steps
@@ -46,6 +49,7 @@ Create custom error types that:
 ### 4. Explicit Parameter Requirements
 
 Based on user preference for explicit behavior:
+
 - Do NOT implement smart defaults or parameter inference
 - Require all necessary parameters to be explicitly provided
 - Keep tool behavior predictable and transparent
