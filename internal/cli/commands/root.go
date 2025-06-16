@@ -4,7 +4,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"github.com/aki/amux/internal/cli/commands/agent"
 	"github.com/aki/amux/internal/cli/commands/session"
 	"github.com/aki/amux/internal/cli/ui"
 )
@@ -45,8 +44,6 @@ func init() {
 	rootCmd.AddCommand(workspaceCmd)
 
 	rootCmd.AddCommand(session.Command())
-
-	rootCmd.AddCommand(agent.Command())
 
 	rootCmd.AddCommand(mcpCmd)
 

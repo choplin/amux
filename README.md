@@ -118,10 +118,6 @@ amux session logs <session>   # View session output
 amux session logs -f <session> # Follow logs (tail -f behavior)
 amux tail <session>           # alias: amux session logs -f
 
-# Agent configuration
-amux agent list               # List configured agents
-amux agent show <agent>       # Show agent details
-
 # Configuration management
 amux config show              # Display current configuration
 amux config edit              # Edit configuration in your editor
@@ -294,9 +290,8 @@ amux session logs session-123              # View session output
 amux session logs -f session-123           # Follow logs in real-time
 amux tail session-123                      # Shortcut for follow logs
 
-# Configure agents
-amux agent config add aider --name "Aider" --command "aider"
-amux agent config list                     # List configured agents
+# Configure agents in config file
+# Edit .amux/config.yaml to add agent configurations
 ```
 
 ### Working Context

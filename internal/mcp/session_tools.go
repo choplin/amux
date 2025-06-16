@@ -169,7 +169,7 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 			attachID = info.Index
 		}
 		response["attach_command"] = fmt.Sprintf("tmux attach-session -t %s", info.TmuxSession)
-		response["attach_amux"] = fmt.Sprintf("amux agent attach %s", attachID)
+		response["attach_amux"] = fmt.Sprintf("amux session attach %s", attachID)
 	}
 
 	// Add success message to response

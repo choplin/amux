@@ -1,6 +1,7 @@
 package session
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -48,6 +49,8 @@ func TestSendInputToSession(t *testing.T) {
 
 	t.Run("fails with invalid session", func(t *testing.T) {
 		cmd := sendInputCmd()
+		// Set a context to avoid nil context panic
+		cmd.SetContext(context.Background())
 		// Try to send input to a non-existent session
 		err := cmd.RunE(cmd, []string{"non-existent-session", "test input"})
 		assert.Error(t, err)
