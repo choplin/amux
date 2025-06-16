@@ -125,6 +125,9 @@ amux agent config show claude
 Agents are configured in `.amux/config.yaml`:
 
 ```yaml
+# Optional: Add schema reference for VS Code IntelliSense
+# $schema: https://github.com/choplin/amux/schemas/config.schema.json
+
 agents:
   claude:
     name: Claude

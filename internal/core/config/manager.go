@@ -32,25 +32,20 @@ func NewManager(projectRoot string) *Manager {
 
 // Load reads the configuration from disk
 func (m *Manager) Load() (*Config, error) {
-	data, err := os.ReadFile(m.configPath)
+	// Use JSON schema validation
+	config, err := LoadWithValidation(m.configPath)
 	if err != nil {
+		// Customize error message for missing file
 		if os.IsNotExist(err) {
 			return nil, fmt.Errorf("amux not initialized. Run 'amux init' first")
 		}
-		return nil, fmt.Errorf("failed to read config: %w", err)
+		return nil, err
 	}
 
-	var config Config
-	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("failed to parse config: %w", err)
-	}
+	// Apply defaults after validation
+	applyDefaults(config)
 
-	// Validate the loaded configuration
-	if err := ValidateConfig(&config); err != nil {
-		return nil, fmt.Errorf("invalid configuration: %w", err)
-	}
-
-	return &config, nil
+	return config, nil
 }
 
 // Save writes the configuration to disk
@@ -116,4 +111,22 @@ func FindProjectRoot() (string, error) {
 	}
 
 	return "", fmt.Errorf("not in an Amux project (no .amux directory found)")
+}
+
+// GetConfigPath returns the configuration file path
+func (m *Manager) GetConfigPath() string {
+	return m.configPath
+}
+
+// applyDefaults applies default values to the configuration
+func applyDefaults(cfg *Config) {
+	// Apply default version if empty
+	if cfg.Version == "" {
+		cfg.Version = "1.0"
+	}
+
+	// Apply default MCP transport if not set
+	if cfg.MCP.Transport.Type == "" {
+		cfg.MCP.Transport.Type = "stdio"
+	}
 }

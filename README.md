@@ -175,7 +175,7 @@ amux config edit
 # Edit with a specific editor
 EDITOR=nano amux config edit
 
-# Validate configuration
+# Validate configuration (uses JSON Schema)
 amux config validate
 
 # Validate with verbose output

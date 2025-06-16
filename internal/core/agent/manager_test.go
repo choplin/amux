@@ -22,6 +22,11 @@ func setupTestManager(t *testing.T) (*Manager, string) {
 			Name:         "test-project",
 			DefaultAgent: "claude",
 		},
+		MCP: config.MCPConfig{
+			Transport: config.TransportConfig{
+				Type: "stdio",
+			},
+		},
 		Agents: map[string]config.Agent{
 			"claude": {
 				Name: "Claude",

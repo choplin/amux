@@ -1,0 +1,189 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/choplin/amux/schemas/config.schema.json",
+  "title": "Amux Configuration",
+  "description": "Configuration schema for Amux - Agent Multiplexer",
+  "type": "object",
+  "required": ["version", "project", "agents"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Configuration file version",
+      "enum": ["1.0"]
+    },
+    "project": {
+      "type": "object",
+      "description": "Project-specific configuration",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Project name",
+          "minLength": 1
+        },
+        "repository": {
+          "type": "string",
+          "description": "Git repository URL",
+          "format": "uri"
+        },
+        "defaultAgent": {
+          "type": "string",
+          "description": "Default agent ID to use when not specified"
+        }
+      }
+    },
+    "mcp": {
+      "type": "object",
+      "description": "MCP (Model Context Protocol) server configuration",
+      "additionalProperties": false,
+      "properties": {
+        "transport": {
+          "type": "object",
+          "required": ["type"],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["stdio", "http"],
+              "description": "Transport type for MCP server"
+            },
+            "http": {
+              "type": "object",
+              "description": "HTTP transport configuration",
+              "additionalProperties": false,
+              "properties": {
+                "port": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 65535,
+                  "description": "Port number for HTTP server"
+                },
+                "auth": {
+                  "type": "object",
+                  "description": "Authentication configuration",
+                  "additionalProperties": false,
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["none", "bearer", "basic"],
+                      "description": "Authentication type"
+                    },
+                    "bearer": {
+                      "type": "string",
+                      "description": "Bearer token for authentication"
+                    },
+                    "basic": {
+                      "type": "object",
+                      "properties": {
+                        "username": {
+                          "type": "string",
+                          "description": "Username for basic auth"
+                        },
+                        "password": {
+                          "type": "string",
+                          "description": "Password for basic auth"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "agents": {
+      "type": "object",
+      "description": "AI agent configurations",
+      "patternProperties": {
+        "^[a-zA-Z0-9][a-zA-Z0-9_-]*$": {
+          "$ref": "#/$defs/agent"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "agent": {
+      "type": "object",
+      "description": "AI agent configuration",
+      "required": ["name", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Display name for the agent",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "description": "Session type for the agent",
+          "enum": ["tmux"]
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional description of the agent"
+        },
+        "environment": {
+          "type": "object",
+          "description": "Environment variables for the agent",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "workingDir": {
+          "type": "string",
+          "description": "Working directory for the agent"
+        },
+        "tags": {
+          "type": "array",
+          "description": "Tags for categorizing the agent",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "tmux": {
+          "type": "object",
+          "description": "Tmux-specific configuration",
+          "required": ["command"],
+          "additionalProperties": false,
+          "properties": {
+            "command": {
+              "type": "string",
+              "description": "Command to execute in the tmux session",
+              "minLength": 1
+            },
+            "shell": {
+              "type": "string",
+              "description": "Shell to use for the session"
+            },
+            "windowName": {
+              "type": "string",
+              "description": "Name for the tmux window"
+            },
+            "detached": {
+              "type": "boolean",
+              "description": "Whether to detach from the session after creation"
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": { "const": "tmux" }
+            }
+          },
+          "then": {
+            "required": ["tmux"]
+          }
+        }
+      ]
+    }
+  }
+}
