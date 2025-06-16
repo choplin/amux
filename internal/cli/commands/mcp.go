@@ -42,11 +42,11 @@ var (
 
 	serveAuthPass string
 
-	rootDir string
+	gitRoot string
 )
 
 func init() {
-	mcpCmd.Flags().StringVar(&rootDir, "root-dir", "", "Project root directory (required if not in amux project)")
+	mcpCmd.Flags().StringVar(&gitRoot, "git-root", "", "Git repository root directory (required if not in amux project)")
 
 	mcpCmd.Flags().StringVarP(&serveTransport, "transport", "t", "", "Transport type (stdio, http, https)")
 
@@ -66,9 +66,9 @@ func runMCP(cmd *cobra.Command, args []string) error {
 	var projectRoot string
 	var err error
 
-	if rootDir != "" {
-		// Use explicitly provided root directory
-		absPath, err := filepath.Abs(rootDir)
+	if gitRoot != "" {
+		// Use explicitly provided git root directory
+		absPath, err := filepath.Abs(gitRoot)
 		if err != nil {
 			return fmt.Errorf("invalid root directory: %w", err)
 		}
@@ -77,13 +77,13 @@ func runMCP(cmd *cobra.Command, args []string) error {
 		// Validate it's a git repository
 		gitOps := git.NewOperations(projectRoot)
 		if !gitOps.IsGitRepository() {
-			return fmt.Errorf("--root-dir must be a git repository: %s", projectRoot)
+			return fmt.Errorf("--git-root must be a git repository: %s", projectRoot)
 		}
 	} else {
 		// Try to find project root from current directory
 		projectRoot, err = config.FindProjectRoot()
 		if err != nil {
-			return fmt.Errorf("not in an amux project and --root-dir not specified")
+			return fmt.Errorf("not in an amux project and --git-root not specified")
 		}
 	}
 
