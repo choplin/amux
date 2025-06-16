@@ -22,18 +22,28 @@ func setupTestManager(t *testing.T) (*Manager, string) {
 			Name:         "test-project",
 			DefaultAgent: "claude",
 		},
+		MCP: config.MCPConfig{
+			Transport: config.TransportConfig{
+				Type: "stdio",
+			},
+		},
 		Agents: map[string]config.Agent{
 			"claude": {
-				Name:    "Claude",
-				Type:    "claude",
-				Command: "claude",
+				Name: "Claude",
+				Type: config.AgentTypeTmux,
 				Environment: map[string]string{
 					"ANTHROPIC_API_KEY": "test-key",
+				},
+				Params: &config.TmuxParams{
+					Command: "claude",
 				},
 			},
 			"gpt": {
 				Name: "GPT",
-				Type: "openai",
+				Type: config.AgentTypeTmux,
+				Params: &config.TmuxParams{
+					Command: "gpt",
+				},
 			},
 		},
 	}
@@ -58,9 +68,16 @@ func TestManager_GetAgent(t *testing.T) {
 	if agent.Name != "Claude" {
 		t.Errorf("Expected agent name 'Claude', got '%s'", agent.Name)
 	}
-	if agent.Command != "claude" {
-		t.Errorf("Expected command 'claude', got '%s'", agent.Command)
+
+	// Check tmux options
+	params, err := agent.GetTmuxParams()
+	if err != nil {
+		t.Errorf("Failed to get tmux options: %v", err)
 	}
+	if params.Command != "claude" {
+		t.Errorf("Expected tmux command 'claude', got '%s'", params.Command)
+	}
+
 	if agent.Environment["ANTHROPIC_API_KEY"] != "test-key" {
 		t.Errorf("Expected environment variable not found")
 	}
@@ -96,11 +113,13 @@ func TestManager_AddAgent(t *testing.T) {
 	manager, _ := setupTestManager(t)
 
 	newAgent := config.Agent{
-		Name:    "Gemini",
-		Type:    "google",
-		Command: "gemini",
+		Name: "Gemini",
+		Type: config.AgentTypeTmux,
 		Environment: map[string]string{
 			"GOOGLE_API_KEY": "test-key",
+		},
+		Params: &config.TmuxParams{
+			Command: "gemini",
 		},
 	}
 
@@ -124,12 +143,14 @@ func TestManager_UpdateAgent(t *testing.T) {
 
 	// Update existing agent
 	updatedAgent := config.Agent{
-		Name:    "Claude Updated",
-		Type:    "claude",
-		Command: "claude-v2",
+		Name: "Claude Updated",
+		Type: config.AgentTypeTmux,
 		Environment: map[string]string{
 			"ANTHROPIC_API_KEY": "new-key",
 			"DEBUG":             "true",
+		},
+		Params: &config.TmuxParams{
+			Command: "claude-v2",
 		},
 	}
 
@@ -146,9 +167,16 @@ func TestManager_UpdateAgent(t *testing.T) {
 	if agent.Name != "Claude Updated" {
 		t.Errorf("Expected updated name, got '%s'", agent.Name)
 	}
-	if agent.Command != "claude-v2" {
-		t.Errorf("Expected updated command, got '%s'", agent.Command)
+
+	// Check updated tmux options
+	params, err := agent.GetTmuxParams()
+	if err != nil {
+		t.Errorf("Failed to get tmux options: %v", err)
 	}
+	if params.Command != "claude-v2" {
+		t.Errorf("Expected updated tmux command 'claude-v2', got '%s'", params.Command)
+	}
+
 	if len(agent.Environment) != 2 {
 		t.Errorf("Expected 2 environment variables, got %d", len(agent.Environment))
 	}
@@ -230,8 +258,8 @@ func TestManager_GetEnvironment(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get environment: %v", err)
 	}
-	if env != nil {
-		t.Error("Expected nil environment for agent without environment")
+	if len(env) != 0 {
+		t.Errorf("Expected empty environment for agent without environment, got %d", len(env))
 	}
 
 	// Test non-existent agent

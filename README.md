@@ -125,6 +125,7 @@ amux agent show <agent>       # Show agent details
 # Configuration management
 amux config show              # Display current configuration
 amux config edit              # Edit configuration in your editor
+amux config validate          # Validate configuration file
 
 # MCP server
 amux mcp [options]            # Start MCP server
@@ -173,6 +174,12 @@ amux config edit
 
 # Edit with a specific editor
 EDITOR=nano amux config edit
+
+# Validate configuration (uses JSON Schema)
+amux config validate
+
+# Validate with verbose output
+amux config validate --verbose
 ```
 
 The configuration file is stored at `.amux/config.yaml` in your project root.
@@ -281,7 +288,7 @@ Run multiple AI agents concurrently in isolated workspaces:
 ```bash
 # Run agents
 amux run claude --workspace feature-auth    # Run Claude in a workspace
-amux run gpt --workspace bugfix-api        # Run GPT in another workspace
+amux run aider --workspace bugfix-api      # Run Aider in another workspace
 
 # Manage sessions
 amux ps                                    # List running agents
@@ -293,7 +300,7 @@ amux session logs -f session-123           # Follow logs in real-time
 amux tail session-123                      # Shortcut for follow logs
 
 # Configure agents
-amux agent config add gpt --name "GPT-4" --command "gpt-cli"
+amux agent config add aider --name "Aider" --command "aider"
 amux agent config list                     # List configured agents
 ```
 

@@ -14,7 +14,10 @@ The config command provides subcommands to view and edit the configuration file.
   amux config show
 
   # Edit configuration in your editor
-  amux config edit`,
+  amux config edit
+
+  # Validate configuration
+  amux config validate`,
 }
 
 func init() {
