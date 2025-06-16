@@ -56,7 +56,7 @@ func TestIntegration_FullWorkflow(t *testing.T) {
 	}
 
 	// Create a workspace
-	ws, err := wsManager.Create(workspace.CreateOptions{
+	ws, err := wsManager.Create(context.Background(), workspace.CreateOptions{
 		Name:        "integration-test",
 		BaseBranch:  "main",
 		Description: "Integration test workspace",
@@ -95,12 +95,10 @@ func TestIntegration_FullWorkflow(t *testing.T) {
 	}
 
 	// Create session manager with mock adapter
-	store, err := session.NewFileStore(configManager.GetAmuxDir())
+	sessionManager, err := session.NewManager(configManager.GetAmuxDir(), wsManager, nil)
 	if err != nil {
-		t.Fatalf("Failed to create session store: %v", err)
+		t.Fatalf("Failed to create session manager: %v", err)
 	}
-
-	sessionManager := session.NewManager(store, wsManager, nil)
 
 	// Use mock adapter for predictable testing
 	mockAdapter := tmux.NewMockAdapter()
@@ -124,7 +122,7 @@ func TestIntegration_FullWorkflow(t *testing.T) {
 		Environment: env,
 	}
 
-	sess, err := sessionManager.CreateSession(opts)
+	sess, err := sessionManager.CreateSession(context.Background(), opts)
 	if err != nil {
 		t.Fatalf("Failed to create session: %v", err)
 	}
@@ -185,7 +183,7 @@ func TestIntegration_FullWorkflow(t *testing.T) {
 	}
 
 	// List all sessions
-	sessions, err := sessionManager.ListSessions()
+	sessions, err := sessionManager.ListSessions(context.Background())
 	if err != nil {
 		t.Fatalf("Failed to list sessions: %v", err)
 	}
@@ -195,7 +193,7 @@ func TestIntegration_FullWorkflow(t *testing.T) {
 	}
 
 	// Clean up workspace
-	if err := wsManager.Remove(workspace.Identifier(ws.ID)); err != nil {
+	if err := wsManager.Remove(context.Background(), workspace.Identifier(ws.ID)); err != nil {
 		t.Errorf("Failed to remove workspace: %v", err)
 	}
 }
@@ -247,12 +245,10 @@ func TestIntegration_MultipleAgents(t *testing.T) {
 	}
 
 	// Create session manager with mock
-	store, err := session.NewFileStore(configManager.GetAmuxDir())
+	sessionManager, err := session.NewManager(configManager.GetAmuxDir(), wsManager, nil)
 	if err != nil {
-		t.Fatalf("Failed to create session store: %v", err)
+		t.Fatalf("Failed to create session manager: %v", err)
 	}
-
-	sessionManager := session.NewManager(store, wsManager, nil)
 	mockAdapter := tmux.NewMockAdapter()
 	sessionManager.SetTmuxAdapter(mockAdapter)
 
@@ -262,7 +258,7 @@ func TestIntegration_MultipleAgents(t *testing.T) {
 
 	for _, agentID := range agents {
 		// Create workspace
-		ws, err := wsManager.Create(workspace.CreateOptions{
+		ws, err := wsManager.Create(context.Background(), workspace.CreateOptions{
 			Name: "workspace-" + agentID,
 		})
 		if err != nil {
@@ -270,7 +266,7 @@ func TestIntegration_MultipleAgents(t *testing.T) {
 		}
 
 		// Create session
-		sess, err := sessionManager.CreateSession(session.Options{
+		sess, err := sessionManager.CreateSession(context.Background(), session.Options{
 			WorkspaceID: ws.ID,
 			AgentID:     agentID,
 		})
@@ -297,7 +293,7 @@ func TestIntegration_MultipleAgents(t *testing.T) {
 	}
 
 	// List all sessions
-	allSessions, err := sessionManager.ListSessions()
+	allSessions, err := sessionManager.ListSessions(context.Background())
 	if err != nil {
 		t.Fatalf("Failed to list sessions: %v", err)
 	}

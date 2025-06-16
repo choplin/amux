@@ -83,7 +83,7 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 	}
 
 	// Resolve workspace
-	ws, err := s.workspaceManager.ResolveWorkspace(workspace.Identifier(workspaceID))
+	ws, err := s.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(workspaceID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 	}
@@ -126,7 +126,7 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 	}
 
 	// Create session
-	sess, err := sessionManager.CreateSession(opts)
+	sess, err := sessionManager.CreateSession(ctx, opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session: %w", err)
 	}
@@ -199,7 +199,7 @@ func (s *ServerV2) handleSessionStop(ctx context.Context, request mcp.CallToolRe
 	}
 
 	// Get session
-	sess, err := sessionManager.ResolveSession(session.Identifier(sessionID))
+	sess, err := sessionManager.ResolveSession(ctx, session.Identifier(sessionID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
@@ -244,7 +244,7 @@ func (s *ServerV2) handleSessionSendInput(ctx context.Context, request mcp.CallT
 	}
 
 	// Get session
-	sess, err := sessionManager.ResolveSession(session.Identifier(sessionID))
+	sess, err := sessionManager.ResolveSession(ctx, session.Identifier(sessionID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}

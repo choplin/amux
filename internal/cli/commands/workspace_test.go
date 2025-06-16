@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -37,7 +38,7 @@ func TestWorkspaceRemovalSafetyCheck(t *testing.T) {
 		Description: "Test workspace removal safety",
 	}
 
-	ws, err := manager.Create(opts)
+	ws, err := manager.Create(context.Background(), opts)
 	if err != nil {
 		t.Fatalf("Failed to create workspace: %v", err)
 	}
@@ -45,7 +46,7 @@ func TestWorkspaceRemovalSafetyCheck(t *testing.T) {
 	t.Cleanup(func() {
 		// Clean up: change to repo dir first, then remove workspace
 		os.Chdir(repoDir)
-		if err := manager.Remove(workspace.Identifier(ws.ID)); err != nil {
+		if err := manager.Remove(context.Background(), workspace.Identifier(ws.ID)); err != nil {
 			t.Logf("Failed to remove workspace %s: %v", ws.ID, err)
 		}
 	})
@@ -157,20 +158,20 @@ func TestWorkspaceCdCommand(t *testing.T) {
 		Description: "Test workspace cd command",
 	}
 
-	ws, err := manager.Create(opts)
+	ws, err := manager.Create(context.Background(), opts)
 	if err != nil {
 		t.Fatalf("Failed to create workspace: %v", err)
 	}
 	// Ensure cleanup happens after all subtests complete
 	t.Cleanup(func() {
-		if err := manager.Remove(workspace.Identifier(ws.ID)); err != nil {
+		if err := manager.Remove(context.Background(), workspace.Identifier(ws.ID)); err != nil {
 			t.Logf("Failed to remove workspace %s: %v", ws.ID, err)
 		}
 	})
 
 	// Test workspace resolution by name
 	t.Run("ResolveByName", func(t *testing.T) {
-		resolved, err := manager.ResolveWorkspace("test-cd")
+		resolved, err := manager.ResolveWorkspace(context.Background(), "test-cd")
 		if err != nil {
 			t.Errorf("Failed to resolve workspace by name: %v", err)
 		}
@@ -181,7 +182,7 @@ func TestWorkspaceCdCommand(t *testing.T) {
 
 	// Test workspace resolution by ID
 	t.Run("ResolveByID", func(t *testing.T) {
-		resolved, err := manager.ResolveWorkspace(workspace.Identifier(ws.ID))
+		resolved, err := manager.ResolveWorkspace(context.Background(), workspace.Identifier(ws.ID))
 		if err != nil {
 			t.Errorf("Failed to resolve workspace by ID: %v", err)
 		}
@@ -193,7 +194,7 @@ func TestWorkspaceCdCommand(t *testing.T) {
 	// Test workspace resolution by index
 	t.Run("ResolveByIndex", func(t *testing.T) {
 		if ws.Index != "" {
-			resolved, err := manager.ResolveWorkspace(workspace.Identifier(ws.Index))
+			resolved, err := manager.ResolveWorkspace(context.Background(), workspace.Identifier(ws.Index))
 			if err != nil {
 				t.Errorf("Failed to resolve workspace by index: %v", err)
 			}
@@ -205,7 +206,7 @@ func TestWorkspaceCdCommand(t *testing.T) {
 
 	// Test invalid workspace
 	t.Run("InvalidWorkspace", func(t *testing.T) {
-		_, err := manager.ResolveWorkspace("non-existent")
+		_, err := manager.ResolveWorkspace(context.Background(), "non-existent")
 		if err == nil {
 			t.Error("Expected error for non-existent workspace, got nil")
 		}

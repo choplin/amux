@@ -44,7 +44,7 @@ func TestTailer_Follow(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create workspace
-	ws, err := wsManager.Create(workspace.CreateOptions{
+	ws, err := wsManager.Create(context.Background(), workspace.CreateOptions{
 		Name: "test-workspace",
 	})
 	require.NoError(t, err)
@@ -52,11 +52,9 @@ func TestTailer_Follow(t *testing.T) {
 	// Create dependencies
 	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
 	require.NoError(t, err)
-	store, err := session.NewFileStore(configManager.GetAmuxDir())
-	require.NoError(t, err)
-
 	// Create session manager with mock adapter
-	sessionManager := session.NewManager(store, wsManager, idMapper, session.WithLogger(logger.Nop()))
+	sessionManager, err := session.NewManager(configManager.GetAmuxDir(), wsManager, idMapper, session.WithLogger(logger.Nop()))
+	require.NoError(t, err)
 
 	// Replace tmux adapter with mock
 	mockAdapter := tmux.NewMockAdapter()
@@ -69,7 +67,7 @@ func TestTailer_Follow(t *testing.T) {
 		Command:     "echo 'Starting test'",
 	}
 
-	sess, err := sessionManager.CreateSession(opts)
+	sess, err := sessionManager.CreateSession(context.Background(), opts)
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -150,7 +148,7 @@ func TestTailer_Follow(t *testing.T) {
 
 	t.Run("exits when session stops", func(t *testing.T) {
 		// Create new session for this test
-		sess2, err := sessionManager.CreateSession(session.Options{
+		sess2, err := sessionManager.CreateSession(context.Background(), session.Options{
 			WorkspaceID: ws.ID,
 			AgentID:     "test-agent-2",
 			Command:     "echo 'Test 2'",
@@ -203,7 +201,7 @@ func TestFollowFunc(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create workspace
-	ws, err := wsManager.Create(workspace.CreateOptions{
+	ws, err := wsManager.Create(context.Background(), workspace.CreateOptions{
 		Name: "test-workspace",
 	})
 	require.NoError(t, err)
@@ -211,11 +209,9 @@ func TestFollowFunc(t *testing.T) {
 	// Create dependencies
 	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
 	require.NoError(t, err)
-	store, err := session.NewFileStore(configManager.GetAmuxDir())
-	require.NoError(t, err)
-
 	// Create session manager with mock adapter
-	sessionManager := session.NewManager(store, wsManager, idMapper, session.WithLogger(logger.Nop()))
+	sessionManager, err := session.NewManager(configManager.GetAmuxDir(), wsManager, idMapper, session.WithLogger(logger.Nop()))
+	require.NoError(t, err)
 
 	// Replace tmux adapter with mock
 	mockAdapter := tmux.NewMockAdapter()
@@ -228,7 +224,7 @@ func TestFollowFunc(t *testing.T) {
 		Command:     "echo 'Test'",
 	}
 
-	sess, err := sessionManager.CreateSession(opts)
+	sess, err := sessionManager.CreateSession(context.Background(), opts)
 	require.NoError(t, err)
 
 	ctx := context.Background()

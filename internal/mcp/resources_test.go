@@ -17,7 +17,7 @@ func TestHandleWorkspaceListResource(t *testing.T) {
 	s := setupTestServer(t)
 
 	// Create a test workspace
-	ws, err := s.workspaceManager.Create(workspace.CreateOptions{
+	ws, err := s.workspaceManager.Create(context.Background(), workspace.CreateOptions{
 		Name:        "test-workspace",
 		Description: "Test workspace for resource testing",
 	})

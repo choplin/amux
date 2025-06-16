@@ -112,7 +112,7 @@ func (s *ServerV2) handleSessionListResource(ctx context.Context, request mcp.Re
 		return nil, fmt.Errorf("failed to create session manager: %w", err)
 	}
 
-	sessions, err := sessionManager.ListSessions()
+	sessions, err := sessionManager.ListSessions(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list sessions: %w", err)
 	}
@@ -178,7 +178,7 @@ func (s *ServerV2) handleSessionDetailResource(ctx context.Context, request mcp.
 	}
 
 	// Get session (supports ID, index, or name)
-	sess, err := sessionManager.ResolveSession(session.Identifier(sessionID))
+	sess, err := sessionManager.ResolveSession(ctx, session.Identifier(sessionID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
@@ -249,7 +249,7 @@ func (s *ServerV2) handleSessionOutputResource(ctx context.Context, request mcp.
 	}
 
 	// Get session (supports ID, index, or name)
-	sess, err := sessionManager.ResolveSession(session.Identifier(sessionID))
+	sess, err := sessionManager.ResolveSession(ctx, session.Identifier(sessionID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
@@ -303,12 +303,11 @@ func (s *ServerV2) createSessionManager() (*session.Manager, error) {
 		return nil, fmt.Errorf("failed to create ID mapper: %w", err)
 	}
 
-	// Create session store
-	store, err := session.NewFileStore(s.configManager.GetAmuxDir())
+	// Create session manager
+	manager, err := session.NewManager(s.configManager.GetAmuxDir(), workspaceManager, idMapper)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create session store: %w", err)
+		return nil, fmt.Errorf("failed to create session manager: %w", err)
 	}
 
-	// Create session manager
-	return session.NewManager(store, workspaceManager, idMapper), nil
+	return manager, nil
 }

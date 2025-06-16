@@ -1,6 +1,7 @@
 package session
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -10,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/aki/amux/internal/adapters/tmux"
+	"github.com/aki/amux/internal/core/idmap"
 	"github.com/aki/amux/internal/core/workspace"
 )
 
@@ -46,17 +48,23 @@ func TestSessionFailureDetection(t *testing.T) {
 	_, wsManager, configManager := setupTestEnvironment(t)
 
 	// Create workspace
-	ws, err := wsManager.Create(workspace.CreateOptions{
+	ws, err := wsManager.Create(context.Background(), workspace.CreateOptions{
 		Name: "test-workspace",
 	})
 	if err != nil {
 		t.Fatalf("Failed to create workspace: %v", err)
 	}
 
-	// Create store
-	store, err := NewFileStore(configManager.GetAmuxDir())
+	// Create ID mapper
+	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
 	if err != nil {
-		t.Fatalf("Failed to create store: %v", err)
+		t.Fatalf("Failed to create ID mapper: %v", err)
+	}
+
+	// Create manager
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, idMapper)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
 	}
 
 	t.Run("Session marked as failed when tmux session doesn't exist", func(t *testing.T) {
@@ -77,7 +85,7 @@ func TestSessionFailureDetection(t *testing.T) {
 		}
 
 		// Create session
-		sess := NewTmuxSession(info, store, mockAdapter, ws)
+		sess := NewTmuxSession(info, manager, mockAdapter, ws)
 
 		// Create tmux session first
 		err := mockAdapter.CreateSession(info.TmuxSession, ws.Path)
@@ -117,7 +125,7 @@ func TestSessionFailureDetection(t *testing.T) {
 		}
 
 		// Create session
-		sess := NewTmuxSession(info, store, mockAdapter, ws)
+		sess := NewTmuxSession(info, manager, mockAdapter, ws)
 
 		// Create tmux session
 		err := mockAdapter.CreateSession(info.TmuxSession, ws.Path)
@@ -155,7 +163,7 @@ func TestSessionFailureDetection(t *testing.T) {
 		}
 
 		// Create session with mock process checker
-		sess := NewTmuxSession(info, store, mockAdapter, ws, WithProcessChecker(mockProcessChecker))
+		sess := NewTmuxSession(info, manager, mockAdapter, ws, WithProcessChecker(mockProcessChecker))
 
 		// Create tmux session
 		err := mockAdapter.CreateSession(info.TmuxSession, ws.Path)
@@ -194,7 +202,7 @@ func TestSessionFailureDetection(t *testing.T) {
 		}
 
 		// Create session with mock process checker
-		sess := NewTmuxSession(info, store, mockAdapter, ws, WithProcessChecker(mockProcessChecker))
+		sess := NewTmuxSession(info, manager, mockAdapter, ws, WithProcessChecker(mockProcessChecker))
 
 		// Create tmux session
 		err := mockAdapter.CreateSession(info.TmuxSession, ws.Path)
@@ -238,7 +246,7 @@ func TestSessionFailureDetection(t *testing.T) {
 		}
 
 		// Create session with mock process checker
-		sess := NewTmuxSession(info, store, mockAdapter, ws, WithProcessChecker(mockProcessChecker))
+		sess := NewTmuxSession(info, manager, mockAdapter, ws, WithProcessChecker(mockProcessChecker))
 
 		// Create tmux session
 		err := mockAdapter.CreateSession(info.TmuxSession, ws.Path)
@@ -284,7 +292,7 @@ func TestSessionFailureDetection(t *testing.T) {
 		}
 
 		// Create session with mock process checker
-		sess := NewTmuxSession(info, store, mockAdapter, ws, WithProcessChecker(mockProcessChecker))
+		sess := NewTmuxSession(info, manager, mockAdapter, ws, WithProcessChecker(mockProcessChecker))
 
 		// Create tmux session
 		err := mockAdapter.CreateSession(info.TmuxSession, ws.Path)
@@ -326,7 +334,7 @@ func TestSessionFailureDetection(t *testing.T) {
 		}
 
 		// Create session with mock process checker
-		sess := NewTmuxSession(info, store, mockAdapter, ws, WithProcessChecker(mockProcessChecker))
+		sess := NewTmuxSession(info, manager, mockAdapter, ws, WithProcessChecker(mockProcessChecker))
 
 		// Create tmux session
 		err := mockAdapter.CreateSession(info.TmuxSession, ws.Path)

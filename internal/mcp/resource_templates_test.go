@@ -77,7 +77,7 @@ func TestHandleWorkspaceDetailResource(t *testing.T) {
 	s := setupTestServer(t)
 
 	// Create a test workspace
-	ws, err := s.workspaceManager.Create(workspace.CreateOptions{
+	ws, err := s.workspaceManager.Create(context.Background(), workspace.CreateOptions{
 		Name:        "test-detail",
 		Description: "Test workspace for detail resource",
 		BaseBranch:  "main",
@@ -127,7 +127,7 @@ func TestHandleWorkspaceFilesResource(t *testing.T) {
 	s := setupTestServer(t)
 
 	// Create a test workspace
-	ws, err := s.workspaceManager.Create(workspace.CreateOptions{
+	ws, err := s.workspaceManager.Create(context.Background(), workspace.CreateOptions{
 		Name: "test-files",
 	})
 	require.NoError(t, err)
@@ -206,7 +206,7 @@ func TestHandleWorkspaceContextResource(t *testing.T) {
 	s := setupTestServer(t)
 
 	// Create a test workspace
-	ws, err := s.workspaceManager.Create(workspace.CreateOptions{
+	ws, err := s.workspaceManager.Create(context.Background(), workspace.CreateOptions{
 		Name: "test-context",
 	})
 	require.NoError(t, err)
@@ -262,7 +262,7 @@ func TestRegisterResourceTemplates(t *testing.T) {
 	// we'll test by attempting to use the handlers
 
 	// Create a test workspace
-	ws, err := s.workspaceManager.Create(workspace.CreateOptions{
+	ws, err := s.workspaceManager.Create(context.Background(), workspace.CreateOptions{
 		Name: "test-templates",
 	})
 	require.NoError(t, err)
