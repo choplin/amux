@@ -13,7 +13,7 @@ Modern development workflows often require:
 - Maintaining context across different tasks
 - Avoiding conflicts between parallel work streams
 
-Traditional Git workflows force constant stashing, branch switching, and context loss. Running multiple AI agents means dealing with conflicting changes and confused assistants. The result: reduced productivity and increased frustration.
+Stash. Switch. Lose context. Repeat. And when multiple AI agents step on each other's changes? Even more time lost untangling the mess.
 
 ## What is Amux
 

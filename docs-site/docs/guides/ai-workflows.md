@@ -10,9 +10,9 @@ Integrate Amux with AI assistants through the Model Context Protocol (MCP).
 
 Amux is designed to provide identical functionality through both CLI and MCP:
 
-- **Every CLI command has an MCP equivalent** - `amux ws create` → `workspace_create` tool
+- **Core operations have MCP equivalents** - `amux ws create` → `workspace_create` tool
 - **Same parameters and options** - What works in CLI works in MCP
-- **Unified experience** - AI agents can do everything a human user can do
+- **Unified experience** - AI agents can perform the same meaningful operations as humans
 
 This design ensures that workflows are portable between human and AI usage.
 
