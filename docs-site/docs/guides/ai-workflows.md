@@ -194,10 +194,12 @@ workspace_create({
 
 ```typescript
 session_run({
-  agent_id: string,         // Required: agent to run
-  workspace_identifier?: string,  // Optional: target workspace
-  name?: string,            // Optional: session name
-  command?: string          // Optional: override command
+  agent_id: string,                // Required: agent to run
+  workspace_identifier: string,    // Required: target workspace
+  name?: string,                   // Optional: session name
+  description?: string,            // Optional: session description
+  command?: string,                // Optional: override command
+  environment?: {[key: string]: string}  // Optional: env variables
 })
 ```
 
