@@ -75,37 +75,37 @@ The schema defines:
 
 ### Important: Type-Specific Field Validation
 
-Currently, the schema relies on `additionalProperties: false` to prevent invalid fields. However, when adding new agent types, we must ensure type-specific fields are mutually exclusive. The `enum` constraint only restricts the `type` field value, not the presence of type-specific configuration objects.
+The schema uses a unified `params` field for all type-specific configurations, avoiding field name conflicts between different agent types. The `params` field content is validated based on the agent's `type` field value.
 
-For example, when we add `claude-code` type support, we need to prevent:
+For example:
+- `tmux` agents require `params` to contain tmux-specific fields (command, shell, etc.)
+- Future `claude-code` agents will require different fields in `params`
 
-- `tmux` configuration on `claude-code` agents
-- `claudeCode` configuration on `tmux` agents
-
-This requires enhanced conditional validation:
+This is implemented using conditional validation:
 
 ```json
-"allOf": [
-  {
-    "if": { "properties": { "type": { "const": "tmux" } } },
-    "then": {
-      "required": ["tmux"],
-      "properties": { "claudeCode": false }
-    }
-  },
-  {
-    "if": { "properties": { "type": { "const": "claude-code" } } },
-    "then": {
-      "required": ["claudeCode"],
-      "properties": { "tmux": false }
+"if": {
+  "properties": { "type": { "const": "tmux" } }
+},
+"then": {
+  "properties": {
+    "params": {
+      "type": "object",
+      "required": ["command"],
+      "properties": {
+        "command": { "type": "string" },
+        "shell": { "type": "string" },
+        "windowName": { "type": "string" },
+        "detached": { "type": "boolean" }
+      }
     }
   }
-]
+}
 ```
 
 Future agent types can be added by:
 
 1. Adding the type to the `agent.type` enum
-2. Adding type-specific configuration to the schema
-3. Adding conditional validation rules with mutual exclusion
-4. Ensuring type-specific fields are properly restricted to their respective types
+2. Adding a new conditional validation rule for the `params` content
+3. Implementing the corresponding Go type and getter method
+4. The unified `params` field prevents naming conflicts between types
