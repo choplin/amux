@@ -69,10 +69,13 @@ func (m *Manager[T]) Read(ctx context.Context, path string) (*T, *FileInfo, erro
 	if !locked {
 		return nil, nil, ErrLockTimeout
 	}
-	defer func() { _ = lock.Unlock() }()
 
 	// Read the file
-	data, err := os.ReadFile(path)
+	data, err := readFileWithRetry(path)
+
+	// Release lock immediately after reading
+	_ = lock.Unlock()
+
 	if err != nil {
 		return nil, nil, err
 	}
