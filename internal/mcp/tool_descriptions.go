@@ -73,7 +73,7 @@ var toolDescriptions = map[string]ToolDescription{
 	},
 
 	"storage_read": {
-		Description: "Read files from workspace or session storage (replaces cat, head, tail commands). Use this instead of bash file reading commands",
+		Description: "Read files from workspace or session storage (replaces cat, head, tail commands). Use this instead of bash file reading commands. Requires either workspace_identifier or session_identifier",
 		WhenToUse: []string{
 			"When you need to read file contents",
 			"Instead of using bash commands like 'cat', 'head', or 'tail'",

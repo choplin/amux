@@ -228,28 +228,6 @@ func (s *ServerV2) Start(ctx context.Context) error {
 	}
 }
 
-// getMostRecentWorkspace returns the most recently created workspace
-func (s *ServerV2) getMostRecentWorkspace(ctx context.Context) (*workspace.Workspace, error) {
-	workspaces, err := s.workspaceManager.List(ctx, workspace.ListOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to list workspaces: %w", err)
-	}
-
-	if len(workspaces) == 0 {
-		return nil, NoWorkspacesError()
-	}
-
-	// Find the most recent workspace
-	var mostRecent *workspace.Workspace
-	for _, ws := range workspaces {
-		if mostRecent == nil || ws.CreatedAt.After(mostRecent.CreatedAt) {
-			mostRecent = ws
-		}
-	}
-
-	return mostRecent, nil
-}
-
 // startHTTPServer starts the HTTP/SSE server
 
 func (s *ServerV2) startHTTPServer(ctx context.Context) error {

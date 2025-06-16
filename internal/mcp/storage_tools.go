@@ -77,18 +77,8 @@ func (s *ServerV2) handleStorageRead(ctx context.Context, request mcp.CallToolRe
 	sessionID, _ := args["session_identifier"].(string)
 	path, _ := args["path"].(string)
 
-	// Track whether we inferred parameters
-	var metadata *ToolResultMetadata
-	inferredWorkspace := false
-
-	// Smart default: if no workspace or session specified, try to use the most recent workspace
 	if workspaceID == "" && sessionID == "" {
-		if recentWS, err := s.getMostRecentWorkspace(ctx); err == nil {
-			workspaceID = recentWS.ID
-			inferredWorkspace = true
-		} else {
-			return nil, fmt.Errorf("either workspace_identifier or session_identifier must be provided (no recent workspace found)")
-		}
+		return nil, fmt.Errorf("either workspace_identifier or session_identifier must be provided")
 	}
 
 	if workspaceID != "" && sessionID != "" {
@@ -144,15 +134,6 @@ func (s *ServerV2) handleStorageRead(ctx context.Context, request mcp.CallToolRe
 		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
 
-	// Set up metadata if we inferred parameters
-	if inferredWorkspace {
-		metadata = &ToolResultMetadata{
-			InferredParameters: map[string]string{
-				"workspace_identifier": workspaceID,
-			},
-		}
-	}
-
 	// Create result with file info
 	result := map[string]interface{}{
 		"path":    path,
@@ -160,11 +141,7 @@ func (s *ServerV2) handleStorageRead(ctx context.Context, request mcp.CallToolRe
 		"size":    len(content),
 	}
 
-	if inferredWorkspace {
-		result["note"] = "Automatically used the most recent workspace"
-	}
-
-	return createEnhancedResult("storage_read", result, metadata)
+	return createEnhancedResult("storage_read", result, nil)
 }
 
 // handleStorageWrite writes a file to storage
@@ -241,20 +218,7 @@ func (s *ServerV2) handleStorageWrite(ctx context.Context, request mcp.CallToolR
 		"message": fmt.Sprintf("Successfully wrote %d bytes to %s", len(content), path),
 	}
 
-	// Track if we inferred workspace
-	var metadata *ToolResultMetadata
-	if workspaceID != "" && sessionID == "" {
-		// Check if this might be using the most recent workspace
-		if recentWS, err := s.getMostRecentWorkspace(ctx); err == nil && recentWS.ID == workspaceID {
-			metadata = &ToolResultMetadata{
-				InferredParameters: map[string]string{
-					"workspace_identifier": workspaceID,
-				},
-			}
-		}
-	}
-
-	return createEnhancedResult("storage_write", result, metadata)
+	return createEnhancedResult("storage_write", result, nil)
 }
 
 // handleStorageList lists files in storage
@@ -342,18 +306,5 @@ func (s *ServerV2) handleStorageList(ctx context.Context, request mcp.CallToolRe
 		"count": len(files),
 	}
 
-	// Track if we might have inferred workspace
-	var metadata *ToolResultMetadata
-	if workspaceID != "" && sessionID == "" {
-		// Check if this might be using the most recent workspace
-		if recentWS, err := s.getMostRecentWorkspace(ctx); err == nil && recentWS.ID == workspaceID {
-			metadata = &ToolResultMetadata{
-				InferredParameters: map[string]string{
-					"workspace_identifier": workspaceID,
-				},
-			}
-		}
-	}
-
-	return createEnhancedResult("storage_list", listResult, metadata)
+	return createEnhancedResult("storage_list", listResult, nil)
 }
