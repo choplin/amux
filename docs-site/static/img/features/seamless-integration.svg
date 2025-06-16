@@ -1,0 +1,18 @@
+<svg width="64" height="64" viewBox="0 0 64 64"
+    xmlns="http://www.w3.org/2000/svg">
+    <!-- Interlocking pieces -->
+    <g fill="#25c2a0">
+        <!-- Left piece -->
+        <path
+            d="M 8 20 L 28 20 L 28 28 L 36 28 L 36 36 L 28 36 L 28 44 L 8 44 Z"
+            opacity="0.8" />
+
+        <!-- Right piece -->
+        <path
+            d="M 36 20 L 56 20 L 56 44 L 36 44 L 36 36 L 28 36 L 28 28 L 36 28 Z"
+            opacity="0.4" />
+    </g>
+
+    <!-- Connection point -->
+    <rect x="28" y="28" width="8" height="8" fill="#25c2a0" />
+</svg>

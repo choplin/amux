@@ -28,9 +28,7 @@
     "config": {
       "default": true,
       "MD013": false,
-      "MD033": {
-        "allowed_elements": ["details", "summary", "br"]
-      },
+      "MD033": false,
       "MD041": false,
       "no-hard-tabs": false
     },
