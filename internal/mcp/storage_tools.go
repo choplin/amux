@@ -100,6 +100,10 @@ func (s *ServerV2) handleStorageRead(ctx context.Context, request mcp.CallToolRe
 		// Get workspace storage path
 		ws, err := s.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(workspaceID))
 		if err != nil {
+			// Check if it's a not found error
+			if strings.Contains(err.Error(), "not found") {
+				return nil, WorkspaceNotFoundError(workspaceID)
+			}
 			return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 		}
 		storagePath = ws.StoragePath
@@ -133,6 +137,10 @@ func (s *ServerV2) handleStorageRead(ctx context.Context, request mcp.CallToolRe
 	// Read the file
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
+		// Check if it's a file not found error
+		if os.IsNotExist(err) {
+			return nil, FileNotFoundError(path)
+		}
 		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
 
@@ -181,6 +189,10 @@ func (s *ServerV2) handleStorageWrite(ctx context.Context, request mcp.CallToolR
 		// Get workspace storage path
 		ws, err := s.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(workspaceID))
 		if err != nil {
+			// Check if it's a not found error
+			if strings.Contains(err.Error(), "not found") {
+				return nil, WorkspaceNotFoundError(workspaceID)
+			}
 			return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 		}
 		storagePath = ws.StoragePath
@@ -266,6 +278,10 @@ func (s *ServerV2) handleStorageList(ctx context.Context, request mcp.CallToolRe
 		// Get workspace storage path
 		ws, err := s.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(workspaceID))
 		if err != nil {
+			// Check if it's a not found error
+			if strings.Contains(err.Error(), "not found") {
+				return nil, WorkspaceNotFoundError(workspaceID)
+			}
 			return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 		}
 		storagePath = ws.StoragePath
@@ -301,6 +317,10 @@ func (s *ServerV2) handleStorageList(ctx context.Context, request mcp.CallToolRe
 	// List directory contents
 	entries, err := os.ReadDir(listPath)
 	if err != nil {
+		// Check if it's a directory not found error
+		if os.IsNotExist(err) {
+			return nil, DirectoryNotFoundError(subPath)
+		}
 		return nil, fmt.Errorf("failed to list directory: %w", err)
 	}
 

@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
 )
@@ -70,6 +71,10 @@ func (s *ServerV2) handleResourceWorkspaceShow(ctx context.Context, request mcp.
 	// Use shared logic with resource handler
 	detail, err := s.getWorkspaceDetail(ctx, workspaceID)
 	if err != nil {
+		// Check if it's a not found error
+		if strings.Contains(err.Error(), "not found") {
+			return nil, WorkspaceNotFoundError(workspaceID)
+		}
 		return nil, err
 	}
 

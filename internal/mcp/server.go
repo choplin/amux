@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -176,9 +177,12 @@ func (s *ServerV2) handleWorkspaceRemove(ctx context.Context, request mcp.CallTo
 	}
 
 	// Resolve workspace to get name for better feedback
-
 	ws, err := s.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(workspaceID))
 	if err != nil {
+		// Check if it's a not found error
+		if strings.Contains(err.Error(), "not found") {
+			return nil, WorkspaceNotFoundError(workspaceID)
+		}
 		return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 	}
 
@@ -232,7 +236,7 @@ func (s *ServerV2) getMostRecentWorkspace(ctx context.Context) (*workspace.Works
 	}
 
 	if len(workspaces) == 0 {
-		return nil, fmt.Errorf("no workspaces found")
+		return nil, NoWorkspacesError()
 	}
 
 	// Find the most recent workspace

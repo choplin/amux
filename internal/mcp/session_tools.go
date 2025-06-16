@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
 
@@ -84,6 +85,10 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 	// Resolve workspace
 	ws, err := s.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(workspaceID))
 	if err != nil {
+		// Check if it's a not found error
+		if strings.Contains(err.Error(), "not found") {
+			return nil, WorkspaceNotFoundError(workspaceID)
+		}
 		return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 	}
 
@@ -191,6 +196,10 @@ func (s *ServerV2) handleSessionStop(ctx context.Context, request mcp.CallToolRe
 	// Get session
 	sess, err := sessionManager.ResolveSession(ctx, session.Identifier(sessionID))
 	if err != nil {
+		// Check if it's a not found error
+		if strings.Contains(err.Error(), "not found") {
+			return nil, SessionNotFoundError(sessionID)
+		}
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
 
@@ -236,12 +245,16 @@ func (s *ServerV2) handleSessionSendInput(ctx context.Context, request mcp.CallT
 	// Get session
 	sess, err := sessionManager.ResolveSession(ctx, session.Identifier(sessionID))
 	if err != nil {
+		// Check if it's a not found error
+		if strings.Contains(err.Error(), "not found") {
+			return nil, SessionNotFoundError(sessionID)
+		}
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
 
 	// Check if session is running
 	if !sess.Status().IsRunning() {
-		return nil, fmt.Errorf("session is not running (status: %s)", sess.Status())
+		return nil, SessionNotRunningError(sessionID)
 	}
 
 	// Type assert to TerminalSession
