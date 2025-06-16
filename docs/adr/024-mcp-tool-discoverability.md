@@ -27,8 +27,9 @@ Add comprehensive descriptions to all MCP tools including:
 
 - Clear, detailed descriptions of what each tool does
 - "WHEN TO USE THIS TOOL" sections with specific triggers and use cases
-- Practical examples showing correct parameter usage
+- Practical examples showing correct parameter usage with expected results
 - Suggested next tools for common workflows
+- Token-efficient format using arrow notation (→) for examples
 
 ### 2. Tool Chaining Hints
 
@@ -73,6 +74,9 @@ Based on user preference for explicit behavior:
 ### Implementation Notes
 
 - Tool descriptions are centralized in `tool_descriptions.go` for easy maintenance
-- Enhanced result format includes a `__metadata` field to avoid conflicts with content
+- Enhanced result format includes a `_metadata` field to avoid conflicts with content
 - Error suggestions are contextual and help guide users to the right tool
 - All changes are backward compatible with existing MCP clients
+- Examples include expected output to help AI agents understand what each tool returns
+- Redundant examples were removed to optimize token usage while keeping significant variations
+- The `InferredParameters` field was removed as smart defaults were not implemented
