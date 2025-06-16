@@ -20,9 +20,9 @@ var toolDescriptions = map[string]ToolDescription{
 			"When you want to experiment without affecting the main branch",
 		},
 		Examples: []string{
-			`workspace_create(name: "fix-issue-30", description: "Fix authentication bug (#30)")`,
-			`workspace_create(name: "feat-dark-mode", description: "Implement dark mode feature")`,
-			`workspace_create(name: "refactor-api", baseBranch: "develop", description: "Refactor API structure")`,
+			`workspace_create(name: "fix-issue-30") → {id: "workspace-fix-issue-30-...", name: "fix-issue-30", branch: "fix-issue-30"}`,
+			`workspace_create(name: "feat-api", description: "New API endpoints") → {id: "workspace-feat-api-...", name: "feat-api", description: "New API endpoints"}`,
+			`workspace_create(name: "hotfix", baseBranch: "release/v2") → {id: "workspace-hotfix-...", branch: "hotfix", base_branch: "release/v2"}`,
 		},
 		NextTools: []string{
 			"resource_workspace_browse - Explore the workspace structure",
@@ -40,9 +40,8 @@ var toolDescriptions = map[string]ToolDescription{
 			"After completing work on a feature or fix",
 		},
 		Examples: []string{
-			`workspace_remove(workspace_identifier: "fix-issue-30")`,
-			`workspace_remove(workspace_identifier: "3")`,
-			`workspace_remove(workspace_identifier: "workspace-feat-api-1234567890-abcdef12")`,
+			`workspace_remove(workspace_identifier: "fix-issue-30") → {message: "Workspace fix-issue-30 removed"}`,
+			`workspace_remove(workspace_identifier: "3") → {message: "Workspace feat-api (3) removed"}`,
 		},
 		NextTools: []string{
 			"resource_workspace_list - Verify remaining workspaces",
@@ -61,9 +60,9 @@ var toolDescriptions = map[string]ToolDescription{
 			"To check if a file or directory exists",
 		},
 		Examples: []string{
-			`resource_workspace_browse(workspace_identifier: "current", path: ".")`,
-			`resource_workspace_browse(workspace_identifier: "1", path: "src/")`,
-			`resource_workspace_browse(workspace_identifier: "fix-auth", path: "internal/auth")`,
+			`resource_workspace_browse(workspace_identifier: "1") → {content: "src/\nREADME.md\ngo.mod\n..."}`,
+			`resource_workspace_browse(workspace_identifier: "1", path: "src/") → {content: "main.go\nconfig/\nhandlers/\n..."}`,
+			`resource_workspace_browse(workspace_identifier: "1", path: "README.md") → {content: "# Project Title\n\nDescription..."}`,
 		},
 		NextTools: []string{
 			"storage_read - Read the full content of files you found",
@@ -82,9 +81,8 @@ var toolDescriptions = map[string]ToolDescription{
 			"When implementing features to understand existing code",
 		},
 		Examples: []string{
-			`storage_read(workspace_identifier: "current", path: "README.md")`,
-			`storage_read(workspace_identifier: "1", path: "src/main.go")`,
-			`storage_read(session_identifier: "session-123", path: "debug.log")`,
+			`storage_read(workspace_identifier: "1", path: "config.yaml") → {content: "name: myapp\nversion: 1.0\n...", size: 256}`,
+			`storage_read(session_identifier: "2", path: "output.log") → {content: "[INFO] Starting...\n[ERROR] Failed...", size: 1024}`,
 		},
 		NextTools: []string{
 			"storage_write - Modify the file or create related files",
@@ -103,9 +101,8 @@ var toolDescriptions = map[string]ToolDescription{
 			"When documenting your findings or creating TODO lists",
 		},
 		Examples: []string{
-			`storage_write(workspace_identifier: "current", path: "NOTES.md", content: "# Implementation Plan\n...")`,
-			`storage_write(workspace_identifier: "1", path: "src/feature.go", content: "package main\n...")`,
-			`storage_write(workspace_identifier: "fix-auth", path: "tests/auth_test.go", content: "...")`,
+			`storage_write(workspace_identifier: "1", path: "NOTES.md", content: "# TODOs\n- Fix auth\n- Add tests") → {path: "NOTES.md", bytes: 28}`,
+			`storage_write(session_identifier: "2", path: "results.json", content: "{...}") → {path: "results.json", bytes: 156}`,
 		},
 		NextTools: []string{
 			"session_run - Test your changes",
@@ -124,9 +121,9 @@ var toolDescriptions = map[string]ToolDescription{
 			"Instead of trying to use bash directly",
 		},
 		Examples: []string{
-			`session_run(agent_id: "test-runner", command: "npm test", workspace_identifier: "current")`,
-			`session_run(agent_id: "builder", command: "go build ./...", workspace_identifier: "1")`,
-			`session_run(name: "debug-session", command: "python debug.py", workspace_identifier: "fix-auth")`,
+			`session_run(agent_id: "test", command: "go test", workspace_identifier: "1") → {id: "session-123", status: "running", tmux_session: "amux-session-123"}`,
+			`session_run(agent_id: "shell", workspace_identifier: "2") → {id: "session-124", status: "running", command: "/bin/bash"}`,
+			`session_run(agent_id: "custom", name: "build", command: "make", workspace_identifier: "3") → {id: "session-125", name: "build", status: "running"}`,
 		},
 		NextTools: []string{
 			"resource_session_output - Monitor the command output",
@@ -146,8 +143,8 @@ var toolDescriptions = map[string]ToolDescription{
 			"To verify that commands completed successfully",
 		},
 		Examples: []string{
-			`resource_session_output(session_identifier: "session-abc123")`,
-			`resource_session_output(session_identifier: "current")`,
+			`resource_session_output(session_identifier: "session-123") → {content: "Running tests...\nPASS: auth_test.go\nPASS: main_test.go\n"}`,
+			`resource_session_output(session_identifier: "1") → {content: "[ERROR] Build failed: undefined variable\n"}`,
 		},
 		NextTools: []string{
 			"session_send_input - Send commands if errors need fixing",
@@ -165,8 +162,8 @@ var toolDescriptions = map[string]ToolDescription{
 			"When debugging interactively",
 		},
 		Examples: []string{
-			`session_send_input(session_identifier: "session-123", input: "yes\n")`,
-			`session_send_input(session_identifier: "current", input: "npm install express\n")`,
+			`session_send_input(session_identifier: "session-123", input: "yes\n") → {message: "Input sent to session session-123"}`,
+			`session_send_input(session_identifier: "2", input: "exit\n") → {message: "Input sent to session 2"}`,
 		},
 		NextTools: []string{
 			"resource_session_output - Check the response",
@@ -183,8 +180,8 @@ var toolDescriptions = map[string]ToolDescription{
 			"When explicitly asked to stop a session",
 		},
 		Examples: []string{
-			`session_stop(session_identifier: "session-123")`,
-			`session_stop(session_identifier: "current")`,
+			`session_stop(session_identifier: "session-123") → {message: "Session session-123 stopped successfully"}`,
+			`session_stop(session_identifier: "1") → {message: "Session 1 stopped successfully"}`,
 		},
 		NextTools: []string{
 			"resource_session_list - Check remaining sessions",
@@ -201,7 +198,7 @@ var toolDescriptions = map[string]ToolDescription{
 			"To check workspace status before operations",
 		},
 		Examples: []string{
-			`resource_workspace_list()`,
+			`resource_workspace_list() → [{id: "workspace-fix-auth-...", name: "fix-auth", branch: "fix-auth"}, {id: "workspace-feat-api-...", name: "feat-api", branch: "feat-api"}]`,
 		},
 		NextTools: []string{
 			"resource_workspace_show - Get details of a specific workspace",
@@ -219,8 +216,8 @@ var toolDescriptions = map[string]ToolDescription{
 			"Before performing operations on a workspace",
 		},
 		Examples: []string{
-			`resource_workspace_show(workspace_identifier: "1")`,
-			`resource_workspace_show(workspace_identifier: "fix-auth")`,
+			`resource_workspace_show(workspace_identifier: "1") → {id: "workspace-fix-auth-...", name: "fix-auth", worktree_path: "/path/to/worktree", branch: "fix-auth"}`,
+			`resource_workspace_show(workspace_identifier: "feat-api") → {id: "workspace-feat-api-...", name: "feat-api", description: "API refactoring", created_at: "2024-01-15T10:30:00Z"}`,
 		},
 		NextTools: []string{
 			"resource_workspace_browse - Explore the workspace files",
@@ -237,8 +234,8 @@ var toolDescriptions = map[string]ToolDescription{
 			"To verify files were created correctly",
 		},
 		Examples: []string{
-			`storage_list(workspace_identifier: "current", path: ".")`,
-			`storage_list(session_identifier: "session-123", path: "logs/")`,
+			`storage_list(workspace_identifier: "1") → {files: ["README.md", "config.yaml", "src/"], count: 3}`,
+			`storage_list(session_identifier: "2", path: "logs/") → {files: ["error.log", "debug.log"], count: 2}`,
 		},
 		NextTools: []string{
 			"storage_read - Read specific files",
@@ -255,7 +252,7 @@ var toolDescriptions = map[string]ToolDescription{
 			"Before creating new sessions",
 		},
 		Examples: []string{
-			`resource_session_list()`,
+			`resource_session_list() → [{id: "session-123", name: "test", status: "running", workspace_id: "1"}, {id: "session-124", status: "idle", workspace_id: "2"}]`,
 		},
 		NextTools: []string{
 			"resource_session_show - Get session details",
@@ -272,7 +269,7 @@ var toolDescriptions = map[string]ToolDescription{
 			"To get session metadata",
 		},
 		Examples: []string{
-			`resource_session_show(session_identifier: "session-123")`,
+			`resource_session_show(session_identifier: "session-123") → {id: "session-123", agent_id: "test", status: "running", command: "go test", started_at: "2024-01-15T10:35:00Z"}`,
 		},
 		NextTools: []string{
 			"resource_session_output - Check session logs",
