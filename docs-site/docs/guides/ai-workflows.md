@@ -153,30 +153,6 @@ AI Assistant:
 5. Monitors all sessions with status checks
 ```
 
-## Best Practices
-
-### Workspace Naming
-
-AI agents typically create descriptive workspace names:
-
-- `fix-issue-123-login-bug`
-- `feat-user-authentication`
-- `docs-api-reference`
-- `refactor-database-layer`
-
-### Session Management
-
-1. **One agent per workspace** - Avoid conflicts
-2. **Monitor agent status** - Check for stuck sessions
-3. **Clean up after completion** - Remove merged workspaces
-4. **Use storage for context** - Save task-specific information
-
-### MCP Configuration
-
-1. **Use absolute paths** - Both for amux binary and project root
-2. **Restart after changes** - MCP clients cache configuration
-3. **Check initialization** - Ensure `.amux/config.yaml` exists
-
 ## Tool Reference
 
 ### workspace_create
