@@ -24,16 +24,21 @@ func setupTestManager(t *testing.T) (*Manager, string) {
 		},
 		Agents: map[string]config.Agent{
 			"claude": {
-				Name:    "Claude",
-				Type:    "claude",
-				Command: "claude",
+				Name: "Claude",
+				Type: "tmux",
 				Environment: map[string]string{
 					"ANTHROPIC_API_KEY": "test-key",
+				},
+				Tmux: &config.TmuxConfig{
+					Command: "claude",
 				},
 			},
 			"gpt": {
 				Name: "GPT",
-				Type: "openai",
+				Type: "tmux",
+				Tmux: &config.TmuxConfig{
+					Command: "gpt",
+				},
 			},
 		},
 	}
@@ -58,8 +63,8 @@ func TestManager_GetAgent(t *testing.T) {
 	if agent.Name != "Claude" {
 		t.Errorf("Expected agent name 'Claude', got '%s'", agent.Name)
 	}
-	if agent.Command != "claude" {
-		t.Errorf("Expected command 'claude', got '%s'", agent.Command)
+	if agent.Tmux == nil || agent.Tmux.Command != "claude" {
+		t.Errorf("Expected tmux command 'claude'")
 	}
 	if agent.Environment["ANTHROPIC_API_KEY"] != "test-key" {
 		t.Errorf("Expected environment variable not found")
@@ -96,11 +101,13 @@ func TestManager_AddAgent(t *testing.T) {
 	manager, _ := setupTestManager(t)
 
 	newAgent := config.Agent{
-		Name:    "Gemini",
-		Type:    "google",
-		Command: "gemini",
+		Name: "Gemini",
+		Type: "tmux",
 		Environment: map[string]string{
 			"GOOGLE_API_KEY": "test-key",
+		},
+		Tmux: &config.TmuxConfig{
+			Command: "gemini",
 		},
 	}
 
@@ -124,12 +131,14 @@ func TestManager_UpdateAgent(t *testing.T) {
 
 	// Update existing agent
 	updatedAgent := config.Agent{
-		Name:    "Claude Updated",
-		Type:    "claude",
-		Command: "claude-v2",
+		Name: "Claude Updated",
+		Type: "tmux",
 		Environment: map[string]string{
 			"ANTHROPIC_API_KEY": "new-key",
 			"DEBUG":             "true",
+		},
+		Tmux: &config.TmuxConfig{
+			Command: "claude-v2",
 		},
 	}
 
@@ -146,8 +155,8 @@ func TestManager_UpdateAgent(t *testing.T) {
 	if agent.Name != "Claude Updated" {
 		t.Errorf("Expected updated name, got '%s'", agent.Name)
 	}
-	if agent.Command != "claude-v2" {
-		t.Errorf("Expected updated command, got '%s'", agent.Command)
+	if agent.Tmux == nil || agent.Tmux.Command != "claude-v2" {
+		t.Errorf("Expected updated tmux command")
 	}
 	if len(agent.Environment) != 2 {
 		t.Errorf("Expected 2 environment variables, got %d", len(agent.Environment))
@@ -230,8 +239,8 @@ func TestManager_GetEnvironment(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get environment: %v", err)
 	}
-	if env != nil {
-		t.Error("Expected nil environment for agent without environment")
+	if len(env) != 0 {
+		t.Errorf("Expected empty environment for agent without environment, got %d", len(env))
 	}
 
 	// Test non-existent agent

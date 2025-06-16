@@ -50,8 +50,10 @@ func listAgents(cmd *cobra.Command, args []string) error {
 
 	// Add rows
 	for id, agent := range agents {
-		command := agent.Command
-		if command == "" {
+		command := ""
+		if agent.Tmux != nil && agent.Tmux.Command != "" {
+			command = agent.Tmux.Command
+		} else {
 			command = ui.DimStyle.Render("(default: " + id + ")")
 		}
 		tbl.AddRow(id, agent.Name, agent.Type, command)

@@ -55,8 +55,8 @@ Output:
 ```text
 SESSION ID           AGENT      WORKSPACE            STATUS     IN STATUS   TOTAL TIME
 session-abc123       claude     feature-auth         working    45s         5m30s
-session-def456       gpt        bugfix-api          idle       2m 15s      8m45s
-session-ghi789       gemini     docs-update         stopped    5m          15m45s
+session-def456       aider      bugfix-api          idle       2m 15s      8m45s
+session-ghi789       my-agent   docs-update         stopped    5m          15m45s
 ```
 
 The **IN STATUS** column shows how long the session has been in its current status,
@@ -102,10 +102,10 @@ Add or update agent configurations:
 
 ```bash
 # Add a new agent
-amux agent config add gpt-4 \
-  --name "GPT-4" \
-  --type openai \
-  --command "gpt-cli" \
+amux agent config add aider \
+  --name "Aider" \
+  --type tmux \
+  --command "aider" \
   --env OPENAI_API_KEY=sk-...
 
 # Update an existing agent
@@ -128,16 +128,33 @@ Agents are configured in `.amux/config.yaml`:
 agents:
   claude:
     name: Claude
-    type: claude
-    command: claude
+    type: tmux  # Required: session type (currently only "tmux" is supported)
+    description: Claude AI assistant for development
     environment:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
-  gpt:
-    name: GPT-4
-    type: openai
-    command: gpt-cli
+    tmux:
+      command: claude
+      shell: /bin/bash  # Optional: custom shell
+      windowName: claude-session  # Optional: tmux window name
+
+  aider:
+    name: Aider
+    type: tmux
+    description: AI pair programming assistant
     environment:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
+    tmux:
+      command: aider
+
+  my-agent:
+    name: My Custom Agent
+    type: tmux
+    description: Custom AI agent
+    environment:
+      API_KEY: ${MY_AGENT_API_KEY}
+      MODEL: gpt-4
+    tmux:
+      command: my-agent-cli --model ${MODEL}
 ```
 
 ## Working Context
@@ -183,9 +200,9 @@ Run different agents in separate workspaces:
 amux ws create feature-oauth --agent claude
 amux run claude --workspace feature-oauth
 
-# Terminal 2: Start GPT for bug fixing
-amux ws create bugfix-api --agent gpt
-amux run gpt --workspace bugfix-api
+# Terminal 2: Start Aider for bug fixing
+amux ws create bugfix-api --agent aider
+amux run aider --workspace bugfix-api
 
 # Terminal 3: Monitor all sessions
 amux ps

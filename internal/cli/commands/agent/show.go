@@ -47,8 +47,8 @@ func showAgent(cmd *cobra.Command, args []string) error {
 	ui.PrintIndented(2, "Name:    %s", agent.Name)
 	ui.PrintIndented(2, "Type:    %s", agent.Type)
 
-	if agent.Command != "" {
-		ui.PrintIndented(2, "Command: %s", agent.Command)
+	if agent.Tmux != nil && agent.Tmux.Command != "" {
+		ui.PrintIndented(2, "Command: %s", agent.Tmux.Command)
 	} else {
 		ui.PrintIndented(2, "Command: %s", ui.DimStyle.Render("(default: "+agentID+")"))
 	}

@@ -113,8 +113,13 @@ func (m *Manager) GetDefaultCommand(agentID string) (string, error) {
 		return agentID, nil //nolint:nilerr // Fallback to agent ID if not configured
 	}
 
-	if agent.Command != "" {
-		return agent.Command, nil
+	// Get command based on agent type
+	switch agent.Type {
+	case "tmux":
+		if agent.Tmux != nil && agent.Tmux.Command != "" {
+			return agent.Tmux.Command, nil
+		}
+		// Future: handle other types
 	}
 
 	// Default to agent ID as command

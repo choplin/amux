@@ -81,11 +81,8 @@ func showConfigPretty(cfg *config.Config) error {
 				ui.OutputLine("    Name: %s", agent.Name)
 			}
 			ui.OutputLine("    Type: %s", agent.Type)
-			if agent.Command != "" {
-				ui.OutputLine("    Command: %s", agent.Command)
-			}
-			if agent.Endpoint != "" {
-				ui.OutputLine("    Endpoint: %s", agent.Endpoint)
+			if agent.Tmux != nil && agent.Tmux.Command != "" {
+				ui.OutputLine("    Command: %s", agent.Tmux.Command)
 			}
 			if agent.WorkingDir != "" {
 				ui.OutputLine("    Working Directory: %s", agent.WorkingDir)

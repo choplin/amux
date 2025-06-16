@@ -45,11 +45,23 @@ type AuthConfig struct {
 // Agent represents an AI agent configuration
 type Agent struct {
 	Name        string            `yaml:"name"`
-	Type        string            `yaml:"type"`
-	Endpoint    string            `yaml:"endpoint,omitempty"`
-	Command     string            `yaml:"command,omitempty"`
+	Type        string            `yaml:"type"` // Required: "tmux", "claude-code", etc.
+	Description string            `yaml:"description,omitempty"`
 	Environment map[string]string `yaml:"environment,omitempty"`
 	WorkingDir  string            `yaml:"workingDir,omitempty"`
+	Tags        []string          `yaml:"tags,omitempty"`
+
+	// Type-specific configurations (only one should be set based on Type)
+	Tmux *TmuxConfig `yaml:"tmux,omitempty"`
+	// Future: ClaudeCode *ClaudeCodeConfig `yaml:"claudeCode,omitempty"`
+}
+
+// TmuxConfig contains tmux-specific session configuration
+type TmuxConfig struct {
+	Command    string `yaml:"command"`
+	Shell      string `yaml:"shell,omitempty"`
+	WindowName string `yaml:"windowName,omitempty"`
+	Detached   bool   `yaml:"detached,omitempty"`
 }
 
 // DefaultConfig returns the default Amux configuration
@@ -68,9 +80,12 @@ func DefaultConfig() *Config {
 		},
 		Agents: map[string]Agent{
 			"claude": {
-				Name:    "Claude",
-				Type:    "claude",
-				Command: "claude",
+				Name:        "Claude",
+				Type:        "tmux",
+				Description: "Claude AI assistant for terminal-based development",
+				Tmux: &TmuxConfig{
+					Command: "claude",
+				},
 			},
 		},
 	}

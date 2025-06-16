@@ -125,9 +125,16 @@ func runSession(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Determine session type from agent config
+	sessionType := session.TypeTmux // Default
+	if agentConfig != nil {
+		sessionType = session.Type(agentConfig.Type)
+	}
+
 	// Create session
 	opts := session.Options{
 		ID:            sessionID,
+		Type:          sessionType,
 		WorkspaceID:   ws.ID,
 		AgentID:       agentID,
 		Command:       command,
