@@ -153,42 +153,6 @@ AI Assistant:
 5. Monitors all sessions with status checks
 ```
 
-## Tool Reference
-
-### workspace_create
-
-```typescript
-workspace_create({
-  name: string,              // Required: workspace name
-  description?: string,      // Optional: description
-  branch?: string,          // Optional: use existing branch
-  baseBranch?: string       // Optional: base for new branch
-})
-```
-
-### session_run
-
-```typescript
-session_run({
-  agent_id: string,                // Required: agent to run
-  workspace_identifier: string,    // Required: target workspace
-  name?: string,                   // Optional: session name
-  description?: string,            // Optional: session description
-  command?: string,                // Optional: override command
-  environment?: {[key: string]: string}  // Optional: env variables
-})
-```
-
-### storage_write
-
-```typescript
-storage_write({
-  workspace_identifier: string,  // Workspace ID or name
-  path: string,                 // File path in storage
-  content: string               // File content
-})
-```
-
 ## Troubleshooting
 
 ### Common Issues
