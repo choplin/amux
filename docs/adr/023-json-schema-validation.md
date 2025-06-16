@@ -78,6 +78,7 @@ The schema defines:
 The schema uses a unified `params` field for all type-specific configurations, avoiding field name conflicts between different agent types. The `params` field content is validated based on the agent's `type` field value.
 
 For example:
+
 - `tmux` agents require `params` to contain tmux-specific fields (command, shell, etc.)
 - Future `claude-code` agents will require different fields in `params`
 
