@@ -298,28 +298,6 @@ amux tail 1
 amux tail my-session
 ```
 
-## Agent Commands
-
-Configure AI agents.
-
-### `amux agent list`
-
-List configured agents.
-
-```bash
-amux agent list
-```
-
-### `amux agent show`
-
-Show agent configuration.
-
-```bash
-amux agent show <agent-id>
-```
-
-**Note:** To add or modify agents, use `amux config edit` to edit the configuration file directly. Agent configurations are defined in the `.amux/config.yaml` file.
-
 ## Configuration Commands
 
 Manage Amux configuration.

@@ -51,15 +51,13 @@ amux mcp --transport http --port 3000
 | N/A | `storage_write` | `workspace_identifier?`, `session_identifier?`, `path`, `content` |
 | N/A | `storage_list` | `workspace_identifier?`, `session_identifier?`, `path?` |
 
-### Configuration & Agent Operations
+### Configuration Operations
 
 | CLI Command | MCP Tool/Resource | Parameters |
 |-------------|-------------------|------------|
 | `amux config show` | N/A (CLI only) | - |
 | `amux config edit` | N/A (CLI only) | - |
 | `amux config validate` | N/A (CLI only) | - |
-| `amux agent list` | N/A (CLI only) | - |
-| `amux agent show <id>` | N/A (CLI only) | - |
 
 ### Prompt Operations (MCP Only)
 

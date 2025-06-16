@@ -67,20 +67,25 @@ amux tail session-123  # Follow logs in real-time
 
 ## Agent Configuration
 
-### List Available Agents
+Agents are configured in `.amux/config.yaml`. To view or modify agent configurations:
 
 ```bash
-amux agent list
-```
+# View current configuration
+amux config show
 
-### Show Agent Details
-
-```bash
-amux agent show claude
-```
-
-Agents are configured in `.amux/config.yaml`. To modify agents:
-
-```bash
+# Edit configuration
 amux config edit
+```
+
+Example agent configuration:
+
+```yaml
+agents:
+  claude:
+    name: Claude
+    type: tmux
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    params:
+      command: claude code
 ```
