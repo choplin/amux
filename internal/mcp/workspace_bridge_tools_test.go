@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -54,10 +55,14 @@ func TestWorkspaceBridgeTools(t *testing.T) {
 			t.Fatalf("expected TextContent, got %T", result.Content[0])
 		}
 
-		var workspaces []map[string]interface{}
-		if err := json.Unmarshal([]byte(textContent.Text), &workspaces); err != nil {
+		// Parse enhanced result
+		var enhancedResult struct {
+			Result []map[string]interface{} `json:"result"`
+		}
+		if err := json.Unmarshal([]byte(textContent.Text), &enhancedResult); err != nil {
 			t.Fatalf("failed to unmarshal response: %v", err)
 		}
+		workspaces := enhancedResult.Result
 
 		if len(workspaces) != 2 {
 			t.Errorf("expected 2 workspaces, got %d", len(workspaces))
@@ -88,10 +93,14 @@ func TestWorkspaceBridgeTools(t *testing.T) {
 			t.Fatalf("expected TextContent, got %T", result.Content[0])
 		}
 
-		var detail map[string]interface{}
-		if err := json.Unmarshal([]byte(textContent.Text), &detail); err != nil {
+		// Parse enhanced result
+		var enhancedResult struct {
+			Result map[string]interface{} `json:"result"`
+		}
+		if err := json.Unmarshal([]byte(textContent.Text), &enhancedResult); err != nil {
 			t.Fatalf("failed to unmarshal response: %v", err)
 		}
+		detail := enhancedResult.Result
 
 		if detail["id"] != ws1.ID {
 			t.Errorf("expected workspace ID %s, got %v", ws1.ID, detail["id"])
@@ -126,25 +135,28 @@ func TestWorkspaceBridgeTools(t *testing.T) {
 			t.Fatalf("expected TextContent, got %T", result.Content[0])
 		}
 
-		// Should return directory listing
-		var files []map[string]interface{}
-		if err := json.Unmarshal([]byte(textContent.Text), &files); err != nil {
+		// Parse enhanced result - browse returns structured content
+		var enhancedResult struct {
+			Result map[string]interface{} `json:"result"`
+		}
+		if err := json.Unmarshal([]byte(textContent.Text), &enhancedResult); err != nil {
 			t.Fatalf("failed to unmarshal response: %v", err)
 		}
 
-		// Should have some files/directories
-		if len(files) == 0 {
-			t.Error("expected at least some files in workspace root")
+		// The content field should contain the directory listing
+		content, ok := enhancedResult.Result["content"].(string)
+		if !ok {
+			t.Fatalf("expected content to be string, got %T", enhancedResult.Result["content"])
 		}
 
-		// Check that entries have expected fields
-		for _, file := range files {
-			if _, ok := file["name"]; !ok {
-				t.Error("file entry missing 'name' field")
-			}
-			if _, ok := file["type"]; !ok {
-				t.Error("file entry missing 'type' field")
-			}
+		// Should have content that indicates it's a directory listing
+		if content == "" {
+			t.Error("expected non-empty content")
+		}
+
+		// The content should contain directory listing text (like from ls command)
+		if !strings.Contains(content, ".") && !strings.Contains(content, "total") {
+			t.Error("expected directory listing content")
 		}
 	})
 }

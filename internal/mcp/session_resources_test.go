@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/aki/amux/internal/adapters/tmux"
@@ -94,14 +93,18 @@ func TestSessionResources(t *testing.T) {
 			t.Fatalf("failed to create workspace: %v", err)
 		}
 
-		// Extract workspace ID
+		// Extract workspace ID from enhanced result
 		workspaceText := workspaceResult.Content[0].(mcp.TextContent).Text
-		var workspaceInfo map[string]interface{}
-		err = json.Unmarshal([]byte(workspaceText[strings.Index(workspaceText, "{"):]), &workspaceInfo)
-		if err != nil {
-			t.Fatalf("failed to parse workspace info: %v", err)
+		var enhancedResult struct {
+			Result struct {
+				ID string `json:"id"`
+			} `json:"result"`
 		}
-		workspaceID := workspaceInfo["id"].(string)
+		err = json.Unmarshal([]byte(workspaceText), &enhancedResult)
+		if err != nil {
+			t.Fatalf("failed to parse enhanced result: %v", err)
+		}
+		workspaceID := enhancedResult.Result.ID
 
 		// Create session with name and description using direct manager call
 		sessionManager, err := testServer.createSessionManager()

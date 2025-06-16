@@ -67,15 +67,14 @@ func TestSessionRun(t *testing.T) {
 		}
 
 		// Parse JSON response
-		jsonStart := findJSONStart(textContent.Text)
-		if jsonStart == -1 {
-			t.Fatalf("no JSON found in response: %s", textContent.Text)
+		// Parse enhanced result
+		var enhancedResult struct {
+			Result map[string]interface{} `json:"result"`
 		}
-
-		var response map[string]interface{}
-		if err := json.Unmarshal([]byte(textContent.Text[jsonStart:]), &response); err != nil {
-			t.Fatalf("failed to parse response JSON: %v", err)
+		if err := json.Unmarshal([]byte(textContent.Text), &enhancedResult); err != nil {
+			t.Fatalf("failed to parse enhanced result: %v", err)
 		}
+		response := enhancedResult.Result
 
 		// Verify response fields
 		if response["workspace_id"] != ws.ID {
@@ -135,16 +134,14 @@ func TestSessionRun(t *testing.T) {
 			t.Fatalf("expected TextContent, got %T", result.Content[0])
 		}
 
-		// Parse JSON response
-		text := textContent.Text
-		jsonStart := strings.Index(text, "{")
-		if jsonStart == -1 {
-			t.Fatalf("no JSON found in response: %s", text)
+		// Parse enhanced result
+		var enhancedResult struct {
+			Result map[string]interface{} `json:"result"`
 		}
-		var response map[string]interface{}
-		if err := json.Unmarshal([]byte(text[jsonStart:]), &response); err != nil {
-			t.Fatalf("failed to parse response JSON: %v", err)
+		if err := json.Unmarshal([]byte(textContent.Text), &enhancedResult); err != nil {
+			t.Fatalf("failed to parse enhanced result: %v", err)
 		}
+		response := enhancedResult.Result
 
 		// Verify name and description
 		if response["name"] != "Named Test Session" {
@@ -385,14 +382,4 @@ func TestSessionToolsRegistration(t *testing.T) {
 // Helper function to check if string contains substring
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > 0 && strings.Contains(s, substr))
-}
-
-// Helper function to find where JSON starts in response
-func findJSONStart(s string) int {
-	for i, ch := range s {
-		if ch == '{' || ch == '[' {
-			return i
-		}
-	}
-	return -1
 }

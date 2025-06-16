@@ -2,7 +2,6 @@ package mcp
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -163,27 +162,8 @@ func (s *ServerV2) handleWorkspaceCreate(ctx context.Context, request mcp.CallTo
 		return nil, fmt.Errorf("failed to create workspace: %w", err)
 	}
 
-	// Create result with workspace details
-	type WorkspaceResult struct {
-		*workspace.Workspace
-		SuggestedNextTools []map[string]string `json:"suggested_next_tools,omitempty"`
-	}
-
-	enhancedResult := WorkspaceResult{
-		Workspace:          ws,
-		SuggestedNextTools: GetNextToolSuggestions("workspace_create"),
-	}
-
-	result, _ := json.MarshalIndent(enhancedResult, "", "  ")
-
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: string(result),
-			},
-		},
-	}, nil
+	// Create enhanced result with metadata
+	return createEnhancedResult("workspace_create", ws, nil)
 }
 
 func (s *ServerV2) handleWorkspaceRemove(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -206,15 +186,14 @@ func (s *ServerV2) handleWorkspaceRemove(ctx context.Context, request mcp.CallTo
 		return nil, fmt.Errorf("failed to remove workspace: %w", err)
 	}
 
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
+	// Create enhanced result
+	result := map[string]interface{}{
+		"workspace_id":   ws.ID,
+		"workspace_name": ws.Name,
+		"message":        fmt.Sprintf("Workspace %s (%s) removed", ws.Name, ws.ID),
+	}
 
-				Text: fmt.Sprintf("Workspace %s (%s) removed", ws.Name, ws.ID),
-			},
-		},
-	}, nil
+	return createEnhancedResult("workspace_remove", result, nil)
 }
 
 // Start starts the MCP server

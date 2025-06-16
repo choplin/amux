@@ -2,7 +2,6 @@ package mcp
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -58,19 +57,7 @@ func (s *ServerV2) handleResourceWorkspaceList(ctx context.Context, request mcp.
 		return nil, err
 	}
 
-	jsonData, err := json.MarshalIndent(workspaceList, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal workspace list: %w", err)
-	}
-
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: string(jsonData),
-			},
-		},
-	}, nil
+	return createEnhancedResult("resource_workspace_list", workspaceList, nil)
 }
 
 func (s *ServerV2) handleResourceWorkspaceShow(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -86,19 +73,7 @@ func (s *ServerV2) handleResourceWorkspaceShow(ctx context.Context, request mcp.
 		return nil, err
 	}
 
-	jsonData, err := json.MarshalIndent(detail, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal workspace detail: %w", err)
-	}
-
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: string(jsonData),
-			},
-		},
-	}, nil
+	return createEnhancedResult("resource_workspace_show", detail, nil)
 }
 
 func (s *ServerV2) handleResourceWorkspaceBrowse(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -137,24 +112,23 @@ func (s *ServerV2) handleResourceWorkspaceBrowse(ctx context.Context, request mc
 	content := contents[0]
 	switch c := content.(type) {
 	case *mcp.TextResourceContents:
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: c.Text,
-				},
-			},
-		}, nil
+		// Create structured result for directory listings or file contents
+		result := map[string]interface{}{
+			"workspace_identifier": workspaceID,
+			"path":                 path,
+			"content":              c.Text,
+		}
+		return createEnhancedResult("resource_workspace_browse", result, nil)
 	case *mcp.BlobResourceContents:
-		// For binary files, return base64 encoded
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: fmt.Sprintf("Binary file (%s): base64 encoded content", c.MIMEType),
-				},
-			},
-		}, nil
+		// For binary files, return structured result
+		result := map[string]interface{}{
+			"workspace_identifier": workspaceID,
+			"path":                 path,
+			"type":                 "binary",
+			"mime_type":            c.MIMEType,
+			"message":              fmt.Sprintf("Binary file (%s)", c.MIMEType),
+		}
+		return createEnhancedResult("resource_workspace_browse", result, nil)
 	default:
 		return nil, fmt.Errorf("unexpected content type")
 	}

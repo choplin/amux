@@ -94,19 +94,7 @@ func (s *ServerV2) handleResourceSessionList(ctx context.Context, request mcp.Ca
 		sessionList[i] = sessionInfo
 	}
 
-	jsonData, err := json.MarshalIndent(sessionList, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal session list: %w", err)
-	}
-
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: string(jsonData),
-			},
-		},
-	}, nil
+	return createEnhancedResult("resource_session_list", sessionList, nil)
 }
 
 func (s *ServerV2) handleResourceSessionShow(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -138,14 +126,14 @@ func (s *ServerV2) handleResourceSessionShow(ctx context.Context, request mcp.Ca
 		return nil, fmt.Errorf("unexpected resource type")
 	}
 
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: textResource.Text,
-			},
-		},
-	}, nil
+	// Parse the JSON to extract session details
+	var sessionDetail map[string]interface{}
+	if err := json.Unmarshal([]byte(textResource.Text), &sessionDetail); err != nil {
+		// If parsing fails, return as plain text
+		return createEnhancedResult("resource_session_show", textResource.Text, nil)
+	}
+
+	return createEnhancedResult("resource_session_show", sessionDetail, nil)
 }
 
 func (s *ServerV2) handleResourceSessionOutput(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -177,12 +165,11 @@ func (s *ServerV2) handleResourceSessionOutput(ctx context.Context, request mcp.
 		return nil, fmt.Errorf("unexpected resource type")
 	}
 
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: textResource.Text,
-			},
-		},
-	}, nil
+	// Create structured output result
+	result := map[string]interface{}{
+		"session_id": sessionID,
+		"output":     textResource.Text,
+	}
+
+	return createEnhancedResult("resource_session_output", result, nil)
 }
