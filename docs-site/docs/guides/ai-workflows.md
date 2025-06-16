@@ -27,20 +27,20 @@ Add to your MCP settings:
   "mcpServers": {
     "amux": {
       "command": "/usr/local/bin/amux",
-      "args": ["mcp", "--root-dir", "/path/to/your/project"],
+      "args": ["mcp", "--git-root", "/path/to/your/project"],
       "env": {}
     }
   }
 }
 ```
 
-**Important:** Always use absolute paths for both the command and `--root-dir`.
+**Important:** Always use absolute paths for both the command and `--git-root`.
 
 ### For Other MCP Clients
 
 ```bash
 # Start MCP server with STDIO transport
-amux mcp --root-dir /path/to/your/project
+amux mcp --git-root /path/to/your/project
 ```
 
 ## Available MCP Tools

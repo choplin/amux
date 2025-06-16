@@ -21,14 +21,14 @@ Add to your MCP settings:
   "mcpServers": {
     "amux": {
       "command": "/usr/local/bin/amux",
-      "args": ["mcp", "--root-dir", "/path/to/your/project"],
+      "args": ["mcp", "--git-root", "/path/to/your/project"],
       "env": {}
     }
   }
 }
 ```
 
-**Important:** Always use absolute paths for both the command and `--root-dir`.
+**Important:** Always use absolute paths for both the command and `--git-root`.
 
 ### For Other MCP Clients
 
@@ -351,7 +351,7 @@ await Promise.all([
 ### Connection Issues
 
 1. Verify `amux` binary path is absolute
-2. Ensure `--root-dir` points to initialized project
+2. Ensure `--git-root` points to initialized project
 3. Check `.amux/config.yaml` exists
 4. Restart MCP client after config changes
 
