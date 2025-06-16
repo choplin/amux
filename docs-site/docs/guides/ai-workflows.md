@@ -119,12 +119,12 @@ Here are effective prompts to invoke Amux tools in AI assistants:
 ```text
 User: "Work on issue #45 about improving error messages"
 
-AI Assistant:
-1. Creates workspace: fix-issue-45-error-messages
-2. Reviews the issue details
-3. Implements the changes
-4. Runs tests to verify
-5. Prepares for pull request
+Typical workflow:
+1. AI creates workspace: fix-issue-45-error-messages
+2. AI reviews the issue details
+3. AI implements the changes
+4. AI runs tests to verify
+5. AI prepares for pull request
 ```
 
 ### Feature Development
@@ -132,12 +132,12 @@ AI Assistant:
 ```text
 User: "Implement user authentication with JWT"
 
-AI Assistant:
-1. Creates workspace: feat-jwt-authentication
-2. Plans the implementation
-3. Writes the authentication module
-4. Creates tests
-5. Documents the feature
+Typical workflow:
+1. AI creates workspace: feat-jwt-authentication
+2. AI plans the implementation
+3. AI writes the authentication module
+4. AI creates tests
+5. AI documents the feature
 ```
 
 ### Parallel AI Development
@@ -145,12 +145,12 @@ AI Assistant:
 ```text
 User: "Run three AI agents to work on different features"
 
-AI Assistant:
-1. Creates three workspaces for different features
-2. Starts claude in feat-api workspace
-3. Starts aider in feat-ui workspace
-4. Starts my-assistant in docs-update workspace
-5. Monitors all sessions with status checks
+Typical workflow:
+1. AI creates three workspaces for different features
+2. AI starts claude in feat-api workspace
+3. AI starts aider in feat-ui workspace
+4. AI starts my-assistant in docs-update workspace
+5. AI monitors all sessions with status checks
 ```
 
 ## Troubleshooting
