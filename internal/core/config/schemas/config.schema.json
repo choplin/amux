@@ -22,15 +22,6 @@
           "type": "string",
           "description": "Project name",
           "minLength": 1
-        },
-        "repository": {
-          "type": "string",
-          "description": "Git repository URL",
-          "format": "uri"
-        },
-        "defaultAgent": {
-          "type": "string",
-          "description": "Default agent ID to use when not specified"
         }
       }
     },

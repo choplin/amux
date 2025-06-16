@@ -21,8 +21,6 @@ func TestValidateYAML(t *testing.T) {
 			yaml: `version: "1.0"
 project:
   name: test-project
-  repository: https://github.com/test/project.git
-  defaultAgent: claude
 mcp:
   transport:
     type: stdio
@@ -199,8 +197,6 @@ agents:
 			yaml: `version: "1.0"
 project:
   name: test-project
-  repository: https://github.com/test/project.git
-  defaultAgent: claude
 mcp:
   transport:
     type: http
@@ -253,7 +249,6 @@ func TestLoadWithValidation(t *testing.T) {
 		validConfig := `version: "1.0"
 project:
   name: test-project
-  repository: https://github.com/test/project.git
 agents:
   claude:
     name: Claude

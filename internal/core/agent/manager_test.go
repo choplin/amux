@@ -19,8 +19,7 @@ func setupTestManager(t *testing.T) (*Manager, string) {
 	testConfig := &config.Config{
 		Version: "1.0",
 		Project: config.ProjectConfig{
-			Name:         "test-project",
-			DefaultAgent: "claude",
+			Name: "test-project",
 		},
 		MCP: config.MCPConfig{
 			Transport: config.TransportConfig{

@@ -20,9 +20,7 @@ func TestConfigShowCommand(t *testing.T) {
 	testCfg := &config.Config{
 		Version: "1.0",
 		Project: config.ProjectConfig{
-			Name:         "test-project",
-			Repository:   "https://github.com/test/project.git",
-			DefaultAgent: "test-agent",
+			Name: "test-project",
 		},
 		MCP: config.MCPConfig{
 			Transport: config.TransportConfig{

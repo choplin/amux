@@ -16,9 +16,7 @@ type Config struct {
 
 // ProjectConfig represents project-specific configuration
 type ProjectConfig struct {
-	Name         string `yaml:"name"`
-	Repository   string `yaml:"repository"`
-	DefaultAgent string `yaml:"defaultAgent"`
+	Name string `yaml:"name"`
 }
 
 // MCPConfig represents MCP server configuration
@@ -158,9 +156,7 @@ func DefaultConfig() *Config {
 	return &Config{
 		Version: "1.0",
 		Project: ProjectConfig{
-			Name:         "amux-project",
-			Repository:   "",
-			DefaultAgent: "claude",
+			Name: "amux-project",
 		},
 		MCP: MCPConfig{
 			Transport: TransportConfig{

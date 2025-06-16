@@ -64,8 +64,6 @@ func runConfigShow(cmd *cobra.Command, args []string) error {
 func showConfigPretty(cfg *config.Config) error {
 	ui.OutputLine("Project Configuration:")
 	ui.OutputLine("  Name: %s", cfg.Project.Name)
-	ui.OutputLine("  Repository: %s", cfg.Project.Repository)
-	ui.OutputLine("  Default Agent: %s", cfg.Project.DefaultAgent)
 
 	ui.OutputLine("\nMCP Configuration:")
 	ui.OutputLine("  Transport: %s", cfg.MCP.Transport.Type)
