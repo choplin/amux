@@ -353,3 +353,52 @@ agents: {}`
 		assert.Contains(t, err.Error(), "configuration file not found")
 	})
 }
+
+func TestSchemaValidation_TypeSpecificFields(t *testing.T) {
+	tests := []struct {
+		name    string
+		yaml    string
+		wantErr string
+	}{
+		{
+			name: "invalid type not in enum",
+			yaml: `version: "1.0"
+project:
+  name: test-project
+agents:
+  future-agent:
+    name: Future Agent
+    type: claude-code
+    tmux:
+      command: some-command`,
+			wantErr: "value must be \"tmux\"",
+		},
+		{
+			name: "tmux agent with unexpected field",
+			yaml: `version: "1.0"
+project:
+  name: test-project
+agents:
+  tmux-agent:
+    name: Tmux Agent
+    type: tmux
+    tmux:
+      command: bash
+    claudeCode:
+      cliPath: /usr/local/bin/claude`,
+			wantErr: "additionalProperties",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateYAML([]byte(tt.yaml))
+			if tt.wantErr != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErr)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}

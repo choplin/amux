@@ -19,11 +19,12 @@ func configValidateCmd() *cobra.Command {
 		Short: "Validate configuration file",
 		Long: `Validate the configuration file to ensure it conforms to the expected format.
 
-This command checks:
+This command validates the configuration file using JSON Schema to ensure:
 - Required fields are present
-- Field types are correct
+- Field types match the schema
 - Agent configurations are valid
-- Session types are supported`,
+- Session types are supported
+- Additional properties are not allowed`,
 		Example: `  # Validate current project configuration
   amux config validate
 
@@ -49,7 +50,11 @@ func validateConfig(cmd *cobra.Command, args []string) error {
 	// Create config manager
 	configManager := config.NewManager(projectRoot)
 
-	// Load configuration (this will validate it)
+	// Load and validate configuration using JSON Schema
+	// The Load() method internally uses LoadWithValidation() which:
+	// 1. Validates YAML against JSON Schema
+	// 2. Unmarshals to Config struct
+	// 3. Applies defaults
 	cfg, err := configManager.Load()
 	if err != nil {
 		ui.Error("Configuration validation failed: %v", err)
