@@ -209,9 +209,6 @@ GET amux://workspace/ws-feature-auth-123
 # Browse files in a workspace
 GET amux://workspace/ws-feature-auth-123/files
 GET amux://workspace/ws-feature-auth-123/files/src/auth.go
-
-# Read workspace context
-GET amux://workspace/ws-feature-auth-123/context
 ```
 
 #### Using Prompts
@@ -249,7 +246,6 @@ Amux provides structured read-only data through MCP Resources:
 - `amux://workspace/{id}` - Detailed workspace information including paths
 - `amux://workspace/{id}/files` - Browse workspace directory structure
 - `amux://workspace/{id}/files/{path}` - Read specific files
-- `amux://workspace/{id}/context` - Access workspace context.md file
 
 Example resource URIs:
 
@@ -257,7 +253,6 @@ Example resource URIs:
 amux://workspace/ws-abc123
 amux://workspace/ws-abc123/files
 amux://workspace/ws-abc123/files/src/main.go
-amux://workspace/ws-abc123/context
 ```
 
 ### MCP Tools (Actions)
@@ -306,14 +301,12 @@ amux agent config list                     # List configured agents
 
 ### Working Context
 
-Each workspace includes context files to help AI agents:
+Each workspace can include context files to help AI agents:
 
 - `background.md` - Task requirements and constraints
 - `plan.md` - Implementation approach
 - `working-log.md` - Progress tracking
 - `results-summary.md` - Final outcomes
-
-Access context path via `$AMUX_CONTEXT_PATH` in agent sessions.
 
 ## 📁 Project Structure
 
@@ -328,7 +321,6 @@ amux/
 │   ├── core/          # Core business logic
 │   │   ├── agent/     # Agent configuration
 │   │   ├── config/    # Configuration management
-│   │   ├── context/   # Working context management
 │   │   ├── git/       # Git operations
 │   │   ├── session/   # Session management
 │   │   └── workspace/ # Workspace management

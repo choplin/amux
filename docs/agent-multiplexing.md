@@ -175,22 +175,7 @@ Located in `.amux/context/` within each workspace:
 
 ### Managing Context
 
-```bash
-# Show context file paths for a workspace
-amux ws context show [workspace]
-
-# Initialize context files manually
-amux ws context init [workspace]
-```
-
-### Environment Variable
-
-The context path is automatically available in agent sessions:
-
-```bash
-echo $AMUX_CONTEXT_PATH
-# Output: /path/to/workspace/.amux/context
-```
+Context files are managed through the workspace storage directory.
 
 ## Advanced Usage
 
@@ -219,7 +204,6 @@ Each session automatically includes:
 - `AMUX_WORKSPACE_PATH` - Full path to workspace
 - `AMUX_SESSION_ID` - Unique session identifier
 - `AMUX_AGENT_ID` - Agent identifier
-- `AMUX_CONTEXT_PATH` - Path to working context files
 - Plus any agent-specific environment variables
 
 ### Workflow Example

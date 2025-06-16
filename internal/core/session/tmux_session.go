@@ -146,7 +146,6 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 	env["AMUX_WORKSPACE_PATH"] = s.workspace.Path
 	env["AMUX_SESSION_ID"] = s.info.ID
 	env["AMUX_AGENT_ID"] = s.info.AgentID
-	env["AMUX_CONTEXT_PATH"] = fmt.Sprintf("%s/.amux/context", s.workspace.Path)
 
 	if err := s.tmuxAdapter.SetEnvironment(tmuxSession, env); err != nil {
 		// Clean up on failure
@@ -319,13 +318,10 @@ func (s *tmuxSessionImpl) GetOutput(maxLines int) ([]byte, error) {
 
 // getDefaultCommand returns the default command for an agent
 func (s *tmuxSessionImpl) getDefaultCommand() string {
-	// Create context directory path
-	contextDir := filepath.Join(s.workspace.Path, ".amux", "context")
-
 	switch s.info.AgentID {
 	case "claude":
 		// Command to start Claude Code with the workspace
-		return fmt.Sprintf("claude code --workspace %s --context %s", s.workspace.Path, contextDir)
+		return fmt.Sprintf("claude code --workspace %s", s.workspace.Path)
 	default:
 		// No default command for unknown agents
 		return ""
