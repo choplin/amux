@@ -38,7 +38,7 @@ type StorageListParams struct {
 func (s *ServerV2) registerStorageTools() error {
 	// Storage read tool
 	readOpts, err := WithStructOptions(
-		"Read a file from workspace or session storage",
+		GetEnhancedDescription("storage_read"),
 		StorageReadParams{},
 	)
 	if err != nil {
@@ -48,7 +48,7 @@ func (s *ServerV2) registerStorageTools() error {
 
 	// Storage write tool
 	writeOpts, err := WithStructOptions(
-		"Write a file to workspace or session storage",
+		GetEnhancedDescription("storage_write"),
 		StorageWriteParams{},
 	)
 	if err != nil {
@@ -58,7 +58,7 @@ func (s *ServerV2) registerStorageTools() error {
 
 	// Storage list tool
 	listOpts, err := WithStructOptions(
-		"List files in workspace or session storage",
+		GetEnhancedDescription("storage_list"),
 		StorageListParams{},
 	)
 	if err != nil {
@@ -90,6 +90,10 @@ func (s *ServerV2) handleStorageRead(ctx context.Context, request mcp.CallToolRe
 		// Get workspace storage path
 		ws, err := s.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(workspaceID))
 		if err != nil {
+			// Check if it's a not found error
+			if strings.Contains(err.Error(), "not found") {
+				return nil, WorkspaceNotFoundError(workspaceID)
+			}
 			return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 		}
 		storagePath = ws.StoragePath
@@ -123,17 +127,21 @@ func (s *ServerV2) handleStorageRead(ctx context.Context, request mcp.CallToolRe
 	// Read the file
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
+		// Check if it's a file not found error
+		if os.IsNotExist(err) {
+			return nil, FileNotFoundError(path)
+		}
 		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
 
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: string(content),
-			},
-		},
-	}, nil
+	// Create result with file info
+	result := map[string]interface{}{
+		"path":    path,
+		"content": string(content),
+		"size":    len(content),
+	}
+
+	return createEnhancedResult("storage_read", result, nil)
 }
 
 // handleStorageWrite writes a file to storage
@@ -158,6 +166,10 @@ func (s *ServerV2) handleStorageWrite(ctx context.Context, request mcp.CallToolR
 		// Get workspace storage path
 		ws, err := s.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(workspaceID))
 		if err != nil {
+			// Check if it's a not found error
+			if strings.Contains(err.Error(), "not found") {
+				return nil, WorkspaceNotFoundError(workspaceID)
+			}
 			return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 		}
 		storagePath = ws.StoragePath
@@ -199,14 +211,14 @@ func (s *ServerV2) handleStorageWrite(ctx context.Context, request mcp.CallToolR
 		return nil, fmt.Errorf("failed to write file: %w", err)
 	}
 
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: fmt.Sprintf("Successfully wrote %d bytes to %s", len(content), path),
-			},
-		},
-	}, nil
+	// Create enhanced result
+	result := map[string]interface{}{
+		"path":    path,
+		"bytes":   len(content),
+		"message": fmt.Sprintf("Successfully wrote %d bytes to %s", len(content), path),
+	}
+
+	return createEnhancedResult("storage_write", result, nil)
 }
 
 // handleStorageList lists files in storage
@@ -230,6 +242,10 @@ func (s *ServerV2) handleStorageList(ctx context.Context, request mcp.CallToolRe
 		// Get workspace storage path
 		ws, err := s.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(workspaceID))
 		if err != nil {
+			// Check if it's a not found error
+			if strings.Contains(err.Error(), "not found") {
+				return nil, WorkspaceNotFoundError(workspaceID)
+			}
 			return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 		}
 		storagePath = ws.StoragePath
@@ -265,6 +281,10 @@ func (s *ServerV2) handleStorageList(ctx context.Context, request mcp.CallToolRe
 	// List directory contents
 	entries, err := os.ReadDir(listPath)
 	if err != nil {
+		// Check if it's a directory not found error
+		if os.IsNotExist(err) {
+			return nil, DirectoryNotFoundError(subPath)
+		}
 		return nil, fmt.Errorf("failed to list directory: %w", err)
 	}
 
@@ -277,21 +297,14 @@ func (s *ServerV2) handleStorageList(ctx context.Context, request mcp.CallToolRe
 		files = append(files, name)
 	}
 
-	result := fmt.Sprintf("Contents of %s:\n", subPath)
-	if len(files) == 0 {
-		result += "(empty)"
-	} else {
-		for _, f := range files {
-			result += fmt.Sprintf("- %s\n", f)
-		}
+	// Just remove the old formatting code - we're using structured data now
+
+	// Create enhanced result
+	listResult := map[string]interface{}{
+		"path":  subPath,
+		"files": files,
+		"count": len(files),
 	}
 
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: result,
-			},
-		},
-	}, nil
+	return createEnhancedResult("storage_list", listResult, nil)
 }

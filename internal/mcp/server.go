@@ -2,11 +2,11 @@ package mcp
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -100,7 +100,7 @@ func NewServerV2(configManager *config.Manager, transport string, httpConfig *co
 func (s *ServerV2) registerTools() error {
 	// workspace_create tool
 
-	createOpts, err := WithStructOptions("Create a new isolated git worktree-based workspace for development. Each workspace has its own branch and can be used for working on separate features or issues", WorkspaceCreateParams{})
+	createOpts, err := WithStructOptions(GetEnhancedDescription("workspace_create"), WorkspaceCreateParams{})
 	if err != nil {
 		return fmt.Errorf("failed to create workspace_create options: %w", err)
 	}
@@ -109,7 +109,7 @@ func (s *ServerV2) registerTools() error {
 
 	// workspace_remove tool
 
-	removeOpts, err := WithStructOptions("Remove a workspace and its associated git worktree. This permanently deletes the workspace directory and cannot be undone", WorkspaceIDParams{})
+	removeOpts, err := WithStructOptions(GetEnhancedDescription("workspace_remove"), WorkspaceIDParams{})
 	if err != nil {
 		return fmt.Errorf("failed to create workspace_remove options: %w", err)
 	}
@@ -163,17 +163,8 @@ func (s *ServerV2) handleWorkspaceCreate(ctx context.Context, request mcp.CallTo
 		return nil, fmt.Errorf("failed to create workspace: %w", err)
 	}
 
-	result, _ := json.MarshalIndent(ws, "", "  ")
-
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-
-				Text: string(result),
-			},
-		},
-	}, nil
+	// Create enhanced result with metadata
+	return createEnhancedResult("workspace_create", ws, nil)
 }
 
 func (s *ServerV2) handleWorkspaceRemove(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -186,9 +177,12 @@ func (s *ServerV2) handleWorkspaceRemove(ctx context.Context, request mcp.CallTo
 	}
 
 	// Resolve workspace to get name for better feedback
-
 	ws, err := s.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(workspaceID))
 	if err != nil {
+		// Check if it's a not found error
+		if strings.Contains(err.Error(), "not found") {
+			return nil, WorkspaceNotFoundError(workspaceID)
+		}
 		return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 	}
 
@@ -196,15 +190,14 @@ func (s *ServerV2) handleWorkspaceRemove(ctx context.Context, request mcp.CallTo
 		return nil, fmt.Errorf("failed to remove workspace: %w", err)
 	}
 
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
+	// Create enhanced result
+	result := map[string]interface{}{
+		"workspace_id":   ws.ID,
+		"workspace_name": ws.Name,
+		"message":        fmt.Sprintf("Workspace %s (%s) removed", ws.Name, ws.ID),
+	}
 
-				Text: fmt.Sprintf("Workspace %s (%s) removed", ws.Name, ws.ID),
-			},
-		},
-	}, nil
+	return createEnhancedResult("workspace_remove", result, nil)
 }
 
 // Start starts the MCP server

@@ -2,8 +2,8 @@ package mcp
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
 
@@ -36,7 +36,7 @@ type SessionSendInputParams struct {
 func (s *ServerV2) registerSessionTools() error {
 	// session_run tool
 	runOpts, err := WithStructOptions(
-		"Run an AI agent session in a workspace. Creates and immediately starts the session.",
+		GetEnhancedDescription("session_run"),
 		SessionRunParams{},
 	)
 	if err != nil {
@@ -46,7 +46,7 @@ func (s *ServerV2) registerSessionTools() error {
 
 	// session_stop tool
 	stopOpts, err := WithStructOptions(
-		"Stop a running agent session gracefully.",
+		GetEnhancedDescription("session_stop"),
 		SessionIDParams{},
 	)
 	if err != nil {
@@ -56,7 +56,7 @@ func (s *ServerV2) registerSessionTools() error {
 
 	// session_send_input tool
 	sendOpts, err := WithStructOptions(
-		"Send input text to a running agent session's stdin.",
+		GetEnhancedDescription("session_send_input"),
 		SessionSendInputParams{},
 	)
 	if err != nil {
@@ -85,6 +85,10 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 	// Resolve workspace
 	ws, err := s.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(workspaceID))
 	if err != nil {
+		// Check if it's a not found error
+		if strings.Contains(err.Error(), "not found") {
+			return nil, WorkspaceNotFoundError(workspaceID)
+		}
 		return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 	}
 
@@ -168,19 +172,10 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 		response["attach_amux"] = fmt.Sprintf("amux agent attach %s", attachID)
 	}
 
-	jsonData, err := json.MarshalIndent(response, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal response: %w", err)
-	}
+	// Add success message to response
+	response["message"] = "Session started successfully!"
 
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: fmt.Sprintf("Session started successfully!\n\n%s", string(jsonData)),
-			},
-		},
-	}, nil
+	return createEnhancedResult("session_run", response, nil)
 }
 
 // handleSessionStop handles the session_stop tool
@@ -201,6 +196,10 @@ func (s *ServerV2) handleSessionStop(ctx context.Context, request mcp.CallToolRe
 	// Get session
 	sess, err := sessionManager.ResolveSession(ctx, session.Identifier(sessionID))
 	if err != nil {
+		// Check if it's a not found error
+		if strings.Contains(err.Error(), "not found") {
+			return nil, SessionNotFoundError(sessionID)
+		}
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
 
@@ -212,15 +211,15 @@ func (s *ServerV2) handleSessionStop(ctx context.Context, request mcp.CallToolRe
 	// Get updated info
 	info := sess.Info()
 
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: fmt.Sprintf("Session %s stopped successfully (agent: %s, workspace: %s)",
-					sessionID, info.AgentID, info.WorkspaceID),
-			},
-		},
-	}, nil
+	// Create response with session info
+	response := map[string]interface{}{
+		"session_id":   sessionID,
+		"agent_id":     info.AgentID,
+		"workspace_id": info.WorkspaceID,
+		"message":      fmt.Sprintf("Session %s stopped successfully", sessionID),
+	}
+
+	return createEnhancedResult("session_stop", response, nil)
 }
 
 // handleSessionSendInput handles the session_send_input tool
@@ -246,12 +245,16 @@ func (s *ServerV2) handleSessionSendInput(ctx context.Context, request mcp.CallT
 	// Get session
 	sess, err := sessionManager.ResolveSession(ctx, session.Identifier(sessionID))
 	if err != nil {
+		// Check if it's a not found error
+		if strings.Contains(err.Error(), "not found") {
+			return nil, SessionNotFoundError(sessionID)
+		}
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
 
 	// Check if session is running
 	if !sess.Status().IsRunning() {
-		return nil, fmt.Errorf("session is not running (status: %s)", sess.Status())
+		return nil, SessionNotRunningError(sessionID)
 	}
 
 	// Type assert to TerminalSession
@@ -265,12 +268,12 @@ func (s *ServerV2) handleSessionSendInput(ctx context.Context, request mcp.CallT
 		return nil, fmt.Errorf("failed to send input: %w", err)
 	}
 
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: fmt.Sprintf("Input sent to session %s", sessionID),
-			},
-		},
-	}, nil
+	// Create response
+	response := map[string]interface{}{
+		"session_id": sessionID,
+		"input":      input,
+		"message":    fmt.Sprintf("Input sent to session %s", sessionID),
+	}
+
+	return createEnhancedResult("session_send_input", response, nil)
 }

@@ -2,8 +2,8 @@ package mcp
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
 )
@@ -18,7 +18,7 @@ type WorkspaceBrowseParams struct {
 func (s *ServerV2) registerWorkspaceBridgeTools() error {
 	// resource_workspace_list - Bridge to amux://workspace
 	listOpts, err := WithStructOptions(
-		"List all workspaces (bridge to amux://workspace resource). Returns the same data as the workspace resource.",
+		GetEnhancedDescription("resource_workspace_list"),
 		struct{}{},
 	)
 	if err != nil {
@@ -28,7 +28,7 @@ func (s *ServerV2) registerWorkspaceBridgeTools() error {
 
 	// resource_workspace_show - Bridge to amux://workspace/{id}
 	showOpts, err := WithStructOptions(
-		"Get details of a specific workspace (bridge to amux://workspace/{id} resource). Returns the same data as the workspace detail resource.",
+		GetEnhancedDescription("resource_workspace_show"),
 		WorkspaceIDParams{},
 	)
 	if err != nil {
@@ -38,7 +38,7 @@ func (s *ServerV2) registerWorkspaceBridgeTools() error {
 
 	// resource_workspace_browse - Bridge to amux://workspace/{id}/files
 	browseOpts, err := WithStructOptions(
-		"Browse files in a workspace (bridge to amux://workspace/{id}/files resource). Returns directory listings or file contents.",
+		GetEnhancedDescription("resource_workspace_browse"),
 		WorkspaceBrowseParams{},
 	)
 	if err != nil {
@@ -58,19 +58,7 @@ func (s *ServerV2) handleResourceWorkspaceList(ctx context.Context, request mcp.
 		return nil, err
 	}
 
-	jsonData, err := json.MarshalIndent(workspaceList, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal workspace list: %w", err)
-	}
-
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: string(jsonData),
-			},
-		},
-	}, nil
+	return createEnhancedResult("resource_workspace_list", workspaceList, nil)
 }
 
 func (s *ServerV2) handleResourceWorkspaceShow(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -83,22 +71,14 @@ func (s *ServerV2) handleResourceWorkspaceShow(ctx context.Context, request mcp.
 	// Use shared logic with resource handler
 	detail, err := s.getWorkspaceDetail(ctx, workspaceID)
 	if err != nil {
+		// Check if it's a not found error
+		if strings.Contains(err.Error(), "not found") {
+			return nil, WorkspaceNotFoundError(workspaceID)
+		}
 		return nil, err
 	}
 
-	jsonData, err := json.MarshalIndent(detail, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal workspace detail: %w", err)
-	}
-
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: string(jsonData),
-			},
-		},
-	}, nil
+	return createEnhancedResult("resource_workspace_show", detail, nil)
 }
 
 func (s *ServerV2) handleResourceWorkspaceBrowse(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -137,24 +117,23 @@ func (s *ServerV2) handleResourceWorkspaceBrowse(ctx context.Context, request mc
 	content := contents[0]
 	switch c := content.(type) {
 	case *mcp.TextResourceContents:
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: c.Text,
-				},
-			},
-		}, nil
+		// Create structured result for directory listings or file contents
+		result := map[string]interface{}{
+			"workspace_identifier": workspaceID,
+			"path":                 path,
+			"content":              c.Text,
+		}
+		return createEnhancedResult("resource_workspace_browse", result, nil)
 	case *mcp.BlobResourceContents:
-		// For binary files, return base64 encoded
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: fmt.Sprintf("Binary file (%s): base64 encoded content", c.MIMEType),
-				},
-			},
-		}, nil
+		// For binary files, return structured result
+		result := map[string]interface{}{
+			"workspace_identifier": workspaceID,
+			"path":                 path,
+			"type":                 "binary",
+			"mime_type":            c.MIMEType,
+			"message":              fmt.Sprintf("Binary file (%s)", c.MIMEType),
+		}
+		return createEnhancedResult("resource_workspace_browse", result, nil)
 	default:
 		return nil, fmt.Errorf("unexpected content type")
 	}
