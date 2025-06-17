@@ -12,10 +12,6 @@ Amux uses `.amux/config.yaml` with strict JSON Schema validation:
 
 ```yaml
 version: "1.0"
-project:
-  name: my-project
-  repository: https://github.com/user/my-project.git
-  defaultAgent: claude
 
 mcp:
   transport:
@@ -105,15 +101,6 @@ amux config schema > config.schema.json
 
 ## Configuration Structure
 
-### Project Section
-
-```yaml
-project:
-  name: my-project         # Required: Project identifier
-  repository: https://...  # Optional: Git repository URL
-  defaultAgent: claude     # Optional: Default agent ID
-```
-
 ### MCP Transport Configuration
 
 ```yaml
@@ -153,8 +140,6 @@ agents:
 
 ```yaml
 version: "1.0"
-project:
-  name: my-app
 agents:
   claude:
     name: Claude
@@ -167,10 +152,6 @@ agents:
 
 ```yaml
 version: "1.0"
-project:
-  name: enterprise-app
-  repository: https://github.com/company/app.git
-  defaultAgent: claude
 
 mcp:
   transport:
