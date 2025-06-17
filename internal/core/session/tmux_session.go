@@ -168,6 +168,19 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 		s.logger.Warn("failed to resize tmux window", "error", err, "session", tmuxSession)
 	}
 
+	// If a custom shell is specified, start it first
+	if s.info.Shell != "" {
+		if err := s.tmuxAdapter.SendKeys(tmuxSession, s.info.Shell); err != nil {
+			// Clean up on failure
+			if killErr := s.tmuxAdapter.KillSession(tmuxSession); killErr != nil {
+				s.logger.Warn("failed to kill tmux session during cleanup", "error", killErr, "session", tmuxSession)
+			}
+			return fmt.Errorf("failed to start custom shell: %w", err)
+		}
+		// Give the shell time to start
+		time.Sleep(100 * time.Millisecond)
+	}
+
 	// Get the command to run
 	command := s.info.Command
 	if command == "" {

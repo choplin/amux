@@ -168,7 +168,7 @@ func TestSessionRun(t *testing.T) {
 					"workspace_identifier": ws.ID,
 					"agent_id":             "test-agent",
 					"command":              "echo 'test'",
-					"shell":                "/bin/zsh",
+					"shell":                "/bin/bash",
 					"window_name":          "dev-session",
 				},
 			},
@@ -195,8 +195,8 @@ func TestSessionRun(t *testing.T) {
 		sess, _ := sessionManager.ResolveSession(context.Background(), session.Identifier(sessionID))
 		if sess != nil {
 			info := sess.Info()
-			if info.Shell != "/bin/zsh" {
-				t.Errorf("expected shell /bin/zsh, got %s", info.Shell)
+			if info.Shell != "/bin/bash" {
+				t.Errorf("expected shell /bin/bash, got %s", info.Shell)
 			}
 			if info.WindowName != "dev-session" {
 				t.Errorf("expected window name dev-session, got %s", info.WindowName)
