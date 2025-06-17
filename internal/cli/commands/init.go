@@ -49,9 +49,6 @@ func runInit(cmd *cobra.Command, args []string) error {
 	// Create default configuration
 	cfg := config.DefaultConfig()
 
-	// Set project name from directory
-	cfg.Project.Name = filepath.Base(cwd)
-
 	// Save configuration
 	if err := configManager.Save(cfg); err != nil {
 		return fmt.Errorf("failed to save configuration: %w", err)

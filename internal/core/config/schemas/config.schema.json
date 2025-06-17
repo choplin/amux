@@ -15,14 +15,9 @@
     "project": {
       "type": "object",
       "description": "Project-specific configuration",
-      "required": ["name"],
+      "required": [],
       "additionalProperties": false,
       "properties": {
-        "name": {
-          "type": "string",
-          "description": "Project name",
-          "minLength": 1
-        }
       }
     },
     "mcp": {

@@ -15,9 +15,8 @@ type Config struct {
 }
 
 // ProjectConfig represents project-specific configuration
-type ProjectConfig struct {
-	Name string `yaml:"name"`
-}
+// Currently empty but kept for future project-specific settings
+type ProjectConfig struct{}
 
 // MCPConfig represents MCP server configuration
 type MCPConfig struct {
@@ -155,9 +154,7 @@ func remarshalParams(from, to interface{}) error {
 func DefaultConfig() *Config {
 	return &Config{
 		Version: "1.0",
-		Project: ProjectConfig{
-			Name: "amux-project",
-		},
+		Project: ProjectConfig{},
 		MCP: MCPConfig{
 			Transport: TransportConfig{
 				Type: "stdio",

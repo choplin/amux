@@ -30,8 +30,7 @@ func TestConfigValidateCommand(t *testing.T) {
 		{
 			name: "valid configuration",
 			config: `version: "1.0"
-project:
-  name: test-project
+project: {}
 mcp:
   transport:
     type: stdio
@@ -164,8 +163,7 @@ func TestConfigValidateCommandVerbose(t *testing.T) {
 
 	// Write valid config
 	validConfig := `version: "1.0"
-project:
-  name: test-project
+project: {}
 mcp:
   transport:
     type: stdio
@@ -217,7 +215,6 @@ agents:
 	assert.Contains(t, output, "Configuration is valid")
 	assert.Contains(t, output, "Configuration details:")
 	assert.Contains(t, output, "Version: 1.0")
-	assert.Contains(t, output, "Project: test-project")
 	assert.Contains(t, output, "MCP Configuration:")
 	assert.Contains(t, output, "Transport: stdio")
 	assert.Contains(t, output, "Agents (2 configured):")

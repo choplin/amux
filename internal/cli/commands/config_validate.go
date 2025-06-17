@@ -69,7 +69,6 @@ func validateConfig(cmd *cobra.Command, args []string) error {
 		ui.Info("")
 		ui.Info("Configuration details:")
 		ui.Info("  Version: %s", cfg.Version)
-		ui.Info("  Project: %s", cfg.Project.Name)
 
 		ui.Info("")
 		ui.Info("MCP Configuration:")

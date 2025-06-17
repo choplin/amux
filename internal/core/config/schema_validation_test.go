@@ -35,8 +35,7 @@ agents:
 		},
 		{
 			name: "missing required version",
-			yaml: `project:
-  name: test-project
+			yaml: `project: {}
 agents:
   claude:
     name: Claude
@@ -69,8 +68,7 @@ project:
 		{
 			name: "invalid version",
 			yaml: `version: "2.0"
-project:
-  name: test-project
+project: {}
 agents:
   claude:
     name: Claude
@@ -83,8 +81,7 @@ agents:
 		{
 			name: "missing agent name",
 			yaml: `version: "1.0"
-project:
-  name: test-project
+project: {}
 agents:
   claude:
     type: tmux
@@ -96,8 +93,7 @@ agents:
 		{
 			name: "missing agent type",
 			yaml: `version: "1.0"
-project:
-  name: test-project
+project: {}
 agents:
   claude:
     name: Claude
@@ -109,8 +105,7 @@ agents:
 		{
 			name: "invalid agent type",
 			yaml: `version: "1.0"
-project:
-  name: test-project
+project: {}
 agents:
   claude:
     name: Claude
@@ -123,8 +118,7 @@ agents:
 		{
 			name: "tmux agent missing params config",
 			yaml: `version: "1.0"
-project:
-  name: test-project
+project: {}
 agents:
   claude:
     name: Claude
@@ -135,8 +129,7 @@ agents:
 		{
 			name: "tmux config missing command",
 			yaml: `version: "1.0"
-project:
-  name: test-project
+project: {}
 agents:
   claude:
     name: Claude
@@ -149,8 +142,7 @@ agents:
 		{
 			name: "additional properties not allowed",
 			yaml: `version: "1.0"
-project:
-  name: test-project
+project: {}
 agents:
   claude:
     name: Claude
@@ -164,8 +156,7 @@ agents:
 		{
 			name: "invalid agent id pattern",
 			yaml: `version: "1.0"
-project:
-  name: test-project
+project: {}
 agents:
   "invalid-@-id":
     name: Claude
@@ -247,8 +238,7 @@ func TestLoadWithValidation(t *testing.T) {
 	t.Run("valid configuration", func(t *testing.T) {
 		configPath := filepath.Join(tmpDir, "valid.yaml")
 		validConfig := `version: "1.0"
-project:
-  name: test-project
+project: {}
 agents:
   claude:
     name: Claude
@@ -261,7 +251,6 @@ agents:
 		cfg, err := LoadWithValidation(configPath)
 		require.NoError(t, err)
 		assert.Equal(t, "1.0", cfg.Version)
-		assert.Equal(t, "test-project", cfg.Project.Name)
 		assert.Equal(t, "Claude", cfg.Agents["claude"].Name)
 		assert.Equal(t, AgentTypeTmux, cfg.Agents["claude"].Type)
 
@@ -275,8 +264,7 @@ agents:
 	t.Run("invalid configuration", func(t *testing.T) {
 		configPath := filepath.Join(tmpDir, "invalid.yaml")
 		invalidConfig := `version: "1.0"
-project:
-  name: test-project
+project: {}
 agents:
   claude:
     name: Claude
@@ -320,8 +308,7 @@ func TestValidateFile(t *testing.T) {
 	t.Run("valid file", func(t *testing.T) {
 		configPath := filepath.Join(tmpDir, "valid.yaml")
 		validConfig := `version: "1.0"
-project:
-  name: test-project
+project: {}
 agents:
   claude:
     name: Claude
@@ -338,8 +325,7 @@ agents:
 	t.Run("invalid file", func(t *testing.T) {
 		configPath := filepath.Join(tmpDir, "invalid.yaml")
 		invalidConfig := `version: "2.0"
-project:
-  name: test-project
+project: {}
 agents: {}`
 
 		require.NoError(t, os.WriteFile(configPath, []byte(invalidConfig), 0o644))
@@ -364,8 +350,7 @@ func TestSchemaValidation_TypeSpecificFields(t *testing.T) {
 		{
 			name: "invalid type not in enum",
 			yaml: `version: "1.0"
-project:
-  name: test-project
+project: {}
 agents:
   future-agent:
     name: Future Agent
@@ -377,8 +362,7 @@ agents:
 		{
 			name: "tmux agent with unexpected field",
 			yaml: `version: "1.0"
-project:
-  name: test-project
+project: {}
 agents:
   tmux-agent:
     name: Tmux Agent
