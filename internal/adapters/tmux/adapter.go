@@ -61,10 +61,10 @@ func (a *RealAdapter) CreateSessionWithOptions(opts CreateSessionOptions) error 
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to create tmux session: %w", err)
 	}
-	
+
 	// Store the shell preference for later use
 	// The actual shell will be started after environment is set
-	
+
 	return nil
 }
 
