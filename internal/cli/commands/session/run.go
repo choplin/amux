@@ -2,8 +2,11 @@ package session
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
 	"strings"
 
+	"github.com/charmbracelet/x/term"
 	"github.com/spf13/cobra"
 
 	"github.com/aki/amux/internal/cli/ui"
@@ -170,9 +173,28 @@ func runSession(cmd *cobra.Command, args []string) error {
 
 	ui.Success("Agent session started successfully!")
 
-	// Show attach instruction if tmux session
+	// Handle auto-attach for tmux sessions
 	info := sess.Info()
 	if info.TmuxSession != "" {
+		// Check if agent has autoAttach enabled
+		shouldAutoAttach := false
+		if agentConfig != nil {
+			if tmuxParams, err := agentConfig.GetTmuxParams(); err == nil && tmuxParams != nil {
+				shouldAutoAttach = tmuxParams.AutoAttach
+			}
+		}
+
+		// Check if we can auto-attach (TTY available and autoAttach enabled)
+		if shouldAutoAttach && term.IsTerminal(os.Stdin.Fd()) {
+			ui.Info("Auto-attaching to session...")
+			tmuxCmd := exec.Command("tmux", "attach-session", "-t", info.TmuxSession)
+			tmuxCmd.Stdin = os.Stdin
+			tmuxCmd.Stdout = os.Stdout
+			tmuxCmd.Stderr = os.Stderr
+			return tmuxCmd.Run()
+		}
+
+		// Show manual attach instructions
 		ui.Info("To attach to this session, run:")
 		ui.Info("  tmux attach-session -t %s", info.TmuxSession)
 		attachID := sess.ID()

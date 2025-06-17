@@ -160,6 +160,10 @@
                   "detached": {
                     "type": "boolean",
                     "description": "Whether to detach from the session after creation"
+                  },
+                  "autoAttach": {
+                    "type": "boolean",
+                    "description": "Whether to automatically attach to the session after creation (CLI only)"
                   }
                 }
               }
