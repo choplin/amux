@@ -188,8 +188,6 @@ agents:
 		{
 			name: "valid tmux config with autoAttach",
 			yaml: `version: "1.0"
-project:
-  name: test-project
 agents:
   claude-interactive:
     name: Claude Interactive
