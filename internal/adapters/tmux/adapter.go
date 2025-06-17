@@ -53,7 +53,7 @@ func (a *RealAdapter) CreateSessionWithOptions(opts CreateSessionOptions) error 
 
 	// Add environment variables using -e option
 	for key, value := range opts.Environment {
-		args = append(args, "-e", key+"="+value)
+		args = append(args, "-e", fmt.Sprintf("%s=%s", key, value))
 	}
 
 	// Add shell as initial command if specified
