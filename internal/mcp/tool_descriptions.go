@@ -124,6 +124,7 @@ var toolDescriptions = map[string]ToolDescription{
 			`session_run(agent_id: "test", command: "go test", workspace_identifier: "1") → {id: "session-123", status: "running", tmux_session: "amux-session-123"}`,
 			`session_run(agent_id: "shell", workspace_identifier: "2") → {id: "session-124", status: "running", command: "/bin/bash"}`,
 			`session_run(agent_id: "custom", name: "build", command: "make", workspace_identifier: "3") → {id: "session-125", name: "build", status: "running"}`,
+			`session_run(agent_id: "dev", workspace_identifier: "4", shell: "/bin/zsh", window_name: "development") → {id: "session-126", status: "running"}`,
 		},
 		NextTools: []string{
 			"resource_session_output - Monitor the command output",
