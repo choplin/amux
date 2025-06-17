@@ -19,8 +19,7 @@ func TestValidateYAML(t *testing.T) {
 		{
 			name: "valid configuration",
 			yaml: `version: "1.0"
-project:
-  name: test-project
+project: {}
 mcp:
   transport:
     type: stdio
@@ -169,8 +168,7 @@ agents:
 		{
 			name: "invalid transport type",
 			yaml: `version: "1.0"
-project:
-  name: test-project
+project: {}
 mcp:
   transport:
     type: websocket
@@ -186,8 +184,7 @@ agents:
 		{
 			name: "valid with all optional fields",
 			yaml: `version: "1.0"
-project:
-  name: test-project
+project: {}
 mcp:
   transport:
     type: http
@@ -289,7 +286,6 @@ agents:
 		configPath := filepath.Join(tmpDir, "malformed.yaml")
 		malformedYAML := `version: "1.0"
 project:
-  name: test-project
   [invalid yaml`
 
 		require.NoError(t, os.WriteFile(configPath, []byte(malformedYAML), 0o644))
