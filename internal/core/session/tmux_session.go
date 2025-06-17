@@ -130,8 +130,14 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 		s.info.AgentID,
 		time.Now().Unix())
 
-	// Create tmux session
-	if err := s.tmuxAdapter.CreateSession(tmuxSession, s.workspace.Path); err != nil {
+	// Create tmux session with options
+	opts := tmux.CreateSessionOptions{
+		SessionName: tmuxSession,
+		WorkDir:     s.workspace.Path,
+		Shell:       s.info.Shell,
+		WindowName:  s.info.WindowName,
+	}
+	if err := s.tmuxAdapter.CreateSessionWithOptions(opts); err != nil {
 		return fmt.Errorf("failed to create tmux session: %w", err)
 	}
 

@@ -137,6 +137,15 @@ func runSession(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Extract tmux-specific options from agent config
+	var shell, windowName string
+	if agentConfig != nil && agentConfig.Type == config.AgentTypeTmux {
+		if tmuxParams, err := agentConfig.GetTmuxParams(); err == nil {
+			shell = tmuxParams.Shell
+			windowName = tmuxParams.WindowName
+		}
+	}
+
 	// Create session
 	opts := session.Options{
 		ID:            sessionID,
@@ -148,6 +157,8 @@ func runSession(cmd *cobra.Command, args []string) error {
 		InitialPrompt: runInitialPrompt,
 		Name:          runSessionName,
 		Description:   runSessionDescription,
+		Shell:         shell,
+		WindowName:    windowName,
 	}
 
 	sess, err := sessionManager.CreateSession(cmd.Context(), opts)

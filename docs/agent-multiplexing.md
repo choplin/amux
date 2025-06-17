@@ -122,7 +122,21 @@ amux agent config show claude
 
 ### Configuration File
 
-Agents are configured in `.amux/config.yaml`:
+Agents are configured in `.amux/config.yaml`.
+
+#### Tmux Parameters
+
+For tmux-based agents, you can configure the following parameters:
+
+- **command** (required): The command to execute when starting the agent
+- **shell** (optional): Custom shell to use (defaults to system shell)
+  - Examples: `/bin/bash`, `/bin/zsh`, `/bin/fish`
+  - The specified shell will be used to run the agent command
+- **windowName** (optional): Custom name for the tmux window
+  - Helps identify sessions in tmux's window list
+  - Defaults to the session name if not specified
+
+Example configuration:
 
 ```yaml
 # Optional: Add schema reference for VS Code IntelliSense
@@ -135,10 +149,10 @@ agents:
     description: Claude AI assistant for development
     environment:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
-    tmux:
+    params:
       command: claude
-      shell: /bin/bash  # Optional: custom shell
-      windowName: claude-session  # Optional: tmux window name
+      shell: /bin/bash  # Optional: custom shell (e.g., /bin/zsh, /bin/fish)
+      windowName: claude-dev  # Optional: tmux window name
 
   aider:
     name: Aider
@@ -146,7 +160,7 @@ agents:
     description: AI pair programming assistant
     environment:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
-    tmux:
+    params:
       command: aider
 
   my-agent:
@@ -156,8 +170,9 @@ agents:
     environment:
       API_KEY: ${MY_AGENT_API_KEY}
       MODEL: gpt-4
-    tmux:
+    params:
       command: my-agent-cli --model ${MODEL}
+      shell: /bin/zsh  # Use zsh for this agent
 ```
 
 ## Working Context

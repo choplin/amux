@@ -222,3 +222,87 @@ func TestAdapter_GetSessionPID(t *testing.T) {
 		t.Errorf("Invalid PID: %d", pid)
 	}
 }
+
+func TestAdapter_CreateSessionWithOptions(t *testing.T) {
+	skipIfNoTmux(t)
+
+	adapter, err := NewAdapter()
+	if err != nil {
+		t.Fatalf("Failed to create adapter: %v", err)
+	}
+
+	tests := []struct {
+		name string
+		opts CreateSessionOptions
+	}{
+		{
+			name: "basic session",
+			opts: CreateSessionOptions{
+				SessionName: "test-basic-" + time.Now().Format("20060102-150405"),
+				WorkDir:     t.TempDir(),
+			},
+		},
+		{
+			name: "session with shell",
+			opts: CreateSessionOptions{
+				SessionName: "test-shell-" + time.Now().Format("20060102-150405"),
+				WorkDir:     t.TempDir(),
+				Shell:       "/bin/bash",
+			},
+		},
+		{
+			name: "session with window name",
+			opts: CreateSessionOptions{
+				SessionName: "test-window-" + time.Now().Format("20060102-150405"),
+				WorkDir:     t.TempDir(),
+				WindowName:  "dev",
+			},
+		},
+		{
+			name: "session with all options",
+			opts: CreateSessionOptions{
+				SessionName: "test-full-" + time.Now().Format("20060102-150405"),
+				WorkDir:     t.TempDir(),
+				Shell:       "/bin/sh",
+				WindowName:  "workspace",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create session
+			if err := adapter.CreateSessionWithOptions(tt.opts); err != nil {
+				t.Fatalf("Failed to create session: %v", err)
+			}
+			defer adapter.KillSession(tt.opts.SessionName)
+
+			// Verify session exists
+			if !adapter.SessionExists(tt.opts.SessionName) {
+				t.Error("Session should exist after creation")
+			}
+
+			// If shell was specified, verify it's running
+			if tt.opts.Shell != "" {
+				// Send command to check shell
+				checkCmd := "echo $SHELL"
+				if err := adapter.SendKeys(tt.opts.SessionName, checkCmd); err != nil {
+					t.Fatalf("Failed to send keys: %v", err)
+				}
+
+				// Wait for command
+				time.Sleep(100 * time.Millisecond)
+
+				// Capture output
+				output, err := adapter.CapturePane(tt.opts.SessionName)
+				if err != nil {
+					t.Fatalf("Failed to capture pane: %v", err)
+				}
+
+				// Note: The echo $SHELL might show the default shell, not the running shell
+				// This is because tmux starts the specified shell as a command, not as SHELL env
+				t.Logf("Shell check output: %s", output)
+			}
+		})
+	}
+}

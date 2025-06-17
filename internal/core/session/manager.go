@@ -140,6 +140,8 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 		StoragePath:   storagePath,
 		Name:          opts.Name,
 		Description:   opts.Description,
+		Shell:         opts.Shell,
+		WindowName:    opts.WindowName,
 	}
 
 	// Save session info to file

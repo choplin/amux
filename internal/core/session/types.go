@@ -104,6 +104,10 @@ type Options struct {
 	InitialPrompt string            // Optional: initial prompt to send after starting
 	Name          string            // Optional: human-readable name for the session
 	Description   string            // Optional: description of session purpose
+
+	// Tmux-specific options
+	Shell      string // Optional: custom shell to use (e.g., /bin/zsh)
+	WindowName string // Optional: custom window name
 }
 
 // Info contains metadata about a session
@@ -126,6 +130,10 @@ type Info struct {
 	StoragePath   string            `yaml:"storage_path,omitempty"`
 	Name          string            `yaml:"name,omitempty"`
 	Description   string            `yaml:"description,omitempty"`
+
+	// Tmux-specific fields
+	Shell      string `yaml:"shell,omitempty"`       // Custom shell for tmux session
+	WindowName string `yaml:"window_name,omitempty"` // Custom window name for tmux
 }
 
 // Session represents an active or inactive agent session
