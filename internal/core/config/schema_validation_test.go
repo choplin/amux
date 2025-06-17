@@ -43,8 +43,8 @@ agents:
 			errMsg:  "missing properties: 'version'",
 		},
 		{
-			name: "missing required agents",
-			yaml: `version: "1.0"`,
+			name:    "missing required agents",
+			yaml:    `version: "1.0"`,
 			wantErr: true,
 			errMsg:  "missing properties: 'agents'",
 		},
