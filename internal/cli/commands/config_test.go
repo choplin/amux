@@ -19,7 +19,6 @@ func TestConfigShowCommand(t *testing.T) {
 	// Create a test configuration
 	testCfg := &config.Config{
 		Version: "1.0",
-		Project: config.ProjectConfig{},
 		MCP: config.MCPConfig{
 			Transport: config.TransportConfig{
 				Type: "stdio",

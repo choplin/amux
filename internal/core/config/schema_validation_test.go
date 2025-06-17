@@ -19,7 +19,6 @@ func TestValidateYAML(t *testing.T) {
 		{
 			name: "valid configuration",
 			yaml: `version: "1.0"
-project: {}
 mcp:
   transport:
     type: stdio
@@ -34,8 +33,7 @@ agents:
 		},
 		{
 			name: "missing required version",
-			yaml: `project: {}
-agents:
+			yaml: `agents:
   claude:
     name: Claude
     type: tmux
@@ -45,29 +43,14 @@ agents:
 			errMsg:  "missing properties: 'version'",
 		},
 		{
-			name: "missing required project",
-			yaml: `version: "1.0"
-agents:
-  claude:
-    name: Claude
-    type: tmux
-    params:
-      command: claude`,
-			wantErr: true,
-			errMsg:  "missing properties: 'project'",
-		},
-		{
 			name: "missing required agents",
-			yaml: `version: "1.0"
-project:
-  name: test-project`,
+			yaml: `version: "1.0"`,
 			wantErr: true,
 			errMsg:  "missing properties: 'agents'",
 		},
 		{
 			name: "invalid version",
 			yaml: `version: "2.0"
-project: {}
 agents:
   claude:
     name: Claude
@@ -80,7 +63,6 @@ agents:
 		{
 			name: "missing agent name",
 			yaml: `version: "1.0"
-project: {}
 agents:
   claude:
     type: tmux
@@ -92,7 +74,6 @@ agents:
 		{
 			name: "missing agent type",
 			yaml: `version: "1.0"
-project: {}
 agents:
   claude:
     name: Claude
@@ -104,7 +85,6 @@ agents:
 		{
 			name: "invalid agent type",
 			yaml: `version: "1.0"
-project: {}
 agents:
   claude:
     name: Claude
@@ -117,7 +97,6 @@ agents:
 		{
 			name: "tmux agent missing params config",
 			yaml: `version: "1.0"
-project: {}
 agents:
   claude:
     name: Claude
@@ -128,7 +107,6 @@ agents:
 		{
 			name: "tmux config missing command",
 			yaml: `version: "1.0"
-project: {}
 agents:
   claude:
     name: Claude
@@ -141,7 +119,6 @@ agents:
 		{
 			name: "additional properties not allowed",
 			yaml: `version: "1.0"
-project: {}
 agents:
   claude:
     name: Claude
@@ -155,7 +132,6 @@ agents:
 		{
 			name: "invalid agent id pattern",
 			yaml: `version: "1.0"
-project: {}
 agents:
   "invalid-@-id":
     name: Claude
@@ -168,7 +144,6 @@ agents:
 		{
 			name: "invalid transport type",
 			yaml: `version: "1.0"
-project: {}
 mcp:
   transport:
     type: websocket
@@ -184,7 +159,6 @@ agents:
 		{
 			name: "valid with all optional fields",
 			yaml: `version: "1.0"
-project: {}
 mcp:
   transport:
     type: http
@@ -235,7 +209,6 @@ func TestLoadWithValidation(t *testing.T) {
 	t.Run("valid configuration", func(t *testing.T) {
 		configPath := filepath.Join(tmpDir, "valid.yaml")
 		validConfig := `version: "1.0"
-project: {}
 agents:
   claude:
     name: Claude
@@ -261,7 +234,6 @@ agents:
 	t.Run("invalid configuration", func(t *testing.T) {
 		configPath := filepath.Join(tmpDir, "invalid.yaml")
 		invalidConfig := `version: "1.0"
-project: {}
 agents:
   claude:
     name: Claude
@@ -285,7 +257,6 @@ agents:
 	t.Run("malformed YAML", func(t *testing.T) {
 		configPath := filepath.Join(tmpDir, "malformed.yaml")
 		malformedYAML := `version: "1.0"
-project:
   [invalid yaml`
 
 		require.NoError(t, os.WriteFile(configPath, []byte(malformedYAML), 0o644))
@@ -304,7 +275,6 @@ func TestValidateFile(t *testing.T) {
 	t.Run("valid file", func(t *testing.T) {
 		configPath := filepath.Join(tmpDir, "valid.yaml")
 		validConfig := `version: "1.0"
-project: {}
 agents:
   claude:
     name: Claude
@@ -321,7 +291,6 @@ agents:
 	t.Run("invalid file", func(t *testing.T) {
 		configPath := filepath.Join(tmpDir, "invalid.yaml")
 		invalidConfig := `version: "2.0"
-project: {}
 agents: {}`
 
 		require.NoError(t, os.WriteFile(configPath, []byte(invalidConfig), 0o644))
@@ -346,7 +315,6 @@ func TestSchemaValidation_TypeSpecificFields(t *testing.T) {
 		{
 			name: "invalid type not in enum",
 			yaml: `version: "1.0"
-project: {}
 agents:
   future-agent:
     name: Future Agent
@@ -358,7 +326,6 @@ agents:
 		{
 			name: "tmux agent with unexpected field",
 			yaml: `version: "1.0"
-project: {}
 agents:
   tmux-agent:
     name: Tmux Agent

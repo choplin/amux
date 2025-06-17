@@ -62,10 +62,7 @@ func runConfigShow(cmd *cobra.Command, args []string) error {
 }
 
 func showConfigPretty(cfg *config.Config) error {
-	ui.OutputLine("Project Configuration:")
-	ui.OutputLine("  (No project-specific settings)")
-
-	ui.OutputLine("\nMCP Configuration:")
+	ui.OutputLine("MCP Configuration:")
 	ui.OutputLine("  Transport: %s", cfg.MCP.Transport.Type)
 	if cfg.MCP.Transport.Type == "http" && cfg.MCP.Transport.HTTP.Port > 0 {
 		ui.OutputLine("  Port: %d", cfg.MCP.Transport.HTTP.Port)

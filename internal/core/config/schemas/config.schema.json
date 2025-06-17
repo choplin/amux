@@ -4,21 +4,13 @@
   "title": "Amux Configuration",
   "description": "Configuration schema for Amux - Agent Multiplexer",
   "type": "object",
-  "required": ["version", "project", "agents"],
+  "required": ["version", "agents"],
   "additionalProperties": false,
   "properties": {
     "version": {
       "type": "string",
       "description": "Configuration file version",
       "enum": ["1.0"]
-    },
-    "project": {
-      "type": "object",
-      "description": "Project-specific configuration",
-      "required": [],
-      "additionalProperties": false,
-      "properties": {
-      }
     },
     "mcp": {
       "type": "object",

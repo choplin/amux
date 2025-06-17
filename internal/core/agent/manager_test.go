@@ -18,7 +18,6 @@ func setupTestManager(t *testing.T) (*Manager, string) {
 	// Create config file with test agents
 	testConfig := &config.Config{
 		Version: "1.0",
-		Project: config.ProjectConfig{},
 		MCP: config.MCPConfig{
 			Transport: config.TransportConfig{
 				Type: "stdio",

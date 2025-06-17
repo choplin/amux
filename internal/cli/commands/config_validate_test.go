@@ -30,7 +30,6 @@ func TestConfigValidateCommand(t *testing.T) {
 		{
 			name: "valid configuration",
 			config: `version: "1.0"
-project: {}
 mcp:
   transport:
     type: stdio
@@ -47,7 +46,6 @@ agents:
 		{
 			name: "missing agent type",
 			config: `version: "1.0"
-project:
   name: test-project
 agents:
   claude:
@@ -60,7 +58,6 @@ agents:
 		{
 			name: "missing agent name",
 			config: `version: "1.0"
-project:
   name: test-project
 agents:
   claude:
@@ -73,7 +70,6 @@ agents:
 		{
 			name: "unsupported agent type",
 			config: `version: "1.0"
-project:
   name: test-project
 agents:
   claude:
@@ -87,7 +83,6 @@ agents:
 		{
 			name: "missing params command",
 			config: `version: "1.0"
-project:
   name: test-project
 agents:
   claude:
@@ -101,7 +96,6 @@ agents:
 		{
 			name: "missing params config for tmux type",
 			config: `version: "1.0"
-project:
   name: test-project
 agents:
   claude:
@@ -163,7 +157,6 @@ func TestConfigValidateCommandVerbose(t *testing.T) {
 
 	// Write valid config
 	validConfig := `version: "1.0"
-project: {}
 mcp:
   transport:
     type: stdio
