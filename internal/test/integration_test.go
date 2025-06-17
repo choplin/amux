@@ -34,7 +34,6 @@ func TestIntegration_FullWorkflow(t *testing.T) {
 
 	// Initialize configuration
 	cfg := config.DefaultConfig()
-	cfg.Project.Name = "test-integration"
 	cfg.Agents["test-agent"] = config.Agent{
 		Name: "Test Agent",
 		Type: config.AgentTypeTmux,

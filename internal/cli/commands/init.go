@@ -38,12 +38,6 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("not a git repository. Amux requires a git repository")
 	}
 
-	// Get repository info
-	repoInfo, err := gitOps.GetRepositoryInfo()
-	if err != nil {
-		return fmt.Errorf("failed to get repository info: %w", err)
-	}
-
 	// Create configuration manager
 	configManager := config.NewManager(cwd)
 
@@ -54,10 +48,6 @@ func runInit(cmd *cobra.Command, args []string) error {
 
 	// Create default configuration
 	cfg := config.DefaultConfig()
-
-	// Set project name from directory
-	cfg.Project.Name = filepath.Base(cwd)
-	cfg.Project.Repository = repoInfo.RemoteURL
 
 	// Save configuration
 	if err := configManager.Save(cfg); err != nil {

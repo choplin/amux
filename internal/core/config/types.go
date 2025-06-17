@@ -9,16 +9,8 @@ import (
 // Config represents the main Amux configuration
 type Config struct {
 	Version string           `yaml:"version"`
-	Project ProjectConfig    `yaml:"project"`
 	MCP     MCPConfig        `yaml:"mcp"`
 	Agents  map[string]Agent `yaml:"agents"`
-}
-
-// ProjectConfig represents project-specific configuration
-type ProjectConfig struct {
-	Name         string `yaml:"name"`
-	Repository   string `yaml:"repository"`
-	DefaultAgent string `yaml:"defaultAgent"`
 }
 
 // MCPConfig represents MCP server configuration
@@ -157,11 +149,6 @@ func remarshalParams(from, to interface{}) error {
 func DefaultConfig() *Config {
 	return &Config{
 		Version: "1.0",
-		Project: ProjectConfig{
-			Name:         "amux-project",
-			Repository:   "",
-			DefaultAgent: "claude",
-		},
 		MCP: MCPConfig{
 			Transport: TransportConfig{
 				Type: "stdio",

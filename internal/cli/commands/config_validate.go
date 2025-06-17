@@ -69,15 +69,6 @@ func validateConfig(cmd *cobra.Command, args []string) error {
 		ui.Info("")
 		ui.Info("Configuration details:")
 		ui.Info("  Version: %s", cfg.Version)
-		ui.Info("  Project: %s", cfg.Project.Name)
-
-		if cfg.Project.Repository != "" {
-			ui.Info("  Repository: %s", cfg.Project.Repository)
-		}
-
-		if cfg.Project.DefaultAgent != "" {
-			ui.Info("  Default Agent: %s", cfg.Project.DefaultAgent)
-		}
 
 		ui.Info("")
 		ui.Info("MCP Configuration:")

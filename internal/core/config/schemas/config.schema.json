@@ -4,35 +4,13 @@
   "title": "Amux Configuration",
   "description": "Configuration schema for Amux - Agent Multiplexer",
   "type": "object",
-  "required": ["version", "project", "agents"],
+  "required": ["version", "agents"],
   "additionalProperties": false,
   "properties": {
     "version": {
       "type": "string",
       "description": "Configuration file version",
       "enum": ["1.0"]
-    },
-    "project": {
-      "type": "object",
-      "description": "Project-specific configuration",
-      "required": ["name"],
-      "additionalProperties": false,
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "Project name",
-          "minLength": 1
-        },
-        "repository": {
-          "type": "string",
-          "description": "Git repository URL",
-          "format": "uri"
-        },
-        "defaultAgent": {
-          "type": "string",
-          "description": "Default agent ID to use when not specified"
-        }
-      }
     },
     "mcp": {
       "type": "object",

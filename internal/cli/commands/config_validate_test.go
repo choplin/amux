@@ -30,10 +30,6 @@ func TestConfigValidateCommand(t *testing.T) {
 		{
 			name: "valid configuration",
 			config: `version: "1.0"
-project:
-  name: test-project
-  repository: https://github.com/test/project.git
-  defaultAgent: claude
 mcp:
   transport:
     type: stdio
@@ -50,7 +46,6 @@ agents:
 		{
 			name: "missing agent type",
 			config: `version: "1.0"
-project:
   name: test-project
 agents:
   claude:
@@ -63,7 +58,6 @@ agents:
 		{
 			name: "missing agent name",
 			config: `version: "1.0"
-project:
   name: test-project
 agents:
   claude:
@@ -76,7 +70,6 @@ agents:
 		{
 			name: "unsupported agent type",
 			config: `version: "1.0"
-project:
   name: test-project
 agents:
   claude:
@@ -90,7 +83,6 @@ agents:
 		{
 			name: "missing params command",
 			config: `version: "1.0"
-project:
   name: test-project
 agents:
   claude:
@@ -104,7 +96,6 @@ agents:
 		{
 			name: "missing params config for tmux type",
 			config: `version: "1.0"
-project:
   name: test-project
 agents:
   claude:
@@ -166,10 +157,6 @@ func TestConfigValidateCommandVerbose(t *testing.T) {
 
 	// Write valid config
 	validConfig := `version: "1.0"
-project:
-  name: test-project
-  repository: https://github.com/test/project.git
-  defaultAgent: claude
 mcp:
   transport:
     type: stdio
@@ -221,9 +208,6 @@ agents:
 	assert.Contains(t, output, "Configuration is valid")
 	assert.Contains(t, output, "Configuration details:")
 	assert.Contains(t, output, "Version: 1.0")
-	assert.Contains(t, output, "Project: test-project")
-	assert.Contains(t, output, "Repository: https://github.com/test/project.git")
-	assert.Contains(t, output, "Default Agent: claude")
 	assert.Contains(t, output, "MCP Configuration:")
 	assert.Contains(t, output, "Transport: stdio")
 	assert.Contains(t, output, "Agents (2 configured):")

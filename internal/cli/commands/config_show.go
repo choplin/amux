@@ -62,12 +62,7 @@ func runConfigShow(cmd *cobra.Command, args []string) error {
 }
 
 func showConfigPretty(cfg *config.Config) error {
-	ui.OutputLine("Project Configuration:")
-	ui.OutputLine("  Name: %s", cfg.Project.Name)
-	ui.OutputLine("  Repository: %s", cfg.Project.Repository)
-	ui.OutputLine("  Default Agent: %s", cfg.Project.DefaultAgent)
-
-	ui.OutputLine("\nMCP Configuration:")
+	ui.OutputLine("MCP Configuration:")
 	ui.OutputLine("  Transport: %s", cfg.MCP.Transport.Type)
 	if cfg.MCP.Transport.Type == "http" && cfg.MCP.Transport.HTTP.Port > 0 {
 		ui.OutputLine("  Port: %d", cfg.MCP.Transport.HTTP.Port)
