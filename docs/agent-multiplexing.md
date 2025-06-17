@@ -191,11 +191,13 @@ agents:
 ```
 
 **Important Notes:**
+
 - Auto-attach only works when running from a terminal with TTY support
 - When running via MCP (from AI agents), auto-attach is ignored and attach commands are returned instead
 - Use `Ctrl-B D` to detach from an auto-attached session without stopping it
 
 **Use Cases:**
+
 - Interactive debugging sessions
 - Initial setup or configuration that requires user input
 - Educational demonstrations
