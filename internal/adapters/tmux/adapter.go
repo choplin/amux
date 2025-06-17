@@ -51,8 +51,15 @@ func (a *RealAdapter) CreateSessionWithOptions(opts CreateSessionOptions) error 
 		args = append(args, "-n", opts.WindowName)
 	}
 
-	// Don't add shell as initial command - we'll handle it differently
-	// to allow environment variables to be set first
+	// Add environment variables using -e option
+	for key, value := range opts.Environment {
+		args = append(args, "-e", key+"="+value)
+	}
+
+	// Add shell as initial command if specified
+	if opts.Shell != "" {
+		args = append(args, opts.Shell)
+	}
 
 	// Create new session in detached mode with working directory
 	// Set TERM to avoid terminal issues
@@ -61,9 +68,6 @@ func (a *RealAdapter) CreateSessionWithOptions(opts CreateSessionOptions) error 
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to create tmux session: %w", err)
 	}
-
-	// Store the shell preference for later use
-	// The actual shell will be started after environment is set
 
 	return nil
 }

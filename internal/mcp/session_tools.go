@@ -19,8 +19,6 @@ type SessionRunParams struct {
 	Description string            `json:"description,omitempty" jsonschema:"description=Description of the session purpose"`
 	Command     string            `json:"command,omitempty" jsonschema:"description=Override the agent's default command"`
 	Environment map[string]string `json:"environment,omitempty" jsonschema:"description=Additional environment variables"`
-	Shell       string            `json:"shell,omitempty" jsonschema:"description=Custom shell to use (e.g. /bin/zsh)"`
-	WindowName  string            `json:"window_name,omitempty" jsonschema:"description=Custom tmux window name"`
 }
 
 // SessionIDParams contains parameters for session operations
@@ -123,16 +121,6 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 				opts.Environment[k] = strVal
 			}
 		}
-	}
-
-	// Optional shell
-	if shell, ok := args["shell"].(string); ok && shell != "" {
-		opts.Shell = shell
-	}
-
-	// Optional window name
-	if windowName, ok := args["window_name"].(string); ok && windowName != "" {
-		opts.WindowName = windowName
 	}
 
 	// Create session manager

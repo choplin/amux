@@ -83,12 +83,18 @@ func (m *MockAdapter) CreateSessionWithOptions(opts CreateSessionOptions) error 
 		return fmt.Errorf("session already exists: %s", opts.SessionName)
 	}
 
+	// Initialize environment
+	env := make(map[string]string)
+	for k, v := range opts.Environment {
+		env[k] = v
+	}
+
 	m.sessions[opts.SessionName] = &MockSession{
 		name:        opts.SessionName,
 		workDir:     opts.WorkDir,
 		shell:       opts.Shell,
 		windowName:  opts.WindowName,
-		environment: make(map[string]string),
+		environment: env,
 		output:      []string{},
 		pid:         12345 + len(m.sessions),
 	}

@@ -267,6 +267,18 @@ func TestAdapter_CreateSessionWithOptions(t *testing.T) {
 				WindowName:  "workspace",
 			},
 		},
+		{
+			name: "session with environment",
+			opts: CreateSessionOptions{
+				SessionName: "test-env-" + time.Now().Format("20060102-150405"),
+				WorkDir:     t.TempDir(),
+				Shell:       "/bin/bash",
+				Environment: map[string]string{
+					"AMUX_TEST_VAR": "test_value",
+					"AMUX_SESSION":  "test_session",
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -302,6 +314,37 @@ func TestAdapter_CreateSessionWithOptions(t *testing.T) {
 				// Note: The echo $SHELL might show the default shell, not the running shell
 				// This is because tmux starts the specified shell as a command, not as SHELL env
 				t.Logf("Shell check output: %s", output)
+			}
+
+			// If environment was specified, verify variables are set
+			if len(tt.opts.Environment) > 0 {
+				// Wait for session to be ready
+				time.Sleep(500 * time.Millisecond)
+
+				// Check one of the environment variables
+				for key, expectedValue := range tt.opts.Environment {
+					checkCmd := fmt.Sprintf("echo $%s", key)
+					if err := adapter.SendKeys(tt.opts.SessionName, checkCmd); err != nil {
+						t.Fatalf("Failed to send keys: %v", err)
+					}
+
+					// Wait for command
+					time.Sleep(300 * time.Millisecond)
+
+					// Capture output
+					output, err := adapter.CapturePane(tt.opts.SessionName)
+					if err != nil {
+						t.Fatalf("Failed to capture pane: %v", err)
+					}
+
+					// Check if the expected value appears in output
+					if !strings.Contains(output, expectedValue) {
+						// Try to get more context
+						fullOutput, _ := adapter.CapturePane(tt.opts.SessionName)
+						t.Errorf("Environment variable %s not set correctly. Expected %s in output.\nCommand sent: %s\nFull output:\n%s", key, expectedValue, checkCmd, fullOutput)
+					}
+					break // Check only one variable for test speed
+				}
 			}
 		})
 	}

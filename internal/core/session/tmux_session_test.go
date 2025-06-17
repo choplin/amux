@@ -36,7 +36,7 @@ func TestTmuxSession_StartStop(t *testing.T) {
 	}
 
 	// Create manager
-	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, idMapper)
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, nil, idMapper)
 	if err != nil {
 		t.Fatalf("Failed to create manager: %v", err)
 	}
@@ -122,7 +122,7 @@ func TestTmuxSession_WithInitialPrompt(t *testing.T) {
 	}
 
 	// Create manager
-	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, idMapper)
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, nil, idMapper)
 	if err != nil {
 		t.Fatalf("Failed to create manager: %v", err)
 	}
@@ -211,7 +211,7 @@ func TestTmuxSession_StatusTracking(t *testing.T) {
 	}
 
 	// Create manager
-	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, idMapper)
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, nil, idMapper)
 	if err != nil {
 		t.Fatalf("Failed to create manager: %v", err)
 	}
@@ -274,5 +274,190 @@ func TestTmuxSession_StatusTracking(t *testing.T) {
 	// After stop, status should be stopped
 	if status := session.Status(); status != StatusStopped {
 		t.Errorf("Expected status after stop to be stopped, got %s", status)
+	}
+}
+
+func TestTmuxSession_WithEnvironment(t *testing.T) {
+	// Setup
+	_, wsManager, configManager := setupTestEnvironment(t)
+
+	// Create workspace
+	ws, err := wsManager.Create(context.Background(), workspace.CreateOptions{
+		Name: "test-workspace-env",
+	})
+	if err != nil {
+		t.Fatalf("Failed to create workspace: %v", err)
+	}
+
+	// Create ID mapper
+	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	if err != nil {
+		t.Fatalf("Failed to create ID mapper: %v", err)
+	}
+
+	// Create manager
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, nil, idMapper)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
+
+	// Use mock adapter for predictable testing
+	mockAdapter := tmux.NewMockAdapter()
+	manager.SetTmuxAdapter(mockAdapter)
+
+	// Create session info with environment variables
+	now := time.Now()
+	info := &Info{
+		ID:          "test-env-session",
+		WorkspaceID: ws.ID,
+		AgentID:     "test-agent",
+		StatusState: StatusState{
+			Status:          StatusCreated,
+			StatusChangedAt: now,
+			LastOutputTime:  now,
+		},
+		Command: "/bin/bash", // Use bash as command
+		Environment: map[string]string{
+			"CUSTOM_VAR":  "custom_value",
+			"ANOTHER_VAR": "another_value",
+		},
+		CreatedAt: now,
+	}
+
+	// Save info
+	if err := manager.Save(context.Background(), info); err != nil {
+		t.Fatalf("Failed to save session info: %v", err)
+	}
+
+	// Create tmux session
+	session := NewTmuxSession(info, manager, mockAdapter, ws)
+
+	// Start session
+	ctx := context.Background()
+	if err := session.Start(ctx); err != nil {
+		t.Fatalf("Failed to start tmux session: %v", err)
+	}
+
+	// Get the session info to check tmux session name
+	sessionInfo := session.Info()
+	if sessionInfo.TmuxSession == "" {
+		t.Fatal("No tmux session name set")
+	}
+
+	// Check environment variables were set in mock adapter
+	env := mockAdapter.GetSessionEnvironment(sessionInfo.TmuxSession)
+	if env == nil {
+		t.Fatal("No environment found for session")
+	}
+
+	// Test AMUX standard environment variables
+	amuxVars := []struct {
+		name     string
+		expected string
+	}{
+		{"AMUX_WORKSPACE_ID", ws.ID},
+		{"AMUX_WORKSPACE_PATH", ws.Path},
+		{"AMUX_SESSION_ID", info.ID},
+		{"AMUX_AGENT_ID", info.AgentID},
+	}
+
+	for _, v := range amuxVars {
+		if env[v.name] != v.expected {
+			t.Errorf("Environment variable %s not set correctly. Expected %s, got %s", v.name, v.expected, env[v.name])
+		}
+	}
+
+	// Test custom environment variables
+	for key, expectedValue := range info.Environment {
+		if env[key] != expectedValue {
+			t.Errorf("Custom environment variable %s not set correctly. Expected %s, got %s", key, expectedValue, env[key])
+		}
+	}
+
+	// Stop session
+	if err := session.Stop(); err != nil {
+		t.Fatalf("Failed to stop session: %v", err)
+	}
+}
+
+func TestTmuxSession_WithShellAndWindowName(t *testing.T) {
+	// Skip if tmux not available
+	tmuxAdapter, err := tmux.NewAdapter()
+	if err != nil || !tmuxAdapter.IsAvailable() {
+		t.Skip("tmux not available")
+	}
+
+	// Setup
+	_, wsManager, configManager := setupTestEnvironment(t)
+
+	// Create workspace
+	ws, err := wsManager.Create(context.Background(), workspace.CreateOptions{
+		Name: "test-workspace-shell",
+	})
+	if err != nil {
+		t.Fatalf("Failed to create workspace: %v", err)
+	}
+
+	// Create ID mapper
+	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	if err != nil {
+		t.Fatalf("Failed to create ID mapper: %v", err)
+	}
+
+	// Create manager
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, nil, idMapper)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
+
+	// Create session info with custom shell and window name
+	now := time.Now()
+	info := &Info{
+		ID:          "test-shell-window-session",
+		WorkspaceID: ws.ID,
+		AgentID:     "test-agent",
+		StatusState: StatusState{
+			Status:          StatusCreated,
+			StatusChangedAt: now,
+			LastOutputTime:  now,
+		},
+		Command:   "echo 'Custom shell started'",
+		CreatedAt: now,
+	}
+
+	// Save info
+	if err := manager.Save(context.Background(), info); err != nil {
+		t.Fatalf("Failed to save session info: %v", err)
+	}
+
+	// Create tmux session
+	session := NewTmuxSession(info, manager, tmuxAdapter, ws)
+
+	// Start session
+	ctx := context.Background()
+	if err := session.Start(ctx); err != nil {
+		t.Fatalf("Failed to start tmux session: %v", err)
+	}
+
+	// Wait for session to be ready
+	time.Sleep(200 * time.Millisecond)
+
+	// Get output to verify command was executed
+	output, err := session.GetOutput(0)
+	if err != nil {
+		t.Errorf("Failed to get output: %v", err)
+	} else {
+		outputStr := string(output)
+		t.Logf("Session output with custom shell:\n%s", outputStr)
+
+		// Verify the command was executed
+		if !strings.Contains(outputStr, "Custom shell started") {
+			t.Errorf("Command not executed in custom shell. Output: %s", outputStr)
+		}
+	}
+
+	// Stop session
+	if err := session.Stop(); err != nil {
+		t.Fatalf("Failed to stop session: %v", err)
 	}
 }

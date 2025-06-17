@@ -160,52 +160,6 @@ func TestSessionRun(t *testing.T) {
 		}
 	})
 
-	t.Run("creates session with shell and window name", func(t *testing.T) {
-		req := mcp.CallToolRequest{
-			Params: mcp.CallToolParams{
-				Name: "session_run",
-				Arguments: map[string]interface{}{
-					"workspace_identifier": ws.ID,
-					"agent_id":             "test-agent",
-					"command":              "echo 'test'",
-					"shell":                "/bin/bash",
-					"window_name":          "dev-session",
-				},
-			},
-		}
-
-		result, err := testServer.handleSessionRun(context.Background(), req)
-		if err != nil {
-			t.Fatalf("expected no error, got %v", err)
-		}
-
-		// Parse response
-		textContent := result.Content[0].(mcp.TextContent)
-		var enhancedResult struct {
-			Result map[string]interface{} `json:"result"`
-		}
-		if err := json.Unmarshal([]byte(textContent.Text), &enhancedResult); err != nil {
-			t.Fatalf("failed to parse enhanced result: %v", err)
-		}
-		response := enhancedResult.Result
-
-		// Get session to verify parameters were set
-		sessionID := response["id"].(string)
-		sessionManager, _ := testServer.createSessionManager()
-		sess, _ := sessionManager.ResolveSession(context.Background(), session.Identifier(sessionID))
-		if sess != nil {
-			info := sess.Info()
-			if info.Shell != "/bin/bash" {
-				t.Errorf("expected shell /bin/bash, got %s", info.Shell)
-			}
-			if info.WindowName != "dev-session" {
-				t.Errorf("expected window name dev-session, got %s", info.WindowName)
-			}
-			// Clean up
-			_ = sess.Stop()
-		}
-	})
-
 	t.Run("fails with invalid workspace", func(t *testing.T) {
 		req := mcp.CallToolRequest{
 			Params: mcp.CallToolParams{

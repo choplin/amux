@@ -53,7 +53,7 @@ func TestTailer_Follow(t *testing.T) {
 	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
 	require.NoError(t, err)
 	// Create session manager with mock adapter
-	sessionManager, err := session.NewManager(configManager.GetAmuxDir(), wsManager, idMapper, session.WithLogger(logger.Nop()))
+	sessionManager, err := session.NewManager(configManager.GetAmuxDir(), wsManager, nil, idMapper, session.WithLogger(logger.Nop()))
 	require.NoError(t, err)
 
 	// Replace tmux adapter with mock
@@ -210,7 +210,7 @@ func TestFollowFunc(t *testing.T) {
 	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
 	require.NoError(t, err)
 	// Create session manager with mock adapter
-	sessionManager, err := session.NewManager(configManager.GetAmuxDir(), wsManager, idMapper, session.WithLogger(logger.Nop()))
+	sessionManager, err := session.NewManager(configManager.GetAmuxDir(), wsManager, nil, idMapper, session.WithLogger(logger.Nop()))
 	require.NoError(t, err)
 
 	// Replace tmux adapter with mock
