@@ -25,6 +25,7 @@ type tmuxSessionImpl struct {
 	manager        *Manager
 	tmuxAdapter    tmux.Adapter
 	workspace      *workspace.Workspace
+	agentConfig    *config.Agent
 	logger         logger.Logger
 	processChecker process.Checker
 	mu             sync.RWMutex
@@ -54,12 +55,13 @@ func WithProcessChecker(checker process.Checker) TmuxSessionOption {
 }
 
 // NewTmuxSession creates a new tmux-backed session
-func NewTmuxSession(info *Info, manager *Manager, tmuxAdapter tmux.Adapter, workspace *workspace.Workspace, opts ...TmuxSessionOption) TerminalSession {
+func NewTmuxSession(info *Info, manager *Manager, tmuxAdapter tmux.Adapter, workspace *workspace.Workspace, agentConfig *config.Agent, opts ...TmuxSessionOption) TerminalSession {
 	s := &tmuxSessionImpl{
 		info:           info,
 		manager:        manager,
 		tmuxAdapter:    tmuxAdapter,
 		workspace:      workspace,
+		agentConfig:    agentConfig,
 		logger:         logger.Nop(),    // Default to no-op logger
 		processChecker: process.Default, // Default to system process checker
 	}
@@ -137,14 +139,10 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 
 	// Get shell and window name from agent configuration
 	var shell, windowName string
-	if s.manager.agentManager != nil {
-		if agentConfig, err := s.manager.agentManager.GetAgent(s.info.AgentID); err == nil && agentConfig != nil {
-			if agentConfig.Type == config.AgentTypeTmux {
-				if tmuxParams, err := agentConfig.GetTmuxParams(); err == nil {
-					shell = tmuxParams.Shell
-					windowName = tmuxParams.WindowName
-				}
-			}
+	if s.agentConfig != nil && s.agentConfig.Type == config.AgentTypeTmux {
+		if tmuxParams, err := s.agentConfig.GetTmuxParams(); err == nil {
+			shell = tmuxParams.Shell
+			windowName = tmuxParams.WindowName
 		}
 	}
 

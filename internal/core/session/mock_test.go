@@ -66,7 +66,7 @@ func TestTmuxSession_WithMock(t *testing.T) {
 	}
 
 	// Create tmux session with mock
-	session := NewTmuxSession(info, manager, mockAdapter, ws)
+	session := NewTmuxSession(info, manager, mockAdapter, ws, nil)
 
 	// Start session
 	ctx := context.Background()
@@ -276,7 +276,7 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 	}
 
 	// Create tmux session with mock adapter
-	session := NewTmuxSession(info, manager, mockAdapter, ws).(*tmuxSessionImpl)
+	session := NewTmuxSession(info, manager, mockAdapter, ws, nil).(*tmuxSessionImpl)
 
 	// Initialize the session as if it started
 	session.info.StatusState.Status = StatusWorking

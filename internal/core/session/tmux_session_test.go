@@ -62,7 +62,7 @@ func TestTmuxSession_StartStop(t *testing.T) {
 	}
 
 	// Create tmux session
-	session := NewTmuxSession(info, manager, tmuxAdapter, ws)
+	session := NewTmuxSession(info, manager, tmuxAdapter, ws, nil)
 
 	// Start session
 	ctx := context.Background()
@@ -150,7 +150,7 @@ func TestTmuxSession_WithInitialPrompt(t *testing.T) {
 	}
 
 	// Create tmux session
-	session := NewTmuxSession(info, manager, tmuxAdapter, ws)
+	session := NewTmuxSession(info, manager, tmuxAdapter, ws, nil)
 
 	// Start session
 	ctx := context.Background()
@@ -237,7 +237,7 @@ func TestTmuxSession_StatusTracking(t *testing.T) {
 	}
 
 	// Create tmux session
-	session := NewTmuxSession(info, manager, tmuxAdapter, ws)
+	session := NewTmuxSession(info, manager, tmuxAdapter, ws, nil)
 
 	// Initial status should be created
 	if status := session.Status(); status != StatusCreated {
@@ -330,7 +330,7 @@ func TestTmuxSession_WithEnvironment(t *testing.T) {
 	}
 
 	// Create tmux session
-	session := NewTmuxSession(info, manager, mockAdapter, ws)
+	session := NewTmuxSession(info, manager, mockAdapter, ws, nil)
 
 	// Start session
 	ctx := context.Background()
@@ -431,7 +431,7 @@ func TestTmuxSession_WithShellAndWindowName(t *testing.T) {
 	}
 
 	// Create tmux session
-	session := NewTmuxSession(info, manager, tmuxAdapter, ws)
+	session := NewTmuxSession(info, manager, tmuxAdapter, ws, nil)
 
 	// Start session
 	ctx := context.Background()
