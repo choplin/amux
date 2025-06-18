@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/aki/amux/internal/adapters/tmux"
+	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/logger"
 	"github.com/aki/amux/internal/core/process"
 	"github.com/aki/amux/internal/core/terminal"
@@ -24,6 +25,7 @@ type tmuxSessionImpl struct {
 	manager        *Manager
 	tmuxAdapter    tmux.Adapter
 	workspace      *workspace.Workspace
+	agentConfig    *config.Agent
 	logger         logger.Logger
 	processChecker process.Checker
 	mu             sync.RWMutex
@@ -53,12 +55,13 @@ func WithProcessChecker(checker process.Checker) TmuxSessionOption {
 }
 
 // NewTmuxSession creates a new tmux-backed session
-func NewTmuxSession(info *Info, manager *Manager, tmuxAdapter tmux.Adapter, workspace *workspace.Workspace, opts ...TmuxSessionOption) TerminalSession {
+func NewTmuxSession(info *Info, manager *Manager, tmuxAdapter tmux.Adapter, workspace *workspace.Workspace, agentConfig *config.Agent, opts ...TmuxSessionOption) TerminalSession {
 	s := &tmuxSessionImpl{
 		info:           info,
 		manager:        manager,
 		tmuxAdapter:    tmuxAdapter,
 		workspace:      workspace,
+		agentConfig:    agentConfig,
 		logger:         logger.Nop(),    // Default to no-op logger
 		processChecker: process.Default, // Default to system process checker
 	}
@@ -90,6 +93,10 @@ func (s *tmuxSessionImpl) ID() string {
 
 func (s *tmuxSessionImpl) WorkspaceID() string {
 	return s.info.WorkspaceID
+}
+
+func (s *tmuxSessionImpl) WorkspacePath() string {
+	return s.workspace.Path
 }
 
 func (s *tmuxSessionImpl) AgentID() string {
@@ -130,29 +137,33 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 		s.info.AgentID,
 		time.Now().Unix())
 
-	// Create tmux session
-	if err := s.tmuxAdapter.CreateSession(tmuxSession, s.workspace.Path); err != nil {
-		return fmt.Errorf("failed to create tmux session: %w", err)
-	}
-
-	// Set environment variables
-	env := make(map[string]string)
-	for k, v := range s.info.Environment {
-		env[k] = v
-	}
-
-	// Add workspace-specific environment
-	env["AMUX_WORKSPACE_ID"] = s.workspace.ID
-	env["AMUX_WORKSPACE_PATH"] = s.workspace.Path
-	env["AMUX_SESSION_ID"] = s.info.ID
-	env["AMUX_AGENT_ID"] = s.info.AgentID
-
-	if err := s.tmuxAdapter.SetEnvironment(tmuxSession, env); err != nil {
-		// Clean up on failure
-		if killErr := s.tmuxAdapter.KillSession(tmuxSession); killErr != nil {
-			s.logger.Warn("failed to kill tmux session during cleanup", "error", killErr, "session", tmuxSession)
+	// Get shell and window name from agent configuration
+	var shell, windowName string
+	if s.agentConfig != nil && s.agentConfig.Type == config.AgentTypeTmux {
+		if tmuxParams, err := s.agentConfig.GetTmuxParams(); err == nil {
+			shell = tmuxParams.Shell
+			windowName = tmuxParams.WindowName
 		}
-		return fmt.Errorf("failed to set environment: %w", err)
+	}
+
+	// Merge environment variables:
+	// 1. AMUX standard environment variables
+	// 2. Session environment (from agent config and CLI -e)
+	environment := mergeEnvironment(
+		getAMUXEnvironment(s),
+		s.info.Environment,
+	)
+
+	// Create tmux session with options
+	opts := tmux.CreateSessionOptions{
+		SessionName: tmuxSession,
+		WorkDir:     s.workspace.Path,
+		Shell:       shell,
+		WindowName:  windowName,
+		Environment: environment,
+	}
+	if err := s.tmuxAdapter.CreateSessionWithOptions(opts); err != nil {
+		return fmt.Errorf("failed to create tmux session: %w", err)
 	}
 
 	// Resize to terminal dimensions or use defaults

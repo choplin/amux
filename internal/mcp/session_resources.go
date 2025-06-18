@@ -8,6 +8,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 
+	"github.com/aki/amux/internal/core/agent"
 	"github.com/aki/amux/internal/core/idmap"
 	"github.com/aki/amux/internal/core/session"
 )
@@ -303,8 +304,11 @@ func (s *ServerV2) createSessionManager() (*session.Manager, error) {
 		return nil, fmt.Errorf("failed to create ID mapper: %w", err)
 	}
 
+	// Create agent manager
+	agentManager := agent.NewManager(s.configManager)
+
 	// Create session manager
-	manager, err := session.NewManager(s.configManager.GetAmuxDir(), workspaceManager, idMapper)
+	manager, err := session.NewManager(s.configManager.GetAmuxDir(), workspaceManager, agentManager, idMapper)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session manager: %w", err)
 	}

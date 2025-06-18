@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/aki/amux/internal/adapters/tmux"
+	"github.com/aki/amux/internal/core/agent"
+	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/idmap"
 	"github.com/aki/amux/internal/core/logger"
 	"github.com/aki/amux/internal/core/workspace"
@@ -20,6 +22,7 @@ type Manager struct {
 	sessionsDir      string
 	fileManager      *filemanager.Manager[Info]
 	workspaceManager *workspace.Manager
+	agentManager     *agent.Manager
 	tmuxAdapter      tmux.Adapter
 	sessions         map[string]Session
 	idMapper         *idmap.IDMapper
@@ -38,7 +41,7 @@ func WithLogger(log logger.Logger) ManagerOption {
 }
 
 // NewManager creates a new session manager
-func NewManager(basePath string, workspaceManager *workspace.Manager, idMapper *idmap.IDMapper, opts ...ManagerOption) (*Manager, error) {
+func NewManager(basePath string, workspaceManager *workspace.Manager, agentManager *agent.Manager, idMapper *idmap.IDMapper, opts ...ManagerOption) (*Manager, error) {
 	// Ensure sessions directory exists
 	sessionsDir := filepath.Join(basePath, "sessions")
 	if err := os.MkdirAll(sessionsDir, 0o755); err != nil {
@@ -52,6 +55,7 @@ func NewManager(basePath string, workspaceManager *workspace.Manager, idMapper *
 		sessionsDir:      sessionsDir,
 		fileManager:      filemanager.NewManager[Info](),
 		workspaceManager: workspaceManager,
+		agentManager:     agentManager,
 		idMapper:         idMapper,
 		tmuxAdapter:      tmuxAdapter,
 		sessions:         make(map[string]Session),
@@ -114,6 +118,14 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 		opts.AgentID = "default"
 	}
 
+	// Get agent configuration if available
+	var agentConfig *config.Agent
+	if m.agentManager != nil {
+		if agent, err := m.agentManager.GetAgent(opts.AgentID); err == nil {
+			agentConfig = agent
+		}
+	}
+
 	now := time.Now()
 
 	// Create session storage directory
@@ -159,7 +171,7 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 	}
 
 	// Create and cache session
-	sess := NewTmuxSession(info, m, m.tmuxAdapter, ws)
+	sess := NewTmuxSession(info, m, m.tmuxAdapter, ws, agentConfig)
 	m.mu.Lock()
 	m.sessions[sessionID.String()] = sess
 	m.mu.Unlock()
@@ -322,7 +334,15 @@ func (m *Manager) createSessionFromInfo(ctx context.Context, info *Info) (Sessio
 			return nil, fmt.Errorf("workspace not found for session: %w", err)
 		}
 
-		return NewTmuxSession(info, m, m.tmuxAdapter, ws), nil
+		// Get agent configuration if available
+		var agentConfig *config.Agent
+		if m.agentManager != nil {
+			if agent, err := m.agentManager.GetAgent(info.AgentID); err == nil {
+				agentConfig = agent
+			}
+		}
+
+		return NewTmuxSession(info, m, m.tmuxAdapter, ws, agentConfig), nil
 
 	default:
 		return nil, fmt.Errorf("unsupported session type: %s", info.Type)

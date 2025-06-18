@@ -34,7 +34,7 @@ func TestTmuxSession_WithMock(t *testing.T) {
 	}
 
 	// Create manager
-	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, idMapper)
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, nil, idMapper)
 	if err != nil {
 		t.Fatalf("Failed to create manager: %v", err)
 	}
@@ -66,7 +66,7 @@ func TestTmuxSession_WithMock(t *testing.T) {
 	}
 
 	// Create tmux session with mock
-	session := NewTmuxSession(info, manager, mockAdapter, ws)
+	session := NewTmuxSession(info, manager, mockAdapter, ws, nil)
 
 	// Start session
 	ctx := context.Background()
@@ -141,7 +141,7 @@ func TestManager_WithMockAdapter(t *testing.T) {
 	}
 
 	// Create manager
-	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, idMapper)
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, nil, idMapper)
 	if err != nil {
 		t.Fatalf("Failed to create manager: %v", err)
 	}
@@ -201,7 +201,7 @@ func TestManager_WithUnavailableTmux(t *testing.T) {
 	}
 
 	// Create manager
-	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, idMapper)
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, nil, idMapper)
 	if err != nil {
 		t.Fatalf("Failed to create manager: %v", err)
 	}
@@ -247,7 +247,7 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 	}
 
 	// Create manager
-	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, idMapper)
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, nil, idMapper)
 	if err != nil {
 		t.Fatalf("Failed to create manager: %v", err)
 	}
@@ -276,7 +276,7 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 	}
 
 	// Create tmux session with mock adapter
-	session := NewTmuxSession(info, manager, mockAdapter, ws).(*tmuxSessionImpl)
+	session := NewTmuxSession(info, manager, mockAdapter, ws, nil).(*tmuxSessionImpl)
 
 	// Initialize the session as if it started
 	session.info.StatusState.Status = StatusWorking

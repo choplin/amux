@@ -136,6 +136,9 @@ type Session interface {
 	// WorkspaceID returns the workspace this session runs in
 	WorkspaceID() string
 
+	// WorkspacePath returns the workspace path
+	WorkspacePath() string
+
 	// AgentID returns the agent running in this session
 	AgentID() string
 

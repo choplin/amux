@@ -18,6 +18,8 @@ type MockAdapter struct {
 type MockSession struct {
 	name        string
 	workDir     string
+	shell       string
+	windowName  string
 	environment map[string]string
 	output      []string
 	pid         int
@@ -62,6 +64,14 @@ func (m *MockAdapter) IsAvailable() bool {
 
 // CreateSession creates a new tmux session
 func (m *MockAdapter) CreateSession(sessionName, workDir string) error {
+	return m.CreateSessionWithOptions(CreateSessionOptions{
+		SessionName: sessionName,
+		WorkDir:     workDir,
+	})
+}
+
+// CreateSessionWithOptions creates a new tmux session with custom options
+func (m *MockAdapter) CreateSessionWithOptions(opts CreateSessionOptions) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -69,14 +79,22 @@ func (m *MockAdapter) CreateSession(sessionName, workDir string) error {
 		return m.createError
 	}
 
-	if _, exists := m.sessions[sessionName]; exists {
-		return fmt.Errorf("session already exists: %s", sessionName)
+	if _, exists := m.sessions[opts.SessionName]; exists {
+		return fmt.Errorf("session already exists: %s", opts.SessionName)
 	}
 
-	m.sessions[sessionName] = &MockSession{
-		name:        sessionName,
-		workDir:     workDir,
-		environment: make(map[string]string),
+	// Initialize environment
+	env := make(map[string]string)
+	for k, v := range opts.Environment {
+		env[k] = v
+	}
+
+	m.sessions[opts.SessionName] = &MockSession{
+		name:        opts.SessionName,
+		workDir:     opts.WorkDir,
+		shell:       opts.Shell,
+		windowName:  opts.WindowName,
+		environment: env,
 		output:      []string{},
 		pid:         12345 + len(m.sessions),
 	}

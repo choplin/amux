@@ -35,13 +35,40 @@ func (a *RealAdapter) IsAvailable() bool {
 
 // CreateSession creates a new tmux session
 func (a *RealAdapter) CreateSession(sessionName, workDir string) error {
+	return a.CreateSessionWithOptions(CreateSessionOptions{
+		SessionName: sessionName,
+		WorkDir:     workDir,
+	})
+}
+
+// CreateSessionWithOptions creates a new tmux session with custom options
+func (a *RealAdapter) CreateSessionWithOptions(opts CreateSessionOptions) error {
+	// Build command arguments
+	args := []string{"new-session", "-d", "-s", opts.SessionName, "-c", opts.WorkDir}
+
+	// Add window name if specified
+	if opts.WindowName != "" {
+		args = append(args, "-n", opts.WindowName)
+	}
+
+	// Add environment variables using -e option
+	for key, value := range opts.Environment {
+		args = append(args, "-e", fmt.Sprintf("%s=%s", key, value))
+	}
+
+	// Add shell as initial command if specified
+	if opts.Shell != "" {
+		args = append(args, opts.Shell)
+	}
+
 	// Create new session in detached mode with working directory
 	// Set TERM to avoid terminal issues
-	cmd := exec.Command(a.tmuxPath, "new-session", "-d", "-s", sessionName, "-c", workDir)
+	cmd := exec.Command(a.tmuxPath, args...)
 	cmd.Env = append(os.Environ(), "TERM=xterm-256color")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to create tmux session: %w", err)
 	}
+
 	return nil
 }
 

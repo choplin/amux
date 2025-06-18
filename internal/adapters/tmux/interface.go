@@ -1,9 +1,19 @@
 package tmux
 
+// CreateSessionOptions contains options for creating a tmux session
+type CreateSessionOptions struct {
+	SessionName string
+	WorkDir     string
+	Shell       string            // Optional: custom shell to use (e.g., /bin/zsh)
+	WindowName  string            // Optional: custom window name
+	Environment map[string]string // Optional: environment variables to set
+}
+
 // Adapter defines the interface for tmux operations
 type Adapter interface {
 	IsAvailable() bool
 	CreateSession(sessionName, workDir string) error
+	CreateSessionWithOptions(opts CreateSessionOptions) error
 	SessionExists(sessionName string) bool
 	KillSession(sessionName string) error
 	SendKeys(sessionName, keys string) error
