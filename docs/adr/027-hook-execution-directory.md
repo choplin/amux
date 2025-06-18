@@ -33,6 +33,7 @@ Change hook execution behavior to use context-appropriate working directories:
 3. **Session hooks without workspace** - Fail with clear error message
 
 Additionally:
+
 - Rename `agent_start/stop` events to `session_start/stop` for consistency with the rest of the codebase
 - Execute commands through shell (`sh -c`) to support redirections, pipes, and other shell features
 
@@ -45,6 +46,7 @@ Hooks should run where the action occurred. When creating a workspace, it's natu
 ### Common Use Cases
 
 Most hook use cases involve workspace-specific operations:
+
 - Installing dependencies (`npm install`, `pip install`, `go mod download`)
 - Setting up environment files (`.env`, `config.yaml`)
 - Running initialization scripts
@@ -57,6 +59,7 @@ Sessions already run in their assigned workspaces. Hooks should follow the same 
 ### Shell Execution
 
 Using `sh -c` allows natural shell syntax:
+
 - Redirections: `echo "test" > file.txt`
 - Pipes: `cat file | grep pattern`
 - Multiple commands: `command1 && command2`
