@@ -27,7 +27,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: "1.24"
       - name: Install just
         uses: extractions/setup-just@v3
       - name: Cache Go modules
@@ -44,8 +44,6 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
         run: |
           just build
-          # Rename for platform-specific artifact
-          mv bin/amux amux${{ matrix.os == 'windows-latest' && '.exe' || '' }}
       - name: Test binary (Unix)
         if: matrix.os != 'windows-latest'
         run: |
