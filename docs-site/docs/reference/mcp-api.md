@@ -45,11 +45,22 @@ amux mcp --transport http --port 3000
 
 ### Storage Operations (MCP Only)
 
+#### Workspace Storage
+
 | CLI Command | MCP Tool | Parameters |
 |-------------|----------|------------|
-| N/A | `storage_read` | `workspace_identifier?`, `session_identifier?`, `path` |
-| N/A | `storage_write` | `workspace_identifier?`, `session_identifier?`, `path`, `content` |
-| N/A | `storage_list` | `workspace_identifier?`, `session_identifier?`, `path?` |
+| N/A | `workspace_storage_read` | `workspace_identifier`, `path` |
+| N/A | `workspace_storage_write` | `workspace_identifier`, `path`, `content` |
+| N/A | `workspace_storage_list` | `workspace_identifier`, `path?` |
+
+#### Session Storage
+
+| CLI Command | MCP Tool | Parameters |
+|-------------|----------|------------|
+| N/A | `session_storage_read` | `session_identifier`, `path` |
+| N/A | `session_storage_write` | `session_identifier`, `path`, `content` |
+| N/A | `session_storage_list` | `session_identifier`, `path?` |
+
 
 ### Configuration Operations
 
@@ -143,42 +154,78 @@ session_send_input({
 
 ### Storage Tools
 
-#### storage_read
+#### Workspace Storage Tools
 
-Read a file from workspace or session storage.
+##### workspace_storage_read
+
+Read a file from workspace storage.
 
 ```typescript
-storage_read({
-  workspace_identifier?: string,  // Either workspace...
-  session_identifier?: string,    // ...or session (one required)
-  path: string                   // Relative path in storage
+workspace_storage_read({
+  workspace_identifier: string,  // Workspace ID, index, or name
+  path: string                  // Relative path in storage
 })
 ```
 
-#### storage_write
+##### workspace_storage_write
 
-Write a file to workspace or session storage.
+Write a file to workspace storage.
 
 ```typescript
-storage_write({
-  workspace_identifier?: string,  // Either workspace...
-  session_identifier?: string,    // ...or session (one required)
-  path: string,                  // Relative path in storage
-  content: string                // File content
+workspace_storage_write({
+  workspace_identifier: string,  // Workspace ID, index, or name
+  path: string,                 // Relative path in storage
+  content: string              // File content
 })
 ```
 
-#### storage_list
+##### workspace_storage_list
 
-List files in workspace or session storage.
+List files in workspace storage.
 
 ```typescript
-storage_list({
-  workspace_identifier?: string,  // Either workspace...
-  session_identifier?: string,    // ...or session (one required)
-  path?: string                  // Optional subdirectory
+workspace_storage_list({
+  workspace_identifier: string,  // Workspace ID, index, or name
+  path?: string                 // Optional subdirectory
 })
 ```
+
+#### Session Storage Tools
+
+##### session_storage_read
+
+Read a file from session storage.
+
+```typescript
+session_storage_read({
+  session_identifier: string,  // Session ID, index, or name
+  path: string                // Relative path in storage
+})
+```
+
+##### session_storage_write
+
+Write a file to session storage.
+
+```typescript
+session_storage_write({
+  session_identifier: string,  // Session ID, index, or name
+  path: string,               // Relative path in storage
+  content: string            // File content
+})
+```
+
+##### session_storage_list
+
+List files in session storage.
+
+```typescript
+session_storage_list({
+  session_identifier: string,  // Session ID, index, or name
+  path?: string               // Optional subdirectory
+})
+```
+
 
 ### Resource Bridge Tools
 

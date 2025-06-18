@@ -64,7 +64,8 @@ amux mcp --git-root /path/to/your/project
 | Browse files | `resource_workspace_browse` (disabled) | Remote file access |
 | Session output | `resource_session_output` | Get logs/output |
 | Send input | `session_send_input` | Interactive control |
-| Storage ops | `storage_read/write/list` | Persistent data |
+| Workspace storage | `workspace_storage_read/write/list` | Workspace data |
+| Session storage | `session_storage_read/write/list` | Session data |
 
 ## Common Workflow Prompts
 

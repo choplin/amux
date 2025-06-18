@@ -214,13 +214,23 @@ Send input to a running session.
 - `session_identifier` (required) - Session ID
 - `input` (required) - Text to send
 
-### storage_read / storage_write
+### workspace_storage_read / workspace_storage_write
 
-Access workspace or session storage.
+Access workspace storage.
 
 **Parameters:**
 
-- `workspace_identifier` or `session_identifier` (required)
+- `workspace_identifier` (required) - Workspace ID or name
+- `path` (required) - File path within storage
+- `content` (required for write) - File content
+
+### session_storage_read / session_storage_write
+
+Access session storage.
+
+**Parameters:**
+
+- `session_identifier` (required) - Session ID
 - `path` (required) - File path within storage
 - `content` (required for write) - File content
 
