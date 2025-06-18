@@ -7,6 +7,7 @@ import (
 
 	"github.com/aki/amux/internal/cli/ui"
 	"github.com/aki/amux/internal/core/config"
+	"github.com/aki/amux/internal/core/hooks"
 	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/workspace"
 )
@@ -46,6 +47,21 @@ func stopSession(cmd *cobra.Command, args []string) error {
 	sess, err := sessionManager.ResolveSession(cmd.Context(), session.Identifier(sessionID))
 	if err != nil {
 		return fmt.Errorf("failed to get session: %w", err)
+	}
+
+	// Get workspace for hooks
+	info := sess.Info()
+	var ws *workspace.Workspace
+	if info.WorkspaceID != "" {
+		ws, _ = wsManager.ResolveWorkspace(cmd.Context(), workspace.Identifier(info.WorkspaceID))
+	}
+
+	// Execute session stop hooks (before stopping)
+	if ws != nil {
+		if err := executeSessionHooks(sess, ws, hooks.EventSessionStop); err != nil {
+			ui.Warning("Hook execution failed: %v", err)
+			// Continue with stop even if hooks fail
+		}
 	}
 
 	// Stop session

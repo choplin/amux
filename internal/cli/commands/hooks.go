@@ -271,7 +271,7 @@ func testHooks(cmd *cobra.Command, args []string) error {
 	event := hooks.Event(eventName)
 	switch event {
 	case hooks.EventWorkspaceCreate, hooks.EventWorkspaceRemove,
-		hooks.EventAgentStart, hooks.EventAgentStop:
+		hooks.EventSessionStart, hooks.EventSessionStop:
 		// Valid event
 	default:
 		return fmt.Errorf("unknown event: %s", eventName)

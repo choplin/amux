@@ -16,10 +16,11 @@ import (
 
 // Executor executes hooks
 type Executor struct {
-	configDir string
-	env       map[string]string
-	dryRun    bool
-	output    io.Writer
+	configDir  string
+	env        map[string]string
+	dryRun     bool
+	output     io.Writer
+	workingDir string // New field for context-specific working directory
 }
 
 // NewExecutor creates a new hook executor
@@ -40,6 +41,12 @@ func (e *Executor) WithDryRun(dryRun bool) *Executor {
 // WithOutput sets custom output writer
 func (e *Executor) WithOutput(w io.Writer) *Executor {
 	e.output = w
+	return e
+}
+
+// WithWorkingDir sets the working directory for hook execution
+func (e *Executor) WithWorkingDir(dir string) *Executor {
+	e.workingDir = dir
 	return e
 }
 
@@ -123,8 +130,14 @@ func (e *Executor) executeHook(hook *Hook, index, total int) (*ExecutionResult, 
 
 	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 
-	// Set working directory to project root (parent of .amux)
-	cmd.Dir = filepath.Dir(e.configDir)
+	// Set working directory
+	if e.workingDir != "" {
+		// Use context-specific working directory (workspace path)
+		cmd.Dir = e.workingDir
+	} else {
+		// Fall back to project root (parent of .amux)
+		cmd.Dir = filepath.Dir(e.configDir)
+	}
 
 	// Set environment
 	cmd.Env = os.Environ()

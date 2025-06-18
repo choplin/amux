@@ -40,10 +40,10 @@ const (
 	EventWorkspaceCreate Event = "workspace_create"
 	// EventWorkspaceRemove fires before workspace removal
 	EventWorkspaceRemove Event = "workspace_remove"
-	// EventAgentStart fires when agent session starts
-	EventAgentStart Event = "agent_start"
-	// EventAgentStop fires when agent session stops
-	EventAgentStop Event = "agent_stop"
+	// EventSessionStart fires when session starts
+	EventSessionStart Event = "session_start"
+	// EventSessionStop fires when session stops
+	EventSessionStop Event = "session_stop"
 )
 
 // ExecutionResult represents the result of hook execution
