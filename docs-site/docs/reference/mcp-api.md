@@ -61,7 +61,6 @@ amux mcp --transport http --port 3000
 | N/A | `session_storage_write` | `session_identifier`, `path`, `content` |
 | N/A | `session_storage_list` | `session_identifier`, `path?` |
 
-
 ### Configuration Operations
 
 | CLI Command | MCP Tool/Resource | Parameters |
@@ -225,7 +224,6 @@ session_storage_list({
   path?: string               // Optional subdirectory
 })
 ```
-
 
 ### Resource Bridge Tools
 
