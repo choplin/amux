@@ -28,7 +28,7 @@ amux mcp --transport http --port 3000
 | `amux ws remove <id>` | `workspace_remove` | `workspace_identifier` |
 | `amux ws cd <id>` | N/A (CLI only) | - |
 | `amux ws prune` | N/A (CLI only) | - |
-| N/A | `resource_workspace_browse` | `workspace_identifier`, `path?` |
+| N/A | `resource_workspace_browse` (disabled) | `workspace_identifier`, `path?` |
 
 ### Session Operations
 
@@ -202,8 +202,11 @@ resource_workspace_show({
 })
 ```
 
-#### resource_workspace_browse
+#### resource_workspace_browse (Disabled)
 
+**Note**: This tool has been temporarily disabled for v0.1.0 due to AI agent overuse and reliability issues. See [issue #164](https://github.com/choplin/amux/issues/164) for details.
+
+<!--
 Browse workspace files (same as `amux://workspace/{id}/files` resource).
 
 ```typescript
@@ -212,6 +215,7 @@ resource_workspace_browse({
   path?: string                 // Optional subdirectory
 })
 ```
+-->
 
 #### resource_session_list
 

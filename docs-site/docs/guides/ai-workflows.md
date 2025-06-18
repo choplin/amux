@@ -61,7 +61,7 @@ amux mcp --git-root /path/to/your/project
 
 | Feature | MCP Tool | Purpose |
 |---------|----------|----------|
-| Browse files | `resource_workspace_browse` | Remote file access |
+| Browse files | `resource_workspace_browse` (disabled) | Remote file access |
 | Session output | `resource_session_output` | Get logs/output |
 | Send input | `session_send_input` | Interactive control |
 | Storage ops | `storage_read/write/list` | Persistent data |

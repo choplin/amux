@@ -121,9 +121,11 @@ const ws = await workspace_create({
 });
 
 // 2. Work on implementation
-await resource_workspace_browse({
+// Note: resource_workspace_browse is disabled in v0.1.0
+// Use storage_read to read specific files instead
+await storage_read({
   workspace_identifier: ws.id,
-  path: "src/auth"
+  path: "src/auth/config.js"
 });
 
 // 3. Run tests in workspace
