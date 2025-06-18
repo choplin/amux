@@ -526,7 +526,7 @@ func executeWorkspaceHooks(ws *workspace.Workspace, event hooks.Event) error {
 		"AMUX_CONFIG_DIR":            configDir,
 	}
 
-	// Execute hooks
-	executor := hooks.NewExecutor(configDir, env)
+	// Execute hooks in workspace directory
+	executor := hooks.NewExecutor(configDir, env).WithWorkingDir(ws.Path)
 	return executor.ExecuteHooks(event, eventHooks)
 }
