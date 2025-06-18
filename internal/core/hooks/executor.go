@@ -8,7 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
+	"strings"
 	"time"
 
 	"github.com/aki/amux/internal/cli/ui"
@@ -122,13 +122,13 @@ func (e *Executor) executeHook(hook *Hook, index, total int) (*ExecutionResult, 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	// Execute command through shell to support redirections, pipes, etc.
-	var cmd *exec.Cmd
-	if runtime.GOOS == "windows" {
-		cmd = exec.CommandContext(ctx, "cmd", "/C", cmdStr)
-	} else {
-		cmd = exec.CommandContext(ctx, "sh", "-c", cmdStr)
+	// Parse command
+	args := strings.Fields(cmdStr)
+	if len(args) == 0 {
+		return nil, fmt.Errorf("empty command")
 	}
+
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 
 	// Set working directory
 	if e.workingDir != "" {

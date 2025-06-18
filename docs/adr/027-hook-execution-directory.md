@@ -35,7 +35,6 @@ Change hook execution behavior to use context-appropriate working directories:
 Additionally:
 
 - Rename `agent_start/stop` events to `session_start/stop` for consistency with the rest of the codebase
-- Execute commands through shell (`sh -c`) to support redirections, pipes, and other shell features
 
 ## Rationale
 
@@ -56,13 +55,16 @@ Most hook use cases involve workspace-specific operations:
 
 Sessions already run in their assigned workspaces. Hooks should follow the same pattern.
 
-### Shell Execution
+### Direct Command Execution
 
-Using `sh -c` allows natural shell syntax:
+Commands are executed directly without shell interpretation for simplicity and portability. If shell features are needed, users can explicitly invoke a shell:
 
-- Redirections: `echo "test" > file.txt`
-- Pipes: `cat file | grep pattern`
-- Multiple commands: `command1 && command2`
+```yaml
+hooks:
+  workspace_create:
+    - name: "Use shell features"
+      command: "sh -c 'echo test > output.txt'"
+```
 
 ## Consequences
 
