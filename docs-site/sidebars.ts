@@ -18,6 +18,7 @@ const sidebars: SidebarsConfig = {
         'guides/workspaces',
         'guides/session-management',
         'guides/ai-workflows',
+        'guides/hooks',
       ],
     },
     {

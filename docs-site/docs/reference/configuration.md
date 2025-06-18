@@ -222,6 +222,36 @@ amux config validate --verbose
 amux agent validate claude
 ```
 
+## Lifecycle Hooks
+
+Amux supports lifecycle hooks to automate tasks. See the [Hooks Guide](../guides/hooks.md) for detailed information.
+
+```yaml
+hooks:
+  workspace_create:
+    - name: "Install dependencies"
+      command: "npm install"
+    - name: "Setup environment"
+      command: "cp .env.example .env"
+
+  workspace_remove:
+    - name: "Clean up"
+      command: "rm -rf tmp/*"
+
+  session_start:
+    - name: "Start services"
+      command: "docker-compose up -d"
+
+  session_stop:
+    - name: "Stop services"
+      command: "docker-compose down"
+```
+
+Hook execution directories:
+
+- **Workspace hooks**: Execute in the workspace directory
+- **Session hooks**: Execute in the session's workspace directory
+
 ## Best Practices
 
 1. **Start simple**: Begin with minimal configuration and add features as needed
