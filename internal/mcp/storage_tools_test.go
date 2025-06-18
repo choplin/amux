@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/aki/amux/internal/adapters/tmux"
 	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/workspace"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -116,6 +117,12 @@ func TestSeparatedStorageTools(t *testing.T) {
 	})
 
 	t.Run("session storage tools", func(t *testing.T) {
+		// Skip if tmux not available
+		tmuxAdapter, err := tmux.NewAdapter()
+		if err != nil || !tmuxAdapter.IsAvailable() {
+			t.Skip("tmux not available, skipping session storage tools test")
+		}
+
 		// Create test session
 		sessionManager, err := server.createSessionManager()
 		require.NoError(t, err)
