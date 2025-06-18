@@ -37,14 +37,16 @@ func (s *ServerV2) registerWorkspaceBridgeTools() error {
 	s.mcpServer.AddTool(mcp.NewTool("resource_workspace_show", showOpts...), s.handleResourceWorkspaceShow)
 
 	// resource_workspace_browse - Bridge to amux://workspace/{id}/files
-	browseOpts, err := WithStructOptions(
-		GetEnhancedDescription("resource_workspace_browse"),
-		WorkspaceBrowseParams{},
-	)
-	if err != nil {
-		return fmt.Errorf("failed to create resource_workspace_browse options: %w", err)
-	}
-	s.mcpServer.AddTool(mcp.NewTool("resource_workspace_browse", browseOpts...), s.handleResourceWorkspaceBrowse)
+	// Disabled for v0.1.0: AI agents overuse it, low value for own workspace, error-prone
+	// See https://github.com/choplin/amux/issues/164 for context and re-enablement considerations
+	// browseOpts, err := WithStructOptions(
+	// 	GetEnhancedDescription("resource_workspace_browse"),
+	// 	WorkspaceBrowseParams{},
+	// )
+	// if err != nil {
+	// 	return fmt.Errorf("failed to create resource_workspace_browse options: %w", err)
+	// }
+	// s.mcpServer.AddTool(mcp.NewTool("resource_workspace_browse", browseOpts...), s.handleResourceWorkspaceBrowse)
 
 	return nil
 }
