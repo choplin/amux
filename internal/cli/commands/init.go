@@ -60,9 +60,15 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create workspaces directory: %w", err)
 	}
 
-	// Add .amux to .gitignore if not already present
-	if err := addToGitignore(cwd); err != nil {
-		ui.Warning("Failed to update .gitignore: %v", err)
+	// Ask user if they want to add .amux to .gitignore
+	if shouldUpdateGitignore(cwd) {
+		if ui.ConfirmWithDefault("Add .amux/ to .gitignore", false) {
+			if err := addToGitignore(cwd); err != nil {
+				ui.Warning("Failed to update .gitignore: %v", err)
+			} else {
+				ui.Success("Added .amux/ to .gitignore")
+			}
+		}
 	}
 
 	ui.Success("Initialized Amux in %s", cwd)
@@ -70,6 +76,19 @@ func runInit(cmd *cobra.Command, args []string) error {
 	ui.Info("Run 'amux mcp' to start the MCP server")
 
 	return nil
+}
+
+func shouldUpdateGitignore(projectRoot string) bool {
+	gitignorePath := filepath.Join(projectRoot, ".gitignore")
+
+	// Read existing .gitignore
+	content := ""
+	if data, err := os.ReadFile(gitignorePath); err == nil {
+		content = string(data)
+	}
+
+	// Check if .amux is already ignored
+	return !strings.Contains(content, ".amux")
 }
 
 func addToGitignore(projectRoot string) error {

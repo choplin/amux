@@ -276,3 +276,28 @@ func Confirm(prompt string) bool {
 	response = strings.TrimSpace(strings.ToLower(response))
 	return response == "y" || response == "yes"
 }
+
+// ConfirmWithDefault asks the user for confirmation with a default value
+func ConfirmWithDefault(prompt string, defaultYes bool) bool {
+	reader := bufio.NewReader(os.Stdin)
+
+	if defaultYes {
+		fmt.Printf("%s [Y/n]: ", prompt)
+	} else {
+		fmt.Printf("%s [y/N]: ", prompt)
+	}
+
+	response, err := reader.ReadString('\n')
+	if err != nil {
+		return defaultYes
+	}
+
+	response = strings.TrimSpace(strings.ToLower(response))
+
+	// If empty response, use default
+	if response == "" {
+		return defaultYes
+	}
+
+	return response == "y" || response == "yes"
+}
