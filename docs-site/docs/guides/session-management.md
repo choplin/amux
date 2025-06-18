@@ -98,4 +98,7 @@ Agents support optional tmux parameters:
 
 - **shell**: Custom shell for the session (e.g., `/bin/zsh`, `/bin/fish`)
 - **windowName**: Custom name for the tmux window
+- **autoAttach**: Automatically attach to session when run from CLI (default: false)
 - **environment**: Environment variables (can also be set at runtime via MCP)
+
+The `autoAttach` parameter is particularly useful for interactive debugging or when you need immediate access to the session. When enabled and running from a terminal, Amux will automatically attach to the tmux session after creation.

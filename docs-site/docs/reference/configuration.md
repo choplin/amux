@@ -131,6 +131,7 @@ agents:
       command: claude
       shell: /bin/bash               # Optional
       windowName: claude-session     # Optional
+      autoAttach: false              # Optional
       detached: false                # Optional
 ```
 
@@ -177,6 +178,7 @@ agents:
     description: Code editing assistant
     params:
       command: aider
+      autoAttach: true  # Auto-attach when run from CLI
       detached: true
 ```
 

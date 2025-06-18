@@ -177,6 +177,7 @@ amux run <agent-id> [flags]
 - `--command`, `-c` - Override agent command
 - `--env`, `-e` - Environment variables (KEY=VALUE)
 - `--initial-prompt`, `-p` - Initial prompt to send after starting
+- `--auto-attach` - Automatically attach to session after creation (default: true)
 
 **Examples:**
 
@@ -198,6 +199,9 @@ amux run claude --env ANTHROPIC_API_KEY=sk-...
 
 # Run with initial prompt
 amux run claude --initial-prompt "Please analyze the codebase"
+
+# Run without auto-attaching (run in background)
+amux run claude --auto-attach=false
 ```
 
 ### `amux session list` (alias: `amux ps`)
