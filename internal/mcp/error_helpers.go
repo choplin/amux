@@ -68,8 +68,8 @@ func FileNotFoundError(path string) error {
 	return NewErrorWithSuggestions(
 		fmt.Sprintf("file not found: %s", path),
 		"resource_workspace_browse - Browse workspace files",
-		"storage_list - List files in storage",
-		"storage_write - Create the file",
+		"workspace_storage_list - List files in workspace storage",
+		"workspace_storage_write - Create the file in workspace storage",
 	)
 }
 
@@ -78,7 +78,7 @@ func DirectoryNotFoundError(path string) error {
 	return NewErrorWithSuggestions(
 		fmt.Sprintf("directory not found: %s", path),
 		"resource_workspace_browse - Browse workspace structure",
-		"storage_list - List storage contents",
+		"workspace_storage_list - List workspace storage contents",
 	)
 }
 

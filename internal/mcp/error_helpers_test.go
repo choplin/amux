@@ -45,8 +45,8 @@ func TestErrorWithSuggestions(t *testing.T) {
 			wantMessage: "file not found: test.txt",
 			wantSuggest: []string{
 				"resource_workspace_browse",
-				"storage_list",
-				"storage_write",
+				"workspace_storage_list",
+				"workspace_storage_write",
 			},
 		},
 		{
@@ -55,7 +55,7 @@ func TestErrorWithSuggestions(t *testing.T) {
 			wantMessage: "directory not found: test-dir",
 			wantSuggest: []string{
 				"resource_workspace_browse",
-				"storage_list",
+				"workspace_storage_list",
 			},
 		},
 		{

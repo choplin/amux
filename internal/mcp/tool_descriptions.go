@@ -26,7 +26,7 @@ var toolDescriptions = map[string]ToolDescription{
 		},
 		NextTools: []string{
 			"resource_workspace_browse - Explore the workspace structure",
-			"storage_write - Document your plan or findings",
+			"workspace_storage_write - Document your plan or findings",
 			"session_run - Run tests or build commands",
 		},
 	},
@@ -65,8 +65,8 @@ var toolDescriptions = map[string]ToolDescription{
 			`resource_workspace_browse(workspace_identifier: "1", path: "README.md") → {content: "# Project Title\n\nDescription..."}`,
 		},
 		NextTools: []string{
-			"storage_read - Read the full content of files you found",
-			"storage_write - Create new files or document findings",
+			"workspace_storage_read - Read the full content of files you found",
+			"workspace_storage_write - Create new files or document findings",
 			"session_run - Execute commands in the workspace",
 		},
 	},
@@ -89,7 +89,7 @@ var toolDescriptions = map[string]ToolDescription{
 		NextTools: []string{
 			"resource_session_output - Monitor the command output",
 			"session_send_input - Send input if the command is interactive",
-			"storage_write - Save important output or results",
+			"session_storage_write - Save important output or results",
 			"session_stop - Stop the session when done",
 		},
 	},
@@ -109,7 +109,7 @@ var toolDescriptions = map[string]ToolDescription{
 		},
 		NextTools: []string{
 			"session_send_input - Send commands if errors need fixing",
-			"storage_write - Document important findings",
+			"session_storage_write - Document important findings",
 			"session_stop - Stop the session if needed",
 		},
 	},
