@@ -88,4 +88,14 @@ agents:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
     params:
       command: claude code
+      shell: /bin/zsh        # Optional: custom shell
+      windowName: claude-dev # Optional: tmux window name
 ```
+
+### Tmux Parameters
+
+Agents support optional tmux parameters:
+
+- **shell**: Custom shell for the session (e.g., `/bin/zsh`, `/bin/fish`)
+- **windowName**: Custom name for the tmux window
+- **environment**: Environment variables (can also be set at runtime via MCP)

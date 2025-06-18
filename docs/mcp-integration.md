@@ -181,6 +181,7 @@ Start an AI agent session.
 - `workspace_identifier` (optional) - Target workspace
 - `name` (optional) - Session name
 - `command` (optional) - Override agent command
+- `environment` (optional) - Additional environment variables
 
 **Example:**
 
@@ -188,7 +189,11 @@ Start an AI agent session.
 session_run({
   agent_id: "claude",
   workspace_identifier: "feature-auth",
-  name: "auth-implementation"
+  name: "auth-implementation",
+  environment: {
+    "DEBUG": "true",
+    "API_KEY": "custom-key"
+  }
 })
 ```
 
