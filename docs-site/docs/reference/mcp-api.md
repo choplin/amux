@@ -117,7 +117,7 @@ workspace_remove({
 
 #### session_run
 
-Run an AI agent session in a workspace.
+Run an AI agent session for long-running or interactive processes. Use this for development servers, watchers, REPLs, or processes that need monitoring. For one-off commands, use your regular Bash tool instead.
 
 ```typescript
 session_run({

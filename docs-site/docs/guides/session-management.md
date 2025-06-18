@@ -17,6 +17,8 @@ Sessions are running instances of configured agents. Each session:
 
 ## Running Agents
 
+Sessions are designed for long-running or interactive processes like development servers, watchers, REPLs, or test runners. For one-off commands, use standard tools instead of creating sessions.
+
 ### Quick Start
 
 ```bash

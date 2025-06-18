@@ -17,7 +17,7 @@ cd your-project
 amux init
 ```
 
-This creates a `.amux/` directory to store workspace metadata.
+This creates a `.amux/` directory to store workspace metadata. You'll be asked if you want to add `.amux/` to your `.gitignore` file to keep workspace data out of version control.
 
 ### 2. Create a Workspace
 
