@@ -71,38 +71,6 @@ var toolDescriptions = map[string]ToolDescription{
 		},
 	},
 
-	"storage_read": {
-		Description: "[DEPRECATED: Use workspace_storage_read or session_storage_read instead] Read files from workspace or session storage. Requires either workspace_identifier or session_identifier",
-		WhenToUse: []string{
-			"DEPRECATED - Use workspace_storage_read for workspace files",
-			"DEPRECATED - Use session_storage_read for session files",
-		},
-		Examples: []string{
-			`storage_read(workspace_identifier: "1", path: "config.yaml") → {content: "name: myapp\nversion: 1.0\n...", size: 256}`,
-			`storage_read(session_identifier: "2", path: "output.log") → {content: "[INFO] Starting...\n[ERROR] Failed...", size: 1024}`,
-		},
-		NextTools: []string{
-			"workspace_storage_read - Use this for workspace storage",
-			"session_storage_read - Use this for session storage",
-		},
-	},
-
-	"storage_write": {
-		Description: "[DEPRECATED: Use workspace_storage_write or session_storage_write instead] Write files to workspace or session storage",
-		WhenToUse: []string{
-			"DEPRECATED - Use workspace_storage_write for workspace files",
-			"DEPRECATED - Use session_storage_write for session files",
-		},
-		Examples: []string{
-			`storage_write(workspace_identifier: "1", path: "NOTES.md", content: "# TODOs\n- Fix auth\n- Add tests") → {path: "NOTES.md", bytes: 28}`,
-			`storage_write(session_identifier: "2", path: "results.json", content: "{...}") → {path: "results.json", bytes: 156}`,
-		},
-		NextTools: []string{
-			"workspace_storage_write - Use this for workspace storage",
-			"session_storage_write - Use this for session storage",
-		},
-	},
-
 	"session_run": {
 		Description: "Run an AI agent session in a workspace. Creates and immediately starts the session. Better than direct bash commands as it provides session management",
 		WhenToUse: []string{
@@ -215,22 +183,6 @@ var toolDescriptions = map[string]ToolDescription{
 		NextTools: []string{
 			"resource_workspace_browse - Explore the workspace files",
 			"session_run - Execute commands in the workspace",
-		},
-	},
-
-	"storage_list": {
-		Description: "[DEPRECATED: Use workspace_storage_list or session_storage_list instead] List files in workspace or session storage",
-		WhenToUse: []string{
-			"DEPRECATED - Use workspace_storage_list for workspace files",
-			"DEPRECATED - Use session_storage_list for session files",
-		},
-		Examples: []string{
-			`storage_list(workspace_identifier: "1") → {files: ["README.md", "config.yaml", "src/"], count: 3}`,
-			`storage_list(session_identifier: "2", path: "logs/") → {files: ["error.log", "debug.log"], count: 2}`,
-		},
-		NextTools: []string{
-			"workspace_storage_list - Use this for workspace storage",
-			"session_storage_list - Use this for session storage",
 		},
 	},
 

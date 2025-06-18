@@ -1,6 +1,6 @@
 # ADR-026: Separate Storage Endpoints for Workspace and Session
 
-**Status**: Proposed
+**Status**: Accepted
 
 ## Context
 
@@ -27,10 +27,11 @@ if workspaceID != "" && sessionID != "" {
 
 ## Decision
 
-Separate the unified storage endpoints into distinct workspace and session storage tools:
+Replace the unified storage endpoints with distinct workspace and session storage tools:
 
-- `workspace_storage_read`, `workspace_storage_write`, `workspace_storage_list`
-- `session_storage_read`, `session_storage_write`, `session_storage_list`
+- Remove `storage_read`, `storage_write`, `storage_list`
+- Add `workspace_storage_read`, `workspace_storage_write`, `workspace_storage_list`
+- Add `session_storage_read`, `session_storage_write`, `session_storage_list`
 
 ## Rationale
 
@@ -44,10 +45,11 @@ Separate the unified storage endpoints into distinct workspace and session stora
 
 ### Implementation Simplicity
 
-The implementation changes are minimal:
-- Create thin wrapper functions around existing handlers
-- Define separate parameter structs without unnecessary fields
-- Share the core storage logic between endpoints
+The implementation is straightforward:
+
+- Create dedicated handlers for workspace and session storage
+- Define separate parameter structs with only required fields
+- No validation needed for mutual exclusivity
 
 ### Consistency with Other Tools
 
@@ -66,14 +68,10 @@ This aligns with our existing pattern where workspace and session operations hav
 
 - More tools in the MCP interface (6 instead of 3)
 - Minor code duplication in tool registration
-- Existing users need to update their tool usage
 
-### Migration Path
+### Note
 
-1. Implement new separated tools alongside existing ones
-2. Mark existing unified tools as deprecated
-3. Update documentation and examples
-4. Remove deprecated tools in a future release
+Since amux is in pre-release (v0.x), we can make breaking changes. The unified tools are removed immediately rather than deprecated.
 
 ## Implementation Notes
 
