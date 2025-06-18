@@ -1,0 +1,55 @@
+<svg width="1200" height="300" viewBox="0 0 1200 300"
+    xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="300" fill="#000" />
+
+    <g transform="translate(180, 150)">
+        <!-- amux -->
+        <text x="0" y="8" font-family="'SF Mono', monospace" font-size="48"
+            fill="#25c2a0">amux</text>
+
+        <!-- メイン分岐線 -->
+        <line x1="140" y1="0" x2="220" y2="0" stroke="#25c2a0" stroke-width="2"
+            opacity="0.6" />
+
+        <!-- 縦分岐 -->
+        <line x1="220" y1="-70" x2="220" y2="70" stroke="#25c2a0"
+            stroke-width="1" opacity="0.5" />
+
+        <!-- ワークスペースへの線 -->
+        <g stroke="#25c2a0" stroke-width="1" fill="none" opacity="0.5">
+            <line x1="220" y1="-70" x2="280" y2="-70" />
+            <line x1="220" y1="0" x2="280" y2="0" />
+            <line x1="220" y1="70" x2="280" y2="70" />
+        </g>
+
+        <!-- ワークスペース -->
+        <g transform="translate(290, 0)" font-family="'SF Mono', monospace"
+            font-size="18" fill="#8b949e">
+            <text x="0" y="-65">feature-auth</text>
+            <text x="0" y="5">fix-bug-123</text>
+            <text x="0" y="75">optimize-db</text>
+        </g>
+
+        <!-- エージェントへの線 -->
+        <g stroke="#25c2a0" stroke-width="1" fill="none" opacity="0.3">
+            <line x1="420" y1="-70" x2="500" y2="-70" />
+            <line x1="420" y1="0" x2="500" y2="0" />
+            <line x1="420" y1="70" x2="500" y2="70" />
+        </g>
+
+        <!-- エージェント -->
+        <g transform="translate(510, 0)" font-family="'SF Mono', monospace"
+            font-size="18" fill="#25c2a0">
+            <text x="0" y="-65">claude</text>
+            <text x="0" y="5">aider</text>
+            <text x="0" y="75">gemini</text>
+        </g>
+
+        <!-- ステータスインジケーター -->
+        <g fill="#25c2a0">
+            <circle cx="590" cy="-70" r="3" opacity="0.8" />
+            <circle cx="590" cy="0" r="3" opacity="0.8" />
+            <circle cx="590" cy="70" r="3" opacity="0.8" />
+        </g>
+    </g>
+</svg>

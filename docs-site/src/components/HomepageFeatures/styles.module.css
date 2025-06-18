@@ -1,0 +1,37 @@
+.features {
+  display: flex;
+  align-items: center;
+  padding: 2rem 0;
+  width: 100%;
+}
+
+.featureSvg {
+  height: 120px;
+  width: 120px;
+  margin-bottom: 1rem;
+}
+
+
+.videoPlaceholder {
+  background-color: var(--ifm-color-emphasis-200);
+  border-radius: 8px;
+  padding: 4rem 2rem;
+  margin: 2rem auto;
+  max-width: 800px;
+}
+
+.codeExample {
+  background-color: var(--ifm-pre-background);
+  border-radius: var(--ifm-pre-border-radius);
+  margin: 0 auto;
+  max-width: 800px;
+}
+
+.codeExample pre {
+  margin: 0;
+  background: transparent;
+}
+
+.codeExample code {
+  font-size: 0.9rem;
+}
