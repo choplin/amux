@@ -153,6 +153,7 @@ agents:
       command: claude
       shell: /bin/bash  # Optional: custom shell (e.g., /bin/zsh, /bin/fish)
       windowName: claude-dev  # Optional: tmux window name
+      autoAttach: false  # Optional: automatically attach to session after creation (CLI only)
 
   aider:
     name: Aider
@@ -174,6 +175,33 @@ agents:
       command: my-agent-cli --model ${MODEL}
       shell: /bin/zsh  # Use zsh for this agent
 ```
+
+### Auto-Attach Feature
+
+The `autoAttach` parameter allows agents to automatically attach to their tmux session after creation when running from the CLI:
+
+```yaml
+agents:
+  claude-interactive:
+    name: Claude Interactive
+    type: tmux
+    params:
+      command: claude
+      autoAttach: true  # Automatically attach when started from CLI
+```
+
+**Important Notes:**
+
+- Auto-attach only works when running from a terminal with TTY support
+- When running via MCP (from AI agents), auto-attach is ignored and attach commands are returned instead
+- Use `Ctrl-B D` to detach from an auto-attached session without stopping it
+
+**Use Cases:**
+
+- Interactive debugging sessions
+- Initial setup or configuration that requires user input
+- Educational demonstrations
+- Short interactive tasks
 
 ## Working Context
 

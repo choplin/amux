@@ -15,6 +15,7 @@ var (
 	runDescription        string
 	runSessionName        string
 	runSessionDescription string
+	runAutoAttach         *bool
 
 	// Flags for session logs
 	followLogs     bool

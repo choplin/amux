@@ -185,6 +185,18 @@ agents:
       detached: true`,
 			wantErr: false,
 		},
+		{
+			name: "valid tmux config with autoAttach",
+			yaml: `version: "1.0"
+agents:
+  claude-interactive:
+    name: Claude Interactive
+    type: tmux
+    params:
+      command: claude
+      autoAttach: true`,
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {

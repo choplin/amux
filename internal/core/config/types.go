@@ -69,6 +69,7 @@ type TmuxParams struct {
 	Shell      string `yaml:"shell,omitempty"`
 	WindowName string `yaml:"windowName,omitempty"`
 	Detached   bool   `yaml:"detached,omitempty"`
+	AutoAttach bool   `yaml:"autoAttach,omitempty"`
 }
 
 // GetTmuxParams returns tmux parameters if this is a tmux agent
