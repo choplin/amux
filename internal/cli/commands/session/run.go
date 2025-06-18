@@ -37,7 +37,9 @@ Examples:
   # Run with environment variables
   amux session run claude --env ANTHROPIC_API_KEY=sk-...
   # Run with initial prompt
-  amux session run claude --initial-prompt "Please analyze the codebase"`,
+  amux session run claude --initial-prompt "Please analyze the codebase"
+  # Run tmux without auto-attaching
+  amux session run tmux --auto-attach=false`,
 		Args: cobra.ExactArgs(1),
 		RunE: runSession,
 	}
@@ -51,6 +53,10 @@ Examples:
 	cmd.Flags().StringVarP(&runSessionDescription, "session-description", "", "", "Description of the session purpose")
 	cmd.Flags().StringVarP(&runName, "name", "n", "", "Name for the auto-created workspace (only used when --workspace is not specified)")
 	cmd.Flags().StringVarP(&runDescription, "description", "d", "", "Description for the auto-created workspace (only used when --workspace is not specified)")
+
+	// Add auto-attach flag
+	runAutoAttach = new(bool)
+	cmd.Flags().BoolVar(runAutoAttach, "auto-attach", true, "Auto-attach to tmux session after starting (default: true)")
 
 	return cmd
 }
@@ -176,9 +182,14 @@ func runSession(cmd *cobra.Command, args []string) error {
 	// Handle auto-attach for tmux sessions
 	info := sess.Info()
 	if info.TmuxSession != "" {
-		// Check if agent has autoAttach enabled
+		// Check if we should auto-attach
+		// CLI flag takes precedence over config
 		shouldAutoAttach := false
-		if agentConfig != nil {
+		if runAutoAttach != nil {
+			// Use CLI flag value
+			shouldAutoAttach = *runAutoAttach
+		} else if agentConfig != nil {
+			// Fall back to agent config
 			if tmuxParams, err := agentConfig.GetTmuxParams(); err == nil && tmuxParams != nil {
 				shouldAutoAttach = tmuxParams.AutoAttach
 			}
