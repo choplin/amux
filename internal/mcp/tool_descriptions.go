@@ -4,6 +4,7 @@ package mcp
 type ToolDescription struct {
 	Description string
 	WhenToUse   []string
+	DoNotUse    []string // Optional: When NOT to use this tool
 	Examples    []string
 	NextTools   []string
 }
@@ -72,19 +73,23 @@ var toolDescriptions = map[string]ToolDescription{
 	},
 
 	"session_run": {
-		Description: "Run an AI agent session in a workspace. Creates and immediately starts the session. Better than direct bash commands as it provides session management",
+		Description: "Run an AI agent session for LONG-RUNNING or INTERACTIVE processes. Creates and manages persistent sessions with proper lifecycle control",
 		WhenToUse: []string{
-			"When you need to execute commands like tests, builds, or scripts",
-			"To run development tools (npm, go, python, etc.)",
-			"When testing your implementation",
-			"To debug issues by running diagnostic commands",
-			"Instead of trying to use bash directly",
+			"Long-running processes (dev servers, watchers, builds)",
+			"Interactive programs requiring input (REPL, debuggers)",
+			"Test suites that take >30 seconds",
+			"Background tasks that need monitoring",
+		},
+		DoNotUse: []string{
+			"One-off commands that complete immediately (git, make, npm install, etc.)",
+			"Simple file operations (creating, reading, listing files)",
+			"Any command that exits after completion",
 		},
 		Examples: []string{
-			`session_run(agent_id: "test", command: "go test", workspace_identifier: "1") → {id: "session-123", status: "running", tmux_session: "amux-session-123"}`,
-			`session_run(agent_id: "shell", workspace_identifier: "2") → {id: "session-124", status: "running", command: "/bin/bash"}`,
-			`session_run(agent_id: "custom", name: "build", command: "make", workspace_identifier: "3") → {id: "session-125", name: "build", status: "running"}`,
-			`session_run(agent_id: "dev", workspace_identifier: "4", shell: "/bin/zsh", window_name: "development") → {id: "session-126", status: "running"}`,
+			`session_run(agent_id: "test", command: "npm run dev", workspace_identifier: "1") → {id: "session-123", status: "running"}`,
+			`session_run(agent_id: "python", command: "python -m pytest --watch", workspace_identifier: "2") → {id: "session-124", status: "running"}`,
+			`❌ BAD: session_run(agent_id: "shell", command: "git status", workspace_identifier: "3") → Use Bash tool instead`,
+			`❌ BAD: session_run(agent_id: "shell", command: "npm install", workspace_identifier: "4") → Use Bash tool instead`,
 		},
 		NextTools: []string{
 			"resource_session_output - Monitor the command output",
@@ -344,6 +349,13 @@ func GetEnhancedDescription(toolName string) string {
 		result := desc.Description + "\n\nWHEN TO USE THIS TOOL:\n"
 		for _, when := range desc.WhenToUse {
 			result += "- " + when + "\n"
+		}
+
+		if len(desc.DoNotUse) > 0 {
+			result += "\nDO NOT USE FOR:\n"
+			for _, doNot := range desc.DoNotUse {
+				result += "- " + doNot + "\n"
+			}
 		}
 
 		if len(desc.Examples) > 0 {
