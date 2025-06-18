@@ -32,9 +32,7 @@ Change hook execution behavior to use context-appropriate working directories:
 2. **Session hooks** (`session_start`, `session_stop`) - Execute in the session's assigned workspace directory
 3. **Session hooks without workspace** - Fail with clear error message
 
-Additionally:
-
-- Rename `agent_start/stop` events to `session_start/stop` for consistency with the rest of the codebase
+Additionally, rename `agent_start/stop` events to `session_start/stop` for consistency with the rest of the codebase where "session" terminology is used throughout (e.g., `amux ps` lists sessions, `amux run` creates sessions).
 
 ## Rationale
 
@@ -55,15 +53,24 @@ Most hook use cases involve workspace-specific operations:
 
 Sessions already run in their assigned workspaces. Hooks should follow the same pattern.
 
-### Direct Command Execution
+### Command Execution
 
-Commands are executed directly without shell interpretation for simplicity and portability. If shell features are needed, users can explicitly invoke a shell:
+Commands are executed directly without shell interpretation. This approach provides:
+
+- **Simplicity**: No complex shell parsing or escaping
+- **Portability**: Works identically across all platforms (Windows, macOS, Linux)
+- **Security**: No shell injection risks
+- **Predictability**: Arguments are passed exactly as specified
+
+If shell features (redirections, pipes, etc.) are needed, users can explicitly invoke a shell:
 
 ```yaml
 hooks:
   workspace_create:
-    - name: "Use shell features"
+    - name: "Create file with redirection"
       command: "sh -c 'echo test > output.txt'"
+    - name: "Use pipes"
+      command: "sh -c 'cat input.txt | grep pattern'"
 ```
 
 ## Consequences
