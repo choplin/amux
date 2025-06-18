@@ -72,42 +72,34 @@ var toolDescriptions = map[string]ToolDescription{
 	},
 
 	"storage_read": {
-		Description: "Read files from workspace or session storage (replaces cat, head, tail commands). Use this instead of bash file reading commands. Requires either workspace_identifier or session_identifier",
+		Description: "[DEPRECATED: Use workspace_storage_read or session_storage_read instead] Read files from workspace or session storage. Requires either workspace_identifier or session_identifier",
 		WhenToUse: []string{
-			"When you need to read file contents",
-			"Instead of using bash commands like 'cat', 'head', or 'tail'",
-			"To examine source code, configuration files, or documentation",
-			"After using workspace_browse to find files",
-			"When implementing features to understand existing code",
+			"DEPRECATED - Use workspace_storage_read for workspace files",
+			"DEPRECATED - Use session_storage_read for session files",
 		},
 		Examples: []string{
 			`storage_read(workspace_identifier: "1", path: "config.yaml") → {content: "name: myapp\nversion: 1.0\n...", size: 256}`,
 			`storage_read(session_identifier: "2", path: "output.log") → {content: "[INFO] Starting...\n[ERROR] Failed...", size: 1024}`,
 		},
 		NextTools: []string{
-			"storage_write - Modify the file or create related files",
-			"resource_workspace_browse - Find related files",
-			"session_run - Test your understanding with commands",
+			"workspace_storage_read - Use this for workspace storage",
+			"session_storage_read - Use this for session storage",
 		},
 	},
 
 	"storage_write": {
-		Description: "Write files to workspace or session storage (replaces echo >, cat >, file creation). Use this for creating or updating files",
+		Description: "[DEPRECATED: Use workspace_storage_write or session_storage_write instead] Write files to workspace or session storage",
 		WhenToUse: []string{
-			"When creating new files or modifying existing ones",
-			"Instead of using bash commands like 'echo >', 'cat >', or text editors",
-			"To save implementation code, documentation, or notes",
-			"To create test files or configuration",
-			"When documenting your findings or creating TODO lists",
+			"DEPRECATED - Use workspace_storage_write for workspace files",
+			"DEPRECATED - Use session_storage_write for session files",
 		},
 		Examples: []string{
 			`storage_write(workspace_identifier: "1", path: "NOTES.md", content: "# TODOs\n- Fix auth\n- Add tests") → {path: "NOTES.md", bytes: 28}`,
 			`storage_write(session_identifier: "2", path: "results.json", content: "{...}") → {path: "results.json", bytes: 156}`,
 		},
 		NextTools: []string{
-			"session_run - Test your changes",
-			"storage_read - Verify the file was written correctly",
-			"resource_session_output - Check test or build results",
+			"workspace_storage_write - Use this for workspace storage",
+			"session_storage_write - Use this for session storage",
 		},
 	},
 
@@ -227,20 +219,18 @@ var toolDescriptions = map[string]ToolDescription{
 	},
 
 	"storage_list": {
-		Description: "List files in workspace or session storage (replaces ls command)",
+		Description: "[DEPRECATED: Use workspace_storage_list or session_storage_list instead] List files in workspace or session storage",
 		WhenToUse: []string{
-			"To see what files exist in storage",
-			"Instead of using 'ls' command",
-			"To check available files before reading",
-			"To verify files were created correctly",
+			"DEPRECATED - Use workspace_storage_list for workspace files",
+			"DEPRECATED - Use session_storage_list for session files",
 		},
 		Examples: []string{
 			`storage_list(workspace_identifier: "1") → {files: ["README.md", "config.yaml", "src/"], count: 3}`,
 			`storage_list(session_identifier: "2", path: "logs/") → {files: ["error.log", "debug.log"], count: 2}`,
 		},
 		NextTools: []string{
-			"storage_read - Read specific files",
-			"storage_write - Create new files",
+			"workspace_storage_list - Use this for workspace storage",
+			"session_storage_list - Use this for session storage",
 		},
 	},
 
@@ -276,6 +266,122 @@ var toolDescriptions = map[string]ToolDescription{
 			"resource_session_output - Check session logs",
 			"session_send_input - Interact with the session",
 			"session_stop - Stop if needed",
+		},
+	},
+
+	// New separated storage tools
+
+	"workspace_storage_read": {
+		Description: "Read files from workspace storage (replaces cat, head, tail commands). Use this instead of bash file reading commands",
+		WhenToUse: []string{
+			"When you need to read file contents from workspace storage",
+			"Instead of using bash commands like 'cat', 'head', or 'tail'",
+			"To examine saved notes, documentation, or configuration in storage",
+			"After using workspace_storage_list to find files",
+		},
+		Examples: []string{
+			`workspace_storage_read(workspace_identifier: "1", path: "config.yaml") → {content: "name: myapp\nversion: 1.0\n...", size: 256}`,
+			`workspace_storage_read(workspace_identifier: "fix-auth", path: "notes/TODO.md") → {content: "# Tasks\n- Update auth logic...", size: 512}`,
+		},
+		NextTools: []string{
+			"workspace_storage_write - Modify the file or create related files",
+			"workspace_storage_list - Find other files in storage",
+			"session_run - Test your understanding with commands",
+		},
+	},
+
+	"workspace_storage_write": {
+		Description: "Write files to workspace storage (replaces echo >, cat >, file creation). Use this for creating or updating files in workspace storage",
+		WhenToUse: []string{
+			"When creating new files in workspace storage",
+			"Instead of using bash commands like 'echo >', 'cat >', or text editors",
+			"To save notes, documentation, or configuration",
+			"To create persistent workspace-specific files",
+			"When documenting your findings or creating TODO lists",
+		},
+		Examples: []string{
+			`workspace_storage_write(workspace_identifier: "1", path: "NOTES.md", content: "# TODOs\n- Fix auth\n- Add tests") → {path: "NOTES.md", bytes: 28}`,
+			`workspace_storage_write(workspace_identifier: "feat-api", path: "design.md", content: "# API Design...") → {path: "design.md", bytes: 256}`,
+		},
+		NextTools: []string{
+			"workspace_storage_read - Verify the file was written correctly",
+			"workspace_storage_list - See all files in storage",
+			"session_run - Test your implementation",
+		},
+	},
+
+	"workspace_storage_list": {
+		Description: "List files in workspace storage (replaces ls command)",
+		WhenToUse: []string{
+			"To see what files exist in workspace storage",
+			"Instead of using 'ls' command",
+			"To check available files before reading",
+			"To verify files were created correctly",
+		},
+		Examples: []string{
+			`workspace_storage_list(workspace_identifier: "1") → {files: ["README.md", "config.yaml", "notes/"], count: 3}`,
+			`workspace_storage_list(workspace_identifier: "fix-auth", path: "notes/") → {files: ["TODO.md", "design.md"], count: 2}`,
+		},
+		NextTools: []string{
+			"workspace_storage_read - Read specific files",
+			"workspace_storage_write - Create new files",
+		},
+	},
+
+	"session_storage_read": {
+		Description: "Read files from session storage. Use this to read session-specific output and logs",
+		WhenToUse: []string{
+			"When you need to read session output files",
+			"To examine logs, test results, or command output",
+			"After a session has written output to storage",
+			"To debug issues by reading session logs",
+		},
+		Examples: []string{
+			`session_storage_read(session_identifier: "session-123", path: "output.log") → {content: "[INFO] Starting...\n[ERROR] Failed...", size: 1024}`,
+			`session_storage_read(session_identifier: "2", path: "test-results.json") → {content: "{\"passed\": 10, \"failed\": 2}", size: 156}`,
+		},
+		NextTools: []string{
+			"session_storage_write - Update session files",
+			"session_storage_list - Find other session files",
+			"resource_session_output - Check live session output",
+		},
+	},
+
+	"session_storage_write": {
+		Description: "Write files to session storage. Use this to save session-specific data",
+		WhenToUse: []string{
+			"When saving session-specific output or results",
+			"To persist command output for later analysis",
+			"To create session logs or reports",
+			"When debugging to save intermediate results",
+		},
+		Examples: []string{
+			`session_storage_write(session_identifier: "session-123", path: "results.json", content: "{...}") → {path: "results.json", bytes: 156}`,
+			`session_storage_write(session_identifier: "2", path: "debug.log", content: "Debug info...") → {path: "debug.log", bytes: 512}`,
+		},
+		NextTools: []string{
+			"session_storage_read - Verify the file was written",
+			"session_storage_list - See all session files",
+			"resource_session_output - Check session status",
+		},
+	},
+
+	"session_storage_list": {
+		Description: "List files in session storage",
+		WhenToUse: []string{
+			"To see what files exist in session storage",
+			"To find logs, output files, or results",
+			"Before reading session files",
+			"To verify session output was saved",
+		},
+		Examples: []string{
+			`session_storage_list(session_identifier: "session-123") → {files: ["output.log", "errors.log", "results/"], count: 3}`,
+			`session_storage_list(session_identifier: "2", path: "logs/") → {files: ["test.log", "build.log"], count: 2}`,
+		},
+		NextTools: []string{
+			"session_storage_read - Read specific files",
+			"session_storage_write - Create new files",
+			"resource_session_output - Check live output",
 		},
 	},
 }
