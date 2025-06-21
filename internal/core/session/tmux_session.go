@@ -96,6 +96,9 @@ func (s *tmuxSessionImpl) WorkspaceID() string {
 }
 
 func (s *tmuxSessionImpl) WorkspacePath() string {
+	if s.workspace == nil {
+		return "" // Return empty string for deleted workspaces
+	}
 	return s.workspace.Path
 }
 
@@ -131,9 +134,18 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 		return ErrSessionAlreadyRunning{ID: s.info.ID}
 	}
 
+	// Cannot start session without workspace
+	if s.workspace == nil {
+		return fmt.Errorf("cannot start session: workspace has been deleted")
+	}
+
 	// Generate tmux session name
+	workspaceID := "deleted"
+	if s.workspace != nil {
+		workspaceID = s.workspace.ID
+	}
 	tmuxSession := fmt.Sprintf("amux-%s-%s-%d",
-		s.workspace.ID,
+		workspaceID,
 		s.info.AgentID,
 		time.Now().Unix())
 
@@ -155,9 +167,13 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 	)
 
 	// Create tmux session with options
+	workDir := "/tmp" // Default to /tmp for deleted workspaces
+	if s.workspace != nil {
+		workDir = s.workspace.Path
+	}
 	opts := tmux.CreateSessionOptions{
 		SessionName: tmuxSession,
-		WorkDir:     s.workspace.Path,
+		WorkDir:     workDir,
 		Shell:       shell,
 		WindowName:  windowName,
 		Environment: environment,

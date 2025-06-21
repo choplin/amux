@@ -328,10 +328,13 @@ func (m *Manager) createSessionFromInfo(ctx context.Context, info *Info) (Sessio
 			return nil, ErrTmuxNotAvailable{}
 		}
 
-		// Get workspace for tmux session
-		ws, err := m.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(info.WorkspaceID))
-		if err != nil {
-			return nil, fmt.Errorf("workspace not found for session: %w", err)
+		// Try to get workspace, but don't fail if it's missing
+		// This allows us to display sessions with deleted workspaces
+		var ws *workspace.Workspace
+		if m.workspaceManager != nil {
+			ws, _ = m.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(info.WorkspaceID))
+			// If workspace is not found, ws will be nil
+			// The session will operate in "degraded" mode
 		}
 
 		// Get agent configuration if available
