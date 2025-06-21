@@ -95,7 +95,7 @@ func TestSessionRun(t *testing.T) {
 		sessionManager, _ := testServer.createSessionManager()
 		sess, _ := sessionManager.ResolveSession(context.Background(), session.Identifier(sessionID))
 		if sess != nil {
-			_ = sess.Stop()
+			_ = sess.Stop(context.Background())
 		}
 	})
 
@@ -156,7 +156,7 @@ func TestSessionRun(t *testing.T) {
 		sessionManager, _ := testServer.createSessionManager()
 		sess, _ := sessionManager.ResolveSession(context.Background(), session.Identifier(sessionID))
 		if sess != nil {
-			_ = sess.Stop()
+			_ = sess.Stop(context.Background())
 		}
 	})
 
@@ -345,7 +345,7 @@ func TestSessionSendInput(t *testing.T) {
 
 	t.Run("fails with stopped session", func(t *testing.T) {
 		// Stop the session first
-		if err := sess.Stop(); err != nil {
+		if err := sess.Stop(context.Background()); err != nil {
 			t.Fatalf("failed to stop session: %v", err)
 		}
 

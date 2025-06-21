@@ -213,7 +213,7 @@ func (s *ServerV2) handleSessionStop(ctx context.Context, request mcp.CallToolRe
 	}
 
 	// Stop session
-	if err := sess.Stop(); err != nil {
+	if err := sess.Stop(ctx); err != nil {
 		return nil, fmt.Errorf("failed to stop session: %w", err)
 	}
 

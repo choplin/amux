@@ -99,7 +99,7 @@ func TestSessionFailureDetection(t *testing.T) {
 		require.NoError(t, err)
 
 		// Update status
-		err = sess.UpdateStatus()
+		err = sess.UpdateStatus(context.Background())
 		require.NoError(t, err)
 
 		// Should be marked as failed
@@ -136,7 +136,7 @@ func TestSessionFailureDetection(t *testing.T) {
 		require.NoError(t, err)
 
 		// Update status
-		err = sess.UpdateStatus()
+		err = sess.UpdateStatus(context.Background())
 		require.NoError(t, err)
 
 		// Should be marked as failed
@@ -173,7 +173,7 @@ func TestSessionFailureDetection(t *testing.T) {
 		mockProcessChecker.SetHasChildren(info.PID, false)
 
 		// Update status
-		err = sess.UpdateStatus()
+		err = sess.UpdateStatus(context.Background())
 		require.NoError(t, err)
 
 		// Should be marked as completed
@@ -215,7 +215,7 @@ func TestSessionFailureDetection(t *testing.T) {
 		mockProcessChecker.SetHasChildren(info.PID, true)
 
 		// Update status
-		err = sess.UpdateStatus()
+		err = sess.UpdateStatus(context.Background())
 		require.NoError(t, err)
 
 		// Should remain working
@@ -261,7 +261,7 @@ func TestSessionFailureDetection(t *testing.T) {
 		mockProcessChecker.SetHasChildren(info.PID, false)
 
 		// Update status
-		err = sess.UpdateStatus()
+		err = sess.UpdateStatus(context.Background())
 		require.NoError(t, err)
 
 		// Should be marked as failed
@@ -307,7 +307,7 @@ func TestSessionFailureDetection(t *testing.T) {
 		mockProcessChecker.SetHasChildren(info.PID, false)
 
 		// Update status
-		err = sess.UpdateStatus()
+		err = sess.UpdateStatus(context.Background())
 		require.NoError(t, err)
 
 		// Should be marked as completed
@@ -349,7 +349,7 @@ func TestSessionFailureDetection(t *testing.T) {
 		}
 
 		// Update status - should remain working
-		err = sess.UpdateStatus()
+		err = sess.UpdateStatus(context.Background())
 		require.NoError(t, err)
 		assert.Equal(t, StatusWorking, sess.Status())
 
@@ -362,7 +362,7 @@ func TestSessionFailureDetection(t *testing.T) {
 		}
 
 		// Update status - should transition to completed
-		err = sess.UpdateStatus()
+		err = sess.UpdateStatus(context.Background())
 		require.NoError(t, err)
 		assert.Equal(t, StatusCompleted, sess.Status())
 	})

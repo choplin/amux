@@ -64,7 +64,7 @@ func (s *ServerV2) handleResourceSessionList(ctx context.Context, request mcp.Ca
 		if sess.Status().IsRunning() {
 			// Try to update status if session supports terminal operations
 			if terminalSess, ok := sess.(session.TerminalSession); ok {
-				_ = terminalSess.UpdateStatus() // Ignore errors, use current status if update fails
+				_ = terminalSess.UpdateStatus(ctx) // Ignore errors, use current status if update fails
 			}
 		}
 

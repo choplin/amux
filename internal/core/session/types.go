@@ -155,7 +155,7 @@ type Session interface {
 	Start(ctx context.Context) error
 
 	// Stop stops the session gracefully
-	Stop() error
+	Stop(ctx context.Context) error
 }
 
 // TerminalSession represents a session with terminal capabilities
@@ -172,5 +172,5 @@ type TerminalSession interface {
 	GetOutput(maxLines int) ([]byte, error)
 
 	// UpdateStatus updates the session status based on current output
-	UpdateStatus() error
+	UpdateStatus(ctx context.Context) error
 }
