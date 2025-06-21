@@ -25,6 +25,10 @@ type Manager interface {
 
 	// GetByIndex retrieves the entity ID for a given index
 	GetByIndex(entityType EntityType, index Index) (string, bool)
+
+	// Reconcile removes entries for entities that no longer exist
+	// Returns the number of orphaned entries that were cleaned up
+	Reconcile(entityType EntityType, existingIDs []string) (int, error)
 }
 
 // fileManager implements Manager with file-based persistence
@@ -243,4 +247,60 @@ func (m *fileManager) GetByIndex(entityType EntityType, index Index) (string, bo
 
 	entityID, exists := state.Active[entityType][int(index)]
 	return entityID, exists
+}
+
+// Reconcile removes entries for entities that no longer exist
+func (m *fileManager) Reconcile(entityType EntityType, existingIDs []string) (int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Acquire file lock
+	if err := m.flock.Lock(); err != nil {
+		return 0, fmt.Errorf("failed to acquire file lock: %w", err)
+	}
+	defer func() {
+		_ = m.flock.Unlock()
+	}()
+
+	// Load current state
+	state, err := m.loadState()
+	if err != nil {
+		return 0, err
+	}
+
+	// Create a set of existing IDs for fast lookup
+	existingSet := make(map[string]bool)
+	for _, id := range existingIDs {
+		existingSet[id] = true
+	}
+
+	// Track orphaned entries
+	orphanedCount := 0
+	orphanedIndices := []int{}
+
+	// Check active entries
+	if state.Active[entityType] != nil {
+		for idx, entityID := range state.Active[entityType] {
+			if !existingSet[entityID] {
+				orphanedCount++
+				orphanedIndices = append(orphanedIndices, idx)
+				delete(state.Active[entityType], idx)
+			}
+		}
+	}
+
+	// Add orphaned indices to released pool
+	if len(orphanedIndices) > 0 {
+		if state.Released[entityType] == nil {
+			state.Released[entityType] = []int{}
+		}
+		state.Released[entityType] = append(state.Released[entityType], orphanedIndices...)
+
+		// Save updated state
+		if err := m.saveState(state); err != nil {
+			return 0, err
+		}
+	}
+
+	return orphanedCount, nil
 }

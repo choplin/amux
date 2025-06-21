@@ -195,6 +195,12 @@ func (m *Manager) Get(ctx context.Context, id ID) (Session, error) {
 		// If not found in file, it means the session doesn't exist
 		// (even if it might have been in cache before)
 		if os.IsNotExist(err) {
+			// If session doesn't exist but has an index entry, clean it up
+			if m.idMapper != nil {
+				if _, hasIndex := m.idMapper.GetSessionIndex(string(id)); hasIndex {
+					_ = m.idMapper.RemoveSession(string(id))
+				}
+			}
 			return nil, ErrSessionNotFound{ID: string(id)}
 		}
 		return nil, fmt.Errorf("failed to load session: %w", err)
@@ -223,7 +229,11 @@ func (m *Manager) ListSessions(ctx context.Context) ([]Session, error) {
 	}
 
 	sessions := make([]Session, 0, len(infos))
+	existingIDs := make([]string, 0, len(infos))
 	for _, info := range infos {
+		// Collect existing IDs for reconciliation
+		existingIDs = append(existingIDs, info.ID)
+
 		// Populate short ID
 		if m.idMapper != nil {
 			if index, exists := m.idMapper.GetSessionIndex(info.ID); exists {
@@ -258,6 +268,13 @@ func (m *Manager) ListSessions(ctx context.Context) ([]Session, error) {
 		m.mu.Unlock()
 
 		sessions = append(sessions, session)
+	}
+
+	// Reconcile index state with actual sessions
+	if m.idMapper != nil {
+		if orphanedCount, err := m.idMapper.ReconcileSessions(existingIDs); err == nil && orphanedCount > 0 {
+			m.logger.Debug("Cleaned up orphaned session indices", "count", orphanedCount)
+		}
 	}
 
 	return sessions, nil

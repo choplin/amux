@@ -165,6 +165,10 @@ func (m *Manager) Get(ctx context.Context, id ID) (*Workspace, error) {
 	workspace, _, err := m.fm.Read(ctx, workspaceMetaPath)
 	if err != nil {
 		if os.IsNotExist(err) {
+			// If workspace doesn't exist but has an index entry, clean it up
+			if _, hasIndex := m.idMapper.GetWorkspaceIndex(string(id)); hasIndex {
+				_ = m.idMapper.RemoveWorkspace(string(id))
+			}
 			return nil, fmt.Errorf("workspace not found: %s", id)
 		}
 		return nil, fmt.Errorf("failed to read workspace: %w", err)
@@ -197,6 +201,7 @@ func (m *Manager) List(ctx context.Context, opts ListOptions) ([]*Workspace, err
 	}
 
 	var workspaces []*Workspace
+	var existingIDs []string
 	for _, file := range files {
 		if !file.IsDir() {
 			continue
@@ -209,6 +214,9 @@ func (m *Manager) List(ctx context.Context, opts ListOptions) ([]*Workspace, err
 			continue
 		}
 		workspace := *workspacePtr
+
+		// Collect existing IDs for reconciliation
+		existingIDs = append(existingIDs, workspace.ID)
 
 		// Get last modified time from filesystem
 		workspace.UpdatedAt = m.getLastModified(workspace.Path)
@@ -226,6 +234,17 @@ func (m *Manager) List(ctx context.Context, opts ListOptions) ([]*Workspace, err
 		m.CheckConsistency(&workspace)
 
 		workspaces = append(workspaces, &workspace)
+	}
+
+	// Reconcile index state with actual workspaces
+	orphanedCount, err := m.idMapper.ReconcileWorkspaces(existingIDs)
+	if err != nil {
+		// Log error but continue - don't fail the list operation
+		_ = err // Ignore error to satisfy linter
+	} else if orphanedCount > 0 {
+		// Successfully cleaned up orphaned indices
+		// In production, this would be logged at debug level
+		_ = orphanedCount // Reference to satisfy linter
 	}
 
 	// Sort by creation time (newest first)
