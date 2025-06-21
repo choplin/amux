@@ -75,7 +75,7 @@ func TestRemoveSession(t *testing.T) {
 		assert.Contains(t, err.Error(), "cannot remove running session")
 
 		// Clean up: stop the session
-		err = sess.Stop()
+		err = sess.Stop(context.Background())
 		require.NoError(t, err)
 	})
 
@@ -89,10 +89,10 @@ func TestRemoveSession(t *testing.T) {
 		require.NoError(t, err)
 
 		// Start and then stop the session
-		ctx := context.TODO()
+		ctx := context.Background()
 		err = sess.Start(ctx)
 		require.NoError(t, err)
-		err = sess.Stop()
+		err = sess.Stop(ctx)
 		require.NoError(t, err)
 
 		// Now remove it
@@ -135,10 +135,10 @@ func TestRemoveSession(t *testing.T) {
 		require.NoError(t, err)
 
 		// Start and then stop the session
-		ctx := context.TODO()
+		ctx := context.Background()
 		err = sess.Start(ctx)
 		require.NoError(t, err)
-		err = sess.Stop()
+		err = sess.Stop(ctx)
 		require.NoError(t, err)
 
 		// Verify workspace exists before removal
@@ -173,10 +173,10 @@ func TestRemoveSession(t *testing.T) {
 		require.NoError(t, err)
 
 		// Start and then stop the session
-		ctx := context.TODO()
+		ctx := context.Background()
 		err = sess.Start(ctx)
 		require.NoError(t, err)
-		err = sess.Stop()
+		err = sess.Stop(ctx)
 		require.NoError(t, err)
 
 		// Remove the session with --keep-workspace flag
@@ -222,15 +222,15 @@ func TestRemoveSession(t *testing.T) {
 		require.NoError(t, err)
 
 		// Start and stop both sessions
-		ctx := context.TODO()
+		ctx := context.Background()
 		err = sess1.Start(ctx)
 		require.NoError(t, err)
-		err = sess1.Stop()
+		err = sess1.Stop(ctx)
 		require.NoError(t, err)
 
 		err = sess2.Start(ctx)
 		require.NoError(t, err)
-		err = sess2.Stop()
+		err = sess2.Stop(ctx)
 		require.NoError(t, err)
 
 		// Store session IDs
@@ -299,10 +299,10 @@ func TestRemoveSession(t *testing.T) {
 		require.NoError(t, err)
 
 		// Start and then stop the session
-		ctx := context.TODO()
+		ctx := context.Background()
 		err = sess.Start(ctx)
 		require.NoError(t, err)
-		err = sess.Stop()
+		err = sess.Stop(ctx)
 		require.NoError(t, err)
 
 		// Remove the session

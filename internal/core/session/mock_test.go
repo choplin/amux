@@ -112,7 +112,7 @@ func TestTmuxSession_WithMock(t *testing.T) {
 	}
 
 	// Stop session
-	if err := session.Stop(); err != nil {
+	if err := session.Stop(context.Background()); err != nil {
 		t.Fatalf("Failed to stop session: %v", err)
 	}
 
@@ -300,7 +300,7 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 			name: "Initial working status remains working",
 			setupFunc: func() {
 				// First update to establish baseline
-				session.UpdateStatus()
+				session.UpdateStatus(context.Background())
 			},
 			expectedStatus:       StatusWorking,
 			checkStatusChangedAt: false,
@@ -310,7 +310,7 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 			setupFunc: func() {
 				// Change output
 				mockAdapter.SetPaneContent("test-session", "new output")
-				session.UpdateStatus()
+				session.UpdateStatus(context.Background())
 			},
 			expectedStatus:       StatusWorking,
 			checkStatusChangedAt: false,
@@ -320,7 +320,7 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 			setupFunc: func() {
 				// Wait a bit but less than idle threshold
 				time.Sleep(1 * time.Second)
-				session.UpdateStatus()
+				session.UpdateStatus(context.Background())
 			},
 			expectedStatus:       StatusWorking,
 			checkStatusChangedAt: false,
@@ -336,7 +336,7 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 
 				// First ensure we have current state by calling UpdateStatus
 				// This will capture the current output and set lastOutputContent
-				err := session.UpdateStatus()
+				err := session.UpdateStatus(context.Background())
 				if err != nil {
 					t.Fatalf("First UpdateStatus failed: %v", err)
 				}
@@ -348,7 +348,7 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 				session.info.StatusState.LastStatusCheck = time.Time{}
 
 				// Update status again - should detect idle since output hasn't changed
-				err = session.UpdateStatus()
+				err = session.UpdateStatus(context.Background())
 				if err != nil {
 					t.Fatalf("Second UpdateStatus failed: %v", err)
 				}

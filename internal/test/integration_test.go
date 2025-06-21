@@ -153,7 +153,7 @@ func TestIntegration_FullWorkflow(t *testing.T) {
 	}
 
 	// Stop the session
-	if err := sess.Stop(); err != nil {
+	if err := sess.Stop(context.Background()); err != nil {
 		t.Fatalf("Failed to stop session: %v", err)
 	}
 
@@ -302,7 +302,7 @@ func TestIntegration_MultipleAgents(t *testing.T) {
 
 	// Stop all sessions
 	for _, sess := range sessions {
-		if err := sess.Stop(); err != nil {
+		if err := sess.Stop(context.Background()); err != nil {
 			t.Errorf("Failed to stop session %s: %v", sess.ID(), err)
 		}
 	}

@@ -212,7 +212,7 @@ func TestSeparatedStorageTools(t *testing.T) {
 		})
 
 		// Cleanup session
-		err = sess.Stop()
+		err = sess.Stop(context.Background()) //nolint:contextcheck // test cleanup context
 		require.NoError(t, err)
 	})
 }

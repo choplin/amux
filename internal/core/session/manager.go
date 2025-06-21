@@ -402,7 +402,7 @@ func (m *Manager) ResolveSession(ctx context.Context, identifier Identifier) (Se
 }
 
 // UpdateAllStatuses updates the status of multiple sessions in parallel for better performance
-func (m *Manager) UpdateAllStatuses(sessions []Session) {
+func (m *Manager) UpdateAllStatuses(ctx context.Context, sessions []Session) {
 	// Use goroutines to update statuses in parallel
 	// This is beneficial because:
 	// 1. Each session has its own mutex, so different sessions can update concurrently
@@ -423,7 +423,7 @@ func (m *Manager) UpdateAllStatuses(sessions []Session) {
 
 				// Try to update status if session supports terminal operations
 				if terminalSess, ok := s.(TerminalSession); ok {
-					_ = terminalSess.UpdateStatus() // Ignore errors, just use current status if update fails
+					_ = terminalSess.UpdateStatus(ctx) // Ignore errors, just use current status if update fails
 				}
 			}(sess)
 		}

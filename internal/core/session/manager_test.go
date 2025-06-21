@@ -392,7 +392,7 @@ func TestManager_Remove(t *testing.T) {
 	}
 
 	// Stop session
-	if err := session.Stop(); err != nil {
+	if err := session.Stop(context.Background()); err != nil {
 		t.Fatalf("Failed to stop session: %v", err)
 	}
 

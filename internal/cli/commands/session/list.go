@@ -56,7 +56,7 @@ func listSessions(cmd *cobra.Command, args []string) error {
 	}
 
 	// Update all session statuses in batch for better performance
-	sessionManager.UpdateAllStatuses(sessions)
+	sessionManager.UpdateAllStatuses(cmd.Context(), sessions)
 
 	// Create table
 	tbl := ui.NewTable("SESSION", "NAME", "DESCRIPTION", "AGENT", "WORKSPACE", "STATUS", "IN STATUS", "TOTAL TIME")

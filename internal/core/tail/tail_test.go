@@ -173,7 +173,7 @@ func TestTailer_Follow(t *testing.T) {
 
 		// Stop the session after a short delay
 		time.Sleep(200 * time.Millisecond)
-		err = sess2.Stop()
+		err = sess2.Stop(context.Background())
 		require.NoError(t, err)
 
 		// Follow should exit normally

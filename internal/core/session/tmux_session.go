@@ -227,7 +227,7 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 	return nil
 }
 
-func (s *tmuxSessionImpl) Stop() error {
+func (s *tmuxSessionImpl) Stop(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -249,7 +249,7 @@ func (s *tmuxSessionImpl) Stop() error {
 	s.info.StatusState.StatusChangedAt = now
 	s.info.StoppedAt = &now
 
-	if err := s.manager.Save(context.TODO(), s.info); err != nil {
+	if err := s.manager.Save(ctx, s.info); err != nil {
 		return fmt.Errorf("failed to save session: %w", err)
 	}
 
@@ -295,7 +295,7 @@ func (s *tmuxSessionImpl) SendInput(input string) error {
 		s.info.StatusState.Status = StatusWorking
 		s.info.StatusState.StatusChangedAt = now
 		// Save status change
-		if err := s.manager.Save(context.TODO(), s.info); err != nil {
+		if err := s.manager.Save(context.Background(), s.info); err != nil {
 			// Log error but don't fail the input operation
 			s.logger.Warn("failed to save status change after input", "error", err)
 		}
@@ -341,7 +341,7 @@ func (s *tmuxSessionImpl) getDefaultCommand() string {
 
 // UpdateStatus checks the current output and updates the session status accordingly.
 // This should be called by commands that need fresh status information.
-func (s *tmuxSessionImpl) UpdateStatus() error {
+func (s *tmuxSessionImpl) UpdateStatus(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -360,7 +360,7 @@ func (s *tmuxSessionImpl) UpdateStatus() error {
 
 	// Defer saving the session info at the end (single save point)
 	defer func() {
-		if err := s.manager.Save(context.TODO(), s.info); err != nil {
+		if err := s.manager.Save(ctx, s.info); err != nil {
 			s.logger.Warn("failed to save session state", "error", err)
 		}
 	}()

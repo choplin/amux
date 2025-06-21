@@ -87,7 +87,7 @@ func TestTmuxSession_StartStop(t *testing.T) {
 	}
 
 	// Stop session
-	if err := session.Stop(); err != nil {
+	if err := session.Stop(context.Background()); err != nil {
 		t.Fatalf("Failed to stop session: %v", err)
 	}
 
@@ -181,7 +181,7 @@ func TestTmuxSession_WithInitialPrompt(t *testing.T) {
 	}
 
 	// Stop session
-	if err := session.Stop(); err != nil {
+	if err := session.Stop(context.Background()); err != nil {
 		t.Fatalf("Failed to stop session: %v", err)
 	}
 }
@@ -267,7 +267,7 @@ func TestTmuxSession_StatusTracking(t *testing.T) {
 	}
 
 	// Stop session
-	if err := session.Stop(); err != nil {
+	if err := session.Stop(context.Background()); err != nil {
 		t.Fatalf("Failed to stop session: %v", err)
 	}
 
@@ -375,7 +375,7 @@ func TestTmuxSession_WithEnvironment(t *testing.T) {
 	}
 
 	// Stop session
-	if err := session.Stop(); err != nil {
+	if err := session.Stop(context.Background()); err != nil {
 		t.Fatalf("Failed to stop session: %v", err)
 	}
 }
@@ -457,7 +457,7 @@ func TestTmuxSession_WithShellAndWindowName(t *testing.T) {
 	}
 
 	// Stop session
-	if err := session.Stop(); err != nil {
+	if err := session.Stop(context.Background()); err != nil {
 		t.Fatalf("Failed to stop session: %v", err)
 	}
 }

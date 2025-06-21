@@ -119,7 +119,7 @@ func (s *ServerV2) handleSessionListResource(ctx context.Context, request mcp.Re
 	}
 
 	// Update all session statuses in batch for better performance
-	sessionManager.UpdateAllStatuses(sessions)
+	sessionManager.UpdateAllStatuses(ctx, sessions)
 
 	sessionList := make([]sessionInfo, len(sessions))
 	for i, sess := range sessions {
@@ -188,7 +188,7 @@ func (s *ServerV2) handleSessionDetailResource(ctx context.Context, request mcp.
 	if sess.Status().IsRunning() {
 		// Try to update status if session supports terminal operations
 		if terminalSess, ok := sess.(session.TerminalSession); ok {
-			_ = terminalSess.UpdateStatus() // Ignore errors, use current status if update fails
+			_ = terminalSess.UpdateStatus(ctx) // Ignore errors, use current status if update fails
 		}
 	}
 
