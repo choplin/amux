@@ -3,6 +3,7 @@ package session
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -662,5 +663,89 @@ func TestManager_StoreOperations(t *testing.T) {
 	_, err = manager.Load(context.Background(), info.ID)
 	if err == nil {
 		t.Error("Expected error loading deleted session")
+	}
+}
+
+func TestManager_ListSessionsWithDeletedWorkspace(t *testing.T) {
+	// Setup
+	_, wsManager, configManager := setupTestEnvironment(t)
+
+	// Create workspace
+	ws, err := wsManager.Create(context.Background(), workspace.CreateOptions{
+		Name: "test-workspace-to-delete",
+	})
+	if err != nil {
+		t.Fatalf("Failed to create workspace: %v", err)
+	}
+
+	// Create ID mapper
+	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	if err != nil {
+		t.Fatalf("Failed to create ID mapper: %v", err)
+	}
+
+	// Create manager
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, nil, idMapper)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
+
+	// Use mock adapter
+	mockAdapter := tmux.NewMockAdapter()
+	manager.SetTmuxAdapter(mockAdapter)
+
+	// Create session
+	session, err := manager.CreateSession(context.Background(), Options{
+		WorkspaceID: ws.ID,
+		AgentID:     "test-agent",
+		Command:     "test-command",
+	})
+	if err != nil {
+		t.Fatalf("Failed to create session: %v", err)
+	}
+
+	sessionID := session.ID()
+
+	// Verify session is created
+	if session.Status() != StatusCreated {
+		t.Errorf("Expected created status, got %s", session.Status())
+	}
+
+	// Delete the workspace
+	if err := wsManager.Remove(context.Background(), workspace.Identifier(ws.ID)); err != nil {
+		t.Fatalf("Failed to remove workspace: %v", err)
+	}
+
+	// Clear cache to force re-loading
+	manager.mu.Lock()
+	delete(manager.sessions, sessionID)
+	manager.mu.Unlock()
+
+	// List sessions - should not fail
+	sessions, err := manager.ListSessions(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to list sessions: %v", err)
+	}
+
+	// Should have one session
+	if len(sessions) != 1 {
+		t.Fatalf("Expected 1 session, got %d", len(sessions))
+	}
+
+	// Session should be orphaned
+	orphanedSession := sessions[0]
+	info := orphanedSession.Info()
+	if info.StatusState.Status != StatusOrphaned {
+		t.Errorf("Expected orphaned status, got %s", info.StatusState.Status)
+	}
+
+	// Error should indicate workspace not found
+	if !strings.Contains(info.Error, "workspace not found") {
+		t.Errorf("Expected error to contain 'workspace not found', got: %s", info.Error)
+	}
+
+	// Workspace path should be empty
+	if orphanedSession.WorkspacePath() != "" {
+		t.Errorf("Expected empty workspace path for orphaned session, got: %s", orphanedSession.WorkspacePath())
 	}
 }

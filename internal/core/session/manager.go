@@ -328,10 +328,22 @@ func (m *Manager) createSessionFromInfo(ctx context.Context, info *Info) (Sessio
 			return nil, ErrTmuxNotAvailable{}
 		}
 
-		// Get workspace for tmux session
-		ws, err := m.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(info.WorkspaceID))
-		if err != nil {
-			return nil, fmt.Errorf("workspace not found for session: %w", err)
+		// Try to get workspace for tmux session
+		var ws *workspace.Workspace
+		if m.workspaceManager != nil {
+			var err error
+			ws, err = m.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(info.WorkspaceID))
+			if err != nil {
+				// Workspace not found - mark session as orphaned
+				info.StatusState.Status = StatusOrphaned
+				info.Error = fmt.Sprintf("workspace not found: %s", info.WorkspaceID)
+				// Update the stored session info
+				if updateErr := m.saveSessionInfo(ctx, info); updateErr != nil {
+					m.logger.Warn("failed to update orphaned session info", "error", updateErr)
+				}
+				// Continue with nil workspace - session will be created in orphaned state
+				ws = nil
+			}
 		}
 
 		// Get agent configuration if available
