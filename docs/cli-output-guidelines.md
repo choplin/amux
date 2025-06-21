@@ -60,11 +60,11 @@ This document establishes the design principles and patterns for consistent CLI 
 #### Color Palette
 
 - **Default**: Terminal default (no color)
-- **Success**: Green (#00D26A) - Sparingly, for final results
-- **Error**: Red (#F85149) - Only for actual errors
-- **Warning**: Yellow (#F0AD4E) - Only for important warnings
-- **Info**: Blue (#0969DA) - Rarely needed
-- **Dim**: Gray (#6E7781) - For metadata
+- **Success**: Green (#00FF00) - Sparingly, for final results
+- **Error**: Red (#FF0000) - Only for actual errors
+- **Warning**: Yellow (#FFAA00) - Only for important warnings
+- **Info**: Blue (#0099FF) - Rarely needed
+- **Dim**: Gray (#888888) - For metadata
 
 #### Color Usage Rules
 
@@ -92,17 +92,18 @@ This document establishes the design principles and patterns for consistent CLI 
 ### Success Messages
 
 ```text
-✅ {Action} completed successfully
+{Action message or confirmation}
 
 {Optional details without icons}
 ```
 
+Note: The ✅ icon should be used sparingly, only for final completion of major operations.
+
 Example:
 
 ```text
-✅ Workspace created successfully
+Created workspace 'fix-auth-bug'
 
-Name:   fix-auth-bug
 ID:     3
 Branch: fix-auth-bug
 Path:   /path/to/workspace
@@ -123,10 +124,9 @@ Example:
 ```text
 ❌ Failed to create workspace
 
-Error: workspace name 'test' already exists
+Error: {specific error message from the operation}
 
-Use a different name or remove the existing workspace:
-  amux ws remove test
+{Optional helpful hint or suggestion}
 ```
 
 ### List Displays
