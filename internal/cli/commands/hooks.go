@@ -149,28 +149,28 @@ func trustHooks(cmd *cobra.Command, args []string) error {
 	}
 
 	// Display hooks for review
-	ui.Info("Review the following hooks before trusting:")
-	ui.Info("")
+	ui.OutputLine("Review the following hooks before trusting:")
+	ui.OutputLine("")
 
 	for event, hookList := range hooksConfig.Hooks {
 		if len(hookList) == 0 {
 			continue
 		}
 
-		ui.Info("%s:", event)
+		ui.OutputLine("%s:", event)
 		for i, hook := range hookList {
 			cmdStr := hook.Command
 			if cmdStr == "" {
 				cmdStr = hook.Script
 			}
-			ui.Info("  %d. \"%s\" - %s", i+1, hook.Name, cmdStr)
+			ui.OutputLine("  %d. \"%s\" - %s", i+1, hook.Name, cmdStr)
 		}
-		ui.Info("")
+		ui.OutputLine("")
 	}
 
 	// Ask for confirmation
 	if !ui.Confirm("Trust these hooks?") {
-		ui.Info("Hooks not trusted.")
+		ui.OutputLine("Hooks not trusted.")
 		return nil
 	}
 
@@ -218,13 +218,13 @@ func listHooks(cmd *cobra.Command, args []string) error {
 	}
 
 	// Display hooks
-	ui.Output("Hooks configuration (%s):", func() string {
+	ui.OutputLine("Hooks configuration (%s):", func() string {
 		if trusted {
 			return "trusted"
 		}
 		return "not trusted"
 	}())
-	ui.Output("")
+	ui.OutputLine("")
 
 	hasHooks := false
 	for event, hookList := range hooksConfig.Hooks {
@@ -233,32 +233,33 @@ func listHooks(cmd *cobra.Command, args []string) error {
 		}
 
 		hasHooks = true
-		ui.Output("%s:", event)
+		ui.OutputLine("%s:", event)
 		for i, hook := range hookList {
 			cmdStr := hook.Command
 			if cmdStr == "" {
 				cmdStr = fmt.Sprintf("script: %s", hook.Script)
 			}
-			ui.Output("  %d. %s", i+1, hook.Name)
-			ui.Output("     Command: %s", cmdStr)
-			ui.Output("     Timeout: %s", hook.Timeout)
-			ui.Output("     On error: %s", hook.OnError)
+			ui.OutputLine("  %d. %s", i+1, hook.Name)
+			ui.OutputLine("     Command: %s", cmdStr)
+			ui.OutputLine("     Timeout: %s", hook.Timeout)
+			ui.OutputLine("     On error: %s", hook.OnError)
 			if len(hook.Env) > 0 {
-				ui.Output("     Environment:")
+				ui.OutputLine("     Environment:")
 				for k, v := range hook.Env {
-					ui.Output("       %s=%s", k, v)
+					ui.OutputLine("       %s=%s", k, v)
 				}
 			}
-			ui.Output("")
+			ui.OutputLine("")
 		}
 	}
 
 	if !hasHooks {
-		ui.Info("No hooks configured.")
-		ui.Info("Run 'amux hooks init' to create an example configuration.")
+		ui.OutputLine("No hooks configured.")
+		ui.OutputLine("Run 'amux hooks init' to create an example configuration.")
 	} else if !trusted {
-		ui.Warning("Hooks are configured but not trusted.")
-		ui.Info("Run 'amux hooks trust' to enable them.")
+		ui.Warning("Hooks are configured but not trusted")
+		ui.OutputLine("")
+		ui.OutputLine("Run 'amux hooks trust' to enable them.")
 	}
 
 	return nil
@@ -295,29 +296,29 @@ func testHooks(cmd *cobra.Command, args []string) error {
 	// Get hooks for event
 	eventHooks := hooksConfig.GetHooksForEvent(event)
 	if len(eventHooks) == 0 {
-		ui.Info("No hooks configured for event '%s'", event)
+		ui.OutputLine("No hooks configured for event '%s'", event)
 		return nil
 	}
 
 	// Show what would be executed
-	ui.Info("Hooks that would run for '%s':", event)
+	ui.OutputLine("Hooks that would run for '%s':", event)
 	for i, hook := range eventHooks {
 		cmdStr := hook.Command
 		if cmdStr == "" {
 			cmdStr = hook.Script
 		}
-		ui.Info("  %d. \"%s\"", i+1, hook.Name)
-		ui.Info("     Would execute: %s", cmdStr)
-		ui.Info("     Timeout: %s", hook.Timeout)
-		ui.Info("     On error: %s", hook.OnError)
+		ui.OutputLine("  %d. \"%s\"", i+1, hook.Name)
+		ui.OutputLine("     Would execute: %s", cmdStr)
+		ui.OutputLine("     Timeout: %s", hook.Timeout)
+		ui.OutputLine("     On error: %s", hook.OnError)
 	}
 
-	ui.Info("")
-	ui.Info("Environment variables that would be set:")
-	ui.Info("  AMUX_EVENT=%s", event)
-	ui.Info("  AMUX_PROJECT_ROOT=%s", projectRoot)
-	ui.Info("  AMUX_CONFIG_DIR=%s", configDir)
-	ui.Info("  (Plus workspace/agent specific variables when applicable)")
+	ui.OutputLine("")
+	ui.OutputLine("Environment variables that would be set:")
+	ui.OutputLine("  AMUX_EVENT=%s", event)
+	ui.OutputLine("  AMUX_PROJECT_ROOT=%s", projectRoot)
+	ui.OutputLine("  AMUX_CONFIG_DIR=%s", configDir)
+	ui.OutputLine("  (Plus workspace/agent specific variables when applicable)")
 
 	return nil
 }

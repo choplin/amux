@@ -66,31 +66,31 @@ func validateConfig(cmd *cobra.Command, args []string) error {
 
 	// Show configuration details if verbose
 	if verbose {
-		ui.Info("")
-		ui.Info("Configuration details:")
-		ui.Info("  Version: %s", cfg.Version)
+		ui.OutputLine("")
+		ui.OutputLine("Configuration details:")
+		ui.OutputLine("  Version: %s", cfg.Version)
 
-		ui.Info("")
-		ui.Info("MCP Configuration:")
-		ui.Info("  Transport: %s", cfg.MCP.Transport.Type)
+		ui.OutputLine("")
+		ui.OutputLine("MCP Configuration:")
+		ui.OutputLine("  Transport: %s", cfg.MCP.Transport.Type)
 
 		if len(cfg.Agents) > 0 {
-			ui.Info("")
-			ui.Info("Agents (%d configured):", len(cfg.Agents))
+			ui.OutputLine("")
+			ui.OutputLine("Agents (%d configured):", len(cfg.Agents))
 			for id, agent := range cfg.Agents {
-				ui.Info("  %s:", id)
-				ui.Info("    Name: %s", agent.Name)
-				ui.Info("    Type: %s", agent.Type)
+				ui.OutputLine("  %s:", id)
+				ui.OutputLine("    Name: %s", agent.Name)
+				ui.OutputLine("    Type: %s", agent.Type)
 
 				switch agent.Type {
 				case config.AgentTypeTmux:
 					if params, err := agent.GetTmuxParams(); err == nil {
-						ui.Info("    Command: %s", params.Command)
+						ui.OutputLine("    Command: %s", params.Command)
 						if params.Shell != "" {
-							ui.Info("    Shell: %s", params.Shell)
+							ui.OutputLine("    Shell: %s", params.Shell)
 						}
 						if params.WindowName != "" {
-							ui.Info("    Window Name: %s", params.WindowName)
+							ui.OutputLine("    Window Name: %s", params.WindowName)
 						}
 					}
 				case config.AgentTypeClaudeCode, config.AgentTypeAPI:
@@ -98,16 +98,16 @@ func validateConfig(cmd *cobra.Command, args []string) error {
 				}
 
 				if agent.Description != "" {
-					ui.Info("    Description: %s", agent.Description)
+					ui.OutputLine("    Description: %s", agent.Description)
 				}
 
 				if len(agent.Environment) > 0 {
-					ui.Info("    Environment Variables: %d", len(agent.Environment))
+					ui.OutputLine("    Environment Variables: %d", len(agent.Environment))
 				}
 			}
 		} else {
-			ui.Info("")
-			ui.Info("No agents configured")
+			ui.OutputLine("")
+			ui.OutputLine("No agents configured")
 		}
 	}
 
