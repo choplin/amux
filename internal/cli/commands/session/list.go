@@ -72,8 +72,10 @@ func listSessions(cmd *cobra.Command, args []string) error {
 		if err == nil {
 			wsName = ws.Name
 		} else {
-			// Show "(deleted)" for missing workspaces to make it clear
-			wsName = fmt.Sprintf("%s (deleted)", info.WorkspaceID)
+			// Check if the session itself knows its workspace is unavailable
+			if !sess.IsWorkspaceAvailable() {
+				wsName = fmt.Sprintf("%s (deleted)", info.WorkspaceID)
+			}
 		}
 
 		// Calculate total time

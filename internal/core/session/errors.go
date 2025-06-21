@@ -53,3 +53,12 @@ type ErrTmuxNotAvailable struct{}
 func (e ErrTmuxNotAvailable) Error() string {
 	return "tmux is not available on this system"
 }
+
+// ErrWorkspaceNotFound is returned when the workspace for a session cannot be found
+type ErrWorkspaceNotFound struct {
+	WorkspaceID string
+}
+
+func (e ErrWorkspaceNotFound) Error() string {
+	return fmt.Sprintf("workspace not found: %s", e.WorkspaceID)
+}

@@ -25,6 +25,7 @@ type tmuxSessionImpl struct {
 	manager        *Manager
 	tmuxAdapter    tmux.Adapter
 	workspace      *workspace.Workspace
+	workspaceError error // Stores the error if workspace lookup failed
 	agentConfig    *config.Agent
 	logger         logger.Logger
 	processChecker process.Checker
@@ -55,12 +56,14 @@ func WithProcessChecker(checker process.Checker) TmuxSessionOption {
 }
 
 // NewTmuxSession creates a new tmux-backed session
-func NewTmuxSession(info *Info, manager *Manager, tmuxAdapter tmux.Adapter, workspace *workspace.Workspace, agentConfig *config.Agent, opts ...TmuxSessionOption) TerminalSession {
+// If workspace is nil and workspaceErr is non-nil, the session will operate in degraded mode
+func NewTmuxSession(info *Info, manager *Manager, tmuxAdapter tmux.Adapter, workspace *workspace.Workspace, workspaceErr error, agentConfig *config.Agent, opts ...TmuxSessionOption) TerminalSession {
 	s := &tmuxSessionImpl{
 		info:           info,
 		manager:        manager,
 		tmuxAdapter:    tmuxAdapter,
 		workspace:      workspace,
+		workspaceError: workspaceErr,
 		agentConfig:    agentConfig,
 		logger:         logger.Nop(),    // Default to no-op logger
 		processChecker: process.Default, // Default to system process checker
@@ -97,9 +100,13 @@ func (s *tmuxSessionImpl) WorkspaceID() string {
 
 func (s *tmuxSessionImpl) WorkspacePath() string {
 	if s.workspace == nil {
-		return "" // Return empty string for deleted workspaces
+		return ""
 	}
 	return s.workspace.Path
+}
+
+func (s *tmuxSessionImpl) IsWorkspaceAvailable() bool {
+	return s.workspace != nil && s.workspaceError == nil
 }
 
 func (s *tmuxSessionImpl) AgentID() string {
@@ -135,17 +142,16 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 	}
 
 	// Cannot start session without workspace
-	if s.workspace == nil {
-		return fmt.Errorf("cannot start session: workspace has been deleted")
+	if !s.IsWorkspaceAvailable() {
+		if s.workspaceError != nil {
+			return fmt.Errorf("cannot start session: %w", s.workspaceError)
+		}
+		return fmt.Errorf("cannot start session: workspace not available")
 	}
 
 	// Generate tmux session name
-	workspaceID := "deleted"
-	if s.workspace != nil {
-		workspaceID = s.workspace.ID
-	}
 	tmuxSession := fmt.Sprintf("amux-%s-%s-%d",
-		workspaceID,
+		s.workspace.ID,
 		s.info.AgentID,
 		time.Now().Unix())
 
@@ -167,13 +173,9 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 	)
 
 	// Create tmux session with options
-	workDir := "/tmp" // Default to /tmp for deleted workspaces
-	if s.workspace != nil {
-		workDir = s.workspace.Path
-	}
 	opts := tmux.CreateSessionOptions{
 		SessionName: tmuxSession,
-		WorkDir:     workDir,
+		WorkDir:     s.workspace.Path,
 		Shell:       shell,
 		WindowName:  windowName,
 		Environment: environment,

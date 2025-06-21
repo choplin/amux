@@ -137,7 +137,11 @@ type Session interface {
 	WorkspaceID() string
 
 	// WorkspacePath returns the workspace path
+	// Returns empty string if workspace is not found
 	WorkspacePath() string
+
+	// IsWorkspaceAvailable returns true if the workspace exists
+	IsWorkspaceAvailable() bool
 
 	// AgentID returns the agent running in this session
 	AgentID() string

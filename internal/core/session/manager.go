@@ -171,7 +171,7 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 	}
 
 	// Create and cache session
-	sess := NewTmuxSession(info, m, m.tmuxAdapter, ws, agentConfig)
+	sess := NewTmuxSession(info, m, m.tmuxAdapter, ws, nil, agentConfig)
 	m.mu.Lock()
 	m.sessions[sessionID.String()] = sess
 	m.mu.Unlock()
@@ -328,13 +328,17 @@ func (m *Manager) createSessionFromInfo(ctx context.Context, info *Info) (Sessio
 			return nil, ErrTmuxNotAvailable{}
 		}
 
-		// Try to get workspace, but don't fail if it's missing
-		// This allows us to display sessions with deleted workspaces
+		// Try to get workspace for tmux session
 		var ws *workspace.Workspace
+		var wsErr error
 		if m.workspaceManager != nil {
-			ws, _ = m.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(info.WorkspaceID))
-			// If workspace is not found, ws will be nil
-			// The session will operate in "degraded" mode
+			ws, wsErr = m.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(info.WorkspaceID))
+			// If workspace is not found, we'll create a degraded session
+			// that can display info but cannot be started
+			if wsErr != nil {
+				// Convert to our specific error type
+				wsErr = ErrWorkspaceNotFound{WorkspaceID: info.WorkspaceID}
+			}
 		}
 
 		// Get agent configuration if available
@@ -345,7 +349,7 @@ func (m *Manager) createSessionFromInfo(ctx context.Context, info *Info) (Sessio
 			}
 		}
 
-		return NewTmuxSession(info, m, m.tmuxAdapter, ws, agentConfig), nil
+		return NewTmuxSession(info, m, m.tmuxAdapter, ws, wsErr, agentConfig), nil
 
 	default:
 		return nil, fmt.Errorf("unsupported session type: %s", info.Type)
