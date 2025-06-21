@@ -9,11 +9,13 @@ Accepted
 ## Context
 
 The current workspace creation command uses a single `--branch` flag that:
+
 - Takes an existing branch name and uses it for the workspace
 - Fails if the branch doesn't exist
 - Has no way to specify a custom branch name for new workspaces
 
 This design has several problems:
+
 1. **Ambiguous Intent**: Users can't tell from the command whether a branch will be created or reused
 2. **Long Auto-generated Names**: Without specifying `--branch`, workspaces get unwieldy branch names like `amux/workspace-fix-auth-1735000123-a1b2c3d4`
 3. **Poor Git Integration**: Terminal prompts become unreadable with long branch names
@@ -22,12 +24,14 @@ This design has several problems:
 ## Decision
 
 Replace the single `--branch` flag with two explicit flags:
+
 - `--branch/-b <name>`: Create a new branch with the specified name
 - `--checkout/-c <name>`: Use an existing branch
 
 Also simplify `--base-branch` to `--base` for consistency.
 
 The implementation includes:
+
 1. Clear error messages that guide users to the correct flag
 2. Comprehensive help text with examples
 3. A `BranchExists()` method to check both local and remote branches
@@ -36,12 +40,14 @@ The implementation includes:
 ## Consequences
 
 ### Positive
+
 - **Clear Intent**: Commands explicitly state whether they create or use branches
 - **Better UX**: Users can create short, meaningful branch names like `fix-auth`
 - **Git Familiarity**: The `-b` flag matches Git's convention for creating branches
 - **Helpful Errors**: Error messages tell users exactly which flag to use
 
 ### Negative
+
 - **Breaking Change**: Existing scripts using `--branch` will need updates
 - **Two Flags**: Users must choose between `-b` and `-c` (but this makes intent explicit)
 - **Migration**: Users need to learn the new flags

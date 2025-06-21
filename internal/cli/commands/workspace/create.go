@@ -48,15 +48,16 @@ func runCreateWorkspace(cmd *cobra.Command, args []string) error {
 		Name:        name,
 		BaseBranch:  createBaseBranch,
 		Description: createDescription,
+		BranchMode:  workspace.BranchModeCreate, // Default to create mode
 	}
 
 	// Set Branch field based on which flag was used
 	if createBranch != "" {
 		opts.Branch = createBranch
-		opts.CreateNew = true // Explicit: create new branch
+		opts.BranchMode = workspace.BranchModeCreate // Explicit: create new branch
 	} else if createCheckout != "" {
 		opts.Branch = createCheckout
-		opts.UseExisting = true // Explicit: use existing branch
+		opts.BranchMode = workspace.BranchModeCheckout // Explicit: use existing branch
 	}
 
 	ws, err := manager.Create(cmd.Context(), opts)

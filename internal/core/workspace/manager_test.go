@@ -40,11 +40,11 @@ func TestManager_CreateWithExistingBranch(t *testing.T) {
 		t.Fatalf("Failed to create existing branch: %v", err)
 	}
 
-	// Create workspace using existing branch (legacy behavior for now)
+	// Create workspace using existing branch
 	opts := workspace.CreateOptions{
 		Name:        "test-existing",
 		Branch:      existingBranch,
-		UseExisting: true, // Explicitly use existing branch
+		BranchMode:  workspace.BranchModeCheckout, // Explicitly use existing branch
 		Description: "Test workspace with existing branch",
 	}
 
@@ -478,7 +478,7 @@ func TestManager_CreateWithNewBranchFlag(t *testing.T) {
 		opts := workspace.CreateOptions{
 			Name:        "test-new-branch",
 			Branch:      "feature/test-new",
-			CreateNew:   true,
+			BranchMode:  workspace.BranchModeCreate,
 			Description: "Test workspace with new branch flag",
 		}
 
@@ -510,9 +510,9 @@ func TestManager_CreateWithNewBranchFlag(t *testing.T) {
 
 		// Try to create workspace with -b flag for existing branch
 		opts := workspace.CreateOptions{
-			Name:      "test-new-branch-fail",
-			Branch:    existingBranch,
-			CreateNew: true,
+			Name:       "test-new-branch-fail",
+			Branch:     existingBranch,
+			BranchMode: workspace.BranchModeCreate,
 		}
 
 		_, err = manager.Create(context.Background(), opts)
@@ -558,7 +558,7 @@ func TestManager_CreateWithCheckoutFlag(t *testing.T) {
 		opts := workspace.CreateOptions{
 			Name:        "test-checkout",
 			Branch:      existingBranch,
-			UseExisting: true,
+			BranchMode:  workspace.BranchModeCheckout,
 			Description: "Test workspace with checkout flag",
 		}
 
@@ -582,9 +582,9 @@ func TestManager_CreateWithCheckoutFlag(t *testing.T) {
 	t.Run("CheckoutNonExistentBranch", func(t *testing.T) {
 		// Try to checkout non-existent branch
 		opts := workspace.CreateOptions{
-			Name:        "test-checkout-fail",
-			Branch:      "feature/does-not-exist",
-			UseExisting: true,
+			Name:       "test-checkout-fail",
+			Branch:     "feature/does-not-exist",
+			BranchMode: workspace.BranchModeCheckout,
 		}
 
 		_, err = manager.Create(context.Background(), opts)
