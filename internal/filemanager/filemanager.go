@@ -146,14 +146,15 @@ func (m *Manager[T]) Write(ctx context.Context, path string, data *T) error {
 		_ = f.Close()
 	}
 
-	// Release lock before rename to avoid Windows file handle issues
-	_ = lock.Unlock()
-
 	// Atomic rename
 	if err := atomicRename(tempFile, path); err != nil {
+		_ = lock.Unlock()
 		_ = os.Remove(tempFile) // Clean up on failure
 		return fmt.Errorf("failed to rename file: %w", err)
 	}
+
+	// Release lock after rename to prevent race conditions
+	_ = lock.Unlock()
 
 	// Clean up lock file on Windows
 	cleanupLockFile(path)
@@ -223,14 +224,15 @@ func (m *Manager[T]) WriteWithCAS(ctx context.Context, path string, data *T, exp
 		_ = f.Close()
 	}
 
-	// Release lock before rename to avoid Windows file handle issues
-	_ = lock.Unlock()
-
 	// Atomic rename
 	if err := atomicRename(tempFile, path); err != nil {
+		_ = lock.Unlock()
 		_ = os.Remove(tempFile) // Clean up on failure
 		return fmt.Errorf("failed to rename file: %w", err)
 	}
+
+	// Release lock after rename to prevent race conditions
+	_ = lock.Unlock()
 
 	// Clean up lock file on Windows
 	cleanupLockFile(path)
