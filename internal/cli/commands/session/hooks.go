@@ -45,8 +45,8 @@ func executeSessionHooks(sess session.Session, ws *workspace.Workspace, event ho
 	}
 
 	if !trusted {
-		ui.Warning("This project has hooks configured but they are not trusted.")
-		ui.Info("Run 'amux hooks trust' to trust hooks in this project.")
+		ui.Warning("This project has hooks configured but they are not trusted")
+		ui.OutputLine("Run 'amux hooks trust' to trust hooks in this project.")
 		return nil
 	}
 

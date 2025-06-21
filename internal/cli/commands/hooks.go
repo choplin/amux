@@ -115,8 +115,8 @@ func initHooks(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to save hooks configuration: %w", err)
 	}
 
-	ui.Success("Created hooks configuration at %s", hooksPath)
-	ui.Info("Edit this file to configure your hooks, then run 'amux hooks trust' to enable them.")
+	ui.OutputLine("Created hooks configuration at %s", hooksPath)
+	ui.OutputLine("Edit this file to configure your hooks, then run 'amux hooks trust' to enable them.")
 
 	return nil
 }
@@ -191,7 +191,7 @@ func trustHooks(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to save trust information: %w", err)
 	}
 
-	ui.Success("Hooks trusted. They will now run automatically during workspace operations.")
+	ui.OutputLine("Hooks trusted. They will now run automatically during workspace operations.")
 	return nil
 }
 

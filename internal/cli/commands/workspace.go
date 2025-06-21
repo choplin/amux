@@ -201,14 +201,12 @@ func runCreateWorkspace(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create workspace: %w", err)
 	}
 
-	ui.Success("Workspace created successfully")
-	ui.OutputLine("")
-
+	id := ws.ID
 	if ws.Index != "" {
-		ui.PrintKeyValue("ID", ws.Index)
-	} else {
-		ui.PrintKeyValue("ID", ws.ID)
+		id = ws.Index
 	}
+	ui.OutputLine("Created workspace '%s'", ws.Name)
+	ui.PrintKeyValue("ID", id)
 	ui.PrintKeyValue("Branch", ws.Branch)
 	ui.PrintKeyValue("Path", ws.Path)
 
@@ -325,8 +323,7 @@ func runRemoveWorkspace(cmd *cobra.Command, args []string) error {
 	// Check both original and resolved paths
 	if strings.HasPrefix(cwd, ws.Path) || strings.HasPrefix(resolvedCwd, ws.Path) {
 		ui.Error("Cannot remove workspace while working inside it")
-		ui.OutputLine("")
-		ui.OutputLine("Please change to a different directory first:")
+		ui.OutputLine("\nPlease change to a different directory first:")
 		projectRoot, _ := config.FindProjectRoot()
 		if projectRoot != "" {
 			ui.OutputLine("  cd %s", projectRoot)
@@ -360,7 +357,7 @@ func runRemoveWorkspace(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to remove workspace: %w", err)
 	}
 
-	ui.Success("Removed workspace: %s (%s)", ws.Name, ws.ID)
+	ui.OutputLine("Removed workspace: %s (%s)", ws.Name, ws.ID)
 
 	return nil
 }
@@ -390,7 +387,7 @@ func runPruneWorkspace(cmd *cobra.Command, args []string) error {
 	if pruneDryRun {
 		ui.OutputLine("Would remove %d workspace(s):", len(removed))
 	} else {
-		ui.Success("Removed %d workspace(s)", len(removed))
+		ui.OutputLine("Removed %d workspace(s)", len(removed))
 	}
 
 	for _, id := range removed {
@@ -437,8 +434,7 @@ func runCdWorkspace(cmd *cobra.Command, args []string) error {
 	// Print information about entering the workspace
 	ui.OutputLine("Entering workspace: %s", ws.Name)
 	ui.PrintKeyValue("Path", ws.Path)
-	ui.OutputLine("")
-	ui.OutputLine("Exit the shell to return to your original directory")
+	ui.OutputLine("\nExit the shell to return to your original directory")
 
 	// Run the shell
 	if err := shellCmd.Run(); err != nil {
@@ -507,7 +503,6 @@ func executeWorkspaceHooks(ws *workspace.Workspace, event hooks.Event) error {
 
 	if !trusted {
 		ui.Warning("This project has hooks configured but they are not trusted")
-		ui.OutputLine("")
 		ui.OutputLine("Run 'amux hooks trust' to trust hooks in this project.")
 		return nil
 	}
