@@ -1,4 +1,4 @@
-package commands
+package config
 
 import (
 	"fmt"
@@ -22,10 +22,6 @@ var configEditCmd = &cobra.Command{
   # Edit with a specific editor
   EDITOR=nano amux config edit`,
 	RunE: runConfigEdit,
-}
-
-func init() {
-	configCmd.AddCommand(configEditCmd)
 }
 
 func runConfigEdit(cmd *cobra.Command, args []string) error {

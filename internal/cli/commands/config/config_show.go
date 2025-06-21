@@ -1,4 +1,4 @@
-package commands
+package config
 
 import (
 	"fmt"
@@ -8,8 +8,6 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
-
-var showFormat string
 
 var configShowCmd = &cobra.Command{
 	Use:   "show",
@@ -24,11 +22,6 @@ var configShowCmd = &cobra.Command{
   # Show configuration in pretty format
   amux config show --format pretty`,
 	RunE: runConfigShow,
-}
-
-func init() {
-	configCmd.AddCommand(configShowCmd)
-	configShowCmd.Flags().StringVar(&showFormat, "format", "yaml", "Output format (yaml, json, pretty)")
 }
 
 func runConfigShow(cmd *cobra.Command, args []string) error {
