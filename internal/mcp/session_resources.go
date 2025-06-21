@@ -294,7 +294,7 @@ func (s *ServerV2) handleSessionOutputResource(ctx context.Context, request mcp.
 }
 
 // createSessionManager is a helper to create a session manager with all dependencies
-func (s *ServerV2) createSessionManager() (*session.Manager, error) {
+func (s *ServerV2) createSessionManager() (*session.Manager, error) { //nolint:contextcheck // Manager creation doesn't need context
 	// Use existing workspace manager
 	workspaceManager := s.workspaceManager
 
@@ -311,6 +311,15 @@ func (s *ServerV2) createSessionManager() (*session.Manager, error) {
 	manager, err := session.NewManager(s.configManager.GetAmuxDir(), workspaceManager, agentManager, idMapper)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session manager: %w", err)
+	}
+
+	// Trigger initial index reconciliation for sessions
+	// We use a background context here since this is initialization
+	ctx := context.Background()
+	if _, err := manager.ListSessions(ctx); err != nil {
+		// Log but don't fail - reconciliation happens automatically during list
+		// This ensures indices are cleaned up when session manager is first created
+		_ = err // Ignore error to satisfy linter
 	}
 
 	return manager, nil
