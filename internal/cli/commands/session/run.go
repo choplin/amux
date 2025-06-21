@@ -94,7 +94,7 @@ func runSession(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("failed to create auto-workspace: %w", err)
 		}
-		ui.Success("Created workspace: '%s'", ws.Name)
+		ui.Success("Workspace created successfully: %s", ws.Name)
 	}
 
 	// Create agent manager
@@ -170,15 +170,16 @@ func runSession(cmd *cobra.Command, args []string) error {
 		displayID = info.Index
 	}
 
-	// Show consistent session creation info with workspace name
-	ui.Success("Started session: %s in workspace '%s'", displayID, ws.Name)
-
 	// Start session
 	if err := sess.Start(cmd.Context()); err != nil {
 		return fmt.Errorf("failed to start session: %w", err)
 	}
 
-	ui.Success("Agent session started successfully!")
+	ui.Success("Session started successfully")
+	ui.OutputLine("")
+	ui.PrintKeyValue("Session", displayID)
+	ui.PrintKeyValue("Workspace", ws.Name)
+	ui.PrintKeyValue("Agent", agentID)
 
 	// Execute session start hooks
 	if err := executeSessionHooks(sess, ws, hooks.EventSessionStart); err != nil {
@@ -204,7 +205,7 @@ func runSession(cmd *cobra.Command, args []string) error {
 
 		// Check if we can auto-attach (TTY available and autoAttach enabled)
 		if shouldAutoAttach && term.IsTerminal(os.Stdin.Fd()) {
-			ui.Info("Auto-attaching to session...")
+			ui.OutputLine("\nAuto-attaching to session...")
 			tmuxCmd := exec.Command("tmux", "attach-session", "-t", info.TmuxSession)
 			tmuxCmd.Stdin = os.Stdin
 			tmuxCmd.Stdout = os.Stdout
@@ -213,13 +214,13 @@ func runSession(cmd *cobra.Command, args []string) error {
 		}
 
 		// Show manual attach instructions
-		ui.Info("To attach to this session, run:")
-		ui.Info("  tmux attach-session -t %s", info.TmuxSession)
+		ui.OutputLine("\nTo attach to this session, run:")
+		ui.OutputLine("  tmux attach-session -t %s", info.TmuxSession)
 		attachID := sess.ID()
 		if info.Index != "" {
 			attachID = info.Index
 		}
-		ui.Info("  or: amux attach %s", attachID)
+		ui.OutputLine("  or: amux attach %s", attachID)
 	}
 
 	return nil

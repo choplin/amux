@@ -133,12 +133,12 @@ func streamSessionLogs(sess session.Session) error {
 	err = tailer.Follow(ctx)
 
 	if err == context.Canceled {
-		ui.Info("\nStopped following logs")
+		ui.OutputLine("\nStopped following logs")
 		return nil
 	}
 
 	if err == nil {
-		ui.Info("\nSession ended")
+		ui.OutputLine("\nSession ended")
 		return nil
 	}
 

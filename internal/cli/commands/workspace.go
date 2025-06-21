@@ -201,17 +201,15 @@ func runCreateWorkspace(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create workspace: %w", err)
 	}
 
-	ui.Success("Created workspace: %s", ws.Name)
-
+	id := ws.ID
 	if ws.Index != "" {
-		ui.Info("ID: %s", ws.Index)
-	} else {
-		ui.Info("ID: %s", ws.ID)
+		id = ws.Index
 	}
-
-	ui.Info("Branch: %s", ws.Branch)
-
-	ui.Info("Path: %s", ws.Path)
+	ui.Success("Workspace created successfully")
+	ui.OutputLine("")
+	ui.PrintKeyValue("ID", id)
+	ui.PrintKeyValue("Branch", ws.Branch)
+	ui.PrintKeyValue("Path", ws.Path)
 
 	// Execute hooks unless --no-hooks was specified
 	if !createNoHooks {
@@ -326,10 +324,10 @@ func runRemoveWorkspace(cmd *cobra.Command, args []string) error {
 	// Check both original and resolved paths
 	if strings.HasPrefix(cwd, ws.Path) || strings.HasPrefix(resolvedCwd, ws.Path) {
 		ui.Error("Cannot remove workspace while working inside it")
-		ui.Info("Please change to a different directory first:")
+		ui.OutputLine("\nPlease change to a different directory first:")
 		projectRoot, _ := config.FindProjectRoot()
 		if projectRoot != "" {
-			ui.Info("  cd %s", projectRoot)
+			ui.OutputLine("  cd %s", projectRoot)
 		}
 		return fmt.Errorf("cannot remove workspace from within itself")
 	}
@@ -341,7 +339,7 @@ func runRemoveWorkspace(cmd *cobra.Command, args []string) error {
 		response := ui.Prompt("Are you sure? (y/N): ")
 
 		if response != "y" && response != "Y" {
-			ui.Info("Removal cancelled")
+			ui.OutputLine("Removal cancelled")
 			return nil
 		}
 
@@ -360,7 +358,7 @@ func runRemoveWorkspace(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to remove workspace: %w", err)
 	}
 
-	ui.Success("Removed workspace: %s (%s)", ws.Name, ws.ID)
+	ui.Success("Workspace removed successfully: %s (%s)", ws.Name, ws.ID)
 
 	return nil
 }
@@ -383,17 +381,14 @@ func runPruneWorkspace(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(removed) == 0 {
-
-		ui.Info("No workspaces to prune")
-
+		ui.OutputLine("No workspaces to prune")
 		return nil
-
 	}
 
 	if pruneDryRun {
-		ui.Info("Would remove %d workspace(s):", len(removed))
+		ui.OutputLine("Would remove %d workspace(s):", len(removed))
 	} else {
-		ui.Success("Removed %d workspace(s):", len(removed))
+		ui.OutputLine("Removed %d workspace(s)", len(removed))
 	}
 
 	for _, id := range removed {
@@ -438,9 +433,9 @@ func runCdWorkspace(cmd *cobra.Command, args []string) error {
 	)
 
 	// Print information about entering the workspace
-	ui.Info("Entering workspace: %s", ws.Name)
-	ui.Info("Path: %s", ws.Path)
-	ui.Info("Exit the shell to return to your original directory")
+	ui.OutputLine("Entering workspace: %s", ws.Name)
+	ui.PrintKeyValue("Path", ws.Path)
+	ui.OutputLine("\nExit the shell to return to your original directory")
 
 	// Run the shell
 	if err := shellCmd.Run(); err != nil {
@@ -508,8 +503,8 @@ func executeWorkspaceHooks(ws *workspace.Workspace, event hooks.Event) error {
 	}
 
 	if !trusted {
-		ui.Warning("This project has hooks configured but they are not trusted.")
-		ui.Info("Run 'amux hooks trust' to trust hooks in this project.")
+		ui.Warning("This project has hooks configured but they are not trusted")
+		ui.OutputLine("Run 'amux hooks trust' to trust hooks in this project.")
 		return nil
 	}
 

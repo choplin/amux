@@ -56,7 +56,8 @@ func (e *Executor) ExecuteHooks(event Event, hooks []Hook) error {
 		return nil
 	}
 
-	ui.Info("Running hooks for '%s'...", event)
+	ui.OutputLine("")
+	ui.OutputLine("Running hooks for '%s'...", event)
 
 	for i, hook := range hooks {
 		result, err := e.executeHook(&hook, i+1, len(hooks))
@@ -77,7 +78,8 @@ func (e *Executor) ExecuteHooks(event Event, hooks []Hook) error {
 		}
 	}
 
-	ui.Success("All hooks completed successfully")
+	ui.OutputLine("")
+	ui.Success("Hooks completed successfully")
 	return nil
 }
 
@@ -111,10 +113,10 @@ func (e *Executor) executeHook(hook *Hook, index, total int) (*ExecutionResult, 
 	}
 
 	// Show progress
-	ui.Info("  [%d/%d] %s", index, total, hook.Name)
+	ui.OutputLine("  [%d/%d] %s", index, total, hook.Name)
 
 	if e.dryRun {
-		ui.Info("    > [DRY RUN] Would execute: %s", cmdStr)
+		ui.OutputLine("    > [DRY RUN] Would execute: %s", cmdStr)
 		return &ExecutionResult{Hook: hook}, nil
 	}
 
@@ -173,12 +175,12 @@ func (e *Executor) executeHook(hook *Hook, index, total int) (*ExecutionResult, 
 		}
 
 		duration := result.EndTime.Sub(result.StartTime)
-		ui.Error("  ✗ [%d/%d] %s - failed in %.1fs", index, total, hook.Name, duration.Seconds())
+		ui.OutputLine("    ✗ Failed in %.1fs", duration.Seconds())
 		return result, err
 	}
 
 	duration := result.EndTime.Sub(result.StartTime)
-	ui.Success("  ✓ [%d/%d] %s - completed in %.1fs", index, total, hook.Name, duration.Seconds())
+	ui.OutputLine("    ✓ Completed in %.1fs", duration.Seconds())
 
 	return result, nil
 }

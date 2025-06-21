@@ -51,7 +51,7 @@ func listSessions(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(sessions) == 0 {
-		ui.Info("No active sessions found")
+		ui.OutputLine("No active sessions found")
 		return nil
 	}
 

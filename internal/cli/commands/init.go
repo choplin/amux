@@ -66,14 +66,14 @@ func runInit(cmd *cobra.Command, args []string) error {
 			if err := addToGitignore(cwd); err != nil {
 				ui.Warning("Failed to update .gitignore: %v", err)
 			} else {
-				ui.Success("Added .amux/ to .gitignore")
+				ui.OutputLine("Added .amux/ to .gitignore")
 			}
 		}
 	}
 
-	ui.Success("Initialized Amux in %s", cwd)
-	ui.Info("Configuration saved to %s", filepath.Join(config.AmuxDir, config.ConfigFile))
-	ui.Info("Run 'amux mcp' to start the MCP server")
+	ui.Success("Amux initialized successfully in %s", cwd)
+	ui.PrintKeyValue("Configuration", filepath.Join(config.AmuxDir, config.ConfigFile))
+	ui.OutputLine("\nRun 'amux mcp' to start the MCP server")
 
 	return nil
 }

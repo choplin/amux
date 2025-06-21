@@ -81,7 +81,7 @@ func attachSession(cmd *cobra.Command, args []string) error {
 	}
 
 	// Execute tmux attach
-	ui.Info("Attaching to session %s...", sessionID)
+	ui.OutputLine("Attaching to session %s...", sessionID)
 	tmuxCmd := exec.Command("tmux", "attach-session", "-t", info.TmuxSession)
 	tmuxCmd.Stdin = os.Stdin
 	tmuxCmd.Stdout = os.Stdout

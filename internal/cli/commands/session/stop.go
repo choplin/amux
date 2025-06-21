@@ -69,6 +69,6 @@ func stopSession(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to stop session: %w", err)
 	}
 
-	ui.Success("Session %s stopped", sessionID)
+	ui.OutputLine("Session %s stopped", sessionID)
 	return nil
 }

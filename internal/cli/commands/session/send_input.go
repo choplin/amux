@@ -86,9 +86,7 @@ func sendInputToSession(cmd *cobra.Command, args []string) error {
 	}
 
 	// Display success message
-	info := sess.Info()
-	ui.Success("Input sent to session %s (agent: %s, workspace: %s)",
-		sessionID, info.AgentID, info.WorkspaceID)
+	ui.OutputLine("Input sent to session %s", sessionID)
 
 	return nil
 }
