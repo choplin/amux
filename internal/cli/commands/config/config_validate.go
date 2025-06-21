@@ -1,4 +1,4 @@
-package commands
+package config
 
 import (
 	"fmt"
@@ -8,10 +8,6 @@ import (
 	"github.com/aki/amux/internal/cli/ui"
 	"github.com/aki/amux/internal/core/config"
 )
-
-func init() {
-	configCmd.AddCommand(configValidateCmd())
-}
 
 func configValidateCmd() *cobra.Command {
 	cmd := &cobra.Command{

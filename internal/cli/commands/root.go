@@ -4,7 +4,10 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
+	"github.com/aki/amux/internal/cli/commands/config"
+	"github.com/aki/amux/internal/cli/commands/hooks"
 	"github.com/aki/amux/internal/cli/commands/session"
+	"github.com/aki/amux/internal/cli/commands/workspace"
 	"github.com/aki/amux/internal/cli/ui"
 )
 
@@ -41,11 +44,13 @@ func init() {
 
 	rootCmd.AddCommand(initCmd)
 
-	rootCmd.AddCommand(workspaceCmd)
+	rootCmd.AddCommand(workspace.Command())
 
 	rootCmd.AddCommand(session.Command())
 
 	rootCmd.AddCommand(mcpCmd)
+
+	rootCmd.AddCommand(config.Command())
 
 	// Add global aliases for common session operations
 	// These are shortcuts to session subcommands
@@ -113,7 +118,7 @@ func init() {
 	rootCmd.AddCommand(session.TailCommand())
 
 	// Add hooks command
-	rootCmd.AddCommand(hooksCmd)
+	rootCmd.AddCommand(hooks.Cmd)
 }
 
 // Execute runs the root command

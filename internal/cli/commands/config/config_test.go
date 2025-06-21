@@ -1,4 +1,4 @@
-package commands
+package config
 
 import (
 	"os"
@@ -47,9 +47,9 @@ func TestConfigShowCommand(t *testing.T) {
 
 	// Test that the command executes without error
 	t.Run("Execute command", func(t *testing.T) {
-		// Execute through the parent command to get proper setup
-		rootCmd.SetArgs([]string{"config", "show"})
-		err := rootCmd.Execute()
+		// Execute command directly
+		cmd := configShowCmd
+		err := runConfigShow(cmd, []string{})
 		require.NoError(t, err)
 	})
 }
@@ -62,9 +62,9 @@ func TestConfigShowCommandErrors(t *testing.T) {
 	os.Chdir(tempDir)
 
 	t.Run("Not in amux project", func(t *testing.T) {
-		// Execute through the parent command
-		rootCmd.SetArgs([]string{"config", "show"})
-		err := rootCmd.Execute()
+		// Execute command directly
+		cmd := configShowCmd
+		err := runConfigShow(cmd, []string{})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "not in an Amux project")
 	})
@@ -81,8 +81,11 @@ func TestConfigShowCommandErrors(t *testing.T) {
 		require.NoError(t, err)
 
 		// Run with invalid format
-		rootCmd.SetArgs([]string{"config", "show", "--format", "invalid"})
-		err = rootCmd.Execute()
+		showFormat = "invalid"
+		defer func() { showFormat = "yaml" }() // Reset after test
+
+		cmd := configShowCmd
+		err = runConfigShow(cmd, []string{})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "unsupported format")
 	})
