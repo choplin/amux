@@ -96,6 +96,9 @@ func (s *tmuxSessionImpl) WorkspaceID() string {
 }
 
 func (s *tmuxSessionImpl) WorkspacePath() string {
+	if s.workspace == nil {
+		return ""
+	}
 	return s.workspace.Path
 }
 
@@ -129,6 +132,16 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 
 	if s.info.StatusState.Status.IsRunning() {
 		return ErrSessionAlreadyRunning{ID: s.info.ID}
+	}
+
+	// Cannot start orphaned session
+	if s.info.StatusState.Status == StatusOrphaned {
+		return fmt.Errorf("cannot start orphaned session: %s", s.info.Error)
+	}
+
+	// Cannot start session without workspace
+	if s.workspace == nil {
+		return fmt.Errorf("cannot start session: workspace not available")
 	}
 
 	// Generate tmux session name

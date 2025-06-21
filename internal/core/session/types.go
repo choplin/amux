@@ -64,9 +64,9 @@ func (s Status) IsRunning() bool {
 	return s == StatusWorking || s == StatusIdle
 }
 
-// IsTerminal returns true if the session is in a terminal state (completed, stopped or failed)
+// IsTerminal returns true if the session is in a terminal state (completed, stopped, failed or orphaned)
 func (s Status) IsTerminal() bool {
-	return s == StatusCompleted || s == StatusStopped || s == StatusFailed
+	return s == StatusCompleted || s == StatusStopped || s == StatusFailed || s == StatusOrphaned
 }
 
 const (
@@ -82,6 +82,8 @@ const (
 	StatusStopped Status = "stopped"
 	// StatusFailed indicates a session has failed or crashed
 	StatusFailed Status = "failed"
+	// StatusOrphaned indicates a session with missing dependencies (e.g., deleted workspace)
+	StatusOrphaned Status = "orphaned"
 )
 
 // StatusState holds runtime state for status tracking

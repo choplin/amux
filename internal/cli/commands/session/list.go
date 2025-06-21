@@ -71,6 +71,9 @@ func listSessions(cmd *cobra.Command, args []string) error {
 		wsName := info.WorkspaceID
 		if err == nil {
 			wsName = ws.Name
+		} else if info.StatusState.Status == session.StatusOrphaned {
+			// Show "(deleted)" suffix for orphaned sessions
+			wsName = fmt.Sprintf("%s (deleted)", info.WorkspaceID)
 		}
 
 		// Calculate total time
@@ -98,6 +101,8 @@ func listSessions(cmd *cobra.Command, args []string) error {
 			statusStr = ui.DimStyle.Render(statusStr)
 		case session.StatusFailed:
 			statusStr = ui.ErrorStyle.Render(statusStr)
+		case session.StatusOrphaned:
+			statusStr = ui.WarningStyle.Render(statusStr)
 		}
 
 		// Show time in current status
