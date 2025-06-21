@@ -79,19 +79,39 @@ func (m *Manager) Create(ctx context.Context, opts CreateOptions) (*Workspace, e
 	// Determine branch name
 	var branch string
 	if opts.Branch != "" {
-		// Use existing branch
 		branch = opts.Branch
-		// Create worktree from existing branch
+	} else {
+		// Auto-generate branch name
+		branch = fmt.Sprintf("amux/%s", id)
+	}
+
+	// Check if branch exists
+	exists, err := m.gitOps.BranchExists(branch)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check branch existence: %w", err)
+	}
+
+	// Handle branch creation/checkout based on mode
+	switch opts.BranchMode {
+	case BranchModeCreate:
+		// Create new branch (fail if exists)
+		if exists {
+			return nil, fmt.Errorf("cannot create branch '%s': already exists. Use -c to checkout existing branch", branch)
+		}
+		if err := m.gitOps.CreateWorktree(worktreePath, branch, baseBranch); err != nil {
+			return nil, fmt.Errorf("failed to create worktree with new branch: %w", err)
+		}
+	case BranchModeCheckout:
+		// Use existing branch (fail if doesn't exist)
+		if !exists {
+			return nil, fmt.Errorf("cannot checkout '%s': branch does not exist. Use -b to create new branch", branch)
+		}
 		if err := m.gitOps.CreateWorktreeFromExistingBranch(worktreePath, branch); err != nil {
 			return nil, fmt.Errorf("failed to create worktree from existing branch: %w", err)
 		}
-	} else {
-		// Create new branch
-		branch = fmt.Sprintf("amux/%s", id)
-		// Create worktree with new branch
-		if err := m.gitOps.CreateWorktree(worktreePath, branch, baseBranch); err != nil {
-			return nil, fmt.Errorf("failed to create worktree: %w", err)
-		}
+	default:
+		// Should never happen as BranchModeCreate is the default
+		return nil, fmt.Errorf("invalid branch mode: %v", opts.BranchMode)
 	}
 
 	// Create workspace metadata

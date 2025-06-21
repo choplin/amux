@@ -171,6 +171,25 @@ func (o *Operations) ListWorktrees() ([]*WorktreeInfo, error) {
 	return parseWorktreeList(output), nil
 }
 
+// BranchExists checks if a branch exists (locally or remotely)
+func (o *Operations) BranchExists(branch string) (bool, error) {
+	// Check local branches
+	cmd := exec.Command("git", "rev-parse", "--verify", "refs/heads/"+branch)
+	cmd.Dir = o.repoPath
+	if err := cmd.Run(); err == nil {
+		return true, nil
+	}
+
+	// Check remote branches
+	cmd = exec.Command("git", "rev-parse", "--verify", "refs/remotes/origin/"+branch)
+	cmd.Dir = o.repoPath
+	if err := cmd.Run(); err == nil {
+		return true, nil
+	}
+
+	return false, nil
+}
+
 // GetDefaultBranch returns the default branch name (main or master)
 func (o *Operations) GetDefaultBranch() (string, error) {
 	// Try to get the default branch from remote

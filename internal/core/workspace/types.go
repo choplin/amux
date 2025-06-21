@@ -94,11 +94,22 @@ type Workspace struct {
 	Status         ConsistencyStatus `yaml:"-" json:"status"`
 }
 
+// BranchMode specifies how to handle branch creation/checkout
+type BranchMode int
+
+const (
+	// BranchModeCreate creates a new branch (default)
+	BranchModeCreate BranchMode = iota
+	// BranchModeCheckout uses an existing branch
+	BranchModeCheckout
+)
+
 // CreateOptions represents options for creating a new workspace
 type CreateOptions struct {
 	Name        string
 	BaseBranch  string
-	Branch      string // Specify existing branch to use
+	Branch      string     // Branch name (either new or existing)
+	BranchMode  BranchMode // How to handle the branch (default: BranchModeCreate)
 	Description string
 	AutoCreated bool // Internal: whether workspace was auto-created by session
 }

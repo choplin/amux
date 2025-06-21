@@ -44,6 +44,7 @@ func TestManager_CreateWithExistingBranch(t *testing.T) {
 	opts := workspace.CreateOptions{
 		Name:        "test-existing",
 		Branch:      existingBranch,
+		BranchMode:  workspace.BranchModeCheckout, // Explicitly use existing branch
 		Description: "Test workspace with existing branch",
 	}
 
@@ -452,4 +453,148 @@ func TestManager_CreateSetsContextPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to remove workspace: %v", err)
 	}
+}
+
+func TestManager_CreateWithNewBranchFlag(t *testing.T) {
+	// Create test repository
+	repoDir := helpers.CreateTestRepo(t)
+
+	// Initialize Amux
+	configManager := config.NewManager(repoDir)
+	cfg := config.DefaultConfig()
+	err := configManager.Save(cfg)
+	if err != nil {
+		t.Fatalf("Failed to initialize: %v", err)
+	}
+
+	// Create workspace manager
+	manager, err := workspace.NewManager(configManager)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
+
+	t.Run("CreateNewBranch", func(t *testing.T) {
+		// Create workspace with new branch using -b flag
+		opts := workspace.CreateOptions{
+			Name:        "test-new-branch",
+			Branch:      "feature/test-new",
+			BranchMode:  workspace.BranchModeCreate,
+			Description: "Test workspace with new branch flag",
+		}
+
+		ws, err := manager.Create(context.Background(), opts)
+		if err != nil {
+			t.Fatalf("Failed to create workspace: %v", err)
+		}
+
+		// Verify workspace was created with specified branch
+		if ws.Branch != "feature/test-new" {
+			t.Errorf("Expected branch feature/test-new, got %s", ws.Branch)
+		}
+
+		// Clean up
+		err = manager.Remove(context.Background(), workspace.Identifier(ws.ID))
+		if err != nil {
+			t.Fatalf("Failed to remove workspace: %v", err)
+		}
+	})
+
+	t.Run("CreateNewBranchAlreadyExists", func(t *testing.T) {
+		// Create a branch first
+		gitOps := git.NewOperations(repoDir)
+		existingBranch := "feature/already-exists"
+		err := gitOps.CreateBranch(existingBranch, "main")
+		if err != nil {
+			t.Fatalf("Failed to create existing branch: %v", err)
+		}
+
+		// Try to create workspace with -b flag for existing branch
+		opts := workspace.CreateOptions{
+			Name:       "test-new-branch-fail",
+			Branch:     existingBranch,
+			BranchMode: workspace.BranchModeCreate,
+		}
+
+		_, err = manager.Create(context.Background(), opts)
+		if err == nil {
+			t.Fatal("Expected error when creating new branch that already exists")
+		}
+
+		expectedError := "cannot create branch 'feature/already-exists': already exists. Use -c to checkout existing branch"
+		if err.Error() != expectedError {
+			t.Errorf("Expected error '%s', got '%s'", expectedError, err.Error())
+		}
+	})
+}
+
+func TestManager_CreateWithCheckoutFlag(t *testing.T) {
+	// Create test repository
+	repoDir := helpers.CreateTestRepo(t)
+
+	// Initialize Amux
+	configManager := config.NewManager(repoDir)
+	cfg := config.DefaultConfig()
+	err := configManager.Save(cfg)
+	if err != nil {
+		t.Fatalf("Failed to initialize: %v", err)
+	}
+
+	// Create workspace manager
+	manager, err := workspace.NewManager(configManager)
+	if err != nil {
+		t.Fatalf("Failed to create manager: %v", err)
+	}
+
+	t.Run("CheckoutExistingBranch", func(t *testing.T) {
+		// Create an existing branch first
+		gitOps := git.NewOperations(repoDir)
+		existingBranch := "feature/to-checkout"
+		err := gitOps.CreateBranch(existingBranch, "main")
+		if err != nil {
+			t.Fatalf("Failed to create existing branch: %v", err)
+		}
+
+		// Create workspace with -c flag
+		opts := workspace.CreateOptions{
+			Name:        "test-checkout",
+			Branch:      existingBranch,
+			BranchMode:  workspace.BranchModeCheckout,
+			Description: "Test workspace with checkout flag",
+		}
+
+		ws, err := manager.Create(context.Background(), opts)
+		if err != nil {
+			t.Fatalf("Failed to create workspace: %v", err)
+		}
+
+		// Verify workspace was created with existing branch
+		if ws.Branch != existingBranch {
+			t.Errorf("Expected branch %s, got %s", existingBranch, ws.Branch)
+		}
+
+		// Clean up
+		err = manager.Remove(context.Background(), workspace.Identifier(ws.ID))
+		if err != nil {
+			t.Fatalf("Failed to remove workspace: %v", err)
+		}
+	})
+
+	t.Run("CheckoutNonExistentBranch", func(t *testing.T) {
+		// Try to checkout non-existent branch
+		opts := workspace.CreateOptions{
+			Name:       "test-checkout-fail",
+			Branch:     "feature/does-not-exist",
+			BranchMode: workspace.BranchModeCheckout,
+		}
+
+		_, err = manager.Create(context.Background(), opts)
+		if err == nil {
+			t.Fatal("Expected error when checking out non-existent branch")
+		}
+
+		expectedError := "cannot checkout 'feature/does-not-exist': branch does not exist. Use -b to create new branch"
+		if err.Error() != expectedError {
+			t.Errorf("Expected error '%s', got '%s'", expectedError, err.Error())
+		}
+	})
 }
