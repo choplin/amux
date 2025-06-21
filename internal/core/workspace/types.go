@@ -98,7 +98,9 @@ type Workspace struct {
 type CreateOptions struct {
 	Name        string
 	BaseBranch  string
-	Branch      string // Specify existing branch to use
+	Branch      string // Branch name (either new or existing)
+	CreateNew   bool   // If true, create new branch (fail if exists)
+	UseExisting bool   // If true, use existing branch (fail if doesn't exist)
 	Description string
 	AutoCreated bool // Internal: whether workspace was auto-created by session
 }

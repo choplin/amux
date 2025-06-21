@@ -8,7 +8,8 @@ import (
 var (
 	// Create flags
 	createBaseBranch  string
-	createBranch      string
+	createBranch      string // Create new branch with specified name
+	createCheckout    string // Checkout existing branch
 	createDescription string
 	createNoHooks     bool
 
@@ -41,8 +42,9 @@ func init() {
 	workspaceCmd.AddCommand(cdWorkspaceCmd)
 
 	// Create command flags
-	createWorkspaceCmd.Flags().StringVarP(&createBaseBranch, "base-branch", "b", "", "Base branch to create workspace from")
-	createWorkspaceCmd.Flags().StringVar(&createBranch, "branch", "", "Use existing branch instead of creating new one")
+	createWorkspaceCmd.Flags().StringVar(&createBaseBranch, "base", "", "Base branch for new branches")
+	createWorkspaceCmd.Flags().StringVarP(&createBranch, "branch", "b", "", "Create new branch with specified name")
+	createWorkspaceCmd.Flags().StringVarP(&createCheckout, "checkout", "c", "", "Use existing branch")
 	createWorkspaceCmd.Flags().StringVarP(&createDescription, "description", "d", "", "Description of the workspace")
 	createWorkspaceCmd.Flags().BoolVar(&createNoHooks, "no-hooks", false, "Skip running hooks for this operation")
 
