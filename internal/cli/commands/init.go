@@ -71,7 +71,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	ui.OutputLine("Initialized Amux in %s", cwd)
+	ui.Success("Amux initialized successfully in %s", cwd)
 	ui.PrintKeyValue("Configuration", filepath.Join(config.AmuxDir, config.ConfigFile))
 	ui.OutputLine("\nRun 'amux mcp' to start the MCP server")
 

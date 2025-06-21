@@ -78,7 +78,7 @@ func removeSession(cmd *cobra.Command, args []string, keepWorkspace bool) error 
 		return fmt.Errorf("failed to remove session: %w", err)
 	}
 
-	ui.OutputLine("Session %s removed", sessionID)
+	ui.Success("Session removed successfully: %s", sessionID)
 
 	// Check if workspace was auto-created and --keep-workspace was not specified
 	if !keepWorkspace && workspaceID != "" {

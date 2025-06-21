@@ -34,8 +34,8 @@ This document establishes the design principles and patterns for consistent CLI 
 
 #### When to Use Icons
 
+- **Result headers**: Success (✅), Error (❌), Warning (⚠️) for operation outcomes
 - **Section headers**: To identify major output sections
-- **Final status**: Success (✅), Error (❌), Warning (⚠️)
 - **Entity types**: Workspace (📋), Session (🔄), etc. (sparingly)
 
 #### When NOT to Use Icons
@@ -48,11 +48,11 @@ This document establishes the design principles and patterns for consistent CLI 
 #### Icon Guidelines
 
 ```text
-✅ Success - Use only for final successful completion
-❌ Error - Use only for actual errors that need attention
-⚠️  Warning - Use only for important warnings
+✅ Success - Use for operation result headers (completion messages)
+❌ Error - Use for operation result headers (failure messages)
+⚠️  Warning - Use for operation result headers (warning messages)
 ⓘ  Info - AVOID; rarely needed
-📋 Entity icons - Use only in headers, not in lists
+📋 Entity icons - Use only in section headers, not in lists
 ```
 
 ### Colors
@@ -92,17 +92,17 @@ This document establishes the design principles and patterns for consistent CLI 
 ### Success Messages
 
 ```text
-{Action message or confirmation}
+✅ {Action} completed successfully
 
 {Optional details without icons}
 ```
 
-Note: The ✅ icon should be used sparingly, only for final completion of major operations.
+Note: Use the ✅ icon for result headers to provide clear visual confirmation of successful operations.
 
 Example:
 
 ```text
-Created workspace 'fix-auth-bug'
+✅ Workspace created successfully
 
 ID:     3
 Branch: fix-auth-bug

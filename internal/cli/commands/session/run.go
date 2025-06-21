@@ -94,7 +94,7 @@ func runSession(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("failed to create auto-workspace: %w", err)
 		}
-		ui.OutputLine("Created workspace '%s'", ws.Name)
+		ui.Success("Workspace created successfully: %s", ws.Name)
 	}
 
 	// Create agent manager
@@ -175,7 +175,9 @@ func runSession(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to start session: %w", err)
 	}
 
-	ui.OutputLine("Session %s started", displayID)
+	ui.Success("Session started successfully")
+	ui.OutputLine("")
+	ui.PrintKeyValue("Session", displayID)
 	ui.PrintKeyValue("Workspace", ws.Name)
 	ui.PrintKeyValue("Agent", agentID)
 

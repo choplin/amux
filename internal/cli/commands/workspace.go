@@ -205,7 +205,8 @@ func runCreateWorkspace(cmd *cobra.Command, args []string) error {
 	if ws.Index != "" {
 		id = ws.Index
 	}
-	ui.OutputLine("Created workspace '%s'", ws.Name)
+	ui.Success("Workspace created successfully")
+	ui.OutputLine("")
 	ui.PrintKeyValue("ID", id)
 	ui.PrintKeyValue("Branch", ws.Branch)
 	ui.PrintKeyValue("Path", ws.Path)
@@ -357,7 +358,7 @@ func runRemoveWorkspace(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to remove workspace: %w", err)
 	}
 
-	ui.OutputLine("Removed workspace: %s (%s)", ws.Name, ws.ID)
+	ui.Success("Workspace removed successfully: %s (%s)", ws.Name, ws.ID)
 
 	return nil
 }
