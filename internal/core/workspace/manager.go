@@ -165,10 +165,6 @@ func (m *Manager) Get(ctx context.Context, id ID) (*Workspace, error) {
 	workspace, _, err := m.fm.Read(ctx, workspaceMetaPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			// If workspace doesn't exist but has an index entry, clean it up
-			if _, hasIndex := m.idMapper.GetWorkspaceIndex(string(id)); hasIndex {
-				_ = m.idMapper.RemoveWorkspace(string(id))
-			}
 			return nil, fmt.Errorf("workspace not found: %s", id)
 		}
 		return nil, fmt.Errorf("failed to read workspace: %w", err)

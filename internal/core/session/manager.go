@@ -195,12 +195,6 @@ func (m *Manager) Get(ctx context.Context, id ID) (Session, error) {
 		// If not found in file, it means the session doesn't exist
 		// (even if it might have been in cache before)
 		if os.IsNotExist(err) {
-			// If session doesn't exist but has an index entry, clean it up
-			if m.idMapper != nil {
-				if _, hasIndex := m.idMapper.GetSessionIndex(string(id)); hasIndex {
-					_ = m.idMapper.RemoveSession(string(id))
-				}
-			}
 			return nil, ErrSessionNotFound{ID: string(id)}
 		}
 		return nil, fmt.Errorf("failed to load session: %w", err)

@@ -155,14 +155,25 @@ func TestManager_GetReconciliation(t *testing.T) {
 		t.Fatalf("Failed to manually delete workspace: %v", err)
 	}
 
-	// Try to get the workspace - should fail and clean up index
+	// Try to get the workspace - should fail but NOT clean up index (reconciliation only happens during List)
 	_, err = manager.Get(ctx, workspace.ID(ws.ID))
 	if err == nil {
 		t.Error("Expected error when getting deleted workspace")
 	}
 
-	// Verify the index was cleaned up
+	// Verify the index still exists (Get does not reconcile)
+	if _, exists := idMapper.GetWorkspaceIndex(ws.ID); !exists {
+		t.Error("Expected workspace index to still exist after failed Get (reconciliation only happens during List)")
+	}
+
+	// Now list workspaces - this should trigger reconciliation
+	_, err = manager.List(ctx, workspace.ListOptions{})
+	if err != nil {
+		t.Fatalf("Failed to list workspaces: %v", err)
+	}
+
+	// Now the index should be cleaned up
 	if _, exists := idMapper.GetWorkspaceIndex(ws.ID); exists {
-		t.Error("Expected workspace index to be removed after failed Get")
+		t.Error("Expected workspace index to be removed after List reconciliation")
 	}
 }
