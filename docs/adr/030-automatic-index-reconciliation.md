@@ -19,11 +19,10 @@ Currently, there's no mechanism to detect or repair these inconsistencies. Users
 
 ## Decision
 
-Implement automatic index reconciliation at strategic points in the application lifecycle:
+Implement automatic index reconciliation during entity listing operations:
 
-1. **During entity listing** - When listing workspaces or sessions, validate all indexed entries and remove orphaned ones
-2. **During entity access** - When accessing a specific entity fails, check if it has an orphaned index entry and clean it up
-3. **On MCP server startup** - Perform initial reconciliation to ensure clean state for AI agent operations
+1. **During workspace listing** - When calling `workspace.Manager.List()`, validate all indexed entries and remove orphaned ones
+2. **During session listing** - When calling `session.Manager.ListSessions()`, validate all indexed entries and remove orphaned ones
 
 The reconciliation is implemented by:
 
@@ -54,4 +53,6 @@ The reconciliation is implemented by:
 - Reconciliation only removes definitively orphaned entries (entity doesn't exist on disk)
 - Errors during reconciliation don't fail the primary operation
 - The existing file locking mechanism prevents concurrent modification issues
+- Reconciliation happens only during list operations for consistency and simplicity
+- Individual entity access (Get/ResolveSession) does not trigger reconciliation to minimize performance impact
 - Future enhancement could add debug logging for reconciliation activities
