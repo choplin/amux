@@ -39,11 +39,10 @@ func runShowWorkspace(cmd *cobra.Command, args []string) error {
 	// Print detailed workspace information
 	ui.PrintWorkspaceDetails(ws)
 
-	// Get and display semaphore information
-	holders, err := manager.GetSemaphoreHolders(ws.ID)
-	if err == nil && len(holders) > 0 {
-		ui.OutputLine("\n%s Active Sessions (%d):\n", ui.InfoIcon, len(holders))
-		for _, holder := range holders {
+	// Display semaphore information from workspace
+	if ws.IsInUse() {
+		ui.OutputLine("\n%s Active Sessions (%d):\n", ui.InfoIcon, ws.GetHolderCount())
+		for _, holder := range ws.SemaphoreHolders {
 			description := holder.Description
 			if description == "" {
 				description = fmt.Sprintf("Session %s", holder.SessionID)

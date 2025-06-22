@@ -41,17 +41,12 @@ func runListWorkspace(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list workspaces: %w", err)
 	}
 
-	// Get semaphore information for each workspace
+	// Create entries with holder count from workspace data
 	entries := make([]ui.WorkspaceListEntry, len(workspaces))
 	for i, ws := range workspaces {
-		holders, err := manager.GetSemaphoreHolders(ws.ID)
-		holderCount := 0
-		if err == nil {
-			holderCount = len(holders)
-		}
 		entries[i] = ui.WorkspaceListEntry{
 			Workspace:   ws,
-			HolderCount: holderCount,
+			HolderCount: ws.GetHolderCount(),
 		}
 	}
 

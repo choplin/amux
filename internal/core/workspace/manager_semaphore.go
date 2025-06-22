@@ -71,6 +71,24 @@ func (m *Manager) GetSemaphoreHolders(workspaceID string) ([]Holder, error) {
 	return m.semaphore.SemaphoreManager.GetHolders(workspaceID)
 }
 
+// populateSemaphoreHolders populates the SemaphoreHolders field in a workspace
+func (m *Manager) populateSemaphoreHolders(workspace *Workspace) {
+	if m.semaphore == nil || m.semaphore.SemaphoreManager == nil {
+		// Semaphore not initialized, leave empty
+		workspace.SemaphoreHolders = []Holder{}
+		return
+	}
+
+	holders, err := m.semaphore.SemaphoreManager.GetHolders(workspace.ID)
+	if err != nil {
+		// On error, leave empty
+		workspace.SemaphoreHolders = []Holder{}
+		return
+	}
+
+	workspace.SemaphoreHolders = holders
+}
+
 // IsWorkspaceInUse checks if a workspace is in use by any holders
 func (m *Manager) IsWorkspaceInUse(workspaceID string) (bool, []Holder, error) {
 	if m.semaphore == nil || m.semaphore.SemaphoreManager == nil {
