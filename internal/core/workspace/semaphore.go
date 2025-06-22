@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"time"
 
 	"github.com/gofrs/flock"
@@ -12,8 +13,8 @@ import (
 
 const (
 	semaphoreVersion  = "1.0"
-	semaphoreFileName = ".semaphore"
-	lockFileName      = ".semaphore.lock"
+	semaphoreFileName = "semaphore.json"
+	lockFileName      = "semaphore.lock"
 )
 
 // SemaphoreData represents the semaphore file contents
@@ -157,7 +158,11 @@ func (s *SemaphoreManager) updateSemaphore(workspaceID string, updater func(*Sem
 		return err
 	}
 
-	// Atomic rename
+	// Atomic rename (on Windows, remove existing file first)
+	if runtime.GOOS == "windows" {
+		// Windows doesn't allow renaming over existing files
+		_ = os.Remove(semaphorePath)
+	}
 	if err := os.Rename(tempPath, semaphorePath); err != nil {
 		// Clean up temp file on error
 		_ = os.Remove(tempPath)
