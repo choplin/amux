@@ -307,7 +307,7 @@ func (s *ServerV2) handleSessionStorageRead(ctx context.Context, request mcp.Cal
 	path, _ := args["path"].(string)
 
 	// Get session storage path
-	sessionManager, err := s.createSessionManager()
+	sessionManager, err := s.createSessionManager() //nolint:contextcheck // Manager creation doesn't need context
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session manager: %w", err)
 	}
@@ -358,7 +358,7 @@ func (s *ServerV2) handleSessionStorageWrite(ctx context.Context, request mcp.Ca
 	content, _ := args["content"].(string)
 
 	// Get session storage path
-	sessionManager, err := s.createSessionManager()
+	sessionManager, err := s.createSessionManager() //nolint:contextcheck // Manager creation doesn't need context
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session manager: %w", err)
 	}
@@ -410,7 +410,7 @@ func (s *ServerV2) handleSessionStorageList(ctx context.Context, request mcp.Cal
 	subPath, _ := args["path"].(string)
 
 	// Get session storage path
-	sessionManager, err := s.createSessionManager()
+	sessionManager, err := s.createSessionManager() //nolint:contextcheck // Manager creation doesn't need context
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session manager: %w", err)
 	}

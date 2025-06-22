@@ -48,7 +48,7 @@ func (s *ServerV2) registerSessionBridgeTools() error {
 
 func (s *ServerV2) handleResourceSessionList(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	// Create session manager
-	sessionManager, err := s.createSessionManager()
+	sessionManager, err := s.createSessionManager() //nolint:contextcheck // Manager creation doesn't need context
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session manager: %w", err)
 	}

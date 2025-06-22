@@ -125,7 +125,7 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 	}
 
 	// Create session manager
-	sessionManager, err := s.createSessionManager()
+	sessionManager, err := s.createSessionManager() //nolint:contextcheck // Manager creation doesn't need context
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session manager: %w", err)
 	}
@@ -197,7 +197,7 @@ func (s *ServerV2) handleSessionStop(ctx context.Context, request mcp.CallToolRe
 	}
 
 	// Create session manager
-	sessionManager, err := s.createSessionManager()
+	sessionManager, err := s.createSessionManager() //nolint:contextcheck // Manager creation doesn't need context
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session manager: %w", err)
 	}
@@ -246,7 +246,7 @@ func (s *ServerV2) handleSessionSendInput(ctx context.Context, request mcp.CallT
 	}
 
 	// Create session manager
-	sessionManager, err := s.createSessionManager()
+	sessionManager, err := s.createSessionManager() //nolint:contextcheck // Manager creation doesn't need context
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session manager: %w", err)
 	}

@@ -26,6 +26,7 @@ Implement automatic index reconciliation at strategic points in the application 
 3. **On MCP server startup** - Perform initial reconciliation to ensure clean state for AI agent operations
 
 The reconciliation is implemented by:
+
 - Adding a `Reconcile(entityType, existingIDs)` method to the index manager
 - Calling this method with the list of actually existing entities
 - Silently removing any index entries that don't correspond to existing entities

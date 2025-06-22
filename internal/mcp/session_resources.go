@@ -108,7 +108,7 @@ func (s *ServerV2) registerSessionResources() error {
 // handleSessionListResource handles amux://session
 func (s *ServerV2) handleSessionListResource(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
 	// Create session manager to list sessions
-	sessionManager, err := s.createSessionManager()
+	sessionManager, err := s.createSessionManager() //nolint:contextcheck // Manager creation doesn't need context
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session manager: %w", err)
 	}
@@ -173,7 +173,7 @@ func (s *ServerV2) handleSessionDetailResource(ctx context.Context, request mcp.
 	}
 
 	// Create session manager
-	sessionManager, err := s.createSessionManager()
+	sessionManager, err := s.createSessionManager() //nolint:contextcheck // Manager creation doesn't need context
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session manager: %w", err)
 	}
@@ -244,7 +244,7 @@ func (s *ServerV2) handleSessionOutputResource(ctx context.Context, request mcp.
 	}
 
 	// Create session manager
-	sessionManager, err := s.createSessionManager()
+	sessionManager, err := s.createSessionManager() //nolint:contextcheck // Manager creation doesn't need context
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session manager: %w", err)
 	}
