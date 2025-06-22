@@ -22,7 +22,7 @@ import (
 // tmuxSessionImpl implements both Session and TerminalSession interfaces with tmux backend
 type tmuxSessionImpl struct {
 	info           *Info
-	manager        *Manager
+	manager        SessionManager
 	tmuxAdapter    tmux.Adapter
 	workspace      *workspace.Workspace
 	agentConfig    *config.Agent
@@ -55,15 +55,15 @@ func WithProcessChecker(checker process.Checker) TmuxSessionOption {
 }
 
 // NewTmuxSession creates a new tmux-backed session
-func NewTmuxSession(info *Info, manager *Manager, tmuxAdapter tmux.Adapter, workspace *workspace.Workspace, agentConfig *config.Agent, opts ...TmuxSessionOption) TerminalSession {
+func NewTmuxSession(info *Info, manager SessionManager, tmuxAdapter tmux.Adapter, workspace *workspace.Workspace, agentConfig *config.Agent, opts ...TmuxSessionOption) TerminalSession {
 	s := &tmuxSessionImpl{
 		info:           info,
 		manager:        manager,
 		tmuxAdapter:    tmuxAdapter,
 		workspace:      workspace,
 		agentConfig:    agentConfig,
-		logger:         logger.Nop(),    // Default to no-op logger
-		processChecker: process.Default, // Default to system process checker
+		logger:         logger.Nop(),              // Default to no-op logger
+		processChecker: &process.DefaultChecker{}, // Default to system process checker
 	}
 
 	// Apply options
@@ -162,8 +162,8 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 	// Merge environment variables:
 	// 1. AMUX standard environment variables
 	// 2. Session environment (from agent config and CLI -e)
-	environment := mergeEnvironment(
-		getAMUXEnvironment(s),
+	environment := MergeEnvironment(
+		GetAMUXEnvironment(s),
 		s.info.Environment,
 	)
 

@@ -231,7 +231,7 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 	case TypeTmux:
 		sess = NewTmuxSession(info, m, m.tmuxAdapter, ws, agentConfig)
 	case TypeBlocking:
-		sess, createErr = newBlockingSession(info, m, ws, agentConfig, m.logger)
+		sess, createErr = NewBlockingSession(info, m, ws, agentConfig, m.logger)
 		if createErr != nil {
 			return nil, fmt.Errorf("failed to create blocking session: %w", createErr)
 		}
@@ -457,7 +457,7 @@ func (m *Manager) createSessionFromInfo(ctx context.Context, info *Info) (Sessio
 			}
 		}
 
-		sess, err := newBlockingSession(info, m, ws, agentConfig, m.logger)
+		sess, err := NewBlockingSession(info, m, ws, agentConfig, m.logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create blocking session: %w", err)
 		}

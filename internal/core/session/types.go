@@ -217,3 +217,12 @@ type TerminalSession interface {
 	// UpdateStatus updates the session status based on current output
 	UpdateStatus(ctx context.Context) error
 }
+
+// SessionManager manages session operations
+type SessionManager interface {
+	// Save saves session info to storage
+	Save(ctx context.Context, info *Info) error
+
+	// Update updates session info atomically
+	Update(ctx context.Context, id string, updateFunc func(*Info) error) error
+}

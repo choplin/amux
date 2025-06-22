@@ -21,7 +21,7 @@ import (
 // blockingSessionImpl implements a blocking command execution session
 type blockingSessionImpl struct {
 	info           *Info
-	manager        *Manager
+	manager        SessionManager
 	workspace      *workspace.Workspace
 	agentConfig    *config.Agent
 	logger         logger.Logger
@@ -42,10 +42,10 @@ type blockingSessionImpl struct {
 	outputMu     sync.Mutex // Separate mutex for output operations
 }
 
-// newBlockingSession creates a new blocking session
-func newBlockingSession(
+// NewBlockingSession creates a new blocking session
+func NewBlockingSession(
 	info *Info,
-	manager *Manager,
+	manager SessionManager,
 	ws *workspace.Workspace,
 	agentConfig *config.Agent,
 	logger logger.Logger,
@@ -144,7 +144,7 @@ func (s *blockingSessionImpl) Start(ctx context.Context) error {
 
 	// Validate workspace exists
 	if s.workspace == nil || !s.workspace.PathExists {
-		return fmt.Errorf("workspace does not exist")
+		return fmt.Errorf("workspace not available")
 	}
 
 	// Set up output capture
@@ -221,7 +221,7 @@ func (s *blockingSessionImpl) Stop(ctx context.Context) error {
 
 	s.wasStopped = true
 
-	// Try graceful shutdown with SIGTERM
+	// First try graceful termination with SIGTERM
 	if err := s.cmd.Process.Signal(syscall.SIGTERM); err != nil {
 		// If SIGTERM fails, try SIGKILL
 		if err := s.cmd.Process.Kill(); err != nil {
@@ -229,7 +229,7 @@ func (s *blockingSessionImpl) Stop(ctx context.Context) error {
 		}
 	}
 
-	// Wait up to 2 seconds for graceful shutdown
+	// Wait for up to 5 seconds for graceful shutdown
 	done := make(chan struct{})
 	go func() {
 		s.cmd.Wait()
@@ -239,8 +239,8 @@ func (s *blockingSessionImpl) Stop(ctx context.Context) error {
 	select {
 	case <-done:
 		// Process stopped gracefully
-	case <-time.After(2 * time.Second):
-		// Force kill after timeout
+	case <-time.After(5 * time.Second):
+		// Force kill if still running
 		if err := s.cmd.Process.Kill(); err != nil {
 			return fmt.Errorf("failed to kill process after timeout: %w", err)
 		}
@@ -424,24 +424,17 @@ func (s *blockingSessionImpl) GetOutput(maxLines int) ([]byte, error) {
 
 // readLastLines reads the last N lines from a file
 func readLastLines(filePath string, maxLines int) ([]byte, error) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open output file: %w", err)
+	if maxLines <= 0 {
+		// Read entire file
+		return os.ReadFile(filePath)
 	}
-	defer file.Close()
 
-	// For simplicity, read entire file and return last N lines
-	// In production, this should be optimized for large files
-	data, err := io.ReadAll(file)
+	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read output file: %w", err)
 	}
 
-	if maxLines <= 0 {
-		return data, nil
-	}
-
-	// Split into lines and return last N
+	// Split into lines and get last N
 	lines := bytes.Split(data, []byte("\n"))
 	if len(lines) <= maxLines {
 		return data, nil
