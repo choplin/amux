@@ -148,6 +148,7 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 	response := map[string]interface{}{
 		"id":             info.ID,
 		"index":          info.Index,
+		"type":           string(info.Type),
 		"name":           info.Name,
 		"description":    info.Description,
 		"workspace_id":   info.WorkspaceID,
@@ -163,14 +164,42 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 		response["started_at"] = info.StartedAt.Format("2006-01-02T15:04:05Z07:00")
 	}
 
-	// Add attach instruction if tmux session
-	if info.TmuxSession != "" {
-		attachID := info.ID
-		if info.Index != "" {
-			attachID = info.Index
+	// Add type-specific information
+	switch info.Type {
+	case session.TypeTmux:
+		if info.TmuxSession != "" {
+			attachID := info.ID
+			if info.Index != "" {
+				attachID = info.Index
+			}
+			response["attach_command"] = fmt.Sprintf("tmux attach-session -t %s", info.TmuxSession)
+			response["attach_amux"] = fmt.Sprintf("amux session attach %s", attachID)
 		}
-		response["attach_command"] = fmt.Sprintf("tmux attach-session -t %s", info.TmuxSession)
-		response["attach_amux"] = fmt.Sprintf("amux session attach %s", attachID)
+
+	case session.TypeBlocking:
+		// Add blocking-specific info
+		response["blocking_command"] = info.BlockingCommand
+		response["blocking_args"] = info.BlockingArgs
+
+		logID := info.ID
+		if info.Index != "" {
+			logID = info.Index
+		}
+		response["logs_command"] = fmt.Sprintf("amux logs %s", logID)
+
+		// Add output config info if available
+		if info.OutputConfig != nil {
+			outputInfo := map[string]interface{}{
+				"mode": string(info.OutputConfig.Mode),
+			}
+			if info.OutputConfig.BufferSize > 0 {
+				outputInfo["buffer_size"] = info.OutputConfig.BufferSize
+			}
+			if info.OutputConfig.FilePath != "" {
+				outputInfo["file_path"] = info.OutputConfig.FilePath
+			}
+			response["output_config"] = outputInfo
+		}
 
 		// Check if agent has autoAttach but we're in MCP context
 		agentManager := agent.NewManager(s.configManager)
@@ -264,6 +293,12 @@ func (s *ServerV2) handleSessionSendInput(ctx context.Context, request mcp.CallT
 	// Check if session is running
 	if !sess.Status().IsRunning() {
 		return nil, SessionNotRunningError(sessionID)
+	}
+
+	// Check session type - blocking sessions don't support input
+	info := sess.Info()
+	if info.Type == session.TypeBlocking {
+		return nil, fmt.Errorf("blocking sessions do not support input after start")
 	}
 
 	// Type assert to TerminalSession

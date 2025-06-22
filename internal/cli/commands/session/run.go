@@ -142,6 +142,8 @@ func runSession(cmd *cobra.Command, args []string) error {
 		switch agentConfig.Type {
 		case config.AgentTypeTmux:
 			sessionType = session.TypeTmux
+		case config.AgentTypeBlocking:
+			sessionType = session.TypeBlocking
 		case config.AgentTypeClaudeCode, config.AgentTypeAPI:
 			// Future: add more type mappings as needed
 		}
@@ -187,9 +189,15 @@ func runSession(cmd *cobra.Command, args []string) error {
 		// Don't fail the session start, just warn
 	}
 
-	// Handle auto-attach for tmux sessions
+	// Handle post-start actions based on session type
 	info := sess.Info()
-	if info.TmuxSession != "" {
+	if info.Type == session.TypeBlocking {
+		// For blocking sessions, show how to view output
+		ui.OutputLine("\nThis is a blocking session. To view output, run:")
+		ui.OutputLine("  amux logs %s", displayID)
+		ui.OutputLine("\nTo stop the session, run:")
+		ui.OutputLine("  amux stop %s", displayID)
+	} else if info.TmuxSession != "" {
 		// Check if we should auto-attach
 		// CLI flag takes precedence over config
 		shouldAutoAttach := false

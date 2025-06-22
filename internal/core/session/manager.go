@@ -91,14 +91,13 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 		sessionType = TypeTmux
 	}
 
-	// For now, we only support tmux sessions
-	// In the future, this will be type-based
-	if sessionType != TypeTmux {
+	// Validate session type
+	if sessionType != TypeTmux && sessionType != TypeBlocking {
 		return nil, fmt.Errorf("unsupported session type: %s", sessionType)
 	}
 
-	// Check if tmux is available
-	if m.tmuxAdapter == nil || !m.tmuxAdapter.IsAvailable() {
+	// Check if tmux is available for tmux sessions
+	if sessionType == TypeTmux && (m.tmuxAdapter == nil || !m.tmuxAdapter.IsAvailable()) {
 		return nil, ErrTmuxNotAvailable{}
 	}
 
@@ -110,12 +109,22 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 		sessionID = GenerateID()
 	}
 
-	// Set defaults
-	if opts.Command == "" {
-		opts.Command = "bash"
-	}
-	if opts.AgentID == "" {
-		opts.AgentID = "default"
+	// Set defaults based on session type
+	if sessionType == TypeTmux {
+		if opts.Command == "" {
+			opts.Command = "bash"
+		}
+		if opts.AgentID == "" {
+			opts.AgentID = "default"
+		}
+	} else if sessionType == TypeBlocking {
+		// For blocking sessions, command comes from BlockingCommand
+		if opts.BlockingCommand == "" {
+			return nil, fmt.Errorf("blocking command is required for blocking sessions")
+		}
+		if opts.AgentID == "" {
+			opts.AgentID = "blocking"
+		}
 	}
 
 	// Get agent configuration if available
@@ -123,6 +132,46 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 	if m.agentManager != nil {
 		if agent, err := m.agentManager.GetAgent(opts.AgentID); err == nil {
 			agentConfig = agent
+
+			// If agent type doesn't match session type, warn but continue
+			if agentConfig.Type != config.AgentType(sessionType) {
+				m.logger.Warn("Agent type mismatch",
+					"agent", opts.AgentID,
+					"agentType", agentConfig.Type,
+					"sessionType", sessionType)
+			}
+
+			// For blocking sessions, extract parameters from agent if not provided
+			if sessionType == TypeBlocking && opts.BlockingCommand == "" {
+				if blockingParams, err := agentConfig.GetBlockingParams(); err == nil {
+					opts.BlockingCommand = blockingParams.Command
+					opts.BlockingArgs = blockingParams.Args
+
+					// Convert output config if not provided
+					if opts.OutputConfig == nil && blockingParams.Output.Mode != "" {
+						bufferSize := int64(10 * 1024 * 1024) // Default 10MB
+						if blockingParams.Output.BufferSize != "" {
+							if size, err := config.ParseBufferSize(blockingParams.Output.BufferSize); err == nil {
+								bufferSize = size
+							}
+						}
+
+						outputMode := OutputModeBuffer
+						switch blockingParams.Output.Mode {
+						case "file":
+							outputMode = OutputModeFile
+						case "circular":
+							outputMode = OutputModeCircular
+						}
+
+						opts.OutputConfig = &OutputConfig{
+							Mode:       outputMode,
+							BufferSize: bufferSize,
+							FilePath:   blockingParams.Output.FilePath,
+						}
+					}
+				}
+			}
 		}
 	}
 
@@ -152,6 +201,10 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 		StoragePath:   storagePath,
 		Name:          opts.Name,
 		Description:   opts.Description,
+		// Blocking session specific fields
+		BlockingCommand: opts.BlockingCommand,
+		BlockingArgs:    opts.BlockingArgs,
+		OutputConfig:    opts.OutputConfig,
 	}
 
 	// Save session info to file
@@ -170,8 +223,22 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 		}
 	}
 
-	// Create and cache session
-	sess := NewTmuxSession(info, m, m.tmuxAdapter, ws, agentConfig)
+	// Create and cache session based on type
+	var sess Session
+	var createErr error
+
+	switch sessionType {
+	case TypeTmux:
+		sess = NewTmuxSession(info, m, m.tmuxAdapter, ws, agentConfig)
+	case TypeBlocking:
+		sess, createErr = newBlockingSession(info, m, ws, agentConfig, m.logger)
+		if createErr != nil {
+			return nil, fmt.Errorf("failed to create blocking session: %w", createErr)
+		}
+	default:
+		return nil, fmt.Errorf("unsupported session type: %s", sessionType)
+	}
+
 	m.mu.Lock()
 	m.sessions[sessionID.String()] = sess
 	m.mu.Unlock()
@@ -362,6 +429,39 @@ func (m *Manager) createSessionFromInfo(ctx context.Context, info *Info) (Sessio
 		}
 
 		return NewTmuxSession(info, m, m.tmuxAdapter, ws, agentConfig), nil
+
+	case TypeBlocking:
+		// Try to get workspace for blocking session
+		var ws *workspace.Workspace
+		if m.workspaceManager != nil {
+			var err error
+			ws, err = m.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(info.WorkspaceID))
+			if err != nil {
+				// Workspace not found - mark session as orphaned
+				info.StatusState.Status = StatusOrphaned
+				info.Error = fmt.Sprintf("workspace not found: %s", info.WorkspaceID)
+				// Update the stored session info
+				if updateErr := m.saveSessionInfo(ctx, info); updateErr != nil {
+					m.logger.Warn("failed to update orphaned session info", "error", updateErr)
+				}
+				// Continue with nil workspace - session will be created in orphaned state
+				ws = nil
+			}
+		}
+
+		// Get agent configuration if available
+		var agentConfig *config.Agent
+		if m.agentManager != nil {
+			if agent, err := m.agentManager.GetAgent(info.AgentID); err == nil {
+				agentConfig = agent
+			}
+		}
+
+		sess, err := newBlockingSession(info, m, ws, agentConfig, m.logger)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create blocking session: %w", err)
+		}
+		return sess, nil
 
 	default:
 		return nil, fmt.Errorf("unsupported session type: %s", info.Type)

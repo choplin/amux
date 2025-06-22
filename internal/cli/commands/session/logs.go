@@ -70,14 +70,37 @@ func viewSessionLogs(cmd *cobra.Command, args []string) error {
 		return streamSessionLogs(sess)
 	}
 
-	// Type assert to TerminalSession
-	terminalSess, ok := sess.(session.TerminalSession)
-	if !ok {
-		return fmt.Errorf("session does not support terminal operations")
-	}
+	// Get output based on session type
+	var output []byte
 
-	// Get snapshot of output (0 = all lines for non-follow mode)
-	output, err := terminalSess.GetOutput(0)
+	info := sess.Info()
+	switch info.Type {
+	case session.TypeTmux:
+		// For tmux sessions, use TerminalSession interface
+		terminalSess, ok := sess.(session.TerminalSession)
+		if !ok {
+			return fmt.Errorf("tmux session does not support terminal operations")
+		}
+		output, err = terminalSess.GetOutput(0)
+
+	case session.TypeBlocking:
+		// For blocking sessions, we need to access the output differently
+		// For now, read from the output file if in file mode, or show error
+		if info.OutputConfig != nil && info.OutputConfig.Mode == session.OutputModeFile {
+			// Read from output file
+			outputPath := info.OutputConfig.FilePath
+			if outputPath == "" {
+				outputPath = fmt.Sprintf("%s/output.log", info.StoragePath)
+			}
+			output, err = os.ReadFile(outputPath)
+		} else {
+			// TODO: Add a way to get output from blocking sessions
+			return fmt.Errorf("viewing output for non-file mode blocking sessions is not yet implemented")
+		}
+
+	default:
+		return fmt.Errorf("unsupported session type: %s", info.Type)
+	}
 	if err != nil {
 		return fmt.Errorf("failed to get session output: %w", err)
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -36,6 +37,7 @@ func parseSessionURI(uri string) (string, error) {
 type sessionInfo struct {
 	ID          string              `json:"id"`
 	Index       string              `json:"index,omitempty"`
+	Type        session.Type        `json:"type"`
 	Name        string              `json:"name,omitempty"`
 	Description string              `json:"description,omitempty"`
 	WorkspaceID string              `json:"workspaceId"`
@@ -56,6 +58,7 @@ type sessionResourceURIs struct {
 type sessionDetail struct {
 	ID          string              `json:"id"`
 	Index       string              `json:"index,omitempty"`
+	Type        session.Type        `json:"type"`
 	Name        string              `json:"name,omitempty"`
 	Description string              `json:"description,omitempty"`
 	WorkspaceID string              `json:"workspaceId"`
@@ -128,6 +131,7 @@ func (s *ServerV2) handleSessionListResource(ctx context.Context, request mcp.Re
 		sessionInfo := sessionInfo{
 			ID:          info.ID,
 			Index:       info.Index,
+			Type:        info.Type,
 			Name:        info.Name,
 			Description: info.Description,
 			WorkspaceID: info.WorkspaceID,
@@ -196,6 +200,7 @@ func (s *ServerV2) handleSessionDetailResource(ctx context.Context, request mcp.
 	detail := sessionDetail{
 		ID:          info.ID,
 		Index:       info.Index,
+		Type:        info.Type,
 		Name:        info.Name,
 		Description: info.Description,
 		WorkspaceID: info.WorkspaceID,
@@ -255,33 +260,71 @@ func (s *ServerV2) handleSessionOutputResource(ctx context.Context, request mcp.
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
 
-	// Check if session is running
-	if !sess.Status().IsRunning() {
+	// Get output based on session type
+	info := sess.Info()
+	var output []byte
+	var outputErr error
+
+	switch info.Type {
+	case session.TypeTmux:
+		// Check if session is running
+		if !sess.Status().IsRunning() {
+			return []mcp.ResourceContents{
+				&mcp.TextResourceContents{
+					URI:      request.Params.URI,
+					MIMEType: "text/plain",
+					Text:     fmt.Sprintf("Session %s is not running (status: %s)", sessionID, sess.Status()),
+				},
+			}, nil
+		}
+
+		// Type assert to TerminalSession
+		terminalSess, ok := sess.(session.TerminalSession)
+		if !ok {
+			return []mcp.ResourceContents{
+				&mcp.TextResourceContents{
+					URI:      request.Params.URI,
+					MIMEType: "text/plain",
+					Text:     "Session does not support terminal operations",
+				},
+			}, nil
+		}
+
+		// Get output (0 = all lines for resource access)
+		output, outputErr = terminalSess.GetOutput(0)
+
+	case session.TypeBlocking:
+		// For blocking sessions, we need to access the output differently
+		if info.OutputConfig != nil && info.OutputConfig.Mode == session.OutputModeFile {
+			// Read from output file
+			outputPath := info.OutputConfig.FilePath
+			if outputPath == "" {
+				outputPath = fmt.Sprintf("%s/output.log", info.StoragePath)
+			}
+			output, outputErr = os.ReadFile(outputPath)
+		} else {
+			// TODO: Add a way to get output from buffer/circular modes
+			return []mcp.ResourceContents{
+				&mcp.TextResourceContents{
+					URI:      request.Params.URI,
+					MIMEType: "text/plain",
+					Text:     "Viewing output for non-file mode blocking sessions is not yet implemented",
+				},
+			}, nil
+		}
+
+	default:
 		return []mcp.ResourceContents{
 			&mcp.TextResourceContents{
 				URI:      request.Params.URI,
 				MIMEType: "text/plain",
-				Text:     fmt.Sprintf("Session %s is not running (status: %s)", sessionID, sess.Status()),
+				Text:     fmt.Sprintf("Unsupported session type: %s", info.Type),
 			},
 		}, nil
 	}
 
-	// Type assert to TerminalSession
-	terminalSess, ok := sess.(session.TerminalSession)
-	if !ok {
-		return []mcp.ResourceContents{
-			&mcp.TextResourceContents{
-				URI:      request.Params.URI,
-				MIMEType: "text/plain",
-				Text:     "Session does not support terminal operations",
-			},
-		}, nil
-	}
-
-	// Get output (0 = all lines for resource access)
-	output, err := terminalSess.GetOutput(0)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get session output: %w", err)
+	if outputErr != nil {
+		return nil, fmt.Errorf("failed to get session output: %w", outputErr)
 	}
 
 	return []mcp.ResourceContents{
