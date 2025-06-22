@@ -38,15 +38,6 @@ func NewServerV2(configManager *config.Manager, transport string, httpConfig *co
 		return nil, fmt.Errorf("failed to create workspace manager: %w", err)
 	}
 
-	// Trigger initial index reconciliation on startup
-	ctx := context.Background()
-
-	// Reconcile workspace indices
-	if _, err := workspaceManager.List(ctx, workspace.ListOptions{}); err != nil {
-		// Log but don't fail startup
-		fmt.Fprintf(os.Stderr, "[AMUX MCP] Warning: Failed to reconcile workspace indices: %v\n", err)
-	}
-
 	// Create MCP server
 
 	mcpServer := server.NewMCPServer(
