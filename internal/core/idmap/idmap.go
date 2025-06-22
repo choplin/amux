@@ -88,3 +88,15 @@ func (m *IDMapper) RemoveWorkspace(fullID string) error {
 func (m *IDMapper) RemoveSession(fullID string) error {
 	return m.indexManager.Release(index.EntityTypeSession, fullID)
 }
+
+// ReconcileWorkspaces removes index entries for workspaces that no longer exist
+// Returns the number of orphaned entries that were cleaned up
+func (m *IDMapper) ReconcileWorkspaces(existingIDs []string) (int, error) {
+	return m.indexManager.Reconcile(index.EntityTypeWorkspace, existingIDs)
+}
+
+// ReconcileSessions removes index entries for sessions that no longer exist
+// Returns the number of orphaned entries that were cleaned up
+func (m *IDMapper) ReconcileSessions(existingIDs []string) (int, error) {
+	return m.indexManager.Reconcile(index.EntityTypeSession, existingIDs)
+}

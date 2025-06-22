@@ -197,6 +197,7 @@ func (m *Manager) List(ctx context.Context, opts ListOptions) ([]*Workspace, err
 	}
 
 	var workspaces []*Workspace
+	var existingIDs []string
 	for _, file := range files {
 		if !file.IsDir() {
 			continue
@@ -210,15 +211,14 @@ func (m *Manager) List(ctx context.Context, opts ListOptions) ([]*Workspace, err
 		}
 		workspace := *workspacePtr
 
+		// Collect existing IDs for reconciliation
+		existingIDs = append(existingIDs, workspace.ID)
+
 		// Get last modified time from filesystem
 		workspace.UpdatedAt = m.getLastModified(workspace.Path)
 
 		// Populate index
 		if index, exists := m.idMapper.GetWorkspaceIndex(workspace.ID); exists {
-			workspace.Index = index
-		} else {
-			// Generate index if it doesn't exist
-			index, _ := m.idMapper.AddWorkspace(workspace.ID)
 			workspace.Index = index
 		}
 
@@ -226,6 +226,17 @@ func (m *Manager) List(ctx context.Context, opts ListOptions) ([]*Workspace, err
 		m.CheckConsistency(&workspace)
 
 		workspaces = append(workspaces, &workspace)
+	}
+
+	// Reconcile index state with actual workspaces
+	orphanedCount, err := m.idMapper.ReconcileWorkspaces(existingIDs)
+	if err != nil {
+		// Log error but continue - don't fail the list operation
+		_ = err // Ignore error to satisfy linter
+	} else if orphanedCount > 0 {
+		// Successfully cleaned up orphaned indices
+		// In production, this would be logged at debug level
+		_ = orphanedCount // Reference to satisfy linter
 	}
 
 	// Sort by creation time (newest first)

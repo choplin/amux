@@ -223,14 +223,14 @@ func (m *Manager) ListSessions(ctx context.Context) ([]Session, error) {
 	}
 
 	sessions := make([]Session, 0, len(infos))
+	existingIDs := make([]string, 0, len(infos))
 	for _, info := range infos {
+		// Collect existing IDs for reconciliation
+		existingIDs = append(existingIDs, info.ID)
+
 		// Populate short ID
 		if m.idMapper != nil {
 			if index, exists := m.idMapper.GetSessionIndex(info.ID); exists {
-				info.Index = index
-			} else {
-				// Generate index if it doesn't exist
-				index, _ := m.idMapper.AddSession(info.ID)
 				info.Index = index
 			}
 		}
@@ -258,6 +258,13 @@ func (m *Manager) ListSessions(ctx context.Context) ([]Session, error) {
 		m.mu.Unlock()
 
 		sessions = append(sessions, session)
+	}
+
+	// Reconcile index state with actual sessions
+	if m.idMapper != nil {
+		if orphanedCount, err := m.idMapper.ReconcileSessions(existingIDs); err == nil && orphanedCount > 0 {
+			m.logger.Debug("Cleaned up orphaned session indices", "count", orphanedCount)
+		}
 	}
 
 	return sessions, nil
