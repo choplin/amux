@@ -551,7 +551,6 @@ func (m *Manager) Load(ctx context.Context, id string) (*Info, error) {
 	return m.loadSessionInfo(ctx, id)
 }
 
-// List implements Store.List
 // ListByWorkspace lists all sessions in a specific workspace
 func (m *Manager) ListByWorkspace(ctx context.Context, workspaceID string) ([]Session, error) {
 	allSessions, err := m.ListSessions(ctx)
@@ -570,6 +569,7 @@ func (m *Manager) ListByWorkspace(ctx context.Context, workspaceID string) ([]Se
 	return sessions, nil
 }
 
+// List implements Store.List
 func (m *Manager) List(ctx context.Context) ([]*Info, error) {
 	return m.listSessionInfos(ctx)
 }

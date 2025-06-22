@@ -8,18 +8,18 @@ import (
 	"github.com/aki/amux/internal/core/workspace"
 )
 
-// SessionStopperAdapter implements workspace.SessionStopper interface
-type SessionStopperAdapter struct {
+// StopperAdapter implements workspace.SessionStopper interface
+type StopperAdapter struct {
 	manager *Manager
 }
 
 // NewSessionStopperAdapter creates a new adapter
-func NewSessionStopperAdapter(manager *Manager) *SessionStopperAdapter {
-	return &SessionStopperAdapter{manager: manager}
+func NewSessionStopperAdapter(manager *Manager) *StopperAdapter {
+	return &StopperAdapter{manager: manager}
 }
 
 // StopSessionsInWorkspace stops all sessions in a workspace
-func (s *SessionStopperAdapter) StopSessionsInWorkspace(ctx context.Context, workspaceID string) error {
+func (s *StopperAdapter) StopSessionsInWorkspace(ctx context.Context, workspaceID string) error {
 	sessions, err := s.manager.ListByWorkspace(ctx, workspaceID)
 	if err != nil {
 		return fmt.Errorf("failed to list sessions: %w", err)
@@ -40,7 +40,7 @@ func (s *SessionStopperAdapter) StopSessionsInWorkspace(ctx context.Context, wor
 }
 
 // ListSessionsInWorkspace lists all sessions in a workspace
-func (s *SessionStopperAdapter) ListSessionsInWorkspace(ctx context.Context, workspaceID string) ([]string, error) {
+func (s *StopperAdapter) ListSessionsInWorkspace(ctx context.Context, workspaceID string) ([]string, error) {
 	sessions, err := s.manager.ListByWorkspace(ctx, workspaceID)
 	if err != nil {
 		return nil, err

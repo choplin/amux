@@ -236,11 +236,12 @@ func PrintWorkspaceListWithHolders(entries []WorkspaceListEntry) {
 
 		// Format sessions column
 		var sessions string
-		if entry.HolderCount == 0 {
+		switch entry.HolderCount {
+		case 0:
 			sessions = SuccessStyle.Render("Available")
-		} else if entry.HolderCount == 1 {
+		case 1:
 			sessions = WarningStyle.Render("In use (1)")
-		} else {
+		default:
 			sessions = WarningStyle.Render(fmt.Sprintf("In use (%d)", entry.HolderCount))
 		}
 

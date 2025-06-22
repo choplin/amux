@@ -23,7 +23,7 @@ func (w *WorkspaceSessionChecker) IsSessionActive(sessionID string) (bool, error
 	sess, err := w.sessionManager.Get(context.Background(), ID(sessionID))
 	if err != nil {
 		// Session not found = not active
-		return false, nil
+		return false, nil //nolint:nilerr // Session not found means it's not active
 	}
 
 	// Check if session is in a running state
