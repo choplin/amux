@@ -139,6 +139,12 @@ func FormatDuration(d time.Duration) string {
 	return fmt.Sprintf("%dd", int(d.Hours()/24))
 }
 
+// WorkspaceListEntry contains workspace and its usage information
+type WorkspaceListEntry struct {
+	Workspace   *workspace.Workspace
+	HolderCount int
+}
+
 // PrintWorkspaceList displays a list of workspaces using a table
 func PrintWorkspaceList(workspaces []*workspace.Workspace) {
 	if len(workspaces) == 0 {
@@ -188,6 +194,62 @@ func PrintWorkspaceList(workspaces []*workspace.Workspace) {
 func PrintWorkspaceDetails(w *workspace.Workspace) {
 	OutputLine("%s Workspace Details\n", WorkspaceIcon)
 	PrintWorkspace(w)
+}
+
+// PrintWorkspaceListWithHolders displays a list of workspaces with holder information
+func PrintWorkspaceListWithHolders(entries []WorkspaceListEntry) {
+	if len(entries) == 0 {
+		Info("No workspaces found")
+		return
+	}
+
+	// Create table with sessions column
+	tbl := NewTable("ID", "NAME", "BRANCH", "AGE", "STATUS", "SESSIONS", "DESCRIPTION")
+
+	// Add rows
+	for _, entry := range entries {
+		w := entry.Workspace
+		id := w.ID
+		if w.Index != "" {
+			id = w.Index
+		}
+		age := FormatDuration(time.Since(w.UpdatedAt))
+		description := w.Description
+		if description == "" {
+			description = "-"
+		}
+
+		// Format status with appropriate icon
+		var status string
+		switch w.Status {
+		case workspace.StatusConsistent:
+			status = SuccessStyle.Render("✓ ok")
+		case workspace.StatusFolderMissing:
+			status = WarningStyle.Render("⚠ folder missing")
+		case workspace.StatusWorktreeMissing:
+			status = WarningStyle.Render("⚠ worktree missing")
+		case workspace.StatusOrphaned:
+			status = ErrorStyle.Render("✗ orphaned")
+		default:
+			status = DimStyle.Render("unknown")
+		}
+
+		// Format sessions column
+		var sessions string
+		if entry.HolderCount == 0 {
+			sessions = SuccessStyle.Render("Available")
+		} else if entry.HolderCount == 1 {
+			sessions = WarningStyle.Render("In use (1)")
+		} else {
+			sessions = WarningStyle.Render(fmt.Sprintf("In use (%d)", entry.HolderCount))
+		}
+
+		tbl.AddRow(id, w.Name, w.Branch, age, status, sessions, description)
+	}
+
+	// Print with header
+	PrintSectionHeader(WorkspaceIcon, "Workspaces", len(entries))
+	tbl.Print()
 }
 
 // FormatTime formats a time for display

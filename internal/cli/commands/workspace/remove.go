@@ -78,7 +78,20 @@ func runRemoveWorkspace(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	if err := manager.Remove(cmd.Context(), workspace.Identifier(ws.ID)); err != nil {
+	// Try to use RemoveWithOptions
+	opts := workspace.RemoveOptions{
+		Force: removeForce,
+	}
+	if err := manager.RemoveWithOptions(cmd.Context(), workspace.Identifier(ws.ID), opts); err != nil {
+		// Check if it's a workspace in use error
+		if inUseErr, ok := err.(*workspace.ErrWorkspaceInUse); ok {
+			ui.Error("Cannot remove workspace - currently in use by:")
+			for _, detail := range inUseErr.GetHolderDetails() {
+				ui.OutputLine("  - %s", detail)
+			}
+			ui.OutputLine("\nUse --force to stop all sessions and remove anyway")
+			return fmt.Errorf("workspace in use")
+		}
 		return fmt.Errorf("failed to remove workspace: %w", err)
 	}
 

@@ -56,7 +56,7 @@ func init() {
 	pruneWorkspaceCmd.Flags().BoolVar(&pruneDryRun, "dry-run", false, "Show what would be removed without removing")
 
 	// Remove command flags
-	removeWorkspaceCmd.Flags().BoolVarP(&removeForce, "force", "f", false, "Force removal without confirmation")
+	removeWorkspaceCmd.Flags().BoolVarP(&removeForce, "force", "f", false, "Force removal even if workspace is in use (stops all sessions)")
 	removeWorkspaceCmd.Flags().BoolVar(&removeNoHooks, "no-hooks", false, "Skip running hooks for this operation")
 }
 

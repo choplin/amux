@@ -25,6 +25,7 @@ type Manager struct {
 	workspacesDir string
 	idMapper      *idmap.IDMapper
 	fm            *filemanager.Manager[Workspace]
+	semaphore     *SemaphoreComponents // Semaphore-related components
 }
 
 // NewManager creates a new workspace manager

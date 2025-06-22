@@ -266,6 +266,12 @@ func (s *tmuxSessionImpl) Stop(ctx context.Context) error {
 		return fmt.Errorf("failed to save session: %w", err)
 	}
 
+	// Release workspace semaphore
+	if err := s.manager.releaseSemaphore(ctx, s.info.ID, s.info.WorkspaceID); err != nil {
+		// Log error but don't fail the stop operation
+		s.logger.Warn("failed to release workspace semaphore", "error", err, "session_id", s.info.ID)
+	}
+
 	return nil
 }
 

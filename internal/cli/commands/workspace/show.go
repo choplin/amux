@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -37,6 +38,21 @@ func runShowWorkspace(cmd *cobra.Command, args []string) error {
 
 	// Print detailed workspace information
 	ui.PrintWorkspaceDetails(ws)
+
+	// Get and display semaphore information
+	holders, err := manager.GetSemaphoreHolders(ws.ID)
+	if err == nil && len(holders) > 0 {
+		ui.OutputLine("\n%s Active Sessions (%d):\n", ui.InfoIcon, len(holders))
+		for _, holder := range holders {
+			description := holder.Description
+			if description == "" {
+				description = fmt.Sprintf("Session %s", holder.SessionID)
+			}
+			ui.OutputLine("  - %s: %s (%s ago)", holder.ID, description, ui.FormatDuration(time.Since(holder.Timestamp)))
+		}
+	} else {
+		ui.OutputLine("\n%s Status: Available (no active sessions)", ui.SuccessIcon)
+	}
 
 	return nil
 }

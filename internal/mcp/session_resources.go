@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -312,6 +313,15 @@ func (s *ServerV2) createSessionManager() (*session.Manager, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session manager: %w", err)
 	}
+
+	// Initialize semaphore support
+	// Create adapters
+	sessionChecker := session.NewWorkspaceSessionChecker(manager)
+	sessionStopper := session.NewSessionStopperAdapter(manager)
+
+	// Initialize with default logger (could be enhanced to use configurable logger)
+	logger := slog.Default()
+	workspaceManager.InitializeSemaphore(sessionChecker, sessionStopper, logger)
 
 	return manager, nil
 }

@@ -170,6 +170,13 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 		}
 	}
 
+	// Acquire workspace semaphore
+	if err := m.acquireSemaphore(ctx, info); err != nil {
+		// Clean up on failure
+		_ = m.fileManager.Delete(ctx, sessionID.String())
+		return nil, fmt.Errorf("failed to acquire workspace semaphore: %w", err)
+	}
+
 	// Create and cache session
 	sess := NewTmuxSession(info, m, m.tmuxAdapter, ws, agentConfig)
 	m.mu.Lock()
@@ -545,6 +552,24 @@ func (m *Manager) Load(ctx context.Context, id string) (*Info, error) {
 }
 
 // List implements Store.List
+// ListByWorkspace lists all sessions in a specific workspace
+func (m *Manager) ListByWorkspace(ctx context.Context, workspaceID string) ([]Session, error) {
+	allSessions, err := m.ListSessions(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var sessions []Session
+	for _, sess := range allSessions {
+		info := sess.Info()
+		if info.WorkspaceID == workspaceID {
+			sessions = append(sessions, sess)
+		}
+	}
+
+	return sessions, nil
+}
+
 func (m *Manager) List(ctx context.Context) ([]*Info, error) {
 	return m.listSessionInfos(ctx)
 }

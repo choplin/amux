@@ -41,6 +41,20 @@ func runListWorkspace(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list workspaces: %w", err)
 	}
 
+	// Get semaphore information for each workspace
+	entries := make([]ui.WorkspaceListEntry, len(workspaces))
+	for i, ws := range workspaces {
+		holders, err := manager.GetSemaphoreHolders(ws.ID)
+		holderCount := 0
+		if err == nil {
+			holderCount = len(holders)
+		}
+		entries[i] = ui.WorkspaceListEntry{
+			Workspace:   ws,
+			HolderCount: holderCount,
+		}
+	}
+
 	// Handle JSON output
 	if ui.GlobalFormatter.IsJSON() {
 		return ui.GlobalFormatter.Output(workspaces)
@@ -60,10 +74,11 @@ func runListWorkspace(cmd *cobra.Command, args []string) error {
 			if ws.Index != "" {
 				id = ws.Index
 			}
+
 			ui.PrintTSV([][]string{{ws.Name, id, ws.Branch, ws.Status.String(), ws.Path, description}})
 		}
 	} else {
-		ui.PrintWorkspaceList(workspaces)
+		ui.PrintWorkspaceListWithHolders(entries)
 	}
 
 	return nil
