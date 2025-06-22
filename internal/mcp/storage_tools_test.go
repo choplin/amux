@@ -124,7 +124,7 @@ func TestSeparatedStorageTools(t *testing.T) {
 		}
 
 		// Create test session
-		sessionManager, err := server.createSessionManager()
+		sessionManager, err := server.createSessionManager() //nolint:contextcheck // Manager creation doesn't need context
 		require.NoError(t, err)
 
 		opts := session.Options{
