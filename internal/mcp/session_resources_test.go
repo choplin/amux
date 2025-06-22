@@ -107,7 +107,7 @@ func TestSessionResources(t *testing.T) {
 		workspaceID := enhancedResult.Result.ID
 
 		// Create session with name and description using direct manager call
-		sessionManager, err := testServer.createSessionManager() //nolint:contextcheck // Manager creation doesn't need context
+		sessionManager, err := testServer.createSessionManager()
 		if err != nil {
 			t.Fatalf("failed to create session manager: %v", err)
 		}

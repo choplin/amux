@@ -92,7 +92,7 @@ func TestSessionRun(t *testing.T) {
 
 		// Clean up - stop the session
 		sessionID := response["id"].(string)
-		sessionManager, _ := testServer.createSessionManager() //nolint:contextcheck // Manager creation doesn't need context
+		sessionManager, _ := testServer.createSessionManager()
 		sess, _ := sessionManager.ResolveSession(context.Background(), session.Identifier(sessionID))
 		if sess != nil {
 			_ = sess.Stop(context.Background())
@@ -153,7 +153,7 @@ func TestSessionRun(t *testing.T) {
 
 		// Clean up - stop the session
 		sessionID := response["id"].(string)
-		sessionManager, _ := testServer.createSessionManager() //nolint:contextcheck // Manager creation doesn't need context
+		sessionManager, _ := testServer.createSessionManager()
 		sess, _ := sessionManager.ResolveSession(context.Background(), session.Identifier(sessionID))
 		if sess != nil {
 			_ = sess.Stop(context.Background())
@@ -214,7 +214,7 @@ func TestSessionStop(t *testing.T) {
 	}
 
 	// Create session manager and start a session
-	sessionManager, err := testServer.createSessionManager() //nolint:contextcheck // Manager creation doesn't need context
+	sessionManager, err := testServer.createSessionManager()
 	if err != nil {
 		t.Fatalf("failed to create session manager: %v", err)
 	}
@@ -296,7 +296,7 @@ func TestSessionSendInput(t *testing.T) {
 	}
 
 	// Create session manager and start a session
-	sessionManager, err := testServer.createSessionManager() //nolint:contextcheck // Manager creation doesn't need context
+	sessionManager, err := testServer.createSessionManager()
 	if err != nil {
 		t.Fatalf("failed to create session manager: %v", err)
 	}
