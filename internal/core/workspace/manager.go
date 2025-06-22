@@ -224,10 +224,6 @@ func (m *Manager) List(ctx context.Context, opts ListOptions) ([]*Workspace, err
 		// Populate index
 		if index, exists := m.idMapper.GetWorkspaceIndex(workspace.ID); exists {
 			workspace.Index = index
-		} else {
-			// Generate index if it doesn't exist
-			index, _ := m.idMapper.AddWorkspace(workspace.ID)
-			workspace.Index = index
 		}
 
 		// Check consistency status

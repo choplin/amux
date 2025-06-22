@@ -238,10 +238,6 @@ func (m *Manager) ListSessions(ctx context.Context) ([]Session, error) {
 		if m.idMapper != nil {
 			if index, exists := m.idMapper.GetSessionIndex(info.ID); exists {
 				info.Index = index
-			} else {
-				// Generate index if it doesn't exist
-				index, _ := m.idMapper.AddSession(info.ID)
-				info.Index = index
 			}
 		}
 
