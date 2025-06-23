@@ -30,9 +30,9 @@ type blockingSessionImpl struct {
 	// Blocking-specific fields
 	cmd          *exec.Cmd
 	outputConfig *OutputConfig
-	outputBuffer *bytes.Buffer   // For buffer mode
+	outputBuffer *bytes.Buffer   // For memory mode
 	outputFile   *os.File        // For file mode
-	circularBuf  *circularBuffer // For circular mode
+	circularBuf  *circularBuffer // For streaming mode
 	bufferFull   bool
 	wasStopped   bool
 	startTime    time.Time
@@ -272,7 +272,7 @@ func (s *blockingSessionImpl) Stop(ctx context.Context) error {
 
 func (s *blockingSessionImpl) setupOutputCapture() error {
 	switch s.outputConfig.Mode {
-	case OutputModeBuffer:
+	case OutputModeMemory:
 		s.outputBuffer = bytes.NewBuffer(nil)
 
 	case OutputModeFile:
@@ -290,7 +290,7 @@ func (s *blockingSessionImpl) setupOutputCapture() error {
 		}
 		s.outputFile = file
 
-	case OutputModeCircular:
+	case OutputModeStreaming:
 		s.circularBuf = newCircularBuffer(s.outputConfig.BufferSize)
 	}
 
@@ -307,7 +307,7 @@ func (s *blockingSessionImpl) captureOutputMultiplexed(stdout, stderr io.Reader)
 		if n > 0 {
 			s.outputMu.Lock()
 			switch s.outputConfig.Mode {
-			case OutputModeBuffer:
+			case OutputModeMemory:
 				if int64(s.outputBuffer.Len()+n) > s.outputConfig.BufferSize {
 					s.bufferFull = true
 					s.outputMu.Unlock()
@@ -320,7 +320,7 @@ func (s *blockingSessionImpl) captureOutputMultiplexed(stdout, stderr io.Reader)
 					s.logger.Error("Failed to write to output file", "error", err)
 				}
 
-			case OutputModeCircular:
+			case OutputModeStreaming:
 				_, _ = s.circularBuf.Write(buf[:n])
 			}
 			s.outputMu.Unlock()
@@ -392,7 +392,7 @@ func (s *blockingSessionImpl) GetOutput(maxLines int) ([]byte, error) {
 	defer s.outputMu.Unlock()
 
 	switch s.outputConfig.Mode {
-	case OutputModeBuffer:
+	case OutputModeMemory:
 		if s.outputBuffer == nil {
 			return nil, fmt.Errorf("output buffer not initialized")
 		}
@@ -411,7 +411,7 @@ func (s *blockingSessionImpl) GetOutput(maxLines int) ([]byte, error) {
 		// For file mode, read last N lines
 		return readLastLines(s.outputConfig.FilePath, maxLines)
 
-	case OutputModeCircular:
+	case OutputModeStreaming:
 		if s.circularBuf == nil {
 			return nil, fmt.Errorf("circular buffer not initialized")
 		}

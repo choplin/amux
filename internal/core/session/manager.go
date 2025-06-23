@@ -185,12 +185,14 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 						}
 					}
 
-					outputMode := OutputModeBuffer
+					outputMode := OutputModeMemory
 					switch blockingParams.Output.Mode {
 					case "file":
 						outputMode = OutputModeFile
-					case "circular":
-						outputMode = OutputModeCircular
+					case "streaming", "circular": // Support old name for backward compatibility
+						outputMode = OutputModeStreaming
+					case "memory", "buffer": // Support old name for backward compatibility
+						outputMode = OutputModeMemory
 					}
 
 					opts.OutputConfig = &OutputConfig{

@@ -101,25 +101,25 @@ type StatusState struct {
 type OutputMode string
 
 const (
-	// OutputModeBuffer captures output in memory with size limit
-	OutputModeBuffer OutputMode = "buffer"
+	// OutputModeMemory captures output in memory with size limit
+	OutputModeMemory OutputMode = "memory"
 	// OutputModeFile captures output to a file with no size limit
 	OutputModeFile OutputMode = "file"
-	// OutputModeCircular captures output in a circular buffer keeping only recent data
-	OutputModeCircular OutputMode = "circular"
+	// OutputModeStreaming captures output in a ring buffer keeping only recent data
+	OutputModeStreaming OutputMode = "streaming"
 )
 
 // OutputConfig configures how session output is captured
 type OutputConfig struct {
 	Mode       OutputMode `yaml:"mode"`
-	BufferSize int64      `yaml:"bufferSize,omitempty"` // For buffer/circular modes (bytes)
+	BufferSize int64      `yaml:"bufferSize,omitempty"` // For memory/streaming modes (bytes)
 	FilePath   string     `yaml:"filePath,omitempty"`   // For file mode (auto-generated if empty)
 }
 
 // GetDefaultOutputConfig returns the default output configuration
 func GetDefaultOutputConfig() *OutputConfig {
 	return &OutputConfig{
-		Mode:       OutputModeBuffer,
+		Mode:       OutputModeMemory,
 		BufferSize: 10 * 1024 * 1024, // 10MB
 	}
 }
