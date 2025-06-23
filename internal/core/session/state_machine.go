@@ -161,7 +161,7 @@ func (sm *StateMachine) TransitionTo(ctx context.Context, newState Status) error
 		return fmt.Errorf("failed to save state: %w", err)
 	}
 
-	sm.logger.Info("state transitioned",
+	sm.logger.Debug("state transitioned",
 		"session", sm.sessionID,
 		"from", current.State,
 		"to", newState)

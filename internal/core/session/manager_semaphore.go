@@ -64,7 +64,7 @@ func (m *Manager) acquireSemaphore(ctx context.Context, info *Info) error {
 
 	// Debug: Log that we're attempting to acquire semaphore
 	if m.logger != nil {
-		m.logger.Info("Acquiring semaphore (deprecated)", "sessionID", info.ID, "workspaceID", info.WorkspaceID)
+		m.logger.Debug("Acquiring semaphore (deprecated)", "sessionID", info.ID, "workspaceID", info.WorkspaceID)
 	}
 
 	holder := workspace.Holder{

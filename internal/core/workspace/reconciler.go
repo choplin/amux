@@ -44,7 +44,7 @@ func (r *SemaphoreReconciler) ReconcileWorkspace(workspaceID string) error {
 		data.Holders = validHolders
 
 		if removedCount > 0 {
-			r.logger.Info("reconciled workspace semaphore",
+			r.logger.Debug("reconciled workspace semaphore",
 				"workspace_id", workspaceID,
 				"removed_count", removedCount,
 				"remaining_count", len(validHolders),

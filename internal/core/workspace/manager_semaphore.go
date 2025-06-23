@@ -42,7 +42,7 @@ func (m *Manager) InitializeSemaphore(sessionChecker SessionChecker, sessionStop
 
 	// Debug log
 	if logger != nil {
-		logger.Info("Semaphore initialized", "workspacesDir", m.workspacesDir)
+		logger.Debug("Semaphore initialized", "workspacesDir", m.workspacesDir)
 	}
 }
 

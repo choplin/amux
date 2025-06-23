@@ -56,7 +56,7 @@ func (h *SemaphoreHandler) HandleStateChange(ctx context.Context, from, to Statu
 			return fmt.Errorf("failed to acquire semaphore: %w", err)
 		}
 
-		h.logger.Info("semaphore acquired",
+		h.logger.Debug("semaphore acquired",
 			"session", sessionID,
 			"workspace", workspaceID)
 
@@ -69,7 +69,7 @@ func (h *SemaphoreHandler) HandleStateChange(ctx context.Context, from, to Statu
 				"error", err)
 			// Don't return error - we want to proceed even if release fails
 		} else {
-			h.logger.Info("semaphore released",
+			h.logger.Debug("semaphore released",
 				"session", sessionID,
 				"workspace", workspaceID)
 		}
