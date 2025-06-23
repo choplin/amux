@@ -120,6 +120,11 @@ func (m *Manager) GetDefaultCommand(agentID string) (string, error) {
 		if err == nil && params.Command != "" {
 			return params.Command, nil
 		}
+	case config.AgentTypeBlocking:
+		params, err := agent.GetBlockingParams()
+		if err == nil && params.Command != "" {
+			return params.Command, nil
+		}
 	case config.AgentTypeClaudeCode, config.AgentTypeAPI:
 		// Future: handle other types
 	}

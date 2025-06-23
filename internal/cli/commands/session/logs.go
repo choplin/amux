@@ -84,18 +84,22 @@ func viewSessionLogs(cmd *cobra.Command, args []string) error {
 		output, err = terminalSess.GetOutput(0)
 
 	case session.TypeBlocking:
-		// For blocking sessions, we need to access the output differently
-		// For now, read from the output file if in file mode, or show error
-		if info.OutputConfig != nil && info.OutputConfig.Mode == session.OutputModeFile {
-			// Read from output file
-			outputPath := info.OutputConfig.FilePath
-			if outputPath == "" {
-				outputPath = fmt.Sprintf("%s/output.log", info.StoragePath)
-			}
-			output, err = os.ReadFile(outputPath)
+		// For blocking sessions, try to get output through the session interface
+		// First check if it implements an output getter interface
+		if outputGetter, ok := sess.(interface{ GetOutput(int) ([]byte, error) }); ok {
+			output, err = outputGetter.GetOutput(0) // 0 means get all lines
 		} else {
-			// TODO: Add a way to get output from blocking sessions
-			return fmt.Errorf("viewing output for non-file mode blocking sessions is not yet implemented")
+			// Fallback to reading from file if in file mode
+			if info.OutputConfig != nil && info.OutputConfig.Mode == session.OutputModeFile {
+				// Read from output file
+				outputPath := info.OutputConfig.FilePath
+				if outputPath == "" {
+					outputPath = fmt.Sprintf("%s/output.log", info.StoragePath)
+				}
+				output, err = os.ReadFile(outputPath)
+			} else {
+				return fmt.Errorf("session does not support output retrieval")
+			}
 		}
 
 	default:

@@ -199,7 +199,7 @@ func (s *blockingSessionImpl) Start(ctx context.Context) error {
 	go s.captureOutputMultiplexed(stdout, stderr)
 
 	// Start a goroutine to wait for process completion
-	go s.waitForCompletion()
+	go s.waitForCompletion() //nolint:contextcheck // Process lifetime managed by cmd.Wait
 
 	s.logger.Info("Started blocking session",
 		"id", s.info.ID,
@@ -232,7 +232,7 @@ func (s *blockingSessionImpl) Stop(ctx context.Context) error {
 	// Wait for up to 5 seconds for graceful shutdown
 	done := make(chan struct{})
 	go func() {
-		s.cmd.Wait()
+		_ = s.cmd.Wait()
 		close(done)
 	}()
 
@@ -321,7 +321,7 @@ func (s *blockingSessionImpl) captureOutputMultiplexed(stdout, stderr io.Reader)
 				}
 
 			case OutputModeCircular:
-				s.circularBuf.Write(buf[:n])
+				_, _ = s.circularBuf.Write(buf[:n])
 			}
 			s.outputMu.Unlock()
 		}
@@ -337,7 +337,7 @@ func (s *blockingSessionImpl) captureOutputMultiplexed(stdout, stderr io.Reader)
 
 func (s *blockingSessionImpl) cleanupOutput() {
 	if s.outputFile != nil {
-		s.outputFile.Close()
+		_ = s.outputFile.Close()
 		s.outputFile = nil
 	}
 }

@@ -218,7 +218,9 @@ type TerminalSession interface {
 	UpdateStatus(ctx context.Context) error
 }
 
-// SessionManager manages session operations
+// SessionManager is an interface for session management operations
+//
+//nolint:revive // Interface name is established and changing would break compatibility
 type SessionManager interface {
 	// Save saves session info to storage
 	Save(ctx context.Context, info *Info) error

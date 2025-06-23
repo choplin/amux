@@ -85,10 +85,35 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 		return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 	}
 
-	// Set default session type if not specified
+	// Get agent configuration first to determine session type
+	var agentConfig *config.Agent
+	if m.agentManager != nil && opts.AgentID != "" {
+		if agent, err := m.agentManager.GetAgent(opts.AgentID); err == nil {
+			agentConfig = agent
+		}
+	}
+
+	// Determine session type
 	sessionType := opts.Type
 	if sessionType == "" {
-		sessionType = TypeTmux
+		// If not explicitly specified, try to determine from agent
+		if agentConfig != nil {
+			// Map agent type to session type
+			switch agentConfig.Type {
+			case config.AgentTypeTmux:
+				sessionType = TypeTmux
+			case config.AgentTypeBlocking:
+				sessionType = TypeBlocking
+			case config.AgentTypeClaudeCode, config.AgentTypeAPI:
+				// Future: map these to appropriate session types
+				sessionType = TypeTmux // Default fallback
+			default:
+				sessionType = TypeTmux // Default fallback
+			}
+		} else {
+			// Default to tmux if agent not found
+			sessionType = TypeTmux
+		}
 	}
 
 	// Validate session type
@@ -110,14 +135,15 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 	}
 
 	// Set defaults based on session type
-	if sessionType == TypeTmux {
+	switch sessionType {
+	case TypeTmux:
 		if opts.Command == "" {
 			opts.Command = "bash"
 		}
 		if opts.AgentID == "" {
 			opts.AgentID = "default"
 		}
-	} else if sessionType == TypeBlocking {
+	case TypeBlocking:
 		// For blocking sessions, command comes from BlockingCommand
 		if opts.BlockingCommand == "" {
 			return nil, fmt.Errorf("blocking command is required for blocking sessions")
@@ -127,48 +153,50 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 		}
 	}
 
-	// Get agent configuration if available
-	var agentConfig *config.Agent
-	if m.agentManager != nil {
+	// Re-fetch agent configuration if not already loaded
+	if agentConfig == nil && m.agentManager != nil {
 		if agent, err := m.agentManager.GetAgent(opts.AgentID); err == nil {
 			agentConfig = agent
+		}
+	}
 
-			// If agent type doesn't match session type, warn but continue
-			if agentConfig.Type != config.AgentType(sessionType) {
-				m.logger.Warn("Agent type mismatch",
-					"agent", opts.AgentID,
-					"agentType", agentConfig.Type,
-					"sessionType", sessionType)
-			}
+	// Check if agent type matches session type
+	if agentConfig != nil {
+		// If agent type doesn't match session type, warn but continue
+		if agentConfig.Type != config.AgentType(sessionType) {
+			m.logger.Warn("Agent type mismatch",
+				"agent", opts.AgentID,
+				"agentType", agentConfig.Type,
+				"sessionType", sessionType)
+		}
 
-			// For blocking sessions, extract parameters from agent if not provided
-			if sessionType == TypeBlocking && opts.BlockingCommand == "" {
-				if blockingParams, err := agentConfig.GetBlockingParams(); err == nil {
-					opts.BlockingCommand = blockingParams.Command
-					opts.BlockingArgs = blockingParams.Args
+		// For blocking sessions, extract parameters from agent if not provided
+		if sessionType == TypeBlocking && opts.BlockingCommand == "" {
+			if blockingParams, err := agentConfig.GetBlockingParams(); err == nil {
+				opts.BlockingCommand = blockingParams.Command
+				opts.BlockingArgs = blockingParams.Args
 
-					// Convert output config if not provided
-					if opts.OutputConfig == nil && blockingParams.Output.Mode != "" {
-						bufferSize := int64(10 * 1024 * 1024) // Default 10MB
-						if blockingParams.Output.BufferSize != "" {
-							if size, err := config.ParseBufferSize(blockingParams.Output.BufferSize); err == nil {
-								bufferSize = size
-							}
+				// Convert output config if not provided
+				if opts.OutputConfig == nil && blockingParams.Output.Mode != "" {
+					bufferSize := int64(10 * 1024 * 1024) // Default 10MB
+					if blockingParams.Output.BufferSize != "" {
+						if size, err := config.ParseBufferSize(blockingParams.Output.BufferSize); err == nil {
+							bufferSize = size
 						}
+					}
 
-						outputMode := OutputModeBuffer
-						switch blockingParams.Output.Mode {
-						case "file":
-							outputMode = OutputModeFile
-						case "circular":
-							outputMode = OutputModeCircular
-						}
+					outputMode := OutputModeBuffer
+					switch blockingParams.Output.Mode {
+					case "file":
+						outputMode = OutputModeFile
+					case "circular":
+						outputMode = OutputModeCircular
+					}
 
-						opts.OutputConfig = &OutputConfig{
-							Mode:       outputMode,
-							BufferSize: bufferSize,
-							FilePath:   blockingParams.Output.FilePath,
-						}
+					opts.OutputConfig = &OutputConfig{
+						Mode:       outputMode,
+						BufferSize: bufferSize,
+						FilePath:   blockingParams.Output.FilePath,
 					}
 				}
 			}

@@ -213,7 +213,7 @@ func ParseBufferSize(size string) (int64, error) {
 	}
 
 	// Convert to bytes based on unit
-	var multiplier float64 = 1
+	var multiplier float64
 	switch unit {
 	case "B", "":
 		multiplier = 1

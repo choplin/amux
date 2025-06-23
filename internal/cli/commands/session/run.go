@@ -162,6 +162,15 @@ func runSession(cmd *cobra.Command, args []string) error {
 		Description:   runSessionDescription,
 	}
 
+	// For blocking sessions, set blocking-specific fields
+	if sessionType == session.TypeBlocking && agentConfig != nil {
+		if blockingParams, err := agentConfig.GetBlockingParams(); err == nil {
+			opts.BlockingCommand = blockingParams.Command
+			opts.BlockingArgs = blockingParams.Args
+			// Output config will be handled by the manager
+		}
+	}
+
 	sess, err := sessionManager.CreateSession(cmd.Context(), opts)
 	if err != nil {
 		return fmt.Errorf("failed to create session: %w", err)
