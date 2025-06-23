@@ -73,9 +73,11 @@ func runSession(cmd *cobra.Command, args []string) error {
 
 	// Create managers
 	configManager := config.NewManager(projectRoot)
-	wsManager, err := workspace.NewManager(configManager)
+
+	// Create both managers together with proper initialization
+	wsManager, sessionManager, err := createManagers(configManager)
 	if err != nil {
-		return fmt.Errorf("failed to create workspace manager: %w", err)
+		return err
 	}
 
 	// Generate session ID upfront
@@ -127,12 +129,6 @@ func runSession(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("invalid environment variable format: %s (expected KEY=VALUE)", envVar)
 		}
 		env[parts[0]] = parts[1]
-	}
-
-	// Create session manager
-	sessionManager, err := createSessionManager(configManager, wsManager)
-	if err != nil {
-		return err
 	}
 
 	// Determine session type from agent config

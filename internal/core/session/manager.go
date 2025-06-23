@@ -170,15 +170,29 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 		}
 	}
 
-	// Acquire workspace semaphore
-	if err := m.acquireSemaphore(ctx, info); err != nil {
+	// Create state machine for the session
+	stateMachine := NewStateMachine(
+		sessionID.String(),
+		ws.ID,
+		filepath.Join(m.sessionsDir, sessionID.String()),
+		m.logger,
+	)
+
+	// Add semaphore handler
+	if m.workspaceManager != nil {
+		semaphoreHandler := NewSemaphoreHandler(m.workspaceManager, m.logger)
+		stateMachine.AddStateChangeHandler(semaphoreHandler.HandleStateChange)
+	}
+
+	// Transition to starting state (which will acquire semaphore)
+	if err := stateMachine.TransitionTo(ctx, StatusStarting); err != nil {
 		// Clean up on failure
 		_ = m.fileManager.Delete(ctx, sessionID.String())
-		return nil, fmt.Errorf("failed to acquire workspace semaphore: %w", err)
+		return nil, fmt.Errorf("failed to start session: %w", err)
 	}
 
 	// Create and cache session
-	sess := NewTmuxSession(info, m, m.tmuxAdapter, ws, agentConfig)
+	sess := NewTmuxSession(info, m, m.tmuxAdapter, ws, agentConfig, WithStateMachine(stateMachine))
 	m.mu.Lock()
 	m.sessions[sessionID.String()] = sess
 	m.mu.Unlock()

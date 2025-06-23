@@ -13,7 +13,6 @@ import (
 	"github.com/aki/amux/internal/core/logger"
 	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/terminal"
-	"github.com/aki/amux/internal/core/workspace"
 )
 
 func attachCmd() *cobra.Command {
@@ -40,13 +39,9 @@ func attachSession(cmd *cobra.Command, args []string) error {
 
 	// Create managers
 	configManager := config.NewManager(projectRoot)
-	wsManager, err := workspace.NewManager(configManager)
-	if err != nil {
-		return fmt.Errorf("failed to create workspace manager: %w", err)
-	}
 
-	// Create session manager
-	sessionManager, err := createSessionManager(configManager, wsManager)
+	// Create both managers together with proper initialization
+	_, sessionManager, err := createManagers(configManager)
 	if err != nil {
 		return err
 	}

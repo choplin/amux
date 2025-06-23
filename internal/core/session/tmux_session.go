@@ -28,6 +28,7 @@ type tmuxSessionImpl struct {
 	agentConfig    *config.Agent
 	logger         logger.Logger
 	processChecker process.Checker
+	stateMachine   *StateMachine
 	mu             sync.RWMutex
 }
 
@@ -51,6 +52,13 @@ func WithTmuxLogger(log logger.Logger) TmuxSessionOption {
 func WithProcessChecker(checker process.Checker) TmuxSessionOption {
 	return func(s *tmuxSessionImpl) {
 		s.processChecker = checker
+	}
+}
+
+// WithStateMachine sets the state machine for the session
+func WithStateMachine(sm *StateMachine) TmuxSessionOption {
+	return func(s *tmuxSessionImpl) {
+		s.stateMachine = sm
 	}
 }
 
@@ -130,13 +138,22 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.info.StatusState.Status.IsRunning() {
-		return ErrSessionAlreadyRunning{ID: s.info.ID}
-	}
+	// Use state machine if available
+	if s.stateMachine != nil {
+		// The state machine will handle validation and state transitions
+		if err := s.stateMachine.TransitionTo(ctx, StatusRunning); err != nil {
+			return err
+		}
+	} else {
+		// Legacy behavior for backward compatibility
+		if s.info.StatusState.Status.IsRunning() {
+			return ErrSessionAlreadyRunning{ID: s.info.ID}
+		}
 
-	// Cannot start orphaned session
-	if s.info.StatusState.Status == StatusOrphaned {
-		return fmt.Errorf("cannot start orphaned session: %s", s.info.Error)
+		// Cannot start orphaned session
+		if s.info.StatusState.Status == StatusOrphaned {
+			return fmt.Errorf("cannot start orphaned session: %s", s.info.Error)
+		}
 	}
 
 	// Cannot start session without workspace
@@ -244,6 +261,39 @@ func (s *tmuxSessionImpl) Stop(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	// Use state machine if available
+	if s.stateMachine != nil {
+		// Transition to stopping state
+		if err := s.stateMachine.TransitionTo(ctx, StatusStopping); err != nil {
+			return err
+		}
+
+		// Kill tmux session
+		if s.info.TmuxSession != "" {
+			if err := s.tmuxAdapter.KillSession(s.info.TmuxSession); err != nil {
+				// Log error and transition to failed
+				s.logger.Warn("failed to kill tmux session", "error", err, "session", s.info.TmuxSession)
+				_ = s.stateMachine.TransitionTo(ctx, StatusFailed)
+				return err
+			}
+		}
+
+		// Transition to stopped
+		if err := s.stateMachine.TransitionTo(ctx, StatusStopped); err != nil {
+			return err
+		}
+
+		// Update info to reflect state change
+		now := time.Now()
+		s.info.StatusState.Status = StatusStopped
+		s.info.StatusState.StatusChangedAt = now
+		s.info.StoppedAt = &now
+
+		// Save updated info
+		return s.manager.Save(ctx, s.info)
+	}
+
+	// Legacy behavior
 	if !s.info.StatusState.Status.IsRunning() {
 		return ErrSessionNotRunning{ID: s.info.ID}
 	}

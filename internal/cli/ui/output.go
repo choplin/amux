@@ -238,11 +238,11 @@ func PrintWorkspaceListWithHolders(entries []WorkspaceListEntry) {
 		var sessions string
 		switch entry.HolderCount {
 		case 0:
-			sessions = SuccessStyle.Render("Available")
+			sessions = SuccessStyle.Render("None")
 		case 1:
-			sessions = WarningStyle.Render("In use (1)")
+			sessions = WarningStyle.Render("1 active")
 		default:
-			sessions = WarningStyle.Render(fmt.Sprintf("In use (%d)", entry.HolderCount))
+			sessions = WarningStyle.Render(fmt.Sprintf("%d active", entry.HolderCount))
 		}
 
 		tbl.AddRow(id, w.Name, w.Branch, age, status, sessions, description)

@@ -54,6 +54,8 @@ func (s *SemaphoreManager) SetReconciler(reconciler *SemaphoreReconciler) {
 
 // Acquire acquires a semaphore for a workspace
 func (s *SemaphoreManager) Acquire(workspaceID string, holder Holder) error {
+	// Get semaphore path for this workspace
+
 	// Reconcile before acquiring
 	if s.reconciler != nil {
 		_ = s.reconciler.ReconcileOnAcquire(workspaceID)

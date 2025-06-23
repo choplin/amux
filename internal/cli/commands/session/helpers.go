@@ -3,6 +3,7 @@ package session
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/aki/amux/internal/core/agent"
 	"github.com/aki/amux/internal/core/config"
@@ -11,6 +12,23 @@ import (
 	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/workspace"
 )
+
+// createManagers creates both workspace and session managers with proper initialization
+func createManagers(configManager *config.Manager) (*workspace.Manager, *session.Manager, error) {
+	// Create workspace manager
+	wsManager, err := workspace.NewManager(configManager)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create workspace manager: %w", err)
+	}
+
+	// Create session manager with the workspace manager
+	sessionManager, err := createSessionManager(configManager, wsManager)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return wsManager, sessionManager, nil
+}
 
 // createSessionManager is a helper to create a session manager with all dependencies
 func createSessionManager(configManager *config.Manager, wsManager *workspace.Manager) (*session.Manager, error) {
@@ -30,6 +48,11 @@ func createSessionManager(configManager *config.Manager, wsManager *workspace.Ma
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session manager: %w", err)
 	}
+
+	// Initialize semaphore support in workspace manager
+	sessionChecker := session.NewWorkspaceSessionChecker(manager)
+	sessionStopper := session.NewSessionStopperAdapter(manager)
+	wsManager.InitializeSemaphore(sessionChecker, sessionStopper, slog.Default())
 
 	return manager, nil
 }

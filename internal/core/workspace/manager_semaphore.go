@@ -39,15 +39,22 @@ func (m *Manager) InitializeSemaphore(sessionChecker SessionChecker, sessionStop
 		Reconciler:       reconciler,
 		SessionStopper:   sessionStopper,
 	}
+
+	// Debug log
+	if logger != nil {
+		logger.Info("Semaphore initialized", "workspacesDir", m.workspacesDir)
+	}
 }
 
 // AcquireSemaphore acquires a semaphore for a workspace
 func (m *Manager) AcquireSemaphore(workspaceID string, holder Holder) error {
 	if m.semaphore == nil || m.semaphore.SemaphoreManager == nil {
 		// Semaphore not initialized, skip
+		// Semaphore not initialized, skip silently
 		return nil
 	}
 
+	// Proceed with acquisition
 	return m.semaphore.SemaphoreManager.Acquire(workspaceID, holder)
 }
 

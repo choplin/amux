@@ -50,7 +50,7 @@ func runShowWorkspace(cmd *cobra.Command, args []string) error {
 			ui.OutputLine("  - %s: %s (%s ago)", holder.ID, description, ui.FormatDuration(time.Since(holder.Timestamp)))
 		}
 	} else {
-		ui.OutputLine("\n%s Status: Available (no active sessions)", ui.SuccessIcon)
+		ui.OutputLine("\n%s No active sessions", ui.SuccessIcon)
 	}
 
 	return nil

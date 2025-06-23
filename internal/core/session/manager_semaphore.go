@@ -54,11 +54,17 @@ func (s *StopperAdapter) ListSessionsInWorkspace(ctx context.Context, workspaceI
 	return ids, nil
 }
 
-// acquireSemaphore acquires a workspace semaphore for a session
+// acquireSemaphore is deprecated - use state machine instead
+// Kept for backward compatibility
 func (m *Manager) acquireSemaphore(ctx context.Context, info *Info) error {
 	if m.workspaceManager == nil {
 		// No workspace manager, skip semaphore
 		return nil
+	}
+
+	// Debug: Log that we're attempting to acquire semaphore
+	if m.logger != nil {
+		m.logger.Info("Acquiring semaphore (deprecated)", "sessionID", info.ID, "workspaceID", info.WorkspaceID)
 	}
 
 	holder := workspace.Holder{
