@@ -189,9 +189,9 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 					switch blockingParams.Output.Mode {
 					case "file":
 						outputMode = OutputModeFile
-					case "streaming", "circular": // Support old name for backward compatibility
+					case "streaming":
 						outputMode = OutputModeStreaming
-					case "memory", "buffer": // Support old name for backward compatibility
+					case "memory":
 						outputMode = OutputModeMemory
 					}
 

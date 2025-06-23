@@ -80,7 +80,7 @@ type BlockingParams struct {
 	Command string   `yaml:"command"`        // Command to execute
 	Args    []string `yaml:"args,omitempty"` // Command arguments
 	Output  struct {
-		Mode       string `yaml:"mode,omitempty"`       // buffer, file, circular
+		Mode       string `yaml:"mode,omitempty"`       // memory, file, streaming
 		BufferSize string `yaml:"bufferSize,omitempty"` // e.g., "10MB", "1GB"
 		FilePath   string `yaml:"filePath,omitempty"`   // for file mode
 	} `yaml:"output,omitempty"`

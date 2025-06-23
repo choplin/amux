@@ -303,14 +303,19 @@ func (s *ServerV2) handleSessionOutputResource(ctx context.Context, request mcp.
 			}
 			output, outputErr = os.ReadFile(outputPath)
 		} else {
-			// TODO: Add a way to get output from buffer/circular modes
-			return []mcp.ResourceContents{
-				&mcp.TextResourceContents{
-					URI:      request.Params.URI,
-					MIMEType: "text/plain",
-					Text:     "Viewing output for non-file mode blocking sessions is not yet implemented",
-				},
-			}, nil
+			// For memory/streaming modes, try to get output through the session interface
+			// The session is already loaded, so just use type assertion
+			if outputGetter, ok := sess.(interface{ GetOutput(int) ([]byte, error) }); ok {
+				output, outputErr = outputGetter.GetOutput(0) // 0 means get all lines
+			} else {
+				return []mcp.ResourceContents{
+					&mcp.TextResourceContents{
+						URI:      request.Params.URI,
+						MIMEType: "text/plain",
+						Text:     "Session does not support output retrieval",
+					},
+				}, nil
+			}
 		}
 
 	default:
