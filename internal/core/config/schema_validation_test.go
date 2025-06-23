@@ -92,7 +92,7 @@ agents:
     params:
       command: claude`,
 			wantErr: true,
-			errMsg:  "value must be one of \"tmux\", \"blocking\"",
+			errMsg:  "value must be \"tmux\"",
 		},
 		{
 			name: "tmux agent missing params config",
@@ -333,7 +333,7 @@ agents:
     type: claude-code
     params:
       command: some-command`,
-			wantErr: "value must be one of \"tmux\", \"blocking\"",
+			wantErr: "value must be \"tmux\"",
 		},
 		{
 			name: "tmux agent with unexpected field",

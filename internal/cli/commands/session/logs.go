@@ -70,41 +70,8 @@ func viewSessionLogs(cmd *cobra.Command, args []string) error {
 		return streamSessionLogs(sess)
 	}
 
-	// Get output based on session type
-	var output []byte
-
-	info := sess.Info()
-	switch info.Type {
-	case session.TypeTmux:
-		// For tmux sessions, use TerminalSession interface
-		terminalSess, ok := sess.(session.TerminalSession)
-		if !ok {
-			return fmt.Errorf("tmux session does not support terminal operations")
-		}
-		output, err = terminalSess.GetOutput(0)
-
-	case session.TypeBlocking:
-		// For blocking sessions, try to get output through the session interface
-		// First check if it implements an output getter interface
-		if outputGetter, ok := sess.(interface{ GetOutput(int) ([]byte, error) }); ok {
-			output, err = outputGetter.GetOutput(0) // 0 means get all lines
-		} else {
-			// Fallback to reading from file if in file mode
-			if info.OutputConfig != nil && info.OutputConfig.Mode == session.OutputModeFile {
-				// Read from output file
-				outputPath := info.OutputConfig.FilePath
-				if outputPath == "" {
-					outputPath = fmt.Sprintf("%s/output.log", info.StoragePath)
-				}
-				output, err = os.ReadFile(outputPath)
-			} else {
-				return fmt.Errorf("session does not support output retrieval")
-			}
-		}
-
-	default:
-		return fmt.Errorf("unsupported session type: %s", info.Type)
-	}
+	// Get output - all sessions now support GetOutput
+	output, err := sess.GetOutput(0) // 0 means get all lines
 	if err != nil {
 		return fmt.Errorf("failed to get session output: %w", err)
 	}
@@ -154,9 +121,6 @@ func streamSessionLogs(sess session.Session) error {
 
 	// Use the tail package to follow logs
 	tailer := tail.New(sess, opts)
-	if tailer == nil {
-		return fmt.Errorf("session does not support terminal operations")
-	}
 	err = tailer.Follow(ctx)
 
 	if err == context.Canceled {

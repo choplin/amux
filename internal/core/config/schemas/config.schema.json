@@ -99,7 +99,7 @@
         "type": {
           "type": "string",
           "description": "Session type for the agent",
-          "enum": ["tmux", "blocking"]
+          "enum": ["tmux"]
         },
         "description": {
           "type": "string",
@@ -164,57 +164,6 @@
                   "autoAttach": {
                     "type": "boolean",
                     "description": "Whether to automatically attach to the session after creation (CLI only)"
-                  }
-                }
-              }
-            }
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "type": { "const": "blocking" }
-            }
-          },
-          "then": {
-            "required": ["params"],
-            "properties": {
-              "params": {
-                "type": "object",
-                "required": ["command"],
-                "additionalProperties": false,
-                "properties": {
-                  "command": {
-                    "type": "string",
-                    "description": "Command to execute in blocking mode",
-                    "minLength": 1
-                  },
-                  "args": {
-                    "type": "array",
-                    "description": "Command arguments",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "output": {
-                    "type": "object",
-                    "description": "Output configuration",
-                    "additionalProperties": false,
-                    "properties": {
-                      "mode": {
-                        "type": "string",
-                        "description": "Output capture mode",
-                        "enum": ["buffer", "file", "circular"]
-                      },
-                      "bufferSize": {
-                        "type": "string",
-                        "description": "Buffer size (e.g., '10MB', '1GB')"
-                      },
-                      "filePath": {
-                        "type": "string",
-                        "description": "Output file path (for file mode)"
-                      }
-                    }
                   }
                 }
               }

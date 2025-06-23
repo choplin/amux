@@ -89,18 +89,6 @@ func validateConfig(cmd *cobra.Command, args []string) error {
 							ui.OutputLine("    Window Name: %s", params.WindowName)
 						}
 					}
-				case config.AgentTypeBlocking:
-					if params, err := agent.GetBlockingParams(); err == nil {
-						ui.OutputLine("    Command: %s", params.Command)
-						if len(params.Args) > 0 {
-							ui.OutputLine("    Args: %v", params.Args)
-						}
-						if params.Output.Mode != "" {
-							ui.OutputLine("    Output mode: %s", params.Output.Mode)
-						}
-					}
-				case config.AgentTypeClaudeCode, config.AgentTypeAPI:
-					// Future implementations
 				}
 
 				if agent.Description != "" {

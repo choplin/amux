@@ -48,9 +48,8 @@ type Type string
 const (
 	// TypeTmux indicates a tmux-based terminal session
 	TypeTmux Type = "tmux"
-	// TypeBlocking indicates a blocking command execution session
-	TypeBlocking Type = "blocking"
-	// Future: TypeClaudeCode, TypeCommand, etc.
+	// TypeCommand indicates a structured command execution session (future)
+	TypeCommand Type = "command"
 )
 
 // Status represents the current state of a session
@@ -97,33 +96,6 @@ type StatusState struct {
 	LastStatusCheck time.Time `yaml:"lastStatusCheck,omitempty"`
 }
 
-// OutputMode represents how session output is captured
-type OutputMode string
-
-const (
-	// OutputModeMemory captures output in memory with size limit
-	OutputModeMemory OutputMode = "memory"
-	// OutputModeFile captures output to a file with no size limit
-	OutputModeFile OutputMode = "file"
-	// OutputModeStreaming captures output in a ring buffer keeping only recent data
-	OutputModeStreaming OutputMode = "streaming"
-)
-
-// OutputConfig configures how session output is captured
-type OutputConfig struct {
-	Mode       OutputMode `yaml:"mode"`
-	BufferSize int64      `yaml:"bufferSize,omitempty"` // For memory/streaming modes (bytes)
-	FilePath   string     `yaml:"filePath,omitempty"`   // For file mode (auto-generated if empty)
-}
-
-// GetDefaultOutputConfig returns the default output configuration
-func GetDefaultOutputConfig() *OutputConfig {
-	return &OutputConfig{
-		Mode:       OutputModeMemory,
-		BufferSize: 10 * 1024 * 1024, // 10MB
-	}
-}
-
 // Options contains options for creating a new session
 type Options struct {
 	ID            ID                // Optional: pre-generated session ID
@@ -135,11 +107,6 @@ type Options struct {
 	InitialPrompt string            // Optional: initial prompt to send after starting
 	Name          string            // Optional: human-readable name for the session
 	Description   string            // Optional: description of session purpose
-
-	// Blocking session specific options
-	BlockingCommand string        // Command for blocking sessions
-	BlockingArgs    []string      // Arguments for blocking sessions
-	OutputConfig    *OutputConfig // Optional output configuration
 }
 
 // Info contains metadata about a session
@@ -162,13 +129,6 @@ type Info struct {
 	StoragePath   string            `yaml:"storage_path,omitempty"`
 	Name          string            `yaml:"name,omitempty"`
 	Description   string            `yaml:"description,omitempty"`
-
-	// Blocking session specific fields
-	BlockingCommand string        `yaml:"blocking_command,omitempty"`
-	BlockingArgs    []string      `yaml:"blocking_args,omitempty"`
-	OutputConfig    *OutputConfig `yaml:"output_config,omitempty"`
-	ExitCode        int           `yaml:"exit_code,omitempty"`
-	BufferFull      bool          `yaml:"buffer_full,omitempty"`
 }
 
 // Session represents an active or inactive agent session
@@ -199,6 +159,10 @@ type Session interface {
 
 	// Stop stops the session gracefully
 	Stop(ctx context.Context) error
+
+	// GetOutput returns the captured output
+	// maxLines of 0 means return all available output
+	GetOutput(maxLines int) ([]byte, error)
 }
 
 // TerminalSession represents a session with terminal capabilities

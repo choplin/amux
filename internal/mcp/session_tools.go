@@ -176,31 +176,6 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 			response["attach_amux"] = fmt.Sprintf("amux session attach %s", attachID)
 		}
 
-	case session.TypeBlocking:
-		// Add blocking-specific info
-		response["blocking_command"] = info.BlockingCommand
-		response["blocking_args"] = info.BlockingArgs
-
-		logID := info.ID
-		if info.Index != "" {
-			logID = info.Index
-		}
-		response["logs_command"] = fmt.Sprintf("amux logs %s", logID)
-
-		// Add output config info if available
-		if info.OutputConfig != nil {
-			outputInfo := map[string]interface{}{
-				"mode": string(info.OutputConfig.Mode),
-			}
-			if info.OutputConfig.BufferSize > 0 {
-				outputInfo["buffer_size"] = info.OutputConfig.BufferSize
-			}
-			if info.OutputConfig.FilePath != "" {
-				outputInfo["file_path"] = info.OutputConfig.FilePath
-			}
-			response["output_config"] = outputInfo
-		}
-
 		// Check if agent has autoAttach but we're in MCP context
 		agentManager := agent.NewManager(s.configManager)
 		if agentConfig, _ := agentManager.GetAgent(agentID); agentConfig != nil {
@@ -208,6 +183,10 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 				response["auto_attach_skipped"] = "Auto-attach is not available in MCP context (no TTY)"
 			}
 		}
+
+	case session.TypeCommand:
+		// Command sessions will be implemented in the future
+		response["message"] = "Command session created (future implementation)"
 	}
 
 	// Add success message to response
@@ -293,12 +272,6 @@ func (s *ServerV2) handleSessionSendInput(ctx context.Context, request mcp.CallT
 	// Check if session is running
 	if !sess.Status().IsRunning() {
 		return nil, SessionNotRunningError(sessionID)
-	}
-
-	// Check session type - blocking sessions don't support input
-	info := sess.Info()
-	if info.Type == session.TypeBlocking {
-		return nil, fmt.Errorf("blocking sessions do not support input after start")
 	}
 
 	// Type assert to TerminalSession
