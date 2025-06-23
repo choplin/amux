@@ -13,30 +13,34 @@ import (
 
 func removeCmd() *cobra.Command {
 	var keepWorkspace bool
+	var force bool
 
 	cmd := &cobra.Command{
 		Use:     "remove <session>",
 		Aliases: []string{"rm", "delete"},
-		Short:   "Remove a stopped session",
+		Short:   "Remove a session",
 		Long: `Remove a stopped session from the session list.
 
 This command permanently removes session metadata. Only stopped sessions
 can be removed. To stop a running session first, use 'amux session stop'.
 
 If the session created its workspace automatically, the workspace will also
-be removed unless --keep-workspace is specified.`,
+be removed unless --keep-workspace is specified.
+
+Use --force to automatically stop a running session before removal.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return removeSession(cmd, args, keepWorkspace)
+			return removeSession(cmd, args, keepWorkspace, force)
 		},
 	}
 
 	cmd.Flags().BoolVar(&keepWorkspace, "keep-workspace", false, "Keep auto-created workspace when removing session")
+	cmd.Flags().BoolVarP(&force, "force", "f", false, "Force removal by stopping running sessions first")
 
 	return cmd
 }
 
-func removeSession(cmd *cobra.Command, args []string, keepWorkspace bool) error {
+func removeSession(cmd *cobra.Command, args []string, keepWorkspace bool, force bool) error {
 	sessionID := args[0]
 
 	// Find project root
@@ -66,7 +70,15 @@ func removeSession(cmd *cobra.Command, args []string, keepWorkspace bool) error 
 
 	// Check if session is running
 	if sess.Status().IsRunning() {
-		return fmt.Errorf("cannot remove running session %s (use 'amux session stop' first)", sessionID)
+		if !force {
+			return fmt.Errorf("cannot remove running session %s (use 'amux session stop' first or --force)", sessionID)
+		}
+		// Force flag is set, stop the session first
+		ui.Info("Stopping running session %s...", sessionID)
+		if err := sess.Stop(cmd.Context()); err != nil {
+			return fmt.Errorf("failed to stop session: %w", err)
+		}
+		ui.Success("Session stopped successfully")
 	}
 
 	// Get session info to get workspace ID

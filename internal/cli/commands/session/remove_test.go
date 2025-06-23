@@ -79,6 +79,36 @@ func TestRemoveSession(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("can force remove running session", func(t *testing.T) {
+		// Create a test session
+		sess, err := sessionManager.CreateSession(context.Background(), session.Options{
+			WorkspaceID: ws.ID,
+			AgentID:     "claude",
+		})
+		require.NoError(t, err)
+
+		// Start the session
+		ctx := context.TODO()
+		err = sess.Start(ctx)
+		require.NoError(t, err)
+
+		// Store session ID before removal
+		sessID := sess.ID()
+
+		// Force remove it
+		cmd := removeCmd()
+		cmd.SetArgs([]string{sessID, "--force"})
+		err = cmd.Execute()
+		assert.NoError(t, err)
+
+		// Verify it's gone - session list should not contain it
+		sessions, err := sessionManager.ListSessions(context.Background())
+		require.NoError(t, err)
+		for _, s := range sessions {
+			assert.NotEqual(t, sessID, s.ID(), "Session should have been removed")
+		}
+	})
+
 	t.Run("can remove stopped session", func(t *testing.T) {
 		t.Skip("Skipping flaky test - session remains in cache after deletion")
 		// Create a new test session
