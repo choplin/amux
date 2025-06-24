@@ -153,7 +153,7 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 		"workspace_id":   info.WorkspaceID,
 		"workspace_name": ws.Name,
 		"agent_id":       info.AgentID,
-		"status":         string(info.StatusState.Status),
+		"status":         string(sess.Status()),
 		"command":        info.Command,
 		"tmux_session":   info.TmuxSession,
 		"created_at":     info.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
@@ -276,6 +276,12 @@ func (s *ServerV2) handleSessionSendInput(ctx context.Context, request mcp.CallT
 	if err := terminalSession.SendInput(input); err != nil {
 		return nil, fmt.Errorf("failed to send input: %w", err)
 	}
+
+	// Save the session to persist activity tracking updates
+	// This is necessary because SendInput updates LastOutputTime but
+	// doesn't have a context parameter to save it (see issue #209)
+	_ = sessionManager.Save(ctx, sess.Info())
+	// Ignore error - activity tracking is not critical for the operation
 
 	// Create response
 	response := map[string]interface{}{

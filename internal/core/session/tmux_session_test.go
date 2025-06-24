@@ -47,13 +47,13 @@ func TestTmuxSession_StartStop(t *testing.T) {
 		ID:          "test-tmux-session",
 		WorkspaceID: ws.ID,
 		AgentID:     "test-agent",
-		StatusState: StatusState{
-			Status:          StatusCreated,
-			StatusChangedAt: now,
-			LastOutputTime:  now,
+		ActivityTracking: ActivityTracking{
+			LastOutputTime: now,
 		},
-		Command:   "echo 'Test session started'",
-		CreatedAt: now,
+		Command:     "echo 'Test session started'",
+		CreatedAt:   now,
+		StoragePath: t.TempDir(),
+		StateDir:    t.TempDir(),
 	}
 
 	// Save info
@@ -62,7 +62,10 @@ func TestTmuxSession_StartStop(t *testing.T) {
 	}
 
 	// Create tmux session
-	session := NewTmuxSession(info, manager, tmuxAdapter, ws, nil)
+	session, err := CreateTmuxSession(context.Background(), info, manager, tmuxAdapter, ws, nil)
+	if err != nil {
+		t.Fatalf("Failed to create tmux session: %v", err)
+	}
 
 	// Start session
 	ctx := context.Background()
@@ -134,14 +137,14 @@ func TestTmuxSession_WithInitialPrompt(t *testing.T) {
 		ID:          "test-tmux-prompt-session",
 		WorkspaceID: ws.ID,
 		AgentID:     "test-agent",
-		StatusState: StatusState{
-			Status:          StatusCreated,
-			StatusChangedAt: now,
-			LastOutputTime:  now,
+		ActivityTracking: ActivityTracking{
+			LastOutputTime: now,
 		},
 		Command:       "bash", // Start bash to receive the prompt
 		InitialPrompt: testPrompt,
 		CreatedAt:     now,
+		StoragePath:   t.TempDir(),
+		StateDir:      t.TempDir(),
 	}
 
 	// Save info
@@ -150,7 +153,10 @@ func TestTmuxSession_WithInitialPrompt(t *testing.T) {
 	}
 
 	// Create tmux session
-	session := NewTmuxSession(info, manager, tmuxAdapter, ws, nil)
+	session, err := CreateTmuxSession(context.Background(), info, manager, tmuxAdapter, ws, nil)
+	if err != nil {
+		t.Fatalf("Failed to create tmux session: %v", err)
+	}
 
 	// Start session
 	ctx := context.Background()
@@ -222,13 +228,13 @@ func TestTmuxSession_StatusTracking(t *testing.T) {
 		ID:          "test-status-session",
 		WorkspaceID: ws.ID,
 		AgentID:     "test-agent",
-		StatusState: StatusState{
-			Status:          StatusCreated,
-			StatusChangedAt: now,
-			LastOutputTime:  now,
+		ActivityTracking: ActivityTracking{
+			LastOutputTime: now,
 		},
-		Command:   "bash",
-		CreatedAt: now,
+		Command:     "bash",
+		CreatedAt:   now,
+		StoragePath: t.TempDir(),
+		StateDir:    t.TempDir(),
 	}
 
 	// Save info
@@ -237,7 +243,10 @@ func TestTmuxSession_StatusTracking(t *testing.T) {
 	}
 
 	// Create tmux session
-	session := NewTmuxSession(info, manager, tmuxAdapter, ws, nil)
+	session, err := CreateTmuxSession(context.Background(), info, manager, tmuxAdapter, ws, nil)
+	if err != nil {
+		t.Fatalf("Failed to create tmux session: %v", err)
+	}
 
 	// Initial status should be created
 	if status := session.Status(); status != StatusCreated {
@@ -251,7 +260,7 @@ func TestTmuxSession_StatusTracking(t *testing.T) {
 	}
 
 	// After start, status should be working
-	if status := session.Status(); status != StatusWorking {
+	if status := session.Status(); status != StatusRunning {
 		t.Errorf("Expected status after start to be working, got %s", status)
 	}
 
@@ -262,7 +271,7 @@ func TestTmuxSession_StatusTracking(t *testing.T) {
 	}
 
 	// Status should still be working
-	if status := session.Status(); status != StatusWorking {
+	if status := session.Status(); status != StatusRunning {
 		t.Errorf("Expected status after output to be working, got %s", status)
 	}
 
@@ -311,17 +320,17 @@ func TestTmuxSession_WithEnvironment(t *testing.T) {
 		ID:          "test-env-session",
 		WorkspaceID: ws.ID,
 		AgentID:     "test-agent",
-		StatusState: StatusState{
-			Status:          StatusCreated,
-			StatusChangedAt: now,
-			LastOutputTime:  now,
+		ActivityTracking: ActivityTracking{
+			LastOutputTime: now,
 		},
 		Command: "/bin/bash", // Use bash as command
 		Environment: map[string]string{
 			"CUSTOM_VAR":  "custom_value",
 			"ANOTHER_VAR": "another_value",
 		},
-		CreatedAt: now,
+		CreatedAt:   now,
+		StoragePath: t.TempDir(),
+		StateDir:    t.TempDir(),
 	}
 
 	// Save info
@@ -330,7 +339,10 @@ func TestTmuxSession_WithEnvironment(t *testing.T) {
 	}
 
 	// Create tmux session
-	session := NewTmuxSession(info, manager, mockAdapter, ws, nil)
+	session, err := CreateTmuxSession(context.Background(), info, manager, mockAdapter, ws, nil)
+	if err != nil {
+		t.Fatalf("Failed to create tmux session: %v", err)
+	}
 
 	// Start session
 	ctx := context.Background()
@@ -416,13 +428,13 @@ func TestTmuxSession_WithShellAndWindowName(t *testing.T) {
 		ID:          "test-shell-window-session",
 		WorkspaceID: ws.ID,
 		AgentID:     "test-agent",
-		StatusState: StatusState{
-			Status:          StatusCreated,
-			StatusChangedAt: now,
-			LastOutputTime:  now,
+		ActivityTracking: ActivityTracking{
+			LastOutputTime: now,
 		},
-		Command:   "echo 'Custom shell started'",
-		CreatedAt: now,
+		Command:     "echo 'Custom shell started'",
+		CreatedAt:   now,
+		StoragePath: t.TempDir(),
+		StateDir:    t.TempDir(),
 	}
 
 	// Save info
@@ -431,7 +443,10 @@ func TestTmuxSession_WithShellAndWindowName(t *testing.T) {
 	}
 
 	// Create tmux session
-	session := NewTmuxSession(info, manager, tmuxAdapter, ws, nil)
+	session, err := CreateTmuxSession(context.Background(), info, manager, tmuxAdapter, ws, nil)
+	if err != nil {
+		t.Fatalf("Failed to create tmux session: %v", err)
+	}
 
 	// Start session
 	ctx := context.Background()

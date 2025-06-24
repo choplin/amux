@@ -44,7 +44,7 @@ amux/
 │   └── sessions/                 # Session data and storage
 ├── cmd/amux/                     # CLI entry point
 ├── internal/                     # Core implementation
-├── docs/                         # Documentation
+├── docs/                         # Documentation (stable docs only - no planning/temporary files)
 └── CLAUDE.md                     # Global project context
 ```
 
@@ -174,6 +174,28 @@ For example:
 - Other directories may have their own CLAUDE.md files
 
 **Always read and follow these directory-specific instructions carefully!**
+
+### About the `docs/` Directory
+
+The `docs/` directory should only contain **stable documentation** that reflects the current state of the codebase:
+
+- Architecture Decision Records (ADRs) in `docs/adr/`
+- User guides and references
+- API documentation
+- Any documentation that describes how the project currently works
+
+**DO NOT** put the following in `docs/`:
+
+- Planning documents
+- Temporary design documents
+- Work-in-progress documentation
+- Meeting notes or brainstorming documents
+
+For temporary planning documents, use:
+
+- Workspace storage (via `workspace_storage_write` MCP tool)
+- GitHub issues or PR descriptions
+- External planning tools
 
 ## Troubleshooting
 

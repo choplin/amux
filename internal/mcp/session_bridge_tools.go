@@ -76,7 +76,7 @@ func (s *ServerV2) handleResourceSessionList(ctx context.Context, request mcp.Ca
 			Description: info.Description,
 			WorkspaceID: info.WorkspaceID,
 			AgentID:     info.AgentID,
-			Status:      info.StatusState.Status,
+			Status:      sess.Status(),
 			CreatedAt:   info.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		}
 

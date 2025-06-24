@@ -9,7 +9,7 @@ import (
 
 func TestManager_CurrentState(t *testing.T) {
 	tmpDir := t.TempDir()
-	manager := NewManager("session-123", "workspace-456", tmpDir, slog.Default())
+	manager := InitManager("session-123", "workspace-456", tmpDir, slog.Default())
 
 	// Test default state (no file exists)
 	state, err := manager.CurrentState()
@@ -78,7 +78,7 @@ func TestManager_TransitionTo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tmpDir := t.TempDir()
-			manager := NewManager("session-123", "workspace-456", tmpDir, slog.Default())
+			manager := InitManager("session-123", "workspace-456", tmpDir, slog.Default())
 
 			// Set initial state if not created
 			if tt.initialState != StatusCreated {
@@ -132,7 +132,7 @@ func TestManager_TransitionTo(t *testing.T) {
 
 func TestManager_StateChangeHandlers(t *testing.T) {
 	tmpDir := t.TempDir()
-	manager := NewManager("session-123", "workspace-456", tmpDir, slog.Default())
+	manager := InitManager("session-123", "workspace-456", tmpDir, slog.Default())
 
 	// Track handler calls
 	handlerCalls := make([]string, 0)
@@ -174,12 +174,12 @@ func TestManager_StatePersistence(t *testing.T) {
 	// Test with nil logger (should use default)
 
 	// Create first manager and set state
-	manager1 := NewManager("session-123", "workspace-456", tmpDir, nil)
+	manager1 := InitManager("session-123", "workspace-456", tmpDir, nil)
 	_ = manager1.TransitionTo(context.Background(), StatusStarting)
 	_ = manager1.TransitionTo(context.Background(), StatusRunning)
 
 	// Create second manager with same paths
-	manager2 := NewManager("session-123", "workspace-456", tmpDir, nil)
+	manager2 := InitManager("session-123", "workspace-456", tmpDir, nil)
 
 	// Verify state is persisted
 	state, err := manager2.CurrentState()
@@ -194,7 +194,7 @@ func TestManager_StatePersistence(t *testing.T) {
 
 func TestManager_ConcurrentAccess(t *testing.T) {
 	tmpDir := t.TempDir()
-	manager := NewManager("session-123", "workspace-456", tmpDir, slog.Default())
+	manager := InitManager("session-123", "workspace-456", tmpDir, slog.Default())
 
 	// Run concurrent transitions
 	done := make(chan bool, 3)

@@ -9,6 +9,7 @@ import (
 
 	"github.com/aki/amux/internal/adapters/tmux"
 	"github.com/aki/amux/internal/core/idmap"
+	"github.com/aki/amux/internal/core/session/state"
 	"github.com/aki/amux/internal/core/workspace"
 )
 
@@ -458,11 +459,18 @@ func TestManager_RemoveCompletedSession(t *testing.T) {
 	// We need to update the session's internal state, not just the store
 	// Cast to internal type to access internal methods
 	tmuxSess := session.(*tmuxSessionImpl)
+
+	// Get tmux session name before updating status
 	tmuxSess.mu.Lock()
-	tmuxSess.info.StatusState.Status = StatusCompleted
-	tmuxSess.info.StatusState.StatusChangedAt = time.Now()
 	tmuxSessionName := tmuxSess.info.TmuxSession
 	tmuxSess.mu.Unlock()
+
+	// Transition to completed state through embedded StateManager
+	if err := tmuxSess.TransitionTo(context.Background(), state.StatusCompleted); err != nil {
+		t.Fatalf("Failed to transition to completed state: %v", err)
+	}
+
+	// State is now managed by state.Manager, no need to update info
 
 	// Save to manager
 	if err := manager.Save(context.Background(), tmuxSess.info); err != nil {
@@ -615,10 +623,8 @@ func TestManager_StoreOperations(t *testing.T) {
 		ID:          "test-session",
 		WorkspaceID: "test-workspace",
 		AgentID:     "claude",
-		StatusState: StatusState{
-			Status:          StatusCreated,
-			StatusChangedAt: now,
-			LastOutputTime:  now,
+		ActivityTracking: ActivityTracking{
+			LastOutputTime: now,
 		},
 		CreatedAt:   now,
 		Name:        "test-session-name",
@@ -734,12 +740,12 @@ func TestManager_ListSessionsWithDeletedWorkspace(t *testing.T) {
 
 	// Session should be orphaned
 	orphanedSession := sessions[0]
-	info := orphanedSession.Info()
-	if info.StatusState.Status != StatusOrphaned {
-		t.Errorf("Expected orphaned status, got %s", info.StatusState.Status)
+	if orphanedSession.Status() != StatusOrphaned {
+		t.Errorf("Expected orphaned status, got %s", orphanedSession.Status())
 	}
 
 	// Error should indicate workspace not found
+	info := orphanedSession.Info()
 	if !strings.Contains(info.Error, "workspace not found") {
 		t.Errorf("Expected error to contain 'workspace not found', got: %s", info.Error)
 	}

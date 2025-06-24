@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/aki/amux/internal/core/session/state"
 	"github.com/google/uuid"
 )
 
@@ -51,45 +52,24 @@ const (
 	// Future: TypeClaudeCode, etc.
 )
 
-// Status represents the current state of a session
-type Status string
+// Status is an alias for state.Status to maintain backward compatibility
+// and avoid breaking changes in the public API
+type Status = state.Status
 
-// String returns the string representation of the status
-func (s Status) String() string {
-	return string(s)
-}
-
-// IsRunning returns true if the session is in a running state (working or idle)
-func (s Status) IsRunning() bool {
-	return s == StatusWorking || s == StatusIdle
-}
-
-// IsTerminal returns true if the session is in a terminal state (completed, stopped, failed or orphaned)
-func (s Status) IsTerminal() bool {
-	return s == StatusCompleted || s == StatusStopped || s == StatusFailed || s == StatusOrphaned
-}
-
+// Re-export status constants for convenience
 const (
-	// StatusCreated indicates a session has been created but not started
-	StatusCreated Status = "created"
-	// StatusWorking indicates a session is actively processing (output changing)
-	StatusWorking Status = "working"
-	// StatusIdle indicates a session is waiting for input (no recent output)
-	StatusIdle Status = "idle"
-	// StatusCompleted indicates a session command has finished successfully
-	StatusCompleted Status = "completed"
-	// StatusStopped indicates a session has been stopped normally
-	StatusStopped Status = "stopped"
-	// StatusFailed indicates a session has failed or crashed
-	StatusFailed Status = "failed"
-	// StatusOrphaned indicates a session with missing dependencies (e.g., deleted workspace)
-	StatusOrphaned Status = "orphaned"
+	StatusCreated   = state.StatusCreated
+	StatusStarting  = state.StatusStarting
+	StatusRunning   = state.StatusRunning
+	StatusStopping  = state.StatusStopping
+	StatusCompleted = state.StatusCompleted
+	StatusStopped   = state.StatusStopped
+	StatusFailed    = state.StatusFailed
+	StatusOrphaned  = state.StatusOrphaned
 )
 
-// StatusState holds runtime state for status tracking
-type StatusState struct {
-	Status          Status    `yaml:"status"`
-	StatusChangedAt time.Time `yaml:"statusChangedAt"`
+// ActivityTracking holds runtime metrics for activity monitoring
+type ActivityTracking struct {
 	LastOutputHash  uint32    `yaml:"lastOutputHash,omitempty"`
 	LastOutputTime  time.Time `yaml:"lastOutputTime,omitempty"`
 	LastStatusCheck time.Time `yaml:"lastStatusCheck,omitempty"`
@@ -110,24 +90,25 @@ type Options struct {
 
 // Info contains metadata about a session
 type Info struct {
-	ID            string            `yaml:"id"`
-	Index         string            `yaml:"-"` // Populated from ID mapper, not persisted
-	Type          Type              `yaml:"type"`
-	WorkspaceID   string            `yaml:"workspace_id"`
-	AgentID       string            `yaml:"agent_id"`
-	StatusState   StatusState       `yaml:"statusState"`
-	Command       string            `yaml:"command"`
-	Environment   map[string]string `yaml:"environment,omitempty"`
-	InitialPrompt string            `yaml:"initial_prompt,omitempty"`
-	PID           int               `yaml:"pid,omitempty"`
-	TmuxSession   string            `yaml:"tmux_session,omitempty"`
-	CreatedAt     time.Time         `yaml:"created_at"`
-	StartedAt     *time.Time        `yaml:"started_at,omitempty"`
-	StoppedAt     *time.Time        `yaml:"stopped_at,omitempty"`
-	Error         string            `yaml:"error,omitempty"`
-	StoragePath   string            `yaml:"storage_path,omitempty"`
-	Name          string            `yaml:"name,omitempty"`
-	Description   string            `yaml:"description,omitempty"`
+	ID               string            `yaml:"id"`
+	Index            string            `yaml:"-"` // Populated from ID mapper, not persisted
+	Type             Type              `yaml:"type"`
+	WorkspaceID      string            `yaml:"workspace_id"`
+	AgentID          string            `yaml:"agent_id"`
+	ActivityTracking ActivityTracking  `yaml:"activityTracking"`
+	Command          string            `yaml:"command"`
+	Environment      map[string]string `yaml:"environment,omitempty"`
+	InitialPrompt    string            `yaml:"initial_prompt,omitempty"`
+	PID              int               `yaml:"pid,omitempty"`
+	TmuxSession      string            `yaml:"tmux_session,omitempty"`
+	CreatedAt        time.Time         `yaml:"created_at"`
+	StartedAt        *time.Time        `yaml:"started_at,omitempty"`
+	StoppedAt        *time.Time        `yaml:"stopped_at,omitempty"`
+	Error            string            `yaml:"error,omitempty"`
+	StoragePath      string            `yaml:"storage_path,omitempty"`
+	StateDir         string            `yaml:"state_dir,omitempty"`
+	Name             string            `yaml:"name,omitempty"`
+	Description      string            `yaml:"description,omitempty"`
 }
 
 // Session represents an active or inactive agent session

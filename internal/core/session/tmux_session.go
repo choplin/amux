@@ -15,6 +15,7 @@ import (
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/logger"
 	"github.com/aki/amux/internal/core/process"
+	"github.com/aki/amux/internal/core/session/state"
 	"github.com/aki/amux/internal/core/terminal"
 	"github.com/aki/amux/internal/core/workspace"
 )
@@ -23,6 +24,7 @@ import (
 type tmuxSessionImpl struct {
 	info           *Info
 	manager        *Manager
+	state.Manager  // Embedded - it's just a logical grouping of state operations
 	tmuxAdapter    tmux.Adapter
 	workspace      *workspace.Workspace
 	agentConfig    *config.Agent
@@ -54,8 +56,8 @@ func WithProcessChecker(checker process.Checker) TmuxSessionOption {
 	}
 }
 
-// NewTmuxSession creates a new tmux-backed session
-func NewTmuxSession(info *Info, manager *Manager, tmuxAdapter tmux.Adapter, workspace *workspace.Workspace, agentConfig *config.Agent, opts ...TmuxSessionOption) TerminalSession {
+// CreateTmuxSession creates and initializes a new tmux-backed session
+func CreateTmuxSession(ctx context.Context, info *Info, manager *Manager, tmuxAdapter tmux.Adapter, workspace *workspace.Workspace, agentConfig *config.Agent, opts ...TmuxSessionOption) (TerminalSession, error) {
 	s := &tmuxSessionImpl{
 		info:           info,
 		manager:        manager,
@@ -71,20 +73,16 @@ func NewTmuxSession(info *Info, manager *Manager, tmuxAdapter tmux.Adapter, work
 		opt(s)
 	}
 
-	// Initialize StatusState if not set (e.g., when loading from store)
-	if s.info.StatusState.StatusChangedAt.IsZero() {
-		s.info.StatusState.StatusChangedAt = time.Now()
-	}
-	if s.info.StatusState.LastOutputTime.IsZero() {
-		s.info.StatusState.LastOutputTime = time.Now()
+	// Initialize state manager - StateDir is required
+	if info.StateDir == "" {
+		return nil, fmt.Errorf("CreateTmuxSession: StateDir is required")
 	}
 
-	// Ensure type is set
-	if s.info.Type == "" {
-		s.info.Type = TypeTmux
-	}
+	// TODO: Remove this workaround after migrating to direct slog usage (issue #208)
+	// For now, let state.InitManager use slog.Default()
+	s.Manager = state.InitManager(info.ID, info.WorkspaceID, info.StateDir, nil)
 
-	return s
+	return s, nil
 }
 
 func (s *tmuxSessionImpl) ID() string {
@@ -114,7 +112,16 @@ func (s *tmuxSessionImpl) Status() Status {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	return s.info.StatusState.Status
+	// Get status from embedded state manager
+	currentState, err := s.CurrentState()
+	if err != nil {
+		// This should not happen in normal operation
+		s.logger.Error("failed to get current state", "error", err)
+		return StatusFailed
+	}
+
+	// Return the current state directly (no mapping needed anymore)
+	return currentState
 }
 
 func (s *tmuxSessionImpl) Info() *Info {
@@ -130,18 +137,30 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.info.StatusState.Status.IsRunning() {
+	// Check current status - use internal state to avoid deadlock
+	currentStatus, err := s.CurrentState()
+	if err != nil {
+		// If state read fails, assume we can't start
+		return fmt.Errorf("failed to get current state: %w", err)
+	}
+
+	if currentStatus.IsRunning() {
 		return ErrSessionAlreadyRunning{ID: s.info.ID}
 	}
 
 	// Cannot start orphaned session
-	if s.info.StatusState.Status == StatusOrphaned {
+	if currentStatus == StatusOrphaned {
 		return fmt.Errorf("cannot start orphaned session: %s", s.info.Error)
 	}
 
 	// Cannot start session without workspace
 	if s.workspace == nil {
 		return fmt.Errorf("cannot start session: workspace not available")
+	}
+
+	// Transition to starting state
+	if err := s.TransitionTo(ctx, state.StatusStarting); err != nil {
+		return fmt.Errorf("failed to transition to starting state: %w", err)
 	}
 
 	// Generate tmux session name
@@ -219,12 +238,19 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 	// Get PID
 	pid, _ := s.tmuxAdapter.GetSessionPID(tmuxSession)
 
+	// Transition to running state
+	if err := s.TransitionTo(ctx, state.StatusRunning); err != nil {
+		// Clean up on failure
+		if killErr := s.tmuxAdapter.KillSession(tmuxSession); killErr != nil {
+			s.logger.Warn("failed to kill tmux session during cleanup", "error", killErr, "session", tmuxSession)
+		}
+		return fmt.Errorf("failed to transition to running state: %w", err)
+	}
+
 	// Update session info
 	now := time.Now()
-	s.info.StatusState.Status = StatusWorking // Initially working when started
-	s.info.StatusState.StatusChangedAt = now
-	s.info.StatusState.LastOutputTime = now // Reset output tracking
-	s.info.StatusState.LastOutputHash = 0   // Reset hash
+	s.info.ActivityTracking.LastOutputTime = now // Reset output tracking
+	s.info.ActivityTracking.LastOutputHash = 0   // Reset hash
 	s.info.StartedAt = &now
 	s.info.TmuxSession = tmuxSession
 	s.info.PID = pid
@@ -244,8 +270,20 @@ func (s *tmuxSessionImpl) Stop(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if !s.info.StatusState.Status.IsRunning() {
+	// Check current status - use internal state to avoid deadlock
+	currentStatus, err := s.CurrentState()
+	if err != nil {
+		// If state read fails, assume we can't stop
+		return fmt.Errorf("failed to get current state: %w", err)
+	}
+
+	if !currentStatus.IsRunning() {
 		return ErrSessionNotRunning{ID: s.info.ID}
+	}
+
+	// Transition to stopping state
+	if err := s.TransitionTo(ctx, state.StatusStopping); err != nil {
+		return fmt.Errorf("failed to transition to stopping state: %w", err)
 	}
 
 	// Kill tmux session
@@ -256,10 +294,13 @@ func (s *tmuxSessionImpl) Stop(ctx context.Context) error {
 		}
 	}
 
+	// Transition to stopped state
+	if err := s.TransitionTo(ctx, state.StatusStopped); err != nil {
+		return fmt.Errorf("failed to transition to stopped state: %w", err)
+	}
+
 	// Update status
 	now := time.Now()
-	s.info.StatusState.Status = StatusStopped
-	s.info.StatusState.StatusChangedAt = now
 	s.info.StoppedAt = &now
 
 	if err := s.manager.Save(ctx, s.info); err != nil {
@@ -273,7 +314,12 @@ func (s *tmuxSessionImpl) Attach() error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	if !s.info.StatusState.Status.IsRunning() {
+	// Get current status from state manager
+	currentStatus, err := s.CurrentState()
+	if err != nil {
+		return fmt.Errorf("failed to get current state: %w", err)
+	}
+	if !currentStatus.IsRunning() {
 		return ErrSessionNotRunning{ID: s.info.ID}
 	}
 
@@ -289,7 +335,12 @@ func (s *tmuxSessionImpl) SendInput(input string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if !s.info.StatusState.Status.IsRunning() {
+	// Get current status from state manager
+	currentStatus, err := s.CurrentState()
+	if err != nil {
+		return fmt.Errorf("failed to get current state: %w", err)
+	}
+	if !currentStatus.IsRunning() {
 		return ErrSessionNotRunning{ID: s.info.ID}
 	}
 
@@ -302,19 +353,12 @@ func (s *tmuxSessionImpl) SendInput(input string) error {
 		return err
 	}
 
-	// Update status to working since we just sent input
+	// Update last activity time for activity tracking
 	now := time.Now()
-	if s.info.StatusState.Status == StatusIdle {
-		s.info.StatusState.Status = StatusWorking
-		s.info.StatusState.StatusChangedAt = now
-		// Save status change
-		if err := s.manager.Save(context.Background(), s.info); err != nil {
-			// Log error but don't fail the input operation
-			s.logger.Warn("failed to save status change after input", "error", err)
-		}
-	}
-	// Always update last activity time
-	s.info.StatusState.LastOutputTime = now
+	s.info.ActivityTracking.LastOutputTime = now
+
+	// Note: Persistence must be handled by the caller since we don't have
+	// a context parameter. This is a known limitation (see issue #209).
 
 	return nil
 }
@@ -323,7 +367,12 @@ func (s *tmuxSessionImpl) GetOutput(maxLines int) ([]byte, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	if !s.info.StatusState.Status.IsRunning() {
+	// Get current status from state manager
+	currentStatus, err := s.CurrentState()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current state: %w", err)
+	}
+	if !currentStatus.IsRunning() {
 		return nil, ErrSessionNotRunning{ID: s.info.ID}
 	}
 
@@ -359,17 +408,21 @@ func (s *tmuxSessionImpl) UpdateStatus(ctx context.Context) error {
 	defer s.mu.Unlock()
 
 	// Only update if session is running
-	if !s.info.StatusState.Status.IsRunning() {
+	currentStatus, err := s.CurrentState()
+	if err != nil {
+		return fmt.Errorf("failed to get current state: %w", err)
+	}
+	if !currentStatus.IsRunning() {
 		return nil
 	}
 
 	// Check cache - skip update if checked recently
-	if time.Since(s.info.StatusState.LastStatusCheck) < statusCacheDuration {
+	if time.Since(s.info.ActivityTracking.LastStatusCheck) < statusCacheDuration {
 		return nil
 	}
 
 	// Update last check time
-	s.info.StatusState.LastStatusCheck = time.Now()
+	s.info.ActivityTracking.LastStatusCheck = time.Now()
 
 	// Defer saving the session info at the end (single save point)
 	defer func() {
@@ -381,9 +434,9 @@ func (s *tmuxSessionImpl) UpdateStatus(ctx context.Context) error {
 	// Check if tmux session still exists
 	if !s.tmuxAdapter.SessionExists(s.info.TmuxSession) {
 		// Session doesn't exist anymore - mark as failed
-		now := time.Now()
-		s.info.StatusState.Status = StatusFailed
-		s.info.StatusState.StatusChangedAt = now
+		if err := s.TransitionTo(ctx, state.StatusFailed); err != nil {
+			s.logger.Warn("failed to transition to failed state", "error", err)
+		}
 		s.info.Error = "tmux session no longer exists"
 		return nil
 	}
@@ -395,9 +448,9 @@ func (s *tmuxSessionImpl) UpdateStatus(ctx context.Context) error {
 		s.logger.Warn("failed to check pane status", "error", err)
 	} else if isDead {
 		// Shell process is dead - mark as failed
-		now := time.Now()
-		s.info.StatusState.Status = StatusFailed
-		s.info.StatusState.StatusChangedAt = now
+		if err := s.TransitionTo(ctx, state.StatusFailed); err != nil {
+			s.logger.Warn("failed to transition to failed state", "error", err)
+		}
 		s.info.Error = "shell process exited"
 		return nil
 	}
@@ -417,22 +470,24 @@ func (s *tmuxSessionImpl) UpdateStatus(ctx context.Context) error {
 			}
 
 			// Determine final status based on exit code
-			now := time.Now()
 			if exitCode != 0 {
-				s.info.StatusState.Status = StatusFailed
+				if err := s.TransitionTo(ctx, state.StatusFailed); err != nil {
+					s.logger.Warn("failed to transition to failed state", "error", err)
+				}
 				s.info.Error = fmt.Sprintf("command exited with code %d", exitCode)
 			} else {
-				s.info.StatusState.Status = StatusCompleted
+				if err := s.TransitionTo(ctx, state.StatusCompleted); err != nil {
+					s.logger.Warn("failed to transition to completed state", "error", err)
+				}
 			}
-			s.info.StatusState.StatusChangedAt = now
 			return nil
 		}
 	}
 
 	// If we get here, session is running with active processes
-	// Continue with existing working/idle detection logic
+	// Update activity tracking (but no longer change status)
 
-	// Get last 20 lines of output for status checking
+	// Get last 20 lines of output for activity tracking
 	// This is sufficient to detect activity without fetching entire buffer
 	const statusCheckLines = 20
 	output, err := s.tmuxAdapter.CapturePaneWithOptions(s.info.TmuxSession, statusCheckLines)
@@ -446,28 +501,13 @@ func (s *tmuxSessionImpl) UpdateStatus(ctx context.Context) error {
 	currentHash := h.Sum32()
 	now := time.Now()
 
-	// Check if output changed
-	if currentHash != s.info.StatusState.LastOutputHash {
-		// Output changed, agent is working
-		s.info.StatusState.LastOutputHash = currentHash
-		s.info.StatusState.LastOutputTime = now
-		if s.info.StatusState.Status != StatusWorking {
-			s.info.StatusState.Status = StatusWorking
-			s.info.StatusState.StatusChangedAt = now
-		}
-	} else {
-		// No output change, check if we should transition to idle.
-		// With 1-second cache duration and 3-second idle threshold,
-		// idle detection happens within 3-4 seconds of last activity.
-		timeSinceLastOutput := time.Since(s.info.StatusState.LastOutputTime)
-		const idleThreshold = 3 * time.Second
-
-		if timeSinceLastOutput >= idleThreshold && s.info.StatusState.Status == StatusWorking {
-			// Transition to idle
-			s.info.StatusState.Status = StatusIdle
-			s.info.StatusState.StatusChangedAt = now
-		}
+	// Check if output changed for activity tracking
+	if currentHash != s.info.ActivityTracking.LastOutputHash {
+		// Output changed, update activity tracking
+		s.info.ActivityTracking.LastOutputHash = currentHash
+		s.info.ActivityTracking.LastOutputTime = now
 	}
+	// Note: We no longer transition between Working/Idle states
 
 	return nil
 }
