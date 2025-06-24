@@ -3,8 +3,8 @@ package commands
 import (
 	"log/slog"
 	"os"
+	"strings"
 
-	"github.com/aki/amux/internal/core/logger"
 	"github.com/spf13/cobra"
 )
 
@@ -12,19 +12,27 @@ import (
 var (
 	flagLogLevel  string
 	flagLogFormat string
+	flagDebug     bool
 )
 
 // RegisterLoggerFlags registers global logging flags
 func RegisterLoggerFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().StringVar(&flagLogLevel, "log-level", "info", "Log level (debug, info, warn, error)")
 	cmd.PersistentFlags().StringVar(&flagLogFormat, "log-format", "text", "Log format (text, json)")
+	cmd.PersistentFlags().BoolVar(&flagDebug, "debug", false, "Enable debug logging (shortcut for --log-level debug)")
 }
 
-// CreateLogger creates a logger based on CLI flags
-func CreateLogger() logger.Logger {
+// InitializeSlog initializes the global slog logger based on CLI flags
+func InitializeSlog() {
+	// Debug flag overrides log level
+	levelStr := flagLogLevel
+	if flagDebug {
+		levelStr = "debug"
+	}
+
 	// Parse log level
 	var level slog.Level
-	switch flagLogLevel {
+	switch strings.ToLower(levelStr) {
 	case "debug":
 		level = slog.LevelDebug
 	case "warn":
@@ -35,28 +43,19 @@ func CreateLogger() logger.Logger {
 		level = slog.LevelInfo
 	}
 
-	// Parse format
-	var format logger.Format
-	switch flagLogFormat {
-	case "json":
-		format = logger.FormatJSON
-	default:
-		format = logger.FormatText
+	// Create handler based on format
+	var handler slog.Handler
+	opts := &slog.HandlerOptions{
+		Level: level,
 	}
 
-	// Create logger
-	return logger.New(
-		logger.WithLevel(level),
-		logger.WithFormat(format),
-		logger.WithOutput(os.Stderr),
-	)
-}
+	switch strings.ToLower(flagLogFormat) {
+	case "json":
+		handler = slog.NewJSONHandler(os.Stderr, opts)
+	default:
+		handler = slog.NewTextHandler(os.Stderr, opts)
+	}
 
-// CreateQuietLogger creates a logger that only shows warnings and errors
-func CreateQuietLogger() logger.Logger {
-	return logger.New(
-		logger.WithQuiet(),
-		logger.WithFormat(logger.FormatText),
-		logger.WithOutput(os.Stderr),
-	)
+	// Set as default logger
+	slog.SetDefault(slog.New(handler))
 }

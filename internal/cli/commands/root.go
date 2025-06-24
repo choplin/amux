@@ -24,6 +24,9 @@ can work independently without context mixing. It enables multiplexing multiple 
 across different workspaces.`,
 
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// Initialize slog logger first
+		InitializeSlog()
+
 		// Parse and set the global formatter
 		format, err := ui.ParseFormat(formatFlag)
 		if err != nil {

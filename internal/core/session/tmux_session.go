@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"hash/fnv"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -13,7 +14,6 @@ import (
 
 	"github.com/aki/amux/internal/adapters/tmux"
 	"github.com/aki/amux/internal/core/config"
-	"github.com/aki/amux/internal/core/logger"
 	"github.com/aki/amux/internal/core/process"
 	"github.com/aki/amux/internal/core/session/state"
 	"github.com/aki/amux/internal/core/terminal"
@@ -28,7 +28,6 @@ type tmuxSessionImpl struct {
 	tmuxAdapter    tmux.Adapter
 	workspace      *workspace.Workspace
 	agentConfig    *config.Agent
-	logger         logger.Logger
 	processChecker process.Checker
 	mu             sync.RWMutex
 }
@@ -41,13 +40,6 @@ const statusCacheDuration = 1 * time.Second
 
 // TmuxSessionOption is a function that configures a tmux session
 type TmuxSessionOption func(*tmuxSessionImpl)
-
-// WithTmuxLogger sets the logger for the tmux session
-func WithTmuxLogger(log logger.Logger) TmuxSessionOption {
-	return func(s *tmuxSessionImpl) {
-		s.logger = log
-	}
-}
 
 // WithProcessChecker sets the process checker for the tmux session
 func WithProcessChecker(checker process.Checker) TmuxSessionOption {
@@ -64,7 +56,6 @@ func CreateTmuxSession(ctx context.Context, info *Info, manager *Manager, tmuxAd
 		tmuxAdapter:    tmuxAdapter,
 		workspace:      workspace,
 		agentConfig:    agentConfig,
-		logger:         logger.Nop(),    // Default to no-op logger
 		processChecker: process.Default, // Default to system process checker
 	}
 
@@ -78,8 +69,7 @@ func CreateTmuxSession(ctx context.Context, info *Info, manager *Manager, tmuxAd
 		return nil, fmt.Errorf("CreateTmuxSession: StateDir is required")
 	}
 
-	// TODO: Remove this workaround after migrating to direct slog usage (issue #208)
-	// For now, let state.InitManager use slog.Default()
+	// Initialize state manager with default slog logger
 	s.Manager = state.InitManager(info.ID, info.WorkspaceID, info.StateDir, nil)
 
 	return s, nil
@@ -116,7 +106,7 @@ func (s *tmuxSessionImpl) Status() Status {
 	currentState, err := s.CurrentState()
 	if err != nil {
 		// This should not happen in normal operation
-		s.logger.Error("failed to get current state", "error", err)
+		slog.Error("failed to get current state", "error", err)
 		return StatusFailed
 	}
 
@@ -202,7 +192,7 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 	width, height := terminal.GetSize()
 	if err := s.tmuxAdapter.ResizeWindow(tmuxSession, width, height); err != nil {
 		// Log warning but don't fail - resize is not critical
-		s.logger.Warn("failed to resize tmux window", "error", err, "session", tmuxSession)
+		slog.Warn("failed to resize tmux window", "error", err, "session", tmuxSession)
 	}
 
 	// Get the command to run
@@ -231,7 +221,7 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 
 		if err := s.tmuxAdapter.SendKeys(tmuxSession, s.info.InitialPrompt); err != nil {
 			// Log warning but don't fail - initial prompt is not critical
-			s.logger.Warn("failed to send initial prompt", "error", err, "session", tmuxSession)
+			slog.Warn("failed to send initial prompt", "error", err, "session", tmuxSession)
 		}
 	}
 
@@ -242,7 +232,7 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 	if err := s.TransitionTo(ctx, state.StatusRunning); err != nil {
 		// Clean up on failure
 		if killErr := s.tmuxAdapter.KillSession(tmuxSession); killErr != nil {
-			s.logger.Warn("failed to kill tmux session during cleanup", "error", killErr, "session", tmuxSession)
+			slog.Warn("failed to kill tmux session during cleanup", "error", killErr, "session", tmuxSession)
 		}
 		return fmt.Errorf("failed to transition to running state: %w", err)
 	}
@@ -258,7 +248,7 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 	if err := s.manager.Save(ctx, s.info); err != nil {
 		// Clean up on failure
 		if killErr := s.tmuxAdapter.KillSession(tmuxSession); killErr != nil {
-			s.logger.Warn("failed to kill tmux session during cleanup", "error", killErr, "session", tmuxSession)
+			slog.Warn("failed to kill tmux session during cleanup", "error", killErr, "session", tmuxSession)
 		}
 		return fmt.Errorf("failed to save session: %w", err)
 	}
@@ -290,7 +280,7 @@ func (s *tmuxSessionImpl) Stop(ctx context.Context) error {
 	if s.info.TmuxSession != "" {
 		if err := s.tmuxAdapter.KillSession(s.info.TmuxSession); err != nil {
 			// Log error but continue
-			s.logger.Warn("failed to kill tmux session", "error", err, "session", s.info.TmuxSession)
+			slog.Warn("failed to kill tmux session", "error", err, "session", s.info.TmuxSession)
 		}
 	}
 
@@ -427,7 +417,7 @@ func (s *tmuxSessionImpl) UpdateStatus(ctx context.Context) error {
 	// Defer saving the session info at the end (single save point)
 	defer func() {
 		if err := s.manager.Save(ctx, s.info); err != nil {
-			s.logger.Warn("failed to save session state", "error", err)
+			slog.Warn("failed to save session state", "error", err)
 		}
 	}()
 
@@ -435,7 +425,7 @@ func (s *tmuxSessionImpl) UpdateStatus(ctx context.Context) error {
 	if !s.tmuxAdapter.SessionExists(s.info.TmuxSession) {
 		// Session doesn't exist anymore - mark as failed
 		if err := s.TransitionTo(ctx, state.StatusFailed); err != nil {
-			s.logger.Warn("failed to transition to failed state", "error", err)
+			slog.Warn("failed to transition to failed state", "error", err)
 		}
 		s.info.Error = "tmux session no longer exists"
 		return nil
@@ -445,11 +435,11 @@ func (s *tmuxSessionImpl) UpdateStatus(ctx context.Context) error {
 	isDead, err := s.tmuxAdapter.IsPaneDead(s.info.TmuxSession)
 	if err != nil {
 		// Log error but continue - don't fail the entire status update
-		s.logger.Warn("failed to check pane status", "error", err)
+		slog.Warn("failed to check pane status", "error", err)
 	} else if isDead {
 		// Shell process is dead - mark as failed
 		if err := s.TransitionTo(ctx, state.StatusFailed); err != nil {
-			s.logger.Warn("failed to transition to failed state", "error", err)
+			slog.Warn("failed to transition to failed state", "error", err)
 		}
 		s.info.Error = "shell process exited"
 		return nil
@@ -460,24 +450,24 @@ func (s *tmuxSessionImpl) UpdateStatus(ctx context.Context) error {
 		hasChildren, err := s.processChecker.HasChildren(s.info.PID)
 		if err != nil {
 			// Log error but continue
-			s.logger.Warn("failed to check child processes", "error", err, "pid", s.info.PID)
+			slog.Warn("failed to check child processes", "error", err, "pid", s.info.PID)
 		} else if !hasChildren {
 			// No child processes - capture exit status from shell
 			exitCode, err := s.captureExitStatus()
 			if err != nil {
 				// Failed to capture exit status - log but continue
-				s.logger.Warn("failed to capture exit status", "error", err)
+				slog.Warn("failed to capture exit status", "error", err)
 			}
 
 			// Determine final status based on exit code
 			if exitCode != 0 {
 				if err := s.TransitionTo(ctx, state.StatusFailed); err != nil {
-					s.logger.Warn("failed to transition to failed state", "error", err)
+					slog.Warn("failed to transition to failed state", "error", err)
 				}
 				s.info.Error = fmt.Sprintf("command exited with code %d", exitCode)
 			} else {
 				if err := s.TransitionTo(ctx, state.StatusCompleted); err != nil {
-					s.logger.Warn("failed to transition to completed state", "error", err)
+					slog.Warn("failed to transition to completed state", "error", err)
 				}
 			}
 			return nil

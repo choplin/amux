@@ -3,6 +3,7 @@ package session
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
@@ -12,7 +13,6 @@ import (
 	"github.com/aki/amux/internal/core/agent"
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/idmap"
-	"github.com/aki/amux/internal/core/logger"
 	"github.com/aki/amux/internal/core/workspace"
 	"github.com/aki/amux/internal/filemanager"
 )
@@ -26,19 +26,11 @@ type Manager struct {
 	tmuxAdapter      tmux.Adapter
 	sessions         map[string]Session
 	idMapper         *idmap.IDMapper
-	logger           logger.Logger
 	mu               sync.RWMutex
 }
 
 // ManagerOption is a function that configures a Manager
 type ManagerOption func(*Manager)
-
-// WithLogger sets the logger for the Manager
-func WithLogger(log logger.Logger) ManagerOption {
-	return func(m *Manager) {
-		m.logger = log
-	}
-}
 
 // NewManager creates a new session manager
 func NewManager(basePath string, workspaceManager *workspace.Manager, agentManager *agent.Manager, idMapper *idmap.IDMapper, opts ...ManagerOption) (*Manager, error) {
@@ -59,7 +51,6 @@ func NewManager(basePath string, workspaceManager *workspace.Manager, agentManag
 		idMapper:         idMapper,
 		tmuxAdapter:      tmuxAdapter,
 		sessions:         make(map[string]Session),
-		logger:           logger.Nop(), // Default to no-op logger
 	}
 
 	// Apply options
@@ -256,7 +247,7 @@ func (m *Manager) ListSessions(ctx context.Context) ([]Session, error) {
 		session, err := m.createSessionFromInfo(ctx, info)
 		if err != nil {
 			// Log warning but continue
-			m.logger.Warn("Failed to create session", "session_id", info.ID, "error", err)
+			slog.Warn("Failed to create session", "session_id", info.ID, "error", err)
 			continue
 		}
 
@@ -271,7 +262,7 @@ func (m *Manager) ListSessions(ctx context.Context) ([]Session, error) {
 	// Reconcile index state with actual sessions
 	if m.idMapper != nil {
 		if orphanedCount, err := m.idMapper.ReconcileSessions(existingIDs); err == nil && orphanedCount > 0 {
-			m.logger.Debug("Cleaned up orphaned session indices", "count", orphanedCount)
+			slog.Debug("Cleaned up orphaned session indices", "count", orphanedCount)
 		}
 	}
 
@@ -298,7 +289,7 @@ func (m *Manager) Remove(ctx context.Context, id ID) error {
 		if m.tmuxAdapter.SessionExists(info.TmuxSession) {
 			if err := m.tmuxAdapter.KillSession(info.TmuxSession); err != nil {
 				// Log error but continue with removal
-				m.logger.Warn("failed to kill tmux session during removal", "error", err, "session", info.TmuxSession)
+				slog.Warn("failed to kill tmux session during removal", "error", err, "session", info.TmuxSession)
 			}
 		}
 	}
@@ -354,7 +345,7 @@ func (m *Manager) createSessionFromInfo(ctx context.Context, info *Info) (Sessio
 				info.Error = reason
 				// Update the stored session info
 				if updateErr := m.saveSessionInfo(ctx, info); updateErr != nil {
-					m.logger.Warn("failed to update orphaned session info", "error", updateErr)
+					slog.Warn("failed to update orphaned session info", "error", updateErr)
 				}
 				// Return orphaned terminal session
 				sess, err := CreateOrphanedTerminalSession(ctx, info, m, reason)
@@ -482,7 +473,7 @@ func (m *Manager) loadSessionInfo(ctx context.Context, id string) (*Info, error)
 	sessionFile := filepath.Join(path, "session.yaml")
 	if err := MigrateSessionInfo(sessionFile); err != nil {
 		// Log but don't fail - migration is best effort
-		m.logger.Debug("failed to migrate session info", "session", id, "error", err)
+		slog.Debug("failed to migrate session info", "session", id, "error", err)
 	}
 
 	info, _, err := m.fileManager.Read(ctx, path)
