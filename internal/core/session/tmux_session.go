@@ -24,7 +24,7 @@ import (
 type tmuxSessionImpl struct {
 	info           *Info
 	manager        *Manager
-	stateManager   *state.Manager
+	state.Manager  // Embedded - it's just a logical grouping of state operations
 	tmuxAdapter    tmux.Adapter
 	workspace      *workspace.Workspace
 	agentConfig    *config.Agent
@@ -80,8 +80,8 @@ func CreateTmuxSession(ctx context.Context, info *Info, manager *Manager, tmuxAd
 
 	stateDir := filepath.Join(info.StoragePath, "state")
 	// TODO: Remove this workaround after migrating to direct slog usage (issue #208)
-	// For now, let state.NewManager use slog.Default()
-	s.stateManager = state.NewManager(info.ID, info.WorkspaceID, stateDir, nil)
+	// For now, let state.InitManager use slog.Default()
+	s.Manager = state.InitManager(info.ID, info.WorkspaceID, stateDir, nil)
 
 	return s, nil
 }
@@ -113,14 +113,8 @@ func (s *tmuxSessionImpl) Status() Status {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	// Get status from state manager
-	if s.stateManager == nil {
-		// This should not happen if CreateTmuxSession is used properly
-		s.logger.Error("StateManager is nil")
-		return StatusFailed
-	}
-
-	currentState, err := s.stateManager.CurrentState()
+	// Get status from embedded state manager
+	currentState, err := s.CurrentState()
 	if err != nil {
 		// This should not happen in normal operation
 		s.logger.Error("failed to get current state", "error", err)
@@ -145,14 +139,9 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 	defer s.mu.Unlock()
 
 	// Check current status - use internal state to avoid deadlock
-	var currentStatus Status
-	if s.stateManager != nil {
-		if state, err := s.stateManager.CurrentState(); err == nil {
-			currentStatus = state
-		} else {
-			currentStatus = s.info.StatusState.Status
-		}
-	} else {
+	currentStatus, err := s.CurrentState()
+	if err != nil {
+		// Fallback to stored status if state read fails
 		currentStatus = s.info.StatusState.Status
 	}
 
@@ -171,10 +160,8 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 	}
 
 	// Transition to starting state
-	if s.stateManager != nil {
-		if err := s.stateManager.TransitionTo(ctx, state.StatusStarting); err != nil {
-			return fmt.Errorf("failed to transition to starting state: %w", err)
-		}
+	if err := s.TransitionTo(ctx, state.StatusStarting); err != nil {
+		return fmt.Errorf("failed to transition to starting state: %w", err)
 	}
 
 	// Generate tmux session name
@@ -253,14 +240,12 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 	pid, _ := s.tmuxAdapter.GetSessionPID(tmuxSession)
 
 	// Transition to running state
-	if s.stateManager != nil {
-		if err := s.stateManager.TransitionTo(ctx, state.StatusRunning); err != nil {
-			// Clean up on failure
-			if killErr := s.tmuxAdapter.KillSession(tmuxSession); killErr != nil {
-				s.logger.Warn("failed to kill tmux session during cleanup", "error", killErr, "session", tmuxSession)
-			}
-			return fmt.Errorf("failed to transition to running state: %w", err)
+	if err := s.TransitionTo(ctx, state.StatusRunning); err != nil {
+		// Clean up on failure
+		if killErr := s.tmuxAdapter.KillSession(tmuxSession); killErr != nil {
+			s.logger.Warn("failed to kill tmux session during cleanup", "error", killErr, "session", tmuxSession)
 		}
+		return fmt.Errorf("failed to transition to running state: %w", err)
 	}
 
 	// Update session info
@@ -289,14 +274,9 @@ func (s *tmuxSessionImpl) Stop(ctx context.Context) error {
 	defer s.mu.Unlock()
 
 	// Check current status - use internal state to avoid deadlock
-	var currentStatus Status
-	if s.stateManager != nil {
-		if state, err := s.stateManager.CurrentState(); err == nil {
-			currentStatus = state
-		} else {
-			currentStatus = s.info.StatusState.Status
-		}
-	} else {
+	currentStatus, err := s.CurrentState()
+	if err != nil {
+		// Fallback to stored status if state read fails
 		currentStatus = s.info.StatusState.Status
 	}
 
@@ -305,10 +285,8 @@ func (s *tmuxSessionImpl) Stop(ctx context.Context) error {
 	}
 
 	// Transition to stopping state
-	if s.stateManager != nil {
-		if err := s.stateManager.TransitionTo(ctx, state.StatusStopping); err != nil {
-			return fmt.Errorf("failed to transition to stopping state: %w", err)
-		}
+	if err := s.TransitionTo(ctx, state.StatusStopping); err != nil {
+		return fmt.Errorf("failed to transition to stopping state: %w", err)
 	}
 
 	// Kill tmux session
@@ -320,10 +298,8 @@ func (s *tmuxSessionImpl) Stop(ctx context.Context) error {
 	}
 
 	// Transition to stopped state
-	if s.stateManager != nil {
-		if err := s.stateManager.TransitionTo(ctx, state.StatusStopped); err != nil {
-			return fmt.Errorf("failed to transition to stopped state: %w", err)
-		}
+	if err := s.TransitionTo(ctx, state.StatusStopped); err != nil {
+		return fmt.Errorf("failed to transition to stopped state: %w", err)
 	}
 
 	// Update status
@@ -447,10 +423,8 @@ func (s *tmuxSessionImpl) UpdateStatus(ctx context.Context) error {
 	// Check if tmux session still exists
 	if !s.tmuxAdapter.SessionExists(s.info.TmuxSession) {
 		// Session doesn't exist anymore - mark as failed
-		if s.stateManager != nil {
-			if err := s.stateManager.TransitionTo(ctx, state.StatusFailed); err != nil {
-				s.logger.Warn("failed to transition to failed state", "error", err)
-			}
+		if err := s.TransitionTo(ctx, state.StatusFailed); err != nil {
+			s.logger.Warn("failed to transition to failed state", "error", err)
 		}
 		now := time.Now()
 		s.info.StatusState.Status = StatusFailed
@@ -466,10 +440,8 @@ func (s *tmuxSessionImpl) UpdateStatus(ctx context.Context) error {
 		s.logger.Warn("failed to check pane status", "error", err)
 	} else if isDead {
 		// Shell process is dead - mark as failed
-		if s.stateManager != nil {
-			if err := s.stateManager.TransitionTo(ctx, state.StatusFailed); err != nil {
-				s.logger.Warn("failed to transition to failed state", "error", err)
-			}
+		if err := s.TransitionTo(ctx, state.StatusFailed); err != nil {
+			s.logger.Warn("failed to transition to failed state", "error", err)
 		}
 		now := time.Now()
 		s.info.StatusState.Status = StatusFailed
@@ -495,18 +467,14 @@ func (s *tmuxSessionImpl) UpdateStatus(ctx context.Context) error {
 			// Determine final status based on exit code
 			now := time.Now()
 			if exitCode != 0 {
-				if s.stateManager != nil {
-					if err := s.stateManager.TransitionTo(ctx, state.StatusFailed); err != nil {
-						s.logger.Warn("failed to transition to failed state", "error", err)
-					}
+				if err := s.TransitionTo(ctx, state.StatusFailed); err != nil {
+					s.logger.Warn("failed to transition to failed state", "error", err)
 				}
 				s.info.StatusState.Status = StatusFailed
 				s.info.Error = fmt.Sprintf("command exited with code %d", exitCode)
 			} else {
-				if s.stateManager != nil {
-					if err := s.stateManager.TransitionTo(ctx, state.StatusCompleted); err != nil {
-						s.logger.Warn("failed to transition to completed state", "error", err)
-					}
+				if err := s.TransitionTo(ctx, state.StatusCompleted); err != nil {
+					s.logger.Warn("failed to transition to completed state", "error", err)
 				}
 				s.info.StatusState.Status = StatusCompleted
 			}

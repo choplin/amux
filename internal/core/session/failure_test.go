@@ -96,9 +96,9 @@ func TestSessionFailureDetection(t *testing.T) {
 
 		// Manually transition to running state for test
 		tmuxSess := sess.(*tmuxSessionImpl)
-		err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusStarting)
+		err = tmuxSess.TransitionTo(context.Background(), state.StatusStarting)
 		require.NoError(t, err)
-		err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusRunning)
+		err = tmuxSess.TransitionTo(context.Background(), state.StatusRunning)
 		require.NoError(t, err)
 		tmuxSess.info.StatusState.Status = StatusRunning
 
@@ -146,9 +146,9 @@ func TestSessionFailureDetection(t *testing.T) {
 
 		// Manually transition to running state for test
 		tmuxSess := sess.(*tmuxSessionImpl)
-		err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusStarting)
+		err = tmuxSess.TransitionTo(context.Background(), state.StatusStarting)
 		require.NoError(t, err)
-		err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusRunning)
+		err = tmuxSess.TransitionTo(context.Background(), state.StatusRunning)
 		require.NoError(t, err)
 		tmuxSess.info.StatusState.Status = StatusRunning
 
@@ -194,9 +194,9 @@ func TestSessionFailureDetection(t *testing.T) {
 
 		// Manually transition to running state for test
 		tmuxSess := sess.(*tmuxSessionImpl)
-		err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusStarting)
+		err = tmuxSess.TransitionTo(context.Background(), state.StatusStarting)
 		require.NoError(t, err)
-		err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusRunning)
+		err = tmuxSess.TransitionTo(context.Background(), state.StatusRunning)
 		require.NoError(t, err)
 		tmuxSess.info.StatusState.Status = StatusRunning
 
@@ -243,9 +243,9 @@ func TestSessionFailureDetection(t *testing.T) {
 
 		// Manually transition to running state for test
 		tmuxSess := sess.(*tmuxSessionImpl)
-		err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusStarting)
+		err = tmuxSess.TransitionTo(context.Background(), state.StatusStarting)
 		require.NoError(t, err)
-		err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusRunning)
+		err = tmuxSess.TransitionTo(context.Background(), state.StatusRunning)
 		require.NoError(t, err)
 		tmuxSess.info.StatusState.Status = StatusRunning
 
@@ -296,9 +296,9 @@ func TestSessionFailureDetection(t *testing.T) {
 
 		// Manually transition to running state for test
 		tmuxSess := sess.(*tmuxSessionImpl)
-		err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusStarting)
+		err = tmuxSess.TransitionTo(context.Background(), state.StatusStarting)
 		require.NoError(t, err)
-		err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusRunning)
+		err = tmuxSess.TransitionTo(context.Background(), state.StatusRunning)
 		require.NoError(t, err)
 		tmuxSess.info.StatusState.Status = StatusRunning
 
@@ -351,9 +351,9 @@ func TestSessionFailureDetection(t *testing.T) {
 
 		// Manually transition to running state for test
 		tmuxSess := sess.(*tmuxSessionImpl)
-		err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusStarting)
+		err = tmuxSess.TransitionTo(context.Background(), state.StatusStarting)
 		require.NoError(t, err)
-		err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusRunning)
+		err = tmuxSess.TransitionTo(context.Background(), state.StatusRunning)
 		require.NoError(t, err)
 		tmuxSess.info.StatusState.Status = StatusRunning
 
@@ -403,9 +403,9 @@ func TestSessionFailureDetection(t *testing.T) {
 
 		// Manually transition to running state for test
 		tmuxSess := sess.(*tmuxSessionImpl)
-		err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusStarting)
+		err = tmuxSess.TransitionTo(context.Background(), state.StatusStarting)
 		require.NoError(t, err)
-		err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusRunning)
+		err = tmuxSess.TransitionTo(context.Background(), state.StatusRunning)
 		require.NoError(t, err)
 		tmuxSess.info.StatusState.Status = StatusRunning
 

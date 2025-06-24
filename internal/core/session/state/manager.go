@@ -30,12 +30,12 @@ type Data struct {
 	StatusChangedAt time.Time `json:"status_changed_at"`
 }
 
-// NewManager creates a new state manager
-func NewManager(sessionID, workspaceID, stateDir string, logger *slog.Logger) *Manager {
+// InitManager initializes a new state manager
+func InitManager(sessionID, workspaceID, stateDir string, logger *slog.Logger) Manager {
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &Manager{
+	return Manager{
 		sessionID:     sessionID,
 		workspaceID:   workspaceID,
 		stateFilePath: filepath.Join(stateDir, "state.json"),

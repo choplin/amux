@@ -292,11 +292,9 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 	// Need to properly transition through states for StateManager
 	session.info.TmuxSession = "test-session"
 	ctx := context.Background()
-	if session.stateManager != nil {
-		// Transition to running state properly
-		_ = session.stateManager.TransitionTo(ctx, state.StatusStarting)
-		_ = session.stateManager.TransitionTo(ctx, state.StatusRunning)
-	}
+	// Transition to running state properly
+	_ = session.TransitionTo(ctx, state.StatusStarting)
+	_ = session.TransitionTo(ctx, state.StatusRunning)
 	session.info.StatusState.Status = StatusRunning
 
 	// Create the session in the mock adapter

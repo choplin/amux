@@ -465,11 +465,9 @@ func TestManager_RemoveCompletedSession(t *testing.T) {
 	tmuxSessionName := tmuxSess.info.TmuxSession
 	tmuxSess.mu.Unlock()
 
-	// Transition to completed state through StateManager if available
-	if tmuxSess.stateManager != nil {
-		if err := tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusCompleted); err != nil {
-			t.Fatalf("Failed to transition to completed state: %v", err)
-		}
+	// Transition to completed state through embedded StateManager
+	if err := tmuxSess.TransitionTo(context.Background(), state.StatusCompleted); err != nil {
+		t.Fatalf("Failed to transition to completed state: %v", err)
 	}
 
 	// Also update internal state
