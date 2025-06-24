@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/aki/amux/internal/core/session/state"
 	"github.com/google/uuid"
 )
 
@@ -51,41 +52,20 @@ const (
 	// Future: TypeClaudeCode, etc.
 )
 
-// Status represents the current state of a session
-type Status string
+// Status is an alias for state.Status to maintain backward compatibility
+// and avoid breaking changes in the public API
+type Status = state.Status
 
-// String returns the string representation of the status
-func (s Status) String() string {
-	return string(s)
-}
-
-// IsRunning returns true if the session is in a running state
-func (s Status) IsRunning() bool {
-	return s == StatusStarting || s == StatusRunning || s == StatusStopping
-}
-
-// IsTerminal returns true if the session is in a terminal state (completed, stopped, failed or orphaned)
-func (s Status) IsTerminal() bool {
-	return s == StatusCompleted || s == StatusStopped || s == StatusFailed || s == StatusOrphaned
-}
-
+// Re-export status constants for convenience
 const (
-	// StatusCreated indicates a session has been created but not started
-	StatusCreated Status = "created"
-	// StatusStarting indicates the session is in the process of starting
-	StatusStarting Status = "starting"
-	// StatusRunning indicates the session is actively running
-	StatusRunning Status = "running"
-	// StatusStopping indicates the session is in the process of stopping
-	StatusStopping Status = "stopping"
-	// StatusCompleted indicates a session command has finished successfully
-	StatusCompleted Status = "completed"
-	// StatusStopped indicates a session has been stopped normally
-	StatusStopped Status = "stopped"
-	// StatusFailed indicates a session has failed or crashed
-	StatusFailed Status = "failed"
-	// StatusOrphaned indicates a session with missing dependencies (e.g., deleted workspace)
-	StatusOrphaned Status = "orphaned"
+	StatusCreated   = state.StatusCreated
+	StatusStarting  = state.StatusStarting
+	StatusRunning   = state.StatusRunning
+	StatusStopping  = state.StatusStopping
+	StatusCompleted = state.StatusCompleted
+	StatusStopped   = state.StatusStopped
+	StatusFailed    = state.StatusFailed
+	StatusOrphaned  = state.StatusOrphaned
 )
 
 // StatusState holds runtime state for status tracking

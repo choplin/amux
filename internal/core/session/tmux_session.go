@@ -127,8 +127,8 @@ func (s *tmuxSessionImpl) Status() Status {
 		return StatusFailed
 	}
 
-	// Map state.Status back to session.Status
-	return mapStateStatusToSession(currentState)
+	// Return the current state directly (no mapping needed anymore)
+	return currentState
 }
 
 func (s *tmuxSessionImpl) Info() *Info {
@@ -148,7 +148,7 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 	var currentStatus Status
 	if s.stateManager != nil {
 		if state, err := s.stateManager.CurrentState(); err == nil {
-			currentStatus = mapStateStatusToSession(state)
+			currentStatus = state
 		} else {
 			currentStatus = s.info.StatusState.Status
 		}
@@ -292,7 +292,7 @@ func (s *tmuxSessionImpl) Stop(ctx context.Context) error {
 	var currentStatus Status
 	if s.stateManager != nil {
 		if state, err := s.stateManager.CurrentState(); err == nil {
-			currentStatus = mapStateStatusToSession(state)
+			currentStatus = state
 		} else {
 			currentStatus = s.info.StatusState.Status
 		}
@@ -574,28 +574,4 @@ func (s *tmuxSessionImpl) captureExitStatus() (int, error) {
 	}
 
 	return exitCode, nil
-}
-
-// mapStateStatusToSession maps state.Status back to session.Status
-func mapStateStatusToSession(stateStatus state.Status) Status {
-	switch stateStatus {
-	case state.StatusCreated:
-		return StatusCreated
-	case state.StatusStarting:
-		return StatusStarting
-	case state.StatusRunning:
-		return StatusRunning
-	case state.StatusStopping:
-		return StatusStopping
-	case state.StatusCompleted:
-		return StatusCompleted
-	case state.StatusStopped:
-		return StatusStopped
-	case state.StatusFailed:
-		return StatusFailed
-	case state.StatusOrphaned:
-		return StatusOrphaned
-	default:
-		return StatusCreated
-	}
 }
