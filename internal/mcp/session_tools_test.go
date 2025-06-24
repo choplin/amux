@@ -86,8 +86,8 @@ func TestSessionRun(t *testing.T) {
 		status, ok := response["status"].(string)
 		if !ok {
 			t.Errorf("expected status to be string, got %T", response["status"])
-		} else if status != string(session.StatusWorking) && status != string(session.StatusIdle) {
-			t.Errorf("expected status to be working or idle, got %v", status)
+		} else if status != string(session.StatusRunning) {
+			t.Errorf("expected status to be running, got %v", status)
 		}
 
 		// Clean up - stop the session

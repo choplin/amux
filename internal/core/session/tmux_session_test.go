@@ -274,20 +274,20 @@ func TestTmuxSession_StatusTracking(t *testing.T) {
 		t.Fatalf("Failed to start tmux session: %v", err)
 	}
 
-	// After start, status should be working
-	if status := session.Status(); status != state.StatusWorking {
-		t.Errorf("Expected status after start to be working, got %s", status)
+	// After start, status should be running
+	if status := session.Status(); status != state.StatusRunning {
+		t.Errorf("Expected status after start to be running, got %s", status)
 	}
 
-	// Get output - this should keep status as working
+	// Get output - status should remain running
 	_, err = session.GetOutput(0)
 	if err != nil {
 		t.Errorf("Failed to get output: %v", err)
 	}
 
-	// Status should still be working
-	if status := session.Status(); status != state.StatusWorking {
-		t.Errorf("Expected status after output to be working, got %s", status)
+	// Status should still be running
+	if status := session.Status(); status != state.StatusRunning {
+		t.Errorf("Expected status after output to be running, got %s", status)
 	}
 
 	// Stop session

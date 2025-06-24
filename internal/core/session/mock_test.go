@@ -323,18 +323,18 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 		checkStatusChangedAt bool
 	}{
 		{
-			name: "Initial working status remains working",
+			name: "Initial running status remains running",
 			setupFunc: func() {
 				// First update to establish baseline
 				if err := session.UpdateStatus(context.Background()); err != nil {
 					t.Fatalf("Failed to update status: %v", err)
 				}
 			},
-			expectedStatus:       state.StatusWorking,
+			expectedStatus:       state.StatusRunning,
 			checkStatusChangedAt: false,
 		},
 		{
-			name: "Status remains working with new output",
+			name: "Status remains running with new output",
 			setupFunc: func() {
 				// Change output
 				mockAdapter.SetPaneContent("test-session", "new output")
@@ -342,11 +342,11 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 					t.Fatalf("Failed to update status: %v", err)
 				}
 			},
-			expectedStatus:       state.StatusWorking,
+			expectedStatus:       state.StatusRunning,
 			checkStatusChangedAt: false,
 		},
 		{
-			name: "Status remains working within idle threshold",
+			name: "Status remains running within activity threshold",
 			setupFunc: func() {
 				// Wait a bit but less than idle threshold
 				time.Sleep(1 * time.Second)
@@ -354,11 +354,11 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 					t.Fatalf("Failed to update status: %v", err)
 				}
 			},
-			expectedStatus:       state.StatusWorking,
+			expectedStatus:       state.StatusRunning,
 			checkStatusChangedAt: false,
 		},
 		{
-			name: "Status becomes idle after no output for idle threshold",
+			name: "Status remains running even without new output",
 			setupFunc: func() {
 				// Reset to a known state with unique output
 				mockAdapter.SetPaneContent("test-session", "idle test output final")
@@ -373,21 +373,21 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 					t.Fatalf("First UpdateStatus failed: %v", err)
 				}
 
-				// At this point, status should be working because output changed
-				if session.Status() != state.StatusWorking {
-					t.Fatalf("Expected working status after output change, got %s", session.Status())
+				// At this point, status should be running
+				if session.Status() != state.StatusRunning {
+					t.Fatalf("Expected running status after output change, got %s", session.Status())
 				}
 
 				// Wait for idle threshold to pass
 				time.Sleep(3500 * time.Millisecond) // Well over 3 seconds
 
-				// Update status again - should detect idle since output hasn't changed
+				// Update status again - should remain running (no idle state)
 				err = session.UpdateStatus(context.Background())
 				if err != nil {
 					t.Fatalf("Second UpdateStatus failed: %v", err)
 				}
 			},
-			expectedStatus:       state.StatusIdle,
+			expectedStatus:       state.StatusRunning,
 			checkStatusChangedAt: true,
 		},
 	}

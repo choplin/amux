@@ -103,18 +103,16 @@ func TestSessionFailureDetection(t *testing.T) {
 		// Set initial status through state machine
 		if tmuxSess, ok := sess.(*tmuxSessionImpl); ok {
 			if tmuxSess.stateManager != nil {
-				// Created -> Starting -> Running -> Working
+				// Created -> Starting -> Running
 				err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusStarting)
 				require.NoError(t, err)
 				err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusRunning)
 				require.NoError(t, err)
-				err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusWorking)
-				require.NoError(t, err)
 			}
 		}
 
-		// Verify session is working
-		assert.Equal(t, state.StatusWorking, sess.Status())
+		// Verify session is running
+		assert.Equal(t, state.StatusRunning, sess.Status())
 
 		// Kill the tmux session
 		err = mockAdapter.KillSession(info.TmuxSession)
@@ -164,12 +162,10 @@ func TestSessionFailureDetection(t *testing.T) {
 		// Set initial status through state machine
 		if tmuxSess, ok := sess.(*tmuxSessionImpl); ok {
 			if tmuxSess.stateManager != nil {
-				// Created -> Starting -> Running -> Working
+				// Created -> Starting -> Running
 				err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusStarting)
 				require.NoError(t, err)
 				err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusRunning)
-				require.NoError(t, err)
-				err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusWorking)
 				require.NoError(t, err)
 			}
 		}
@@ -223,12 +219,10 @@ func TestSessionFailureDetection(t *testing.T) {
 		// Set initial status through state machine
 		if tmuxSess, ok := sess.(*tmuxSessionImpl); ok {
 			if tmuxSess.stateManager != nil {
-				// Created -> Starting -> Running -> Working
+				// Created -> Starting -> Running
 				err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusStarting)
 				require.NoError(t, err)
 				err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusRunning)
-				require.NoError(t, err)
-				err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusWorking)
 				require.NoError(t, err)
 			}
 		}
@@ -281,12 +275,10 @@ func TestSessionFailureDetection(t *testing.T) {
 		// Set initial status through state machine
 		if tmuxSess, ok := sess.(*tmuxSessionImpl); ok {
 			if tmuxSess.stateManager != nil {
-				// Created -> Starting -> Running -> Working
+				// Created -> Starting -> Running
 				err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusStarting)
 				require.NoError(t, err)
 				err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusRunning)
-				require.NoError(t, err)
-				err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusWorking)
 				require.NoError(t, err)
 			}
 		}
@@ -301,8 +293,8 @@ func TestSessionFailureDetection(t *testing.T) {
 		err = sess.UpdateStatus(context.Background())
 		require.NoError(t, err)
 
-		// Should remain working
-		assert.Equal(t, state.StatusWorking, sess.Status())
+		// Should remain running
+		assert.Equal(t, state.StatusRunning, sess.Status())
 		assert.Empty(t, sess.Info().Error)
 	})
 
@@ -351,12 +343,10 @@ func TestSessionFailureDetection(t *testing.T) {
 		// Set initial status through state machine
 		if tmuxSess, ok := sess.(*tmuxSessionImpl); ok {
 			if tmuxSess.stateManager != nil {
-				// Created -> Starting -> Running -> Working
+				// Created -> Starting -> Running
 				err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusStarting)
 				require.NoError(t, err)
 				err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusRunning)
-				require.NoError(t, err)
-				err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusWorking)
 				require.NoError(t, err)
 			}
 		}
@@ -418,12 +408,10 @@ func TestSessionFailureDetection(t *testing.T) {
 		// Set initial status through state machine
 		if tmuxSess, ok := sess.(*tmuxSessionImpl); ok {
 			if tmuxSess.stateManager != nil {
-				// Created -> Starting -> Running -> Working
+				// Created -> Starting -> Running
 				err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusStarting)
 				require.NoError(t, err)
 				err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusRunning)
-				require.NoError(t, err)
-				err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusWorking)
 				require.NoError(t, err)
 			}
 		}
@@ -476,12 +464,10 @@ func TestSessionFailureDetection(t *testing.T) {
 		// Set initial status through state machine
 		if tmuxSess, ok := sess.(*tmuxSessionImpl); ok {
 			if tmuxSess.stateManager != nil {
-				// Created -> Starting -> Running -> Working
+				// Created -> Starting -> Running
 				err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusStarting)
 				require.NoError(t, err)
 				err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusRunning)
-				require.NoError(t, err)
-				err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusWorking)
 				require.NoError(t, err)
 			}
 		}
@@ -492,10 +478,10 @@ func TestSessionFailureDetection(t *testing.T) {
 		// Sleep a bit to ensure cache expires (cache duration is 1 second)
 		time.Sleep(1100 * time.Millisecond)
 
-		// Update status - should remain working
+		// Update status - should remain running
 		err = sess.UpdateStatus(context.Background())
 		require.NoError(t, err)
-		assert.Equal(t, state.StatusWorking, sess.Status())
+		assert.Equal(t, state.StatusRunning, sess.Status())
 
 		// Now simulate command completion - no more children
 		mockProcessChecker.SetHasChildren(info.PID, false)

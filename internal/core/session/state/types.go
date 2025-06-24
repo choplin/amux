@@ -14,12 +14,8 @@ const (
 	StatusCreated Status = "created"
 	// StatusStarting indicates the session is in the process of starting
 	StatusStarting Status = "starting"
-	// StatusRunning indicates the session is running (generic running state)
+	// StatusRunning indicates the session is running
 	StatusRunning Status = "running"
-	// StatusWorking indicates the session is actively processing (agent is working)
-	StatusWorking Status = "working"
-	// StatusIdle indicates the session is running but inactive (agent is idle)
-	StatusIdle Status = "idle"
 	// StatusStopping indicates the session is in the process of stopping
 	StatusStopping Status = "stopping"
 	// StatusStopped indicates the session has been stopped by user
@@ -34,7 +30,7 @@ const (
 
 // IsRunning returns true if the status indicates the session is running
 func (s Status) IsRunning() bool {
-	return s == StatusRunning || s == StatusWorking || s == StatusIdle
+	return s == StatusRunning
 }
 
 // IsTerminal returns true if the status is a terminal state
@@ -44,16 +40,16 @@ func (s Status) IsTerminal() bool {
 
 // Data represents the persistent state of a session
 type Data struct {
-	State       Status    `json:"state"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	UpdatedBy   int       `json:"updated_by"`
-	SessionID   string    `json:"session_id"`
-	WorkspaceID string    `json:"workspace_id"`
+	State          Status    `json:"state"`
+	StateChangedAt time.Time `json:"state_changed_at"`
+	UpdatedBy      int       `json:"updated_by"`
+	SessionID      string    `json:"session_id"`
+	WorkspaceID    string    `json:"workspace_id"`
 
-	// Activity tracking
-	LastOutputHash  uint32    `json:"last_output_hash,omitempty"`
-	LastOutputTime  time.Time `json:"last_output_time,omitempty"`
-	LastStatusCheck time.Time `json:"last_status_check,omitempty"`
+	// Activity metrics
+	LastActivityHash uint32    `json:"last_activity_hash,omitempty"`
+	LastActivityAt   time.Time `json:"last_activity_at,omitempty"`
+	LastCheckedAt    time.Time `json:"last_checked_at,omitempty"`
 }
 
 // ErrSessionLocked is returned when a session is locked by another process

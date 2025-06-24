@@ -34,9 +34,7 @@ type tmuxSessionImpl struct {
 }
 
 // statusCacheDuration defines how long to cache status before rechecking.
-// This is set to 1 second to balance performance with idle detection accuracy.
-// With a 3-second idle threshold, this ensures we can detect idle state within
-// 3-4 seconds rather than up to 5 seconds (which would happen with 2-second cache).
+// This is set to 1 second to balance performance with activity detection accuracy.
 const statusCacheDuration = 1 * time.Second
 
 // TmuxSessionOption is a function that configures a tmux session
@@ -152,7 +150,7 @@ func (s *tmuxSessionImpl) StatusChangedAt() time.Time {
 	if s.stateManager != nil {
 		stateData, err := s.stateManager.GetState(context.TODO())
 		if err == nil && stateData != nil {
-			return stateData.UpdatedAt
+			return stateData.StateChangedAt
 		}
 	}
 	return time.Time{}
@@ -165,7 +163,7 @@ func (s *tmuxSessionImpl) LastActivityTime() time.Time {
 	if s.stateManager != nil {
 		stateData, err := s.stateManager.GetState(context.TODO())
 		if err == nil && stateData != nil {
-			return stateData.LastOutputTime
+			return stateData.LastActivityAt
 		}
 	}
 	return time.Time{}
@@ -300,12 +298,9 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 
 	// Transition to Running -> Working now that tmux session is created
 	if s.stateManager != nil {
-		// Starting -> Running -> Working
+		// Starting -> Running
 		if err := s.stateManager.TransitionTo(ctx, state.StatusRunning); err != nil {
 			return fmt.Errorf("failed to transition to running: %w", err)
-		}
-		if err := s.stateManager.TransitionTo(ctx, state.StatusWorking); err != nil {
-			return fmt.Errorf("failed to transition to working: %w", err)
 		}
 	}
 
@@ -416,16 +411,8 @@ func (s *tmuxSessionImpl) SendInput(input string) error {
 		return err
 	}
 
-	// If status is idle, transition to working
-	if s.stateManager != nil {
-		stateData, err := s.stateManager.GetState(context.TODO())
-		if err == nil && stateData != nil && stateData.State == state.StatusIdle {
-			// Transition to working since we just sent input
-			if err := s.stateManager.TransitionTo(context.Background(), state.StatusWorking); err != nil {
-				s.logger.Debug("failed to transition to working after input", "error", err)
-			}
-		}
-	}
+	// Update activity timestamp since we just sent input
+	// For now, just rely on the next UpdateStatus call to detect activity
 
 	return nil
 }
@@ -480,7 +467,7 @@ func (s *tmuxSessionImpl) UpdateStatus(ctx context.Context) error {
 	// Check cache - skip update if checked recently
 	if s.stateManager != nil {
 		stateData, err := s.stateManager.GetState(ctx)
-		if err == nil && stateData != nil && time.Since(stateData.LastStatusCheck) < statusCacheDuration {
+		if err == nil && stateData != nil && time.Since(stateData.LastCheckedAt) < statusCacheDuration {
 			return nil
 		}
 	}
@@ -552,9 +539,9 @@ func (s *tmuxSessionImpl) UpdateStatus(ctx context.Context) error {
 	}
 
 	// If we get here, session is running with active processes
-	// Continue with existing working/idle detection logic
+	// Track activity for monitoring purposes
 
-	// Get last 20 lines of output for status checking
+	// Get last 20 lines of output for activity tracking
 	// This is sufficient to detect activity without fetching entire buffer
 	const statusCheckLines = 20
 	output, err := s.tmuxAdapter.CapturePaneWithOptions(s.info.TmuxSession, statusCheckLines)
@@ -568,37 +555,19 @@ func (s *tmuxSessionImpl) UpdateStatus(ctx context.Context) error {
 	currentHash := h.Sum32()
 	now := time.Now()
 
-	// Update output tracking and handle working/idle transitions
+	// Update activity metrics for tracking purposes
 	if s.stateManager != nil {
 		stateData, err := s.stateManager.GetState(ctx)
 		if err == nil && stateData != nil {
-			// Check if output changed
-			if currentHash != stateData.LastOutputHash {
-				// Output changed, agent is working
+			// Update activity if output changed or periodically update check time
+			if currentHash != stateData.LastActivityHash {
+				// Output changed, update activity
 				if err := s.stateManager.UpdateActivity(ctx, currentHash, now); err != nil {
 					s.logger.Warn("failed to update activity", "error", err)
 				}
-
-				// Transition to working if not already
-				if stateData.State != state.StatusWorking {
-					if err := s.stateManager.TransitionTo(ctx, state.StatusWorking); err != nil {
-						s.logger.Debug("failed to transition to working", "error", err)
-					}
-				}
 			} else {
-				// No output change, check if we should transition to idle
-				timeSinceLastOutput := time.Since(stateData.LastOutputTime)
-				const idleThreshold = 3 * time.Second
-
-				if timeSinceLastOutput >= idleThreshold && stateData.State == state.StatusWorking {
-					// Transition to idle
-					if err := s.stateManager.TransitionTo(ctx, state.StatusIdle); err != nil {
-						s.logger.Debug("failed to transition to idle", "error", err)
-					}
-				}
-
-				// Update last check time even if no output change
-				if err := s.stateManager.UpdateActivity(ctx, stateData.LastOutputHash, stateData.LastOutputTime); err != nil {
+				// No output change, just update last check time
+				if err := s.stateManager.UpdateActivity(ctx, stateData.LastActivityHash, stateData.LastActivityAt); err != nil {
 					s.logger.Warn("failed to update activity check time", "error", err)
 				}
 			}

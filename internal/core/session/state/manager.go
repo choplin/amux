@@ -63,10 +63,10 @@ func (m *Manager) GetState(ctx context.Context) (*Data, error) {
 		if os.IsNotExist(err) {
 			// Return default state if file doesn't exist
 			return &Data{
-				State:       StatusCreated,
-				SessionID:   m.sessionID,
-				WorkspaceID: m.workspaceID,
-				UpdatedAt:   time.Now(),
+				State:          StatusCreated,
+				SessionID:      m.sessionID,
+				WorkspaceID:    m.workspaceID,
+				StateChangedAt: time.Now(),
 			}, nil
 		}
 		return nil, err
@@ -75,7 +75,7 @@ func (m *Manager) GetState(ctx context.Context) (*Data, error) {
 }
 
 // UpdateActivity updates activity tracking data
-func (m *Manager) UpdateActivity(ctx context.Context, outputHash uint32, outputTime time.Time) error {
+func (m *Manager) UpdateActivity(ctx context.Context, activityHash uint32, activityTime time.Time) error {
 	lock, err := m.acquireLock(ctx, WriteLock)
 	if err != nil {
 		return fmt.Errorf("failed to acquire write lock: %w", err)
@@ -93,9 +93,9 @@ func (m *Manager) UpdateActivity(ctx context.Context, outputHash uint32, outputT
 	}
 
 	// Update activity fields
-	current.LastOutputHash = outputHash
-	current.LastOutputTime = outputTime
-	current.LastStatusCheck = time.Now()
+	current.LastActivityHash = activityHash
+	current.LastActivityAt = activityTime
+	current.LastCheckedAt = time.Now()
 
 	// Save state
 	if err := m.saveState(current); err != nil {
@@ -150,16 +150,16 @@ func (m *Manager) TransitionTo(ctx context.Context, newState Status) error {
 
 	// Update state atomically
 	newData := &Data{
-		State:       newState,
-		UpdatedAt:   time.Now(),
-		UpdatedBy:   os.Getpid(),
-		SessionID:   m.sessionID,
-		WorkspaceID: m.workspaceID,
+		State:          newState,
+		StateChangedAt: time.Now(),
+		UpdatedBy:      os.Getpid(),
+		SessionID:      m.sessionID,
+		WorkspaceID:    m.workspaceID,
 
 		// Preserve activity tracking data
-		LastOutputHash:  current.LastOutputHash,
-		LastOutputTime:  current.LastOutputTime,
-		LastStatusCheck: current.LastStatusCheck,
+		LastActivityHash: current.LastActivityHash,
+		LastActivityAt:   current.LastActivityAt,
+		LastCheckedAt:    current.LastCheckedAt,
 	}
 
 	if err := m.saveState(newData); err != nil {
@@ -339,10 +339,8 @@ func (l *sessionLock) Release() error {
 func isValidTransition(from, to Status) bool {
 	validTransitions := map[Status][]Status{
 		StatusCreated:  {StatusStarting, StatusFailed, StatusOrphaned},
-		StatusStarting: {StatusRunning, StatusWorking, StatusFailed, StatusOrphaned},
-		StatusRunning:  {StatusWorking, StatusIdle, StatusStopping, StatusFailed, StatusCompleted, StatusOrphaned},
-		StatusWorking:  {StatusIdle, StatusRunning, StatusStopping, StatusFailed, StatusCompleted, StatusOrphaned},
-		StatusIdle:     {StatusWorking, StatusRunning, StatusStopping, StatusFailed, StatusCompleted, StatusOrphaned},
+		StatusStarting: {StatusRunning, StatusFailed, StatusOrphaned},
+		StatusRunning:  {StatusStopping, StatusFailed, StatusCompleted, StatusOrphaned},
 		StatusStopping: {StatusStopped, StatusFailed},
 		// Terminal states cannot transition
 		StatusStopped:   {},

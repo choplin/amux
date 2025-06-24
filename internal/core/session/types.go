@@ -61,8 +61,6 @@ const (
 	StatusCreated   = state.StatusCreated
 	StatusStarting  = state.StatusStarting
 	StatusRunning   = state.StatusRunning
-	StatusWorking   = state.StatusWorking
-	StatusIdle      = state.StatusIdle
 	StatusStopping  = state.StatusStopping
 	StatusCompleted = state.StatusCompleted
 	StatusStopped   = state.StatusStopped

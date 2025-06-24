@@ -85,21 +85,33 @@ func listSessions(cmd *cobra.Command, args []string) error {
 		// Format status for display
 		status := sess.Status()
 		statusStr := string(status)
-		switch status {
-		case session.StatusCreated:
-			// StatusCreated uses default styling (no color)
-		case session.StatusWorking:
+
+		// Add activity info for running sessions
+		if status == session.StatusRunning {
+			// Get last activity time from state manager if available
+			lastActivity := sess.LastActivityTime()
+			if !lastActivity.IsZero() {
+				idleDuration := time.Since(lastActivity)
+				if idleDuration > 30*time.Second {
+					// Show idle indicator
+					statusStr = fmt.Sprintf("%s (%s)", statusStr, ui.DimStyle.Render(fmt.Sprintf("idle %s", ui.FormatDuration(idleDuration))))
+				}
+			}
 			statusStr = ui.SuccessStyle.Render(statusStr)
-		case session.StatusIdle:
-			statusStr = ui.DimStyle.Render(statusStr)
-		case session.StatusCompleted:
-			statusStr = ui.InfoStyle.Render(statusStr)
-		case session.StatusStopped:
-			statusStr = ui.DimStyle.Render(statusStr)
-		case session.StatusFailed:
-			statusStr = ui.ErrorStyle.Render(statusStr)
-		case session.StatusOrphaned:
-			statusStr = ui.WarningStyle.Render(statusStr)
+		} else {
+			// Style other statuses
+			switch status {
+			case session.StatusCreated, session.StatusStarting:
+				// Default styling (no color)
+			case session.StatusCompleted:
+				statusStr = ui.InfoStyle.Render(statusStr)
+			case session.StatusStopped:
+				statusStr = ui.DimStyle.Render(statusStr)
+			case session.StatusFailed:
+				statusStr = ui.ErrorStyle.Render(statusStr)
+			case session.StatusOrphaned:
+				statusStr = ui.WarningStyle.Render(statusStr)
+			}
 		}
 
 		// Show time in current status
