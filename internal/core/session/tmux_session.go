@@ -15,6 +15,7 @@ import (
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/logger"
 	"github.com/aki/amux/internal/core/process"
+	"github.com/aki/amux/internal/core/session/state"
 	"github.com/aki/amux/internal/core/terminal"
 	"github.com/aki/amux/internal/core/workspace"
 )
@@ -28,7 +29,7 @@ type tmuxSessionImpl struct {
 	agentConfig    *config.Agent
 	logger         logger.Logger
 	processChecker process.Checker
-	stateMachine   *StateMachine
+	stateManager   *state.Manager
 	mu             sync.RWMutex
 }
 
@@ -55,10 +56,10 @@ func WithProcessChecker(checker process.Checker) TmuxSessionOption {
 	}
 }
 
-// WithStateMachine sets the state machine for the session
-func WithStateMachine(sm *StateMachine) TmuxSessionOption {
+// WithStateManager sets the state manager for the session
+func WithStateManager(sm *state.Manager) TmuxSessionOption {
 	return func(s *tmuxSessionImpl) {
-		s.stateMachine = sm
+		s.stateManager = sm
 	}
 }
 
@@ -79,13 +80,7 @@ func NewTmuxSession(info *Info, manager *Manager, tmuxAdapter tmux.Adapter, work
 		opt(s)
 	}
 
-	// Initialize StatusState if not set (e.g., when loading from store)
-	if s.info.StatusState.StatusChangedAt.IsZero() {
-		s.info.StatusState.StatusChangedAt = time.Now()
-	}
-	if s.info.StatusState.LastOutputTime.IsZero() {
-		s.info.StatusState.LastOutputTime = time.Now()
-	}
+	// Activity tracking fields are now stored in state machine
 
 	// Ensure type is set
 	if s.info.Type == "" {
@@ -122,7 +117,23 @@ func (s *tmuxSessionImpl) Status() Status {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	return s.info.StatusState.Status
+	// Using TODO context for status check that doesn't need cancellation
+	return s.getStatusLocked(context.TODO())
+}
+
+// getStatusLocked returns the current status without acquiring locks.
+// This method should only be called when the lock is already held.
+func (s *tmuxSessionImpl) getStatusLocked(ctx context.Context) Status {
+	// Read status from state machine if available
+	if s.stateManager != nil {
+		stateData, err := s.stateManager.GetState(ctx)
+		if err == nil && stateData != nil {
+			return stateData.State
+		}
+	}
+
+	// Fallback: default to created
+	return state.StatusCreated
 }
 
 func (s *tmuxSessionImpl) Info() *Info {
@@ -134,24 +145,61 @@ func (s *tmuxSessionImpl) Info() *Info {
 	return &info
 }
 
+func (s *tmuxSessionImpl) StatusChangedAt() time.Time {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if s.stateManager != nil {
+		stateData, err := s.stateManager.GetState(context.TODO())
+		if err == nil && stateData != nil {
+			return stateData.UpdatedAt
+		}
+	}
+	return time.Time{}
+}
+
+func (s *tmuxSessionImpl) LastActivityTime() time.Time {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if s.stateManager != nil {
+		stateData, err := s.stateManager.GetState(context.TODO())
+		if err == nil && stateData != nil {
+			return stateData.LastOutputTime
+		}
+	}
+	return time.Time{}
+}
+
 func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	// Use state machine if available
-	if s.stateMachine != nil {
+	if s.stateManager != nil {
 		// The state machine will handle validation and state transitions
-		if err := s.stateMachine.TransitionTo(ctx, StatusRunning); err != nil {
-			return err
+		// Session may already be in Starting state (from CreateSession), check current state
+		currentState, err := s.stateManager.GetState(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to get current state: %w", err)
+		}
+
+		// If we're already in Starting state (from semaphore acquisition), continue
+		// Otherwise, transition to Starting first
+		if currentState.State != state.StatusStarting {
+			if err := s.stateManager.TransitionTo(ctx, state.StatusStarting); err != nil {
+				return err
+			}
 		}
 	} else {
 		// Legacy behavior for backward compatibility
-		if s.info.StatusState.Status.IsRunning() {
+		status := s.getStatusLocked(ctx)
+		if status.IsRunning() {
 			return ErrSessionAlreadyRunning{ID: s.info.ID}
 		}
 
 		// Cannot start orphaned session
-		if s.info.StatusState.Status == StatusOrphaned {
+		if status == state.StatusOrphaned {
 			return fmt.Errorf("cannot start orphaned session: %s", s.info.Error)
 		}
 	}
@@ -238,10 +286,6 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 
 	// Update session info
 	now := time.Now()
-	s.info.StatusState.Status = StatusWorking // Initially working when started
-	s.info.StatusState.StatusChangedAt = now
-	s.info.StatusState.LastOutputTime = now // Reset output tracking
-	s.info.StatusState.LastOutputHash = 0   // Reset hash
 	s.info.StartedAt = &now
 	s.info.TmuxSession = tmuxSession
 	s.info.PID = pid
@@ -254,6 +298,17 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to save session: %w", err)
 	}
 
+	// Transition to Running -> Working now that tmux session is created
+	if s.stateManager != nil {
+		// Starting -> Running -> Working
+		if err := s.stateManager.TransitionTo(ctx, state.StatusRunning); err != nil {
+			return fmt.Errorf("failed to transition to running: %w", err)
+		}
+		if err := s.stateManager.TransitionTo(ctx, state.StatusWorking); err != nil {
+			return fmt.Errorf("failed to transition to working: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -262,9 +317,9 @@ func (s *tmuxSessionImpl) Stop(ctx context.Context) error {
 	defer s.mu.Unlock()
 
 	// Use state machine if available
-	if s.stateMachine != nil {
+	if s.stateManager != nil {
 		// Transition to stopping state
-		if err := s.stateMachine.TransitionTo(ctx, StatusStopping); err != nil {
+		if err := s.stateManager.TransitionTo(ctx, state.StatusStopping); err != nil {
 			return err
 		}
 
@@ -273,20 +328,20 @@ func (s *tmuxSessionImpl) Stop(ctx context.Context) error {
 			if err := s.tmuxAdapter.KillSession(s.info.TmuxSession); err != nil {
 				// Log error and transition to failed
 				s.logger.Warn("failed to kill tmux session", "error", err, "session", s.info.TmuxSession)
-				_ = s.stateMachine.TransitionTo(ctx, StatusFailed)
+				if err := s.stateManager.TransitionTo(ctx, state.StatusFailed); err != nil {
+					s.logger.Debug("failed to transition to failed", "error", err)
+				}
 				return err
 			}
 		}
 
 		// Transition to stopped
-		if err := s.stateMachine.TransitionTo(ctx, StatusStopped); err != nil {
+		if err := s.stateManager.TransitionTo(ctx, state.StatusStopped); err != nil {
 			return err
 		}
 
 		// Update info to reflect state change
 		now := time.Now()
-		s.info.StatusState.Status = StatusStopped
-		s.info.StatusState.StatusChangedAt = now
 		s.info.StoppedAt = &now
 
 		// Save updated info
@@ -294,7 +349,8 @@ func (s *tmuxSessionImpl) Stop(ctx context.Context) error {
 	}
 
 	// Legacy behavior
-	if !s.info.StatusState.Status.IsRunning() {
+	status := s.getStatusLocked(ctx)
+	if !status.IsRunning() {
 		return ErrSessionNotRunning{ID: s.info.ID}
 	}
 
@@ -308,8 +364,6 @@ func (s *tmuxSessionImpl) Stop(ctx context.Context) error {
 
 	// Update status
 	now := time.Now()
-	s.info.StatusState.Status = StatusStopped
-	s.info.StatusState.StatusChangedAt = now
 	s.info.StoppedAt = &now
 
 	if err := s.manager.Save(ctx, s.info); err != nil {
@@ -329,7 +383,9 @@ func (s *tmuxSessionImpl) Attach() error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	if !s.info.StatusState.Status.IsRunning() {
+	// Use TODO context since we're in a read-locked method without context
+	status := s.getStatusLocked(context.TODO())
+	if !status.IsRunning() {
 		return ErrSessionNotRunning{ID: s.info.ID}
 	}
 
@@ -345,7 +401,9 @@ func (s *tmuxSessionImpl) SendInput(input string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if !s.info.StatusState.Status.IsRunning() {
+	// Use TODO context since we're in a read-locked method without context
+	status := s.getStatusLocked(context.TODO())
+	if !status.IsRunning() {
 		return ErrSessionNotRunning{ID: s.info.ID}
 	}
 
@@ -358,19 +416,16 @@ func (s *tmuxSessionImpl) SendInput(input string) error {
 		return err
 	}
 
-	// Update status to working since we just sent input
-	now := time.Now()
-	if s.info.StatusState.Status == StatusIdle {
-		s.info.StatusState.Status = StatusWorking
-		s.info.StatusState.StatusChangedAt = now
-		// Save status change
-		if err := s.manager.Save(context.Background(), s.info); err != nil {
-			// Log error but don't fail the input operation
-			s.logger.Warn("failed to save status change after input", "error", err)
+	// If status is idle, transition to working
+	if s.stateManager != nil {
+		stateData, err := s.stateManager.GetState(context.TODO())
+		if err == nil && stateData != nil && stateData.State == state.StatusIdle {
+			// Transition to working since we just sent input
+			if err := s.stateManager.TransitionTo(context.Background(), state.StatusWorking); err != nil {
+				s.logger.Debug("failed to transition to working after input", "error", err)
+			}
 		}
 	}
-	// Always update last activity time
-	s.info.StatusState.LastOutputTime = now
 
 	return nil
 }
@@ -379,7 +434,9 @@ func (s *tmuxSessionImpl) GetOutput(maxLines int) ([]byte, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	if !s.info.StatusState.Status.IsRunning() {
+	// Use TODO context since we're in a read-locked method without context
+	status := s.getStatusLocked(context.TODO())
+	if !status.IsRunning() {
 		return nil, ErrSessionNotRunning{ID: s.info.ID}
 	}
 
@@ -415,17 +472,20 @@ func (s *tmuxSessionImpl) UpdateStatus(ctx context.Context) error {
 	defer s.mu.Unlock()
 
 	// Only update if session is running
-	if !s.info.StatusState.Status.IsRunning() {
+	status := s.getStatusLocked(ctx)
+	if !status.IsRunning() {
 		return nil
 	}
 
 	// Check cache - skip update if checked recently
-	if time.Since(s.info.StatusState.LastStatusCheck) < statusCacheDuration {
-		return nil
+	if s.stateManager != nil {
+		stateData, err := s.stateManager.GetState(ctx)
+		if err == nil && stateData != nil && time.Since(stateData.LastStatusCheck) < statusCacheDuration {
+			return nil
+		}
 	}
 
-	// Update last check time
-	s.info.StatusState.LastStatusCheck = time.Now()
+	// Last check time is updated in state machine when we update activity
 
 	// Defer saving the session info at the end (single save point)
 	defer func() {
@@ -437,10 +497,10 @@ func (s *tmuxSessionImpl) UpdateStatus(ctx context.Context) error {
 	// Check if tmux session still exists
 	if !s.tmuxAdapter.SessionExists(s.info.TmuxSession) {
 		// Session doesn't exist anymore - mark as failed
-		now := time.Now()
-		s.info.StatusState.Status = StatusFailed
-		s.info.StatusState.StatusChangedAt = now
 		s.info.Error = "tmux session no longer exists"
+		if s.stateManager != nil {
+			_ = s.stateManager.TransitionTo(ctx, state.StatusFailed)
+		}
 		return nil
 	}
 
@@ -451,10 +511,10 @@ func (s *tmuxSessionImpl) UpdateStatus(ctx context.Context) error {
 		s.logger.Warn("failed to check pane status", "error", err)
 	} else if isDead {
 		// Shell process is dead - mark as failed
-		now := time.Now()
-		s.info.StatusState.Status = StatusFailed
-		s.info.StatusState.StatusChangedAt = now
 		s.info.Error = "shell process exited"
+		if s.stateManager != nil {
+			_ = s.stateManager.TransitionTo(ctx, state.StatusFailed)
+		}
 		return nil
 	}
 
@@ -473,14 +533,20 @@ func (s *tmuxSessionImpl) UpdateStatus(ctx context.Context) error {
 			}
 
 			// Determine final status based on exit code
-			now := time.Now()
 			if exitCode != 0 {
-				s.info.StatusState.Status = StatusFailed
 				s.info.Error = fmt.Sprintf("command exited with code %d", exitCode)
+				if s.stateManager != nil {
+					if err := s.stateManager.TransitionTo(ctx, state.StatusFailed); err != nil {
+						s.logger.Debug("failed to transition to failed", "error", err)
+					}
+				}
 			} else {
-				s.info.StatusState.Status = StatusCompleted
+				if s.stateManager != nil {
+					if err := s.stateManager.TransitionTo(ctx, state.StatusCompleted); err != nil {
+						s.logger.Debug("failed to transition to completed", "error", err)
+					}
+				}
 			}
-			s.info.StatusState.StatusChangedAt = now
 			return nil
 		}
 	}
@@ -502,26 +568,40 @@ func (s *tmuxSessionImpl) UpdateStatus(ctx context.Context) error {
 	currentHash := h.Sum32()
 	now := time.Now()
 
-	// Check if output changed
-	if currentHash != s.info.StatusState.LastOutputHash {
-		// Output changed, agent is working
-		s.info.StatusState.LastOutputHash = currentHash
-		s.info.StatusState.LastOutputTime = now
-		if s.info.StatusState.Status != StatusWorking {
-			s.info.StatusState.Status = StatusWorking
-			s.info.StatusState.StatusChangedAt = now
-		}
-	} else {
-		// No output change, check if we should transition to idle.
-		// With 1-second cache duration and 3-second idle threshold,
-		// idle detection happens within 3-4 seconds of last activity.
-		timeSinceLastOutput := time.Since(s.info.StatusState.LastOutputTime)
-		const idleThreshold = 3 * time.Second
+	// Update output tracking and handle working/idle transitions
+	if s.stateManager != nil {
+		stateData, err := s.stateManager.GetState(ctx)
+		if err == nil && stateData != nil {
+			// Check if output changed
+			if currentHash != stateData.LastOutputHash {
+				// Output changed, agent is working
+				if err := s.stateManager.UpdateActivity(ctx, currentHash, now); err != nil {
+					s.logger.Warn("failed to update activity", "error", err)
+				}
 
-		if timeSinceLastOutput >= idleThreshold && s.info.StatusState.Status == StatusWorking {
-			// Transition to idle
-			s.info.StatusState.Status = StatusIdle
-			s.info.StatusState.StatusChangedAt = now
+				// Transition to working if not already
+				if stateData.State != state.StatusWorking {
+					if err := s.stateManager.TransitionTo(ctx, state.StatusWorking); err != nil {
+						s.logger.Debug("failed to transition to working", "error", err)
+					}
+				}
+			} else {
+				// No output change, check if we should transition to idle
+				timeSinceLastOutput := time.Since(stateData.LastOutputTime)
+				const idleThreshold = 3 * time.Second
+
+				if timeSinceLastOutput >= idleThreshold && stateData.State == state.StatusWorking {
+					// Transition to idle
+					if err := s.stateManager.TransitionTo(ctx, state.StatusIdle); err != nil {
+						s.logger.Debug("failed to transition to idle", "error", err)
+					}
+				}
+
+				// Update last check time even if no output change
+				if err := s.stateManager.UpdateActivity(ctx, stateData.LastOutputHash, stateData.LastOutputTime); err != nil {
+					s.logger.Warn("failed to update activity check time", "error", err)
+				}
+			}
 		}
 	}
 

@@ -9,6 +9,7 @@ import (
 
 	"github.com/aki/amux/internal/adapters/tmux"
 	"github.com/aki/amux/internal/core/idmap"
+	"github.com/aki/amux/internal/core/session/state"
 	"github.com/aki/amux/internal/core/workspace"
 )
 
@@ -65,8 +66,9 @@ func TestManager_CreateSession(t *testing.T) {
 		t.Errorf("Expected agent ID 'claude', got %s", session.AgentID())
 	}
 
-	if session.Status() != StatusCreated {
-		t.Errorf("Expected status %s, got %s", StatusCreated, session.Status())
+	// Session should be in Starting state after creation (semaphore acquisition)
+	if session.Status() != state.StatusStarting {
+		t.Errorf("Expected status %s, got %s", state.StatusStarting, session.Status())
 	}
 
 	// Verify session was saved to manager
@@ -455,14 +457,16 @@ func TestManager_RemoveCompletedSession(t *testing.T) {
 	}
 
 	// Manually set status to completed (simulating command completion)
-	// We need to update the session's internal state, not just the store
-	// Cast to internal type to access internal methods
+	// We need to transition the state machine to completed
 	tmuxSess := session.(*tmuxSessionImpl)
-	tmuxSess.mu.Lock()
-	tmuxSess.info.StatusState.Status = StatusCompleted
-	tmuxSess.info.StatusState.StatusChangedAt = time.Now()
 	tmuxSessionName := tmuxSess.info.TmuxSession
-	tmuxSess.mu.Unlock()
+
+	// Use state machine to transition to completed
+	if tmuxSess.stateManager != nil {
+		if err := tmuxSess.stateManager.TransitionTo(ctx, state.StatusCompleted); err != nil {
+			t.Fatalf("Failed to transition to completed: %v", err)
+		}
+	}
 
 	// Save to manager
 	if err := manager.Save(context.Background(), tmuxSess.info); err != nil {
@@ -615,11 +619,6 @@ func TestManager_StoreOperations(t *testing.T) {
 		ID:          "test-session",
 		WorkspaceID: "test-workspace",
 		AgentID:     "claude",
-		StatusState: StatusState{
-			Status:          StatusCreated,
-			StatusChangedAt: now,
-			LastOutputTime:  now,
-		},
 		CreatedAt:   now,
 		Name:        "test-session-name",
 		Description: "Test session description",
@@ -706,9 +705,9 @@ func TestManager_ListSessionsWithDeletedWorkspace(t *testing.T) {
 
 	sessionID := session.ID()
 
-	// Verify session is created
-	if session.Status() != StatusCreated {
-		t.Errorf("Expected created status, got %s", session.Status())
+	// Verify session is created - should be in starting state after creation
+	if session.Status() != state.StatusStarting {
+		t.Errorf("Expected starting status, got %s", session.Status())
 	}
 
 	// Delete the workspace
@@ -735,8 +734,8 @@ func TestManager_ListSessionsWithDeletedWorkspace(t *testing.T) {
 	// Session should be orphaned
 	orphanedSession := sessions[0]
 	info := orphanedSession.Info()
-	if info.StatusState.Status != StatusOrphaned {
-		t.Errorf("Expected orphaned status, got %s", info.StatusState.Status)
+	if orphanedSession.Status() != state.StatusOrphaned {
+		t.Errorf("Expected orphaned status, got %s", orphanedSession.Status())
 	}
 
 	// Error should indicate workspace not found

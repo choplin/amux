@@ -3,12 +3,9 @@ package session
 import (
 	"context"
 	"fmt"
-	"time"
-
-	"github.com/aki/amux/internal/core/workspace"
 )
 
-// StopperAdapter implements workspace.SessionStopper interface
+// StopperAdapter implements workspace.SessionStopper interface.
 type StopperAdapter struct {
 	manager *Manager
 }
@@ -52,36 +49,6 @@ func (s *StopperAdapter) ListSessionsInWorkspace(ctx context.Context, workspaceI
 	}
 
 	return ids, nil
-}
-
-// acquireSemaphore is deprecated - use state machine instead
-// Kept for backward compatibility
-func (m *Manager) acquireSemaphore(ctx context.Context, info *Info) error {
-	if m.workspaceManager == nil {
-		// No workspace manager, skip semaphore
-		return nil
-	}
-
-	// Debug: Log that we're attempting to acquire semaphore
-	if m.logger != nil {
-		m.logger.Debug("Acquiring semaphore (deprecated)", "sessionID", info.ID, "workspaceID", info.WorkspaceID)
-	}
-
-	holder := workspace.Holder{
-		ID:          info.ID,
-		Type:        workspace.HolderTypeSession,
-		SessionID:   info.ID,
-		WorkspaceID: info.WorkspaceID,
-		Timestamp:   time.Now(),
-		Description: fmt.Sprintf("%s: %s", info.AgentID, info.Description),
-	}
-
-	if holder.Description == info.AgentID+":" || holder.Description == info.AgentID+": " {
-		// Use command if no description
-		holder.Description = fmt.Sprintf("%s: %s", info.AgentID, info.Command)
-	}
-
-	return m.workspaceManager.AcquireSemaphore(info.WorkspaceID, holder)
 }
 
 // releaseSemaphore releases a workspace semaphore for a session

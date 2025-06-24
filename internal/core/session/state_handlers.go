@@ -5,13 +5,15 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/aki/amux/internal/core/logger"
+	"github.com/aki/amux/internal/core/session/state"
 	"github.com/aki/amux/internal/core/workspace"
 )
 
-// SemaphoreHandler manages semaphore lifecycle based on state transitions
+// SemaphoreHandler manages semaphore lifecycle based on state transitions.
 type SemaphoreHandler struct {
 	workspaceManager WorkspaceManager
-	logger           Logger
+	logger           logger.Logger
 }
 
 // WorkspaceManager interface for semaphore operations
@@ -21,7 +23,7 @@ type WorkspaceManager interface {
 }
 
 // NewSemaphoreHandler creates a new semaphore handler
-func NewSemaphoreHandler(wsManager WorkspaceManager, logger Logger) *SemaphoreHandler {
+func NewSemaphoreHandler(wsManager WorkspaceManager, logger logger.Logger) *SemaphoreHandler {
 	return &SemaphoreHandler{
 		workspaceManager: wsManager,
 		logger:           logger,
@@ -29,7 +31,7 @@ func NewSemaphoreHandler(wsManager WorkspaceManager, logger Logger) *SemaphoreHa
 }
 
 // HandleStateChange handles semaphore operations for state transitions
-func (h *SemaphoreHandler) HandleStateChange(ctx context.Context, from, to Status, sessionID, workspaceID string) error {
+func (h *SemaphoreHandler) HandleStateChange(ctx context.Context, from, to state.Status, sessionID, workspaceID string) error {
 	h.logger.Debug("semaphore handler called",
 		"from", from,
 		"to", to,
@@ -37,7 +39,7 @@ func (h *SemaphoreHandler) HandleStateChange(ctx context.Context, from, to Statu
 		"workspace", workspaceID)
 
 	switch {
-	case from == StatusCreated && to == StatusStarting:
+	case from == state.StatusCreated && to == state.StatusStarting:
 		// Acquire semaphore when starting
 		holder := workspace.Holder{
 			ID:          sessionID,
@@ -78,10 +80,10 @@ func (h *SemaphoreHandler) HandleStateChange(ctx context.Context, from, to Statu
 	return nil
 }
 
-// TmuxHandler manages tmux operations based on state transitions
+// TmuxHandler manages tmux operations based on state transitions.
 type TmuxHandler struct {
 	tmuxAdapter TmuxAdapter
-	logger      Logger
+	logger      logger.Logger
 }
 
 // TmuxAdapter interface for tmux operations
@@ -92,7 +94,7 @@ type TmuxAdapter interface {
 }
 
 // NewTmuxHandler creates a new tmux handler
-func NewTmuxHandler(tmux TmuxAdapter, logger Logger) *TmuxHandler {
+func NewTmuxHandler(tmux TmuxAdapter, logger logger.Logger) *TmuxHandler {
 	return &TmuxHandler{
 		tmuxAdapter: tmux,
 		logger:      logger,
@@ -100,7 +102,7 @@ func NewTmuxHandler(tmux TmuxAdapter, logger Logger) *TmuxHandler {
 }
 
 // HandleStateChange handles tmux operations for state transitions
-func (h *TmuxHandler) HandleStateChange(ctx context.Context, from, to Status, sessionID, workspaceID string) error {
+func (h *TmuxHandler) HandleStateChange(ctx context.Context, from, to state.Status, sessionID, workspaceID string) error {
 	// This would be implemented based on specific tmux session details
 	// For now, we'll leave it as a placeholder
 	return nil

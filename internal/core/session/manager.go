@@ -13,6 +13,7 @@ import (
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/idmap"
 	"github.com/aki/amux/internal/core/logger"
+	"github.com/aki/amux/internal/core/session/state"
 	"github.com/aki/amux/internal/core/workspace"
 	"github.com/aki/amux/internal/filemanager"
 )
@@ -136,15 +137,10 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 
 	// Create session info
 	info := &Info{
-		ID:          sessionID.String(),
-		Type:        sessionType,
-		WorkspaceID: ws.ID,
-		AgentID:     opts.AgentID,
-		StatusState: StatusState{
-			Status:          StatusCreated,
-			StatusChangedAt: now,
-			LastOutputTime:  now,
-		},
+		ID:            sessionID.String(),
+		Type:          sessionType,
+		WorkspaceID:   ws.ID,
+		AgentID:       opts.AgentID,
 		Command:       opts.Command,
 		Environment:   opts.Environment,
 		InitialPrompt: opts.InitialPrompt,
@@ -170,29 +166,29 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 		}
 	}
 
-	// Create state machine for the session
-	stateMachine := NewStateMachine(
+	// Create state manager for the session
+	stateManager := state.NewManager(
 		sessionID.String(),
 		ws.ID,
 		filepath.Join(m.sessionsDir, sessionID.String()),
-		m.logger,
+		adaptLogger(m.logger),
 	)
 
 	// Add semaphore handler
 	if m.workspaceManager != nil {
 		semaphoreHandler := NewSemaphoreHandler(m.workspaceManager, m.logger)
-		stateMachine.AddStateChangeHandler(semaphoreHandler.HandleStateChange)
+		stateManager.AddStateChangeHandler(semaphoreHandler.HandleStateChange)
 	}
 
 	// Transition to starting state (which will acquire semaphore)
-	if err := stateMachine.TransitionTo(ctx, StatusStarting); err != nil {
+	if err := stateManager.TransitionTo(ctx, state.StatusStarting); err != nil {
 		// Clean up on failure
 		_ = m.fileManager.Delete(ctx, sessionID.String())
 		return nil, fmt.Errorf("failed to start session: %w", err)
 	}
 
 	// Create and cache session
-	sess := NewTmuxSession(info, m, m.tmuxAdapter, ws, agentConfig, WithStateMachine(stateMachine))
+	sess := NewTmuxSession(info, m, m.tmuxAdapter, ws, agentConfig, WithStateManager(stateManager))
 	m.mu.Lock()
 	m.sessions[sessionID.String()] = sess
 	m.mu.Unlock()
@@ -362,15 +358,25 @@ func (m *Manager) createSessionFromInfo(ctx context.Context, info *Info) (Sessio
 			var err error
 			ws, err = m.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(info.WorkspaceID))
 			if err != nil {
-				// Workspace not found - mark session as orphaned
-				info.StatusState.Status = StatusOrphaned
+				// Workspace not found - create orphaned session
 				info.Error = fmt.Sprintf("workspace not found: %s", info.WorkspaceID)
-				// Update the stored session info
-				if updateErr := m.saveSessionInfo(ctx, info); updateErr != nil {
-					m.logger.Warn("failed to update orphaned session info", "error", updateErr)
+				// Create state manager for orphaned session
+				stateManager := state.NewManager(
+					info.ID,
+					info.WorkspaceID,
+					filepath.Join(m.sessionsDir, info.ID),
+					adaptLogger(m.logger),
+				)
+				// Set orphaned status
+				_ = stateManager.TransitionTo(ctx, state.StatusOrphaned)
+				// Get agent configuration if available
+				var agentConfig *config.Agent
+				if m.agentManager != nil {
+					if agent, err := m.agentManager.GetAgent(info.AgentID); err == nil {
+						agentConfig = agent
+					}
 				}
-				// Continue with nil workspace - session will be created in orphaned state
-				ws = nil
+				return NewTmuxSession(info, m, m.tmuxAdapter, nil, agentConfig, WithStateManager(stateManager)), nil
 			}
 		}
 
@@ -382,7 +388,21 @@ func (m *Manager) createSessionFromInfo(ctx context.Context, info *Info) (Sessio
 			}
 		}
 
-		return NewTmuxSession(info, m, m.tmuxAdapter, ws, agentConfig), nil
+		// Create state manager for the session
+		stateManager := state.NewManager(
+			info.ID,
+			info.WorkspaceID,
+			filepath.Join(m.sessionsDir, info.ID),
+			adaptLogger(m.logger),
+		)
+
+		// Add semaphore handler if workspace manager is available
+		if m.workspaceManager != nil {
+			semaphoreHandler := NewSemaphoreHandler(m.workspaceManager, m.logger)
+			stateManager.AddStateChangeHandler(semaphoreHandler.HandleStateChange)
+		}
+
+		return NewTmuxSession(info, m, m.tmuxAdapter, ws, agentConfig, WithStateManager(stateManager)), nil
 
 	default:
 		return nil, fmt.Errorf("unsupported session type: %s", info.Type)
@@ -605,4 +625,32 @@ func (m *Manager) CreateSessionStorage(sessionID string) (string, error) {
 		return "", err
 	}
 	return storagePath, nil
+}
+
+// adaptLogger adapts our logger interface to state manager's logger interface
+func adaptLogger(log logger.Logger) state.Logger {
+	if log == nil {
+		return nil
+	}
+	return &loggerAdapter{log: log}
+}
+
+type loggerAdapter struct {
+	log logger.Logger
+}
+
+func (a *loggerAdapter) Debug(msg string, args ...interface{}) {
+	a.log.Debug(msg, args...)
+}
+
+func (a *loggerAdapter) Info(msg string, args ...interface{}) {
+	a.log.Info(msg, args...)
+}
+
+func (a *loggerAdapter) Warn(msg string, args ...interface{}) {
+	a.log.Warn(msg, args...)
+}
+
+func (a *loggerAdapter) Error(msg string, args ...interface{}) {
+	a.log.Error(msg, args...)
 }

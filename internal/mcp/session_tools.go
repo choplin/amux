@@ -153,7 +153,7 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 		"workspace_id":   info.WorkspaceID,
 		"workspace_name": ws.Name,
 		"agent_id":       info.AgentID,
-		"status":         string(info.StatusState.Status),
+		"status":         string(sess.Status()),
 		"command":        info.Command,
 		"tmux_session":   info.TmuxSession,
 		"created_at":     info.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),

@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/aki/amux/internal/core/session/state"
 )
 
 // ID is the full UUID of a session
@@ -51,55 +53,22 @@ const (
 	// Future: TypeClaudeCode, etc.
 )
 
-// Status represents the current state of a session
-type Status string
+// Status represents the lifecycle state of a session (re-exported from state package)
+type Status = state.Status
 
-// String returns the string representation of the status
-func (s Status) String() string {
-	return string(s)
-}
-
-// IsRunning returns true if the session is in a running state (working or idle)
-func (s Status) IsRunning() bool {
-	return s == StatusWorking || s == StatusIdle || s == StatusRunning
-}
-
-// IsTerminal returns true if the session is in a terminal state (completed, stopped, failed or orphaned)
-func (s Status) IsTerminal() bool {
-	return s == StatusCompleted || s == StatusStopped || s == StatusFailed || s == StatusOrphaned
-}
-
+// Re-export Status constants from state package
 const (
-	// StatusCreated indicates a session has been created but not started
-	StatusCreated Status = "created"
-	// StatusStarting indicates a session is being started (acquiring resources)
-	StatusStarting Status = "starting"
-	// StatusRunning indicates a session is running (can be working, idle, or stuck)
-	StatusRunning Status = "running"
-	// StatusWorking indicates a session is actively processing (output changing)
-	StatusWorking Status = "working"
-	// StatusIdle indicates a session is waiting for input (no recent output)
-	StatusIdle Status = "idle"
-	// StatusStopping indicates a session is being stopped (releasing resources)
-	StatusStopping Status = "stopping"
-	// StatusCompleted indicates a session command has finished successfully
-	StatusCompleted Status = "completed"
-	// StatusStopped indicates a session has been stopped normally
-	StatusStopped Status = "stopped"
-	// StatusFailed indicates a session has failed or crashed
-	StatusFailed Status = "failed"
-	// StatusOrphaned indicates a session with missing dependencies (e.g., deleted workspace)
-	StatusOrphaned Status = "orphaned"
+	StatusCreated   = state.StatusCreated
+	StatusStarting  = state.StatusStarting
+	StatusRunning   = state.StatusRunning
+	StatusWorking   = state.StatusWorking
+	StatusIdle      = state.StatusIdle
+	StatusStopping  = state.StatusStopping
+	StatusCompleted = state.StatusCompleted
+	StatusStopped   = state.StatusStopped
+	StatusFailed    = state.StatusFailed
+	StatusOrphaned  = state.StatusOrphaned
 )
-
-// StatusState holds runtime state for status tracking
-type StatusState struct {
-	Status          Status    `yaml:"status"`
-	StatusChangedAt time.Time `yaml:"statusChangedAt"`
-	LastOutputHash  uint32    `yaml:"lastOutputHash,omitempty"`
-	LastOutputTime  time.Time `yaml:"lastOutputTime,omitempty"`
-	LastStatusCheck time.Time `yaml:"lastStatusCheck,omitempty"`
-}
 
 // Options contains options for creating a new session
 type Options struct {
@@ -121,7 +90,6 @@ type Info struct {
 	Type          Type              `yaml:"type"`
 	WorkspaceID   string            `yaml:"workspace_id"`
 	AgentID       string            `yaml:"agent_id"`
-	StatusState   StatusState       `yaml:"statusState"`
 	Command       string            `yaml:"command"`
 	Environment   map[string]string `yaml:"environment,omitempty"`
 	InitialPrompt string            `yaml:"initial_prompt,omitempty"`
@@ -158,6 +126,12 @@ type Session interface {
 
 	// Info returns the full session information
 	Info() *Info
+
+	// StatusChangedAt returns when the status last changed
+	StatusChangedAt() time.Time
+
+	// LastActivityTime returns the last time there was activity
+	LastActivityTime() time.Time
 
 	// Start starts the session
 	Start(ctx context.Context) error

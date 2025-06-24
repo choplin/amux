@@ -67,7 +67,7 @@ func listSessions(cmd *cobra.Command, args []string) error {
 		wsName := info.WorkspaceID
 		if err == nil {
 			wsName = ws.Name
-		} else if info.StatusState.Status == session.StatusOrphaned {
+		} else if sess.Status() == session.StatusOrphaned {
 			// Show "(deleted)" suffix for orphaned sessions
 			wsName = fmt.Sprintf("%s (deleted)", info.WorkspaceID)
 		}
@@ -77,14 +77,15 @@ func listSessions(cmd *cobra.Command, args []string) error {
 		if info.StartedAt != nil {
 			if info.StoppedAt != nil {
 				totalTime = ui.FormatDuration(info.StoppedAt.Sub(*info.StartedAt))
-			} else if info.StatusState.Status.IsRunning() {
+			} else if sess.Status().IsRunning() {
 				totalTime = ui.FormatDuration(time.Since(*info.StartedAt))
 			}
 		}
 
 		// Format status for display
-		statusStr := string(info.StatusState.Status)
-		switch info.StatusState.Status {
+		status := sess.Status()
+		statusStr := string(status)
+		switch status {
 		case session.StatusCreated:
 			// StatusCreated uses default styling (no color)
 		case session.StatusWorking:
@@ -103,8 +104,9 @@ func listSessions(cmd *cobra.Command, args []string) error {
 
 		// Show time in current status
 		inStatusStr := "-"
-		if !info.StatusState.StatusChangedAt.IsZero() {
-			statusDuration := time.Since(info.StatusState.StatusChangedAt)
+		statusChangedAt := sess.StatusChangedAt()
+		if !statusChangedAt.IsZero() {
+			statusDuration := time.Since(statusChangedAt)
 			inStatusStr = ui.FormatDuration(statusDuration)
 		}
 
