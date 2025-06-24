@@ -279,7 +279,7 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 	session := NewTmuxSession(info, manager, mockAdapter, ws, nil).(*tmuxSessionImpl)
 
 	// Initialize the session as if it started
-	session.info.StatusState.Status = StatusWorking
+	session.info.StatusState.Status = StatusRunning
 	session.info.TmuxSession = "test-session"
 
 	// Create the session in the mock adapter
@@ -302,7 +302,7 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 				// First update to establish baseline
 				session.UpdateStatus(context.Background())
 			},
-			expectedStatus:       StatusWorking,
+			expectedStatus:       StatusRunning,
 			checkStatusChangedAt: false,
 		},
 		{
@@ -312,7 +312,7 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 				mockAdapter.SetPaneContent("test-session", "new output")
 				session.UpdateStatus(context.Background())
 			},
-			expectedStatus:       StatusWorking,
+			expectedStatus:       StatusRunning,
 			checkStatusChangedAt: false,
 		},
 		{
@@ -322,7 +322,7 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 				time.Sleep(1 * time.Second)
 				session.UpdateStatus(context.Background())
 			},
-			expectedStatus:       StatusWorking,
+			expectedStatus:       StatusRunning,
 			checkStatusChangedAt: false,
 		},
 		{
@@ -353,7 +353,7 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 					t.Fatalf("Second UpdateStatus failed: %v", err)
 				}
 			},
-			expectedStatus:       StatusIdle,
+			expectedStatus:       StatusRunning,
 			checkStatusChangedAt: true,
 		},
 	}

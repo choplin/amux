@@ -171,7 +171,7 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 	}
 
 	// Create and cache session
-	sess := NewTmuxSession(info, m, m.tmuxAdapter, ws, agentConfig)
+	sess := NewTmuxSession(info, m, m.tmuxAdapter, ws, agentConfig) //nolint:contextcheck // NewTmuxSession doesn't perform I/O
 	m.mu.Lock()
 	m.sessions[sessionID.String()] = sess
 	m.mu.Unlock()
@@ -361,7 +361,7 @@ func (m *Manager) createSessionFromInfo(ctx context.Context, info *Info) (Sessio
 			}
 		}
 
-		return NewTmuxSession(info, m, m.tmuxAdapter, ws, agentConfig), nil
+		return NewTmuxSession(info, m, m.tmuxAdapter, ws, agentConfig), nil //nolint:contextcheck // NewTmuxSession doesn't perform I/O
 
 	default:
 		return nil, fmt.Errorf("unsupported session type: %s", info.Type)
@@ -465,6 +465,13 @@ func (m *Manager) loadSessionInfo(ctx context.Context, id string) (*Info, error)
 	if err != nil {
 		return nil, err
 	}
+
+	// Ensure StoragePath is set for backward compatibility
+	// (older sessions might not have this field)
+	if info.StoragePath == "" {
+		info.StoragePath = filepath.Join(m.sessionsDir, id, "storage")
+	}
+
 	return info, nil
 }
 

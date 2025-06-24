@@ -251,7 +251,7 @@ func TestTmuxSession_StatusTracking(t *testing.T) {
 	}
 
 	// After start, status should be working
-	if status := session.Status(); status != StatusWorking {
+	if status := session.Status(); status != StatusRunning {
 		t.Errorf("Expected status after start to be working, got %s", status)
 	}
 
@@ -262,7 +262,7 @@ func TestTmuxSession_StatusTracking(t *testing.T) {
 	}
 
 	// Status should still be working
-	if status := session.Status(); status != StatusWorking {
+	if status := session.Status(); status != StatusRunning {
 		t.Errorf("Expected status after output to be working, got %s", status)
 	}
 

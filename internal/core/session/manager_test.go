@@ -9,6 +9,7 @@ import (
 
 	"github.com/aki/amux/internal/adapters/tmux"
 	"github.com/aki/amux/internal/core/idmap"
+	"github.com/aki/amux/internal/core/session/state"
 	"github.com/aki/amux/internal/core/workspace"
 )
 
@@ -458,10 +459,23 @@ func TestManager_RemoveCompletedSession(t *testing.T) {
 	// We need to update the session's internal state, not just the store
 	// Cast to internal type to access internal methods
 	tmuxSess := session.(*tmuxSessionImpl)
+
+	// Get tmux session name before updating status
+	tmuxSess.mu.Lock()
+	tmuxSessionName := tmuxSess.info.TmuxSession
+	tmuxSess.mu.Unlock()
+
+	// Transition to completed state through StateManager if available
+	if tmuxSess.stateManager != nil {
+		if err := tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusCompleted); err != nil {
+			t.Fatalf("Failed to transition to completed state: %v", err)
+		}
+	}
+
+	// Also update internal state for backward compatibility
 	tmuxSess.mu.Lock()
 	tmuxSess.info.StatusState.Status = StatusCompleted
 	tmuxSess.info.StatusState.StatusChangedAt = time.Now()
-	tmuxSessionName := tmuxSess.info.TmuxSession
 	tmuxSess.mu.Unlock()
 
 	// Save to manager

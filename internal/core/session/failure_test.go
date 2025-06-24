@@ -77,7 +77,7 @@ func TestSessionFailureDetection(t *testing.T) {
 			WorkspaceID: ws.ID,
 			AgentID:     "test-agent",
 			StatusState: StatusState{
-				Status:          StatusWorking,
+				Status:          StatusRunning,
 				StatusChangedAt: time.Now(),
 			},
 			TmuxSession: "test-tmux-session",
@@ -91,8 +91,8 @@ func TestSessionFailureDetection(t *testing.T) {
 		err := mockAdapter.CreateSession(info.TmuxSession, ws.Path)
 		require.NoError(t, err)
 
-		// Verify session is working
-		assert.Equal(t, StatusWorking, sess.Status())
+		// Verify session is running
+		assert.Equal(t, StatusRunning, sess.Status())
 
 		// Kill the tmux session
 		err = mockAdapter.KillSession(info.TmuxSession)
@@ -117,7 +117,7 @@ func TestSessionFailureDetection(t *testing.T) {
 			WorkspaceID: ws.ID,
 			AgentID:     "test-agent",
 			StatusState: StatusState{
-				Status:          StatusWorking,
+				Status:          StatusRunning,
 				StatusChangedAt: time.Now(),
 			},
 			TmuxSession: "test-tmux-session-2",
@@ -155,7 +155,7 @@ func TestSessionFailureDetection(t *testing.T) {
 			WorkspaceID: ws.ID,
 			AgentID:     "test-agent",
 			StatusState: StatusState{
-				Status:          StatusWorking,
+				Status:          StatusRunning,
 				StatusChangedAt: time.Now(),
 			},
 			TmuxSession: "test-tmux-session-completed",
@@ -237,7 +237,7 @@ func TestSessionFailureDetection(t *testing.T) {
 			WorkspaceID: ws.ID,
 			AgentID:     "test-agent",
 			StatusState: StatusState{
-				Status:          StatusWorking,
+				Status:          StatusRunning,
 				StatusChangedAt: time.Now(),
 			},
 			TmuxSession: "test-tmux-session-exit-failed",
@@ -283,7 +283,7 @@ func TestSessionFailureDetection(t *testing.T) {
 			WorkspaceID: ws.ID,
 			AgentID:     "test-agent",
 			StatusState: StatusState{
-				Status:          StatusWorking,
+				Status:          StatusRunning,
 				StatusChangedAt: time.Now(),
 			},
 			TmuxSession: "test-tmux-session-exit-success",
@@ -326,7 +326,7 @@ func TestSessionFailureDetection(t *testing.T) {
 			WorkspaceID: ws.ID,
 			AgentID:     "test-agent",
 			StatusState: StatusState{
-				Status:          StatusWorking,
+				Status:          StatusRunning,
 				StatusChangedAt: time.Now(),
 			},
 			TmuxSession: "test-tmux-session-transition",
@@ -348,10 +348,10 @@ func TestSessionFailureDetection(t *testing.T) {
 			tmuxSess.info.StatusState.LastStatusCheck = time.Time{}
 		}
 
-		// Update status - should remain working
+		// Update status - should remain running
 		err = sess.UpdateStatus(context.Background())
 		require.NoError(t, err)
-		assert.Equal(t, StatusWorking, sess.Status())
+		assert.Equal(t, StatusRunning, sess.Status())
 
 		// Now simulate command completion - no more children
 		mockProcessChecker.SetHasChildren(info.PID, false)

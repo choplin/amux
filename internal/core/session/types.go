@@ -59,9 +59,9 @@ func (s Status) String() string {
 	return string(s)
 }
 
-// IsRunning returns true if the session is in a running state (working or idle)
+// IsRunning returns true if the session is in a running state
 func (s Status) IsRunning() bool {
-	return s == StatusWorking || s == StatusIdle
+	return s == StatusStarting || s == StatusRunning || s == StatusStopping
 }
 
 // IsTerminal returns true if the session is in a terminal state (completed, stopped, failed or orphaned)
@@ -72,10 +72,12 @@ func (s Status) IsTerminal() bool {
 const (
 	// StatusCreated indicates a session has been created but not started
 	StatusCreated Status = "created"
-	// StatusWorking indicates a session is actively processing (output changing)
-	StatusWorking Status = "working"
-	// StatusIdle indicates a session is waiting for input (no recent output)
-	StatusIdle Status = "idle"
+	// StatusStarting indicates the session is in the process of starting
+	StatusStarting Status = "starting"
+	// StatusRunning indicates the session is actively running
+	StatusRunning Status = "running"
+	// StatusStopping indicates the session is in the process of stopping
+	StatusStopping Status = "stopping"
 	// StatusCompleted indicates a session command has finished successfully
 	StatusCompleted Status = "completed"
 	// StatusStopped indicates a session has been stopped normally
@@ -84,6 +86,13 @@ const (
 	StatusFailed Status = "failed"
 	// StatusOrphaned indicates a session with missing dependencies (e.g., deleted workspace)
 	StatusOrphaned Status = "orphaned"
+
+	// StatusWorking is deprecated: kept for backward compatibility
+	// This status is no longer used and will be migrated to StatusRunning
+	StatusWorking Status = "working"
+	// StatusIdle is deprecated: kept for backward compatibility
+	// This status is no longer used and will be migrated to StatusRunning
+	StatusIdle Status = "idle"
 )
 
 // StatusState holds runtime state for status tracking

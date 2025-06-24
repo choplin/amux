@@ -91,10 +91,12 @@ func listSessions(cmd *cobra.Command, args []string) error {
 		switch info.StatusState.Status {
 		case session.StatusCreated:
 			// StatusCreated uses default styling (no color)
-		case session.StatusWorking:
+		case session.StatusStarting:
+			statusStr = ui.InfoStyle.Render(statusStr)
+		case session.StatusRunning:
 			statusStr = ui.SuccessStyle.Render(statusStr)
-		case session.StatusIdle:
-			statusStr = ui.DimStyle.Render(statusStr)
+		case session.StatusStopping:
+			statusStr = ui.WarningStyle.Render(statusStr)
 		case session.StatusCompleted:
 			statusStr = ui.InfoStyle.Render(statusStr)
 		case session.StatusStopped:
@@ -103,6 +105,9 @@ func listSessions(cmd *cobra.Command, args []string) error {
 			statusStr = ui.ErrorStyle.Render(statusStr)
 		case session.StatusOrphaned:
 			statusStr = ui.WarningStyle.Render(statusStr)
+		case session.StatusWorking, session.StatusIdle:
+			// These are deprecated but handle them for backward compatibility
+			statusStr = ui.SuccessStyle.Render("running")
 		}
 
 		// Show time in current status
