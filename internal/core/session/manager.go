@@ -465,13 +465,6 @@ func (m *Manager) loadSessionInfo(ctx context.Context, id string) (*Info, error)
 	if err != nil {
 		return nil, err
 	}
-
-	// Ensure StoragePath is set for backward compatibility
-	// (older sessions might not have this field)
-	if info.StoragePath == "" {
-		info.StoragePath = filepath.Join(m.sessionsDir, id, "storage")
-	}
-
 	return info, nil
 }
 
