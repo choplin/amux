@@ -28,8 +28,10 @@ jobs:
           # Create output directory
           mkdir -p dist
 
-          # Extract version from tag
-          VERSION=${GITHUB_REF#refs/tags/v}
+          # Extract version using git describe
+          VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
+          # Remove 'v' prefix if present
+          VERSION=${VERSION#v}
 
           # Build for multiple platforms and create tar.gz archives
           GOOS=linux GOARCH=amd64 just build
