@@ -350,7 +350,7 @@ func (s *tmuxSessionImpl) SendInput(ctx context.Context, input string) error {
 	// Save session info with proper context
 	if err := s.manager.Save(ctx, s.info); err != nil {
 		// Log error but don't fail the SendInput operation
-		s.logger.Warn("failed to save session info after input", "error", err, "session", s.info.ID)
+		slog.Warn("failed to save session info after input", "error", err, "session", s.info.ID)
 	}
 
 	return nil
