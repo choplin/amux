@@ -132,7 +132,7 @@ func (s *ServerV2) handleSessionListResource(ctx context.Context, request mcp.Re
 			Description: info.Description,
 			WorkspaceID: info.WorkspaceID,
 			AgentID:     info.AgentID,
-			Status:      info.StatusState.Status,
+			Status:      sess.Status(),
 			CreatedAt:   info.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		}
 
@@ -200,7 +200,7 @@ func (s *ServerV2) handleSessionDetailResource(ctx context.Context, request mcp.
 		Description: info.Description,
 		WorkspaceID: info.WorkspaceID,
 		AgentID:     info.AgentID,
-		Status:      info.StatusState.Status,
+		Status:      sess.Status(),
 		Command:     info.Command,
 		Environment: info.Environment,
 		PID:         info.PID,

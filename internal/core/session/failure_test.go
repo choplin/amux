@@ -74,17 +74,14 @@ func TestSessionFailureDetection(t *testing.T) {
 
 		// Create session info
 		info := &Info{
-			ID:          "test-session-1",
-			WorkspaceID: ws.ID,
-			AgentID:     "test-agent",
-			StatusState: StatusState{
-				Status:          StatusCreated,
-				StatusChangedAt: time.Now(),
-			},
-			TmuxSession: "test-tmux-session",
-			PID:         12345,
-			StoragePath: t.TempDir(),
-			StateDir:    t.TempDir(),
+			ID:               "test-session-1",
+			WorkspaceID:      ws.ID,
+			AgentID:          "test-agent",
+			ActivityTracking: ActivityTracking{},
+			TmuxSession:      "test-tmux-session",
+			PID:              12345,
+			StoragePath:      t.TempDir(),
+			StateDir:         t.TempDir(),
 		}
 
 		// Create session
@@ -101,7 +98,7 @@ func TestSessionFailureDetection(t *testing.T) {
 		require.NoError(t, err)
 		err = tmuxSess.TransitionTo(context.Background(), state.StatusRunning)
 		require.NoError(t, err)
-		tmuxSess.info.StatusState.Status = StatusRunning
+		// Status is now managed by state.Manager
 
 		// Verify session is running
 		assert.Equal(t, StatusRunning, sess.Status())
@@ -125,17 +122,14 @@ func TestSessionFailureDetection(t *testing.T) {
 
 		// Create session info
 		info := &Info{
-			ID:          "test-session-2",
-			WorkspaceID: ws.ID,
-			AgentID:     "test-agent",
-			StatusState: StatusState{
-				Status:          StatusCreated,
-				StatusChangedAt: time.Now(),
-			},
-			TmuxSession: "test-tmux-session-2",
-			PID:         12346,
-			StoragePath: t.TempDir(),
-			StateDir:    t.TempDir(),
+			ID:               "test-session-2",
+			WorkspaceID:      ws.ID,
+			AgentID:          "test-agent",
+			ActivityTracking: ActivityTracking{},
+			TmuxSession:      "test-tmux-session-2",
+			PID:              12346,
+			StoragePath:      t.TempDir(),
+			StateDir:         t.TempDir(),
 		}
 
 		// Create session
@@ -152,7 +146,7 @@ func TestSessionFailureDetection(t *testing.T) {
 		require.NoError(t, err)
 		err = tmuxSess.TransitionTo(context.Background(), state.StatusRunning)
 		require.NoError(t, err)
-		tmuxSess.info.StatusState.Status = StatusRunning
+		// Status is now managed by state.Manager
 
 		// Mark pane as dead
 		err = mockAdapter.SetPaneDead(info.TmuxSession, true)
@@ -174,17 +168,14 @@ func TestSessionFailureDetection(t *testing.T) {
 
 		// Create session info
 		info := &Info{
-			ID:          "test-session-completed",
-			WorkspaceID: ws.ID,
-			AgentID:     "test-agent",
-			StatusState: StatusState{
-				Status:          StatusCreated,
-				StatusChangedAt: time.Now(),
-			},
-			TmuxSession: "test-tmux-session-completed",
-			PID:         12348,
-			StoragePath: t.TempDir(),
-			StateDir:    t.TempDir(),
+			ID:               "test-session-completed",
+			WorkspaceID:      ws.ID,
+			AgentID:          "test-agent",
+			ActivityTracking: ActivityTracking{},
+			TmuxSession:      "test-tmux-session-completed",
+			PID:              12348,
+			StoragePath:      t.TempDir(),
+			StateDir:         t.TempDir(),
 		}
 
 		// Create session with mock process checker
@@ -201,7 +192,7 @@ func TestSessionFailureDetection(t *testing.T) {
 		require.NoError(t, err)
 		err = tmuxSess.TransitionTo(context.Background(), state.StatusRunning)
 		require.NoError(t, err)
-		tmuxSess.info.StatusState.Status = StatusRunning
+		// Status is now managed by state.Manager
 
 		// Set process to have no children
 		mockProcessChecker.SetHasChildren(info.PID, false)
@@ -225,11 +216,9 @@ func TestSessionFailureDetection(t *testing.T) {
 			ID:          "test-session-3",
 			WorkspaceID: ws.ID,
 			AgentID:     "test-agent",
-			StatusState: StatusState{
-				Status:          StatusCreated,
-				StatusChangedAt: time.Now(),
-				LastOutputHash:  12345,
-				LastOutputTime:  time.Now(),
+			ActivityTracking: ActivityTracking{
+				LastOutputHash: 12345,
+				LastOutputTime: time.Now(),
 			},
 			TmuxSession: "test-tmux-session-3",
 			PID:         12347,
@@ -251,7 +240,7 @@ func TestSessionFailureDetection(t *testing.T) {
 		require.NoError(t, err)
 		err = tmuxSess.TransitionTo(context.Background(), state.StatusRunning)
 		require.NoError(t, err)
-		tmuxSess.info.StatusState.Status = StatusRunning
+		// Status is now managed by state.Manager
 
 		// Set some output
 		mockAdapter.SetPaneContent(info.TmuxSession, "test output")
@@ -278,17 +267,14 @@ func TestSessionFailureDetection(t *testing.T) {
 
 		// Create session info with storage path
 		info := &Info{
-			ID:          "test-session-exit-failed",
-			WorkspaceID: ws.ID,
-			AgentID:     "test-agent",
-			StatusState: StatusState{
-				Status:          StatusCreated,
-				StatusChangedAt: time.Now(),
-			},
-			TmuxSession: "test-tmux-session-exit-failed",
-			PID:         12350,
-			StoragePath: storageDir,
-			StateDir:    t.TempDir(),
+			ID:               "test-session-exit-failed",
+			WorkspaceID:      ws.ID,
+			AgentID:          "test-agent",
+			ActivityTracking: ActivityTracking{},
+			TmuxSession:      "test-tmux-session-exit-failed",
+			PID:              12350,
+			StoragePath:      storageDir,
+			StateDir:         t.TempDir(),
 		}
 
 		// Create session with mock process checker
@@ -305,7 +291,7 @@ func TestSessionFailureDetection(t *testing.T) {
 		require.NoError(t, err)
 		err = tmuxSess.TransitionTo(context.Background(), state.StatusRunning)
 		require.NoError(t, err)
-		tmuxSess.info.StatusState.Status = StatusRunning
+		// Status is now managed by state.Manager
 
 		// Pre-create exit status file since mock doesn't execute shell commands
 		exitStatusPath := filepath.Join(storageDir, "exit_status")
@@ -334,17 +320,14 @@ func TestSessionFailureDetection(t *testing.T) {
 
 		// Create session info with storage path
 		info := &Info{
-			ID:          "test-session-exit-success",
-			WorkspaceID: ws.ID,
-			AgentID:     "test-agent",
-			StatusState: StatusState{
-				Status:          StatusCreated,
-				StatusChangedAt: time.Now(),
-			},
-			TmuxSession: "test-tmux-session-exit-success",
-			PID:         12351,
-			StoragePath: storageDir,
-			StateDir:    t.TempDir(),
+			ID:               "test-session-exit-success",
+			WorkspaceID:      ws.ID,
+			AgentID:          "test-agent",
+			ActivityTracking: ActivityTracking{},
+			TmuxSession:      "test-tmux-session-exit-success",
+			PID:              12351,
+			StoragePath:      storageDir,
+			StateDir:         t.TempDir(),
 		}
 
 		// Create session with mock process checker
@@ -361,7 +344,7 @@ func TestSessionFailureDetection(t *testing.T) {
 		require.NoError(t, err)
 		err = tmuxSess.TransitionTo(context.Background(), state.StatusRunning)
 		require.NoError(t, err)
-		tmuxSess.info.StatusState.Status = StatusRunning
+		// Status is now managed by state.Manager
 
 		// Pre-create exit status file since mock doesn't execute shell commands
 		exitStatusPath := filepath.Join(storageDir, "exit_status")
@@ -387,17 +370,14 @@ func TestSessionFailureDetection(t *testing.T) {
 
 		// Create session info
 		info := &Info{
-			ID:          "test-session-transition",
-			WorkspaceID: ws.ID,
-			AgentID:     "test-agent",
-			StatusState: StatusState{
-				Status:          StatusCreated,
-				StatusChangedAt: time.Now(),
-			},
-			TmuxSession: "test-tmux-session-transition",
-			PID:         12349,
-			StoragePath: t.TempDir(),
-			StateDir:    t.TempDir(),
+			ID:               "test-session-transition",
+			WorkspaceID:      ws.ID,
+			AgentID:          "test-agent",
+			ActivityTracking: ActivityTracking{},
+			TmuxSession:      "test-tmux-session-transition",
+			PID:              12349,
+			StoragePath:      t.TempDir(),
+			StateDir:         t.TempDir(),
 		}
 
 		// Create session with mock process checker
@@ -414,14 +394,14 @@ func TestSessionFailureDetection(t *testing.T) {
 		require.NoError(t, err)
 		err = tmuxSess.TransitionTo(context.Background(), state.StatusRunning)
 		require.NoError(t, err)
-		tmuxSess.info.StatusState.Status = StatusRunning
+		// Status is now managed by state.Manager
 
 		// Initially has children
 		mockProcessChecker.SetHasChildren(info.PID, true)
 
 		// Reset cache to ensure update runs
 		if tmuxSess, ok := sess.(*tmuxSessionImpl); ok {
-			tmuxSess.info.StatusState.LastStatusCheck = time.Time{}
+			tmuxSess.info.ActivityTracking.LastStatusCheck = time.Time{}
 		}
 
 		// Update status - should remain running
@@ -434,7 +414,7 @@ func TestSessionFailureDetection(t *testing.T) {
 
 		// Reset cache again to ensure update runs
 		if tmuxSess, ok := sess.(*tmuxSessionImpl); ok {
-			tmuxSess.info.StatusState.LastStatusCheck = time.Time{}
+			tmuxSess.info.ActivityTracking.LastStatusCheck = time.Time{}
 		}
 
 		// Update status - should transition to completed

@@ -140,8 +140,8 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 	// Check current status - use internal state to avoid deadlock
 	currentStatus, err := s.CurrentState()
 	if err != nil {
-		// Fallback to stored status if state read fails
-		currentStatus = s.info.StatusState.Status
+		// If state read fails, assume we can't start
+		return fmt.Errorf("failed to get current state: %w", err)
 	}
 
 	if currentStatus.IsRunning() {
@@ -249,10 +249,8 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 
 	// Update session info
 	now := time.Now()
-	s.info.StatusState.Status = StatusRunning
-	s.info.StatusState.StatusChangedAt = now
-	s.info.StatusState.LastOutputTime = now // Reset output tracking
-	s.info.StatusState.LastOutputHash = 0   // Reset hash
+	s.info.ActivityTracking.LastOutputTime = now // Reset output tracking
+	s.info.ActivityTracking.LastOutputHash = 0   // Reset hash
 	s.info.StartedAt = &now
 	s.info.TmuxSession = tmuxSession
 	s.info.PID = pid
@@ -275,8 +273,8 @@ func (s *tmuxSessionImpl) Stop(ctx context.Context) error {
 	// Check current status - use internal state to avoid deadlock
 	currentStatus, err := s.CurrentState()
 	if err != nil {
-		// Fallback to stored status if state read fails
-		currentStatus = s.info.StatusState.Status
+		// If state read fails, assume we can't stop
+		return fmt.Errorf("failed to get current state: %w", err)
 	}
 
 	if !currentStatus.IsRunning() {
@@ -303,8 +301,6 @@ func (s *tmuxSessionImpl) Stop(ctx context.Context) error {
 
 	// Update status
 	now := time.Now()
-	s.info.StatusState.Status = StatusStopped
-	s.info.StatusState.StatusChangedAt = now
 	s.info.StoppedAt = &now
 
 	if err := s.manager.Save(ctx, s.info); err != nil {
@@ -318,7 +314,12 @@ func (s *tmuxSessionImpl) Attach() error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	if !s.info.StatusState.Status.IsRunning() {
+	// Get current status from state manager
+	currentStatus, err := s.CurrentState()
+	if err != nil {
+		return fmt.Errorf("failed to get current state: %w", err)
+	}
+	if !currentStatus.IsRunning() {
 		return ErrSessionNotRunning{ID: s.info.ID}
 	}
 
@@ -334,7 +335,12 @@ func (s *tmuxSessionImpl) SendInput(input string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if !s.info.StatusState.Status.IsRunning() {
+	// Get current status from state manager
+	currentStatus, err := s.CurrentState()
+	if err != nil {
+		return fmt.Errorf("failed to get current state: %w", err)
+	}
+	if !currentStatus.IsRunning() {
 		return ErrSessionNotRunning{ID: s.info.ID}
 	}
 
@@ -349,7 +355,7 @@ func (s *tmuxSessionImpl) SendInput(input string) error {
 
 	// Update last activity time for activity tracking
 	now := time.Now()
-	s.info.StatusState.LastOutputTime = now
+	s.info.ActivityTracking.LastOutputTime = now
 
 	// Save the updated info
 	if err := s.manager.Save(context.Background(), s.info); err != nil {
@@ -364,7 +370,12 @@ func (s *tmuxSessionImpl) GetOutput(maxLines int) ([]byte, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	if !s.info.StatusState.Status.IsRunning() {
+	// Get current status from state manager
+	currentStatus, err := s.CurrentState()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current state: %w", err)
+	}
+	if !currentStatus.IsRunning() {
 		return nil, ErrSessionNotRunning{ID: s.info.ID}
 	}
 
@@ -400,17 +411,21 @@ func (s *tmuxSessionImpl) UpdateStatus(ctx context.Context) error {
 	defer s.mu.Unlock()
 
 	// Only update if session is running
-	if !s.info.StatusState.Status.IsRunning() {
+	currentStatus, err := s.CurrentState()
+	if err != nil {
+		return fmt.Errorf("failed to get current state: %w", err)
+	}
+	if !currentStatus.IsRunning() {
 		return nil
 	}
 
 	// Check cache - skip update if checked recently
-	if time.Since(s.info.StatusState.LastStatusCheck) < statusCacheDuration {
+	if time.Since(s.info.ActivityTracking.LastStatusCheck) < statusCacheDuration {
 		return nil
 	}
 
 	// Update last check time
-	s.info.StatusState.LastStatusCheck = time.Now()
+	s.info.ActivityTracking.LastStatusCheck = time.Now()
 
 	// Defer saving the session info at the end (single save point)
 	defer func() {
@@ -425,9 +440,6 @@ func (s *tmuxSessionImpl) UpdateStatus(ctx context.Context) error {
 		if err := s.TransitionTo(ctx, state.StatusFailed); err != nil {
 			s.logger.Warn("failed to transition to failed state", "error", err)
 		}
-		now := time.Now()
-		s.info.StatusState.Status = StatusFailed
-		s.info.StatusState.StatusChangedAt = now
 		s.info.Error = "tmux session no longer exists"
 		return nil
 	}
@@ -442,9 +454,6 @@ func (s *tmuxSessionImpl) UpdateStatus(ctx context.Context) error {
 		if err := s.TransitionTo(ctx, state.StatusFailed); err != nil {
 			s.logger.Warn("failed to transition to failed state", "error", err)
 		}
-		now := time.Now()
-		s.info.StatusState.Status = StatusFailed
-		s.info.StatusState.StatusChangedAt = now
 		s.info.Error = "shell process exited"
 		return nil
 	}
@@ -464,20 +473,16 @@ func (s *tmuxSessionImpl) UpdateStatus(ctx context.Context) error {
 			}
 
 			// Determine final status based on exit code
-			now := time.Now()
 			if exitCode != 0 {
 				if err := s.TransitionTo(ctx, state.StatusFailed); err != nil {
 					s.logger.Warn("failed to transition to failed state", "error", err)
 				}
-				s.info.StatusState.Status = StatusFailed
 				s.info.Error = fmt.Sprintf("command exited with code %d", exitCode)
 			} else {
 				if err := s.TransitionTo(ctx, state.StatusCompleted); err != nil {
 					s.logger.Warn("failed to transition to completed state", "error", err)
 				}
-				s.info.StatusState.Status = StatusCompleted
 			}
-			s.info.StatusState.StatusChangedAt = now
 			return nil
 		}
 	}
@@ -500,10 +505,10 @@ func (s *tmuxSessionImpl) UpdateStatus(ctx context.Context) error {
 	now := time.Now()
 
 	// Check if output changed for activity tracking
-	if currentHash != s.info.StatusState.LastOutputHash {
+	if currentHash != s.info.ActivityTracking.LastOutputHash {
 		// Output changed, update activity tracking
-		s.info.StatusState.LastOutputHash = currentHash
-		s.info.StatusState.LastOutputTime = now
+		s.info.ActivityTracking.LastOutputHash = currentHash
+		s.info.ActivityTracking.LastOutputTime = now
 	}
 	// Note: We no longer transition between Working/Idle states
 

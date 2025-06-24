@@ -47,10 +47,8 @@ func TestTmuxSession_StartStop(t *testing.T) {
 		ID:          "test-tmux-session",
 		WorkspaceID: ws.ID,
 		AgentID:     "test-agent",
-		StatusState: StatusState{
-			Status:          StatusCreated,
-			StatusChangedAt: now,
-			LastOutputTime:  now,
+		ActivityTracking: ActivityTracking{
+			LastOutputTime: now,
 		},
 		Command:     "echo 'Test session started'",
 		CreatedAt:   now,
@@ -139,10 +137,8 @@ func TestTmuxSession_WithInitialPrompt(t *testing.T) {
 		ID:          "test-tmux-prompt-session",
 		WorkspaceID: ws.ID,
 		AgentID:     "test-agent",
-		StatusState: StatusState{
-			Status:          StatusCreated,
-			StatusChangedAt: now,
-			LastOutputTime:  now,
+		ActivityTracking: ActivityTracking{
+			LastOutputTime: now,
 		},
 		Command:       "bash", // Start bash to receive the prompt
 		InitialPrompt: testPrompt,
@@ -232,10 +228,8 @@ func TestTmuxSession_StatusTracking(t *testing.T) {
 		ID:          "test-status-session",
 		WorkspaceID: ws.ID,
 		AgentID:     "test-agent",
-		StatusState: StatusState{
-			Status:          StatusCreated,
-			StatusChangedAt: now,
-			LastOutputTime:  now,
+		ActivityTracking: ActivityTracking{
+			LastOutputTime: now,
 		},
 		Command:     "bash",
 		CreatedAt:   now,
@@ -326,10 +320,8 @@ func TestTmuxSession_WithEnvironment(t *testing.T) {
 		ID:          "test-env-session",
 		WorkspaceID: ws.ID,
 		AgentID:     "test-agent",
-		StatusState: StatusState{
-			Status:          StatusCreated,
-			StatusChangedAt: now,
-			LastOutputTime:  now,
+		ActivityTracking: ActivityTracking{
+			LastOutputTime: now,
 		},
 		Command: "/bin/bash", // Use bash as command
 		Environment: map[string]string{
@@ -436,10 +428,8 @@ func TestTmuxSession_WithShellAndWindowName(t *testing.T) {
 		ID:          "test-shell-window-session",
 		WorkspaceID: ws.ID,
 		AgentID:     "test-agent",
-		StatusState: StatusState{
-			Status:          StatusCreated,
-			StatusChangedAt: now,
-			LastOutputTime:  now,
+		ActivityTracking: ActivityTracking{
+			LastOutputTime: now,
 		},
 		Command:     "echo 'Custom shell started'",
 		CreatedAt:   now,

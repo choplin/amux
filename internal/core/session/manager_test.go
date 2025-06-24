@@ -470,11 +470,7 @@ func TestManager_RemoveCompletedSession(t *testing.T) {
 		t.Fatalf("Failed to transition to completed state: %v", err)
 	}
 
-	// Also update internal state
-	tmuxSess.mu.Lock()
-	tmuxSess.info.StatusState.Status = StatusCompleted
-	tmuxSess.info.StatusState.StatusChangedAt = time.Now()
-	tmuxSess.mu.Unlock()
+	// State is now managed by state.Manager, no need to update info
 
 	// Save to manager
 	if err := manager.Save(context.Background(), tmuxSess.info); err != nil {
@@ -627,10 +623,8 @@ func TestManager_StoreOperations(t *testing.T) {
 		ID:          "test-session",
 		WorkspaceID: "test-workspace",
 		AgentID:     "claude",
-		StatusState: StatusState{
-			Status:          StatusCreated,
-			StatusChangedAt: now,
-			LastOutputTime:  now,
+		ActivityTracking: ActivityTracking{
+			LastOutputTime: now,
 		},
 		CreatedAt:   now,
 		Name:        "test-session-name",
@@ -746,12 +740,12 @@ func TestManager_ListSessionsWithDeletedWorkspace(t *testing.T) {
 
 	// Session should be orphaned
 	orphanedSession := sessions[0]
-	info := orphanedSession.Info()
-	if info.StatusState.Status != StatusOrphaned {
-		t.Errorf("Expected orphaned status, got %s", info.StatusState.Status)
+	if orphanedSession.Status() != StatusOrphaned {
+		t.Errorf("Expected orphaned status, got %s", orphanedSession.Status())
 	}
 
 	// Error should indicate workspace not found
+	info := orphanedSession.Info()
 	if !strings.Contains(info.Error, "workspace not found") {
 		t.Errorf("Expected error to contain 'workspace not found', got: %s", info.Error)
 	}

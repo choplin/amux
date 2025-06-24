@@ -146,10 +146,8 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 		Type:        sessionType,
 		WorkspaceID: ws.ID,
 		AgentID:     opts.AgentID,
-		StatusState: StatusState{
-			Status:          StatusCreated,
-			StatusChangedAt: now,
-			LastOutputTime:  now,
+		ActivityTracking: ActivityTracking{
+			LastOutputTime: now,
 		},
 		Command:       opts.Command,
 		Environment:   opts.Environment,
@@ -351,15 +349,19 @@ func (m *Manager) createSessionFromInfo(ctx context.Context, info *Info) (Sessio
 			var err error
 			ws, err = m.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(info.WorkspaceID))
 			if err != nil {
-				// Workspace not found - mark session as orphaned
-				info.StatusState.Status = StatusOrphaned
-				info.Error = fmt.Sprintf("workspace not found: %s", info.WorkspaceID)
+				// Workspace not found - create orphaned session
+				reason := fmt.Sprintf("workspace not found: %s", info.WorkspaceID)
+				info.Error = reason
 				// Update the stored session info
 				if updateErr := m.saveSessionInfo(ctx, info); updateErr != nil {
 					m.logger.Warn("failed to update orphaned session info", "error", updateErr)
 				}
-				// Continue with nil workspace - session will be created in orphaned state
-				ws = nil
+				// Return orphaned terminal session
+				sess, err := CreateOrphanedTerminalSession(ctx, info, m, reason)
+				if err != nil {
+					return nil, fmt.Errorf("failed to create orphaned session: %w", err)
+				}
+				return sess, nil
 			}
 		}
 
@@ -475,6 +477,14 @@ func (m *Manager) saveSessionInfo(ctx context.Context, info *Info) error {
 // loadSessionInfo loads session info from file
 func (m *Manager) loadSessionInfo(ctx context.Context, id string) (*Info, error) {
 	path := m.getSessionPath(id)
+
+	// Attempt migration first
+	sessionFile := filepath.Join(path, "session.yaml")
+	if err := MigrateSessionInfo(sessionFile); err != nil {
+		// Log but don't fail - migration is best effort
+		m.logger.Debug("failed to migrate session info", "session", id, "error", err)
+	}
+
 	info, _, err := m.fileManager.Read(ctx, path)
 	if err != nil {
 		return nil, err

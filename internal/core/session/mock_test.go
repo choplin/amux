@@ -49,10 +49,8 @@ func TestTmuxSession_WithMock(t *testing.T) {
 		ID:          "test-mock-session",
 		WorkspaceID: ws.ID,
 		AgentID:     "test-agent",
-		StatusState: StatusState{
-			Status:          StatusCreated,
-			StatusChangedAt: now,
-			LastOutputTime:  now,
+		ActivityTracking: ActivityTracking{
+			LastOutputTime: now,
 		},
 		Command: "echo 'Test session started'",
 		Environment: map[string]string{
@@ -267,10 +265,8 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 		ID:          "test-status-mock-session",
 		WorkspaceID: ws.ID,
 		AgentID:     "test-agent",
-		StatusState: StatusState{
-			Status:          StatusCreated,
-			StatusChangedAt: now,
-			LastOutputTime:  now,
+		ActivityTracking: ActivityTracking{
+			LastOutputTime: now,
 		},
 		Command:     "test-command",
 		CreatedAt:   now,
@@ -297,7 +293,7 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 	// Transition to running state properly
 	_ = session.TransitionTo(ctx, state.StatusStarting)
 	_ = session.TransitionTo(ctx, state.StatusRunning)
-	session.info.StatusState.Status = StatusRunning
+	// Status is now managed by state.Manager
 
 	// Create the session in the mock adapter
 	err = mockAdapter.CreateSession("test-session", ws.Path)
@@ -349,7 +345,7 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 				mockAdapter.SetPaneContent("test-session", "idle test output")
 
 				// Reset the lastStatusCheck to ensure cache doesn't interfere
-				session.info.StatusState.LastStatusCheck = time.Time{}
+				session.info.ActivityTracking.LastStatusCheck = time.Time{}
 
 				// First ensure we have current state by calling UpdateStatus
 				// This will capture the current output and set lastOutputContent
@@ -362,7 +358,7 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 				time.Sleep(3500 * time.Millisecond) // Well over 3 seconds
 
 				// Reset the lastStatusCheck again to ensure second update runs
-				session.info.StatusState.LastStatusCheck = time.Time{}
+				session.info.ActivityTracking.LastStatusCheck = time.Time{}
 
 				// Update status again - should detect idle since output hasn't changed
 				err = session.UpdateStatus(context.Background())
@@ -383,12 +379,8 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 				t.Errorf("Expected status %s, got %s", tt.expectedStatus, status)
 			}
 
-			// Check StatusChangedAt is set correctly
-			if tt.checkStatusChangedAt {
-				if session.info.StatusState.StatusChangedAt.IsZero() {
-					t.Error("Expected StatusChangedAt to be set when status changes")
-				}
-			}
+			// StatusChangedAt is now managed by state.Manager
+			// No need to check it here
 		})
 	}
 }

@@ -68,10 +68,8 @@ const (
 	StatusOrphaned  = state.StatusOrphaned
 )
 
-// StatusState holds runtime state for status tracking
-type StatusState struct {
-	Status          Status    `yaml:"status"`
-	StatusChangedAt time.Time `yaml:"statusChangedAt"`
+// ActivityTracking holds runtime metrics for activity monitoring
+type ActivityTracking struct {
 	LastOutputHash  uint32    `yaml:"lastOutputHash,omitempty"`
 	LastOutputTime  time.Time `yaml:"lastOutputTime,omitempty"`
 	LastStatusCheck time.Time `yaml:"lastStatusCheck,omitempty"`
@@ -92,25 +90,25 @@ type Options struct {
 
 // Info contains metadata about a session
 type Info struct {
-	ID            string            `yaml:"id"`
-	Index         string            `yaml:"-"` // Populated from ID mapper, not persisted
-	Type          Type              `yaml:"type"`
-	WorkspaceID   string            `yaml:"workspace_id"`
-	AgentID       string            `yaml:"agent_id"`
-	StatusState   StatusState       `yaml:"statusState"`
-	Command       string            `yaml:"command"`
-	Environment   map[string]string `yaml:"environment,omitempty"`
-	InitialPrompt string            `yaml:"initial_prompt,omitempty"`
-	PID           int               `yaml:"pid,omitempty"`
-	TmuxSession   string            `yaml:"tmux_session,omitempty"`
-	CreatedAt     time.Time         `yaml:"created_at"`
-	StartedAt     *time.Time        `yaml:"started_at,omitempty"`
-	StoppedAt     *time.Time        `yaml:"stopped_at,omitempty"`
-	Error         string            `yaml:"error,omitempty"`
-	StoragePath   string            `yaml:"storage_path,omitempty"`
-	StateDir      string            `yaml:"state_dir,omitempty"`
-	Name          string            `yaml:"name,omitempty"`
-	Description   string            `yaml:"description,omitempty"`
+	ID               string            `yaml:"id"`
+	Index            string            `yaml:"-"` // Populated from ID mapper, not persisted
+	Type             Type              `yaml:"type"`
+	WorkspaceID      string            `yaml:"workspace_id"`
+	AgentID          string            `yaml:"agent_id"`
+	ActivityTracking ActivityTracking  `yaml:"activityTracking"`
+	Command          string            `yaml:"command"`
+	Environment      map[string]string `yaml:"environment,omitempty"`
+	InitialPrompt    string            `yaml:"initial_prompt,omitempty"`
+	PID              int               `yaml:"pid,omitempty"`
+	TmuxSession      string            `yaml:"tmux_session,omitempty"`
+	CreatedAt        time.Time         `yaml:"created_at"`
+	StartedAt        *time.Time        `yaml:"started_at,omitempty"`
+	StoppedAt        *time.Time        `yaml:"stopped_at,omitempty"`
+	Error            string            `yaml:"error,omitempty"`
+	StoragePath      string            `yaml:"storage_path,omitempty"`
+	StateDir         string            `yaml:"state_dir,omitempty"`
+	Name             string            `yaml:"name,omitempty"`
+	Description      string            `yaml:"description,omitempty"`
 }
 
 // Session represents an active or inactive agent session
