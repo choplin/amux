@@ -138,7 +138,7 @@ func TestIntegration_FullWorkflow(t *testing.T) {
 	}
 
 	// Send some input
-	if err := terminalSess.SendInput("echo 'Integration test complete'"); err != nil {
+	if err := terminalSess.SendInput(context.Background(), "echo 'Integration test complete'"); err != nil {
 		t.Errorf("Failed to send input: %v", err)
 	}
 
@@ -295,7 +295,7 @@ func TestIntegration_MultipleAgents(t *testing.T) {
 			continue
 		}
 		input := "echo 'Output from session " + sess.ID() + "'"
-		if err := terminalSess.SendInput(input); err != nil {
+		if err := terminalSess.SendInput(context.Background(), input); err != nil {
 			t.Errorf("Failed to send input to session %d: %v", i, err)
 		}
 	}

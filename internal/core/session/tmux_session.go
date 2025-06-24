@@ -331,7 +331,7 @@ func (s *tmuxSessionImpl) Attach() error {
 	return s.tmuxAdapter.AttachSession(s.info.TmuxSession)
 }
 
-func (s *tmuxSessionImpl) SendInput(input string) error {
+func (s *tmuxSessionImpl) SendInput(ctx context.Context, input string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -357,8 +357,11 @@ func (s *tmuxSessionImpl) SendInput(input string) error {
 	now := time.Now()
 	s.info.ActivityTracking.LastOutputTime = now
 
-	// Note: Persistence must be handled by the caller since we don't have
-	// a context parameter. This is a known limitation (see issue #209).
+	// Save session info with proper context
+	if err := s.manager.Save(ctx, s.info); err != nil {
+		// Log error but don't fail the SendInput operation
+		s.logger.Warn("failed to save session info after input", "error", err, "session", s.info.ID)
+	}
 
 	return nil
 }

@@ -96,7 +96,7 @@ func TestTmuxSession_WithMock(t *testing.T) {
 	}
 
 	// Send input
-	if err := session.SendInput("echo 'Hello from tmux'"); err != nil {
+	if err := session.SendInput(ctx, "echo 'Hello from tmux'"); err != nil {
 		t.Errorf("Failed to send input: %v", err)
 	}
 

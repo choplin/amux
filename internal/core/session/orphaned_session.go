@@ -109,7 +109,7 @@ func (s *orphanedTerminalSessionImpl) Attach() error {
 	return fmt.Errorf("cannot attach to orphaned session: %s", s.info.Error)
 }
 
-func (s *orphanedTerminalSessionImpl) SendInput(input string) error {
+func (s *orphanedTerminalSessionImpl) SendInput(ctx context.Context, input string) error {
 	return fmt.Errorf("cannot send input to orphaned session: %s", s.info.Error)
 }
 

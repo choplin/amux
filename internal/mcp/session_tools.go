@@ -273,15 +273,9 @@ func (s *ServerV2) handleSessionSendInput(ctx context.Context, request mcp.CallT
 	}
 
 	// Send input
-	if err := terminalSession.SendInput(input); err != nil {
+	if err := terminalSession.SendInput(ctx, input); err != nil {
 		return nil, fmt.Errorf("failed to send input: %w", err)
 	}
-
-	// Save the session to persist activity tracking updates
-	// This is necessary because SendInput updates LastOutputTime but
-	// doesn't have a context parameter to save it (see issue #209)
-	_ = sessionManager.Save(ctx, sess.Info())
-	// Ignore error - activity tracking is not critical for the operation
 
 	// Create response
 	response := map[string]interface{}{

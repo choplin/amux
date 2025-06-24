@@ -149,7 +149,7 @@ type TerminalSession interface {
 	Attach() error
 
 	// SendInput sends input to the session
-	SendInput(input string) error
+	SendInput(ctx context.Context, input string) error
 
 	// GetOutput returns recent output from the session
 	GetOutput(maxLines int) ([]byte, error)
