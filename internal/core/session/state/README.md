@@ -10,7 +10,7 @@ This package implements a proper state machine for managing session lifecycle tr
 - State transition validation rules
 - StateManager for managing transitions with persistence
 - State change handler support for side effects
-- Comprehensive test coverage (100% coverage)
+- Comprehensive test coverage (78% coverage)
 
 ## Integration Plan (Future PRs)
 
@@ -21,7 +21,7 @@ The tmux_session.go file still has many references to the old StatusState field 
 - Replace all `s.info.StatusState.Status` with StateManager calls
 - Update Start() to use StateManager.TransitionTo() instead of direct status updates
 - Update Stop() to use StateManager.TransitionTo()
-- Update SendInput() to use StateManager.UpdateActivity()
+- Update SendInput() to remove working/idle transitions (activity tracking will be handled separately)
 - Update UpdateStatus() to use StateManager for all status changes
 
 ### 2. Update Session Manager
@@ -34,7 +34,7 @@ The tmux_session.go file still has many references to the old StatusState field 
 
 - Update CLI commands that display status
 - Remove references to StatusWorking and StatusIdle
-- Show "idle" as an attribute based on LastActivityTime instead of as a status
+- Implement separate activity tracking mechanism if needed
 
 ### 4. Migration Considerations
 
@@ -63,7 +63,7 @@ stateManager := state.NewManager(
 )
 
 // Add handlers for side effects
-stateManager.AddStateChangeHandler(semaphoreHandler)
+stateManager.AddChangeHandler(semaphoreHandler)
 
 // Transition states
 err := stateManager.TransitionTo(ctx, state.StatusStarting)
@@ -71,6 +71,6 @@ err := stateManager.TransitionTo(ctx, state.StatusStarting)
 // Check current state
 currentState, err := stateManager.CurrentState()
 
-// Update activity without changing state
-err = stateManager.UpdateActivity()
+// Get full state data
+data, err := stateManager.GetData()
 ```

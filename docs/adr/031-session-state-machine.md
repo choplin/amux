@@ -11,8 +11,8 @@ Accepted
 The current session status management in Amux has several issues:
 
 1. **Ambiguous states**: `StatusWorking` and `StatusIdle` are based on output activity, which conflates lifecycle state with activity monitoring
-2. **No transition validation**: Any status can transition to any other status without validation
-3. **No crash recovery**: Session state is not persisted, making it impossible to recover after crashes
+2. **Limited transition validation**: While some validation exists (e.g., preventing start on running sessions), there's no systematic validation for all state changes
+3. **Session state is persisted but lacks proper state machine recovery**: Sessions are saved to YAML files but without a proper state machine to manage transitions
 4. **Inconsistent state management**: Status updates are scattered throughout the codebase without a central authority
 
 These issues make it difficult to implement robust features like workspace protection (preventing deletion of workspaces with active sessions) and proper session lifecycle management.
@@ -51,11 +51,11 @@ Only valid transitions will be allowed:
    - `Manager` for managing state transitions with file-based persistence
    - `ChangeHandler` support for extensibility
 
-2. **File-based persistence**: State will be persisted to `.amux/sessions/{session-id}/state.json` for crash recovery
+2. **File-based persistence**: State will be persisted to a JSON file (path determined by the stateDir parameter passed to NewManager)
 
 3. **Atomic operations**: Use atomic file rename for concurrent access safety
 
-4. **Activity tracking**: Remove from state machine - this is session-specific logic, not generic state management
+4. **Activity tracking**: Removed from state machine - this is session-specific logic, not generic state management
 
 ### Migration Strategy
 
@@ -72,7 +72,7 @@ Only valid transitions will be allowed:
 - **Reliability**: Invalid transitions are prevented at the state machine level
 - **Crash recovery**: Persisted state allows recovery after process crashes
 - **Extensibility**: Change handlers allow adding behavior (like semaphores) without modifying core logic
-- **Testability**: State machine can be tested in isolation
+- **Testability**: State machine can be tested in isolation (78% test coverage achieved)
 
 ### Negative
 
