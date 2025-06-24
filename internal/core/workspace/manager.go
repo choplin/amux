@@ -25,7 +25,6 @@ type Manager struct {
 	workspacesDir string
 	idMapper      *idmap.IDMapper
 	fm            *filemanager.Manager[Workspace]
-	semaphore     *SemaphoreComponents // Semaphore-related components
 }
 
 // NewManager creates a new workspace manager
@@ -182,9 +181,6 @@ func (m *Manager) Get(ctx context.Context, id ID) (*Workspace, error) {
 	// Check consistency status
 	m.CheckConsistency(workspace)
 
-	// Populate semaphore holders
-	m.populateSemaphoreHolders(workspace)
-
 	return workspace, nil
 }
 
@@ -228,9 +224,6 @@ func (m *Manager) List(ctx context.Context, opts ListOptions) ([]*Workspace, err
 
 		// Check consistency status
 		m.CheckConsistency(&workspace)
-
-		// Populate semaphore holders
-		m.populateSemaphoreHolders(&workspace)
 
 		workspaces = append(workspaces, &workspace)
 	}

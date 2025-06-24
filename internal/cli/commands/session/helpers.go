@@ -3,7 +3,6 @@ package session
 import (
 	"context"
 	"fmt"
-	"log/slog"
 
 	"github.com/aki/amux/internal/core/agent"
 	"github.com/aki/amux/internal/core/config"
@@ -49,10 +48,7 @@ func createSessionManager(configManager *config.Manager, wsManager *workspace.Ma
 		return nil, fmt.Errorf("failed to create session manager: %w", err)
 	}
 
-	// Initialize semaphore support in workspace manager
-	sessionChecker := session.NewWorkspaceSessionChecker(manager)
-	sessionStopper := session.NewSessionStopperAdapter(manager)
-	wsManager.InitializeSemaphore(sessionChecker, sessionStopper, slog.Default())
+	// No need to initialize semaphore anymore - it's built into workspace manager
 
 	return manager, nil
 }

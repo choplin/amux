@@ -3,7 +3,6 @@ package session
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/aki/amux/internal/core/logger"
 	"github.com/aki/amux/internal/core/session/state"
@@ -13,19 +12,26 @@ import (
 // SemaphoreHandler manages semaphore lifecycle based on state transitions.
 type SemaphoreHandler struct {
 	workspaceManager WorkspaceManager
+	sessionResolver  SessionResolver
 	logger           logger.Logger
 }
 
-// WorkspaceManager interface for semaphore operations
+// WorkspaceManager interface for workspace session management
 type WorkspaceManager interface {
-	AcquireSemaphore(workspaceID string, holder workspace.Holder) error
-	ReleaseSemaphore(workspaceID string, holderID string) error
+	AcquireWorkspace(workspaceID string, session workspace.Session) error
+	ReleaseWorkspace(workspaceID string, sessionID string) error
+}
+
+// SessionResolver interface to get session objects
+type SessionResolver interface {
+	Get(ctx context.Context, sessionID string) (Session, error)
 }
 
 // NewSemaphoreHandler creates a new semaphore handler
-func NewSemaphoreHandler(wsManager WorkspaceManager, logger logger.Logger) *SemaphoreHandler {
+func NewSemaphoreHandler(wsManager WorkspaceManager, sessionResolver SessionResolver, logger logger.Logger) *SemaphoreHandler {
 	return &SemaphoreHandler{
 		workspaceManager: wsManager,
+		sessionResolver:  sessionResolver,
 		logger:           logger,
 	}
 }
@@ -40,38 +46,37 @@ func (h *SemaphoreHandler) HandleStateChange(ctx context.Context, from, to state
 
 	switch {
 	case from == state.StatusCreated && to == state.StatusStarting:
-		// Acquire semaphore when starting
-		holder := workspace.Holder{
-			ID:          sessionID,
-			Type:        workspace.HolderTypeSession,
-			SessionID:   sessionID,
-			WorkspaceID: workspaceID,
-			Timestamp:   time.Now(),
-			Description: fmt.Sprintf("Session %s", sessionID),
+		// Acquire workspace when starting
+		session, err := h.sessionResolver.Get(ctx, sessionID)
+		if err != nil {
+			h.logger.Error("failed to get session",
+				"session", sessionID,
+				"error", err)
+			return fmt.Errorf("failed to get session: %w", err)
 		}
 
-		if err := h.workspaceManager.AcquireSemaphore(workspaceID, holder); err != nil {
-			h.logger.Error("failed to acquire semaphore",
+		if err := h.workspaceManager.AcquireWorkspace(workspaceID, session); err != nil {
+			h.logger.Error("failed to acquire workspace",
 				"session", sessionID,
 				"workspace", workspaceID,
 				"error", err)
-			return fmt.Errorf("failed to acquire semaphore: %w", err)
+			return fmt.Errorf("failed to acquire workspace: %w", err)
 		}
 
-		h.logger.Debug("semaphore acquired",
+		h.logger.Debug("workspace acquired",
 			"session", sessionID,
 			"workspace", workspaceID)
 
 	case to.IsTerminal():
-		// Release semaphore on any terminal state
-		if err := h.workspaceManager.ReleaseSemaphore(workspaceID, sessionID); err != nil {
-			h.logger.Error("failed to release semaphore",
+		// Release workspace on any terminal state
+		if err := h.workspaceManager.ReleaseWorkspace(workspaceID, sessionID); err != nil {
+			h.logger.Error("failed to release workspace",
 				"session", sessionID,
 				"workspace", workspaceID,
 				"error", err)
 			// Don't return error - we want to proceed even if release fails
 		} else {
-			h.logger.Debug("semaphore released",
+			h.logger.Debug("workspace released",
 				"session", sessionID,
 				"workspace", workspaceID)
 		}

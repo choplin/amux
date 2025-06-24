@@ -58,5 +58,5 @@ func (m *Manager) releaseSemaphore(ctx context.Context, sessionID, workspaceID s
 		return nil
 	}
 
-	return m.workspaceManager.ReleaseSemaphore(workspaceID, sessionID)
+	return m.workspaceManager.ReleaseWorkspace(workspaceID, sessionID)
 }

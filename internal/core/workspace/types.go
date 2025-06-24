@@ -92,19 +92,6 @@ type Workspace struct {
 	PathExists     bool              `yaml:"-" json:"pathExists"`
 	WorktreeExists bool              `yaml:"-" json:"worktreeExists"`
 	Status         ConsistencyStatus `yaml:"-" json:"status"`
-
-	// Semaphore holders (not persisted, populated by manager)
-	SemaphoreHolders []Holder `yaml:"-" json:"semaphoreHolders,omitempty"`
-}
-
-// GetHolderCount returns the number of semaphore holders for this workspace
-func (w *Workspace) GetHolderCount() int {
-	return len(w.SemaphoreHolders)
-}
-
-// IsInUse returns true if the workspace has any semaphore holders
-func (w *Workspace) IsInUse() bool {
-	return len(w.SemaphoreHolders) > 0
 }
 
 // BranchMode specifies how to handle branch creation/checkout

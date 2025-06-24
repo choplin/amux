@@ -176,7 +176,7 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 
 	// Add semaphore handler
 	if m.workspaceManager != nil {
-		semaphoreHandler := NewSemaphoreHandler(m.workspaceManager, m.logger)
+		semaphoreHandler := NewSemaphoreHandler(m.workspaceManager, m, m.logger)
 		stateManager.AddStateChangeHandler(semaphoreHandler.HandleStateChange)
 	}
 
@@ -196,8 +196,13 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 	return sess, nil
 }
 
-// Get retrieves a session by its full ID
-func (m *Manager) Get(ctx context.Context, id ID) (Session, error) {
+// Get retrieves a session by its full ID (implements SessionResolver)
+func (m *Manager) Get(ctx context.Context, sessionID string) (Session, error) {
+	return m.GetByID(ctx, ID(sessionID))
+}
+
+// GetByID retrieves a session by its full ID
+func (m *Manager) GetByID(ctx context.Context, id ID) (Session, error) {
 	// Check cache
 	m.mu.RLock()
 	if sess, ok := m.sessions[string(id)]; ok {
@@ -290,7 +295,7 @@ func (m *Manager) ListSessions(ctx context.Context) ([]Session, error) {
 // Remove removes a session by its full ID
 func (m *Manager) Remove(ctx context.Context, id ID) error {
 	// Get session to check status
-	sess, err := m.Get(ctx, id)
+	sess, err := m.GetByID(ctx, id)
 	if err != nil {
 		return fmt.Errorf("failed to get session: %w", err)
 	}
@@ -398,7 +403,7 @@ func (m *Manager) createSessionFromInfo(ctx context.Context, info *Info) (Sessio
 
 		// Add semaphore handler if workspace manager is available
 		if m.workspaceManager != nil {
-			semaphoreHandler := NewSemaphoreHandler(m.workspaceManager, m.logger)
+			semaphoreHandler := NewSemaphoreHandler(m.workspaceManager, m, m.logger)
 			stateManager.AddStateChangeHandler(semaphoreHandler.HandleStateChange)
 		}
 
@@ -412,7 +417,7 @@ func (m *Manager) createSessionFromInfo(ctx context.Context, info *Info) (Sessio
 // ResolveSession resolves a session identifier (ID, index, or name) to a Session
 func (m *Manager) ResolveSession(ctx context.Context, identifier Identifier) (Session, error) {
 	// 1. Try as full ID
-	session, err := m.Get(ctx, ID(identifier))
+	session, err := m.GetByID(ctx, ID(identifier))
 	if err == nil {
 		return session, nil
 	}
@@ -426,7 +431,7 @@ func (m *Manager) ResolveSession(ctx context.Context, identifier Identifier) (Se
 	// 2. Try as index (short ID)
 	if m.idMapper != nil {
 		if fullID, exists := m.idMapper.GetSessionFull(string(identifier)); exists {
-			session, err := m.Get(ctx, ID(fullID))
+			session, err := m.GetByID(ctx, ID(fullID))
 			if err == nil {
 				return session, nil
 			}

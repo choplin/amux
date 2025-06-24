@@ -2,13 +2,9 @@ package workspace
 
 import (
 	"fmt"
-	"log/slog"
 
-	"github.com/aki/amux/internal/core/agent"
 	"github.com/aki/amux/internal/core/config"
-	"github.com/aki/amux/internal/core/idmap"
 	"github.com/aki/amux/internal/core/logger"
-	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/workspace"
 )
 
@@ -43,32 +39,7 @@ func getWorkspaceManager() (*workspace.Manager, error) {
 }
 
 func initializeSemaphoreSupport(configManager *config.Manager, wsManager *workspace.Manager) error {
-	// Get ID mapper
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
-	if err != nil {
-		return fmt.Errorf("failed to create ID mapper: %w", err)
-	}
-
-	// Create agent manager
-	agentManager := agent.NewManager(configManager)
-
-	// Create logger
-	log := logger.Default()
-
-	// Create session manager
-	sessionManager, err := session.NewManager(configManager.GetAmuxDir(), wsManager, agentManager, idMapper, session.WithLogger(log))
-	if err != nil {
-		return fmt.Errorf("failed to create session manager: %w", err)
-	}
-
-	// Create session checker adapter
-	sessionChecker := session.NewWorkspaceSessionChecker(sessionManager)
-
-	// Create session stopper adapter
-	sessionStopper := session.NewSessionStopperAdapter(sessionManager)
-
-	// Initialize semaphore in workspace manager
-	wsManager.InitializeSemaphore(sessionChecker, sessionStopper, slog.Default())
-
+	// Semaphore is now built into workspace manager
+	// No initialization needed
 	return nil
 }

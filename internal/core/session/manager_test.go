@@ -244,7 +244,7 @@ func TestManager_Get(t *testing.T) {
 	}
 
 	// Get the session
-	retrieved, err := manager.Get(context.Background(), ID(session.ID()))
+	retrieved, err := manager.GetByID(context.Background(), ID(session.ID()))
 	if err != nil {
 		t.Fatalf("Failed to get session: %v", err)
 	}
@@ -254,7 +254,7 @@ func TestManager_Get(t *testing.T) {
 	}
 
 	// Test getting non-existent session
-	_, err = manager.Get(context.Background(), ID("non-existent"))
+	_, err = manager.GetByID(context.Background(), ID("non-existent"))
 	if err == nil {
 		t.Error("Expected error for non-existent session")
 	}
@@ -405,7 +405,7 @@ func TestManager_Remove(t *testing.T) {
 	}
 
 	// Verify session is gone
-	_, err = manager.Get(context.Background(), ID(session.ID()))
+	_, err = manager.GetByID(context.Background(), ID(session.ID()))
 	if err == nil {
 		t.Error("Expected error getting removed session")
 	}
@@ -484,7 +484,7 @@ func TestManager_RemoveCompletedSession(t *testing.T) {
 	}
 
 	// Verify session is gone
-	_, err = manager.Get(context.Background(), ID(session.ID()))
+	_, err = manager.GetByID(context.Background(), ID(session.ID()))
 	if err == nil {
 		t.Error("Expected error getting removed session")
 	}
@@ -586,7 +586,7 @@ func TestManager_GetWithoutTmux(t *testing.T) {
 	manager2.SetTmuxAdapter(nil)
 
 	// Try to get the session without tmux
-	_, err = manager2.Get(context.Background(), ID(sessionID))
+	_, err = manager2.GetByID(context.Background(), ID(sessionID))
 	if err == nil {
 		t.Fatal("Expected error when getting session without tmux")
 	}
