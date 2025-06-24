@@ -22,9 +22,8 @@ func TestManager_CurrentState(t *testing.T) {
 
 	// Create a state file
 	stateData := &Data{
-		Status:           StatusRunning,
-		StatusChangedAt:  time.Now(),
-		LastActivityTime: time.Now(),
+		Status:          StatusRunning,
+		StatusChangedAt: time.Now(),
 	}
 	if err := manager.saveState(stateData); err != nil {
 		t.Fatalf("saveState() error = %v", err)
@@ -170,49 +169,6 @@ func TestManager_StateChangeHandlers(t *testing.T) {
 	}
 }
 
-func TestManager_UpdateActivity(t *testing.T) {
-	tmpDir := t.TempDir()
-	manager := NewManager("session-123", "workspace-456", tmpDir, slog.Default())
-
-	// Transition to running state
-	_ = manager.TransitionTo(context.Background(), StatusStarting)
-	_ = manager.TransitionTo(context.Background(), StatusRunning)
-
-	// Get initial state data
-	data1, err := manager.GetData()
-	if err != nil {
-		t.Fatalf("StateData() error = %v", err)
-	}
-
-	// Sleep briefly to ensure time difference
-	time.Sleep(10 * time.Millisecond)
-
-	// Update activity
-	err = manager.UpdateActivity()
-	if err != nil {
-		t.Fatalf("UpdateActivity() error = %v", err)
-	}
-
-	// Get updated state data
-	data2, err := manager.GetData()
-	if err != nil {
-		t.Fatalf("StateData() error = %v", err)
-	}
-
-	// Verify activity time was updated but status wasn't changed
-	if data2.Status != data1.Status {
-		t.Errorf("Status changed unexpectedly: %v -> %v", data1.Status, data2.Status)
-	}
-
-	if !data2.LastActivityTime.After(data1.LastActivityTime) {
-		t.Errorf("LastActivityTime not updated: %v -> %v", data1.LastActivityTime, data2.LastActivityTime)
-	}
-
-	if data2.StatusChangedAt != data1.StatusChangedAt {
-		t.Errorf("StatusChangedAt changed unexpectedly: %v -> %v", data1.StatusChangedAt, data2.StatusChangedAt)
-	}
-}
-
 func TestManager_StatePersistence(t *testing.T) {
 	tmpDir := t.TempDir()
 	// Test with nil logger (should use default)
@@ -255,9 +211,9 @@ func TestManager_ConcurrentAccess(t *testing.T) {
 		done <- true
 	}()
 
-	// Goroutine 3: Update activity
+	// Goroutine 3: Get state data
 	go func() {
-		_ = manager.UpdateActivity()
+		_, _ = manager.GetData()
 		done <- true
 	}()
 

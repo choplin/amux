@@ -26,9 +26,8 @@ type Manager struct {
 
 // Data represents the persisted state information
 type Data struct {
-	Status           Status    `json:"status"`
-	StatusChangedAt  time.Time `json:"status_changed_at"`
-	LastActivityTime time.Time `json:"last_activity_time"`
+	Status          Status    `json:"status"`
+	StatusChangedAt time.Time `json:"status_changed_at"`
 }
 
 // NewManager creates a new state manager
@@ -91,9 +90,8 @@ func (m *Manager) TransitionTo(ctx context.Context, newStatus Status) error {
 	// Default state if file doesn't exist
 	if data == nil {
 		data = &Data{
-			Status:           StatusCreated,
-			StatusChangedAt:  time.Now(),
-			LastActivityTime: time.Now(),
+			Status:          StatusCreated,
+			StatusChangedAt: time.Now(),
 		}
 	}
 
@@ -131,7 +129,6 @@ func (m *Manager) TransitionTo(ctx context.Context, newStatus Status) error {
 	now := time.Now()
 	data.Status = newStatus
 	data.StatusChangedAt = now
-	data.LastActivityTime = now
 
 	// Persist state
 	if err := m.saveState(data); err != nil {
@@ -144,21 +141,6 @@ func (m *Manager) TransitionTo(ctx context.Context, newStatus Status) error {
 		"to", newStatus)
 
 	return nil
-}
-
-// UpdateActivity updates the last activity time without changing state
-func (m *Manager) UpdateActivity() error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	data, err := m.loadState()
-	if err != nil {
-		return fmt.Errorf("failed to load state: %w", err)
-	}
-
-	data.LastActivityTime = time.Now()
-
-	return m.saveState(data)
 }
 
 // loadState loads state from file
