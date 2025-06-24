@@ -68,7 +68,10 @@ func TestTmuxSession_WithMock(t *testing.T) {
 	}
 
 	// Create tmux session with mock
-	session := CreateTmuxSession(context.Background(), info, manager, mockAdapter, ws, nil)
+	session, err := CreateTmuxSession(context.Background(), info, manager, mockAdapter, ws, nil)
+	if err != nil {
+		t.Fatalf("Failed to create tmux session: %v", err)
+	}
 
 	// Start session
 	ctx := context.Background()
@@ -279,7 +282,11 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 	}
 
 	// Create tmux session with mock adapter
-	session := CreateTmuxSession(context.Background(), info, manager, mockAdapter, ws, nil).(*tmuxSessionImpl)
+	tmpSession, err := CreateTmuxSession(context.Background(), info, manager, mockAdapter, ws, nil)
+	if err != nil {
+		t.Fatalf("Failed to create tmux session: %v", err)
+	}
+	session := tmpSession.(*tmuxSessionImpl)
 
 	// Initialize the session as if it started
 	// Need to properly transition through states for StateManager

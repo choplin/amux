@@ -63,7 +63,10 @@ func TestTmuxSession_StartStop(t *testing.T) {
 	}
 
 	// Create tmux session
-	session := CreateTmuxSession(context.Background(), info, manager, tmuxAdapter, ws, nil)
+	session, err := CreateTmuxSession(context.Background(), info, manager, tmuxAdapter, ws, nil)
+	if err != nil {
+		t.Fatalf("Failed to create tmux session: %v", err)
+	}
 
 	// Start session
 	ctx := context.Background()
@@ -152,7 +155,10 @@ func TestTmuxSession_WithInitialPrompt(t *testing.T) {
 	}
 
 	// Create tmux session
-	session := CreateTmuxSession(context.Background(), info, manager, tmuxAdapter, ws, nil)
+	session, err := CreateTmuxSession(context.Background(), info, manager, tmuxAdapter, ws, nil)
+	if err != nil {
+		t.Fatalf("Failed to create tmux session: %v", err)
+	}
 
 	// Start session
 	ctx := context.Background()
@@ -240,7 +246,10 @@ func TestTmuxSession_StatusTracking(t *testing.T) {
 	}
 
 	// Create tmux session
-	session := CreateTmuxSession(context.Background(), info, manager, tmuxAdapter, ws, nil)
+	session, err := CreateTmuxSession(context.Background(), info, manager, tmuxAdapter, ws, nil)
+	if err != nil {
+		t.Fatalf("Failed to create tmux session: %v", err)
+	}
 
 	// Initial status should be created
 	if status := session.Status(); status != StatusCreated {
@@ -334,7 +343,10 @@ func TestTmuxSession_WithEnvironment(t *testing.T) {
 	}
 
 	// Create tmux session
-	session := CreateTmuxSession(context.Background(), info, manager, mockAdapter, ws, nil)
+	session, err := CreateTmuxSession(context.Background(), info, manager, mockAdapter, ws, nil)
+	if err != nil {
+		t.Fatalf("Failed to create tmux session: %v", err)
+	}
 
 	// Start session
 	ctx := context.Background()
@@ -436,7 +448,10 @@ func TestTmuxSession_WithShellAndWindowName(t *testing.T) {
 	}
 
 	// Create tmux session
-	session := CreateTmuxSession(context.Background(), info, manager, tmuxAdapter, ws, nil)
+	session, err := CreateTmuxSession(context.Background(), info, manager, tmuxAdapter, ws, nil)
+	if err != nil {
+		t.Fatalf("Failed to create tmux session: %v", err)
+	}
 
 	// Start session
 	ctx := context.Background()

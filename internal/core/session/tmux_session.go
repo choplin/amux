@@ -58,7 +58,7 @@ func WithProcessChecker(checker process.Checker) TmuxSessionOption {
 }
 
 // CreateTmuxSession creates and initializes a new tmux-backed session
-func CreateTmuxSession(ctx context.Context, info *Info, manager *Manager, tmuxAdapter tmux.Adapter, workspace *workspace.Workspace, agentConfig *config.Agent, opts ...TmuxSessionOption) TerminalSession {
+func CreateTmuxSession(ctx context.Context, info *Info, manager *Manager, tmuxAdapter tmux.Adapter, workspace *workspace.Workspace, agentConfig *config.Agent, opts ...TmuxSessionOption) (TerminalSession, error) {
 	s := &tmuxSessionImpl{
 		info:           info,
 		manager:        manager,
@@ -76,7 +76,7 @@ func CreateTmuxSession(ctx context.Context, info *Info, manager *Manager, tmuxAd
 
 	// Initialize state manager - StoragePath is required
 	if info.StoragePath == "" {
-		panic("CreateTmuxSession: StoragePath is required")
+		return nil, fmt.Errorf("CreateTmuxSession: StoragePath is required")
 	}
 
 	stateDir := filepath.Join(info.StoragePath, "state")
@@ -88,7 +88,7 @@ func CreateTmuxSession(ctx context.Context, info *Info, manager *Manager, tmuxAd
 	}
 	s.stateManager = state.NewManager(info.ID, info.WorkspaceID, stateDir, slogger)
 
-	return s
+	return s, nil
 }
 
 func (s *tmuxSessionImpl) ID() string {
@@ -120,7 +120,9 @@ func (s *tmuxSessionImpl) Status() Status {
 
 	// Get status from state manager
 	if s.stateManager == nil {
-		panic("tmuxSessionImpl: StateManager is required")
+		// This should not happen if CreateTmuxSession is used properly
+		s.logger.Error("StateManager is nil")
+		return StatusFailed
 	}
 
 	currentState, err := s.stateManager.CurrentState()

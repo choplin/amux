@@ -171,7 +171,10 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 	}
 
 	// Create and cache session
-	sess := CreateTmuxSession(ctx, info, m, m.tmuxAdapter, ws, agentConfig)
+	sess, err := CreateTmuxSession(ctx, info, m, m.tmuxAdapter, ws, agentConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create tmux session: %w", err)
+	}
 	m.mu.Lock()
 	m.sessions[sessionID.String()] = sess
 	m.mu.Unlock()
@@ -361,7 +364,11 @@ func (m *Manager) createSessionFromInfo(ctx context.Context, info *Info) (Sessio
 			}
 		}
 
-		return CreateTmuxSession(ctx, info, m, m.tmuxAdapter, ws, agentConfig), nil
+		sess, err := CreateTmuxSession(ctx, info, m, m.tmuxAdapter, ws, agentConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create tmux session: %w", err)
+		}
+		return sess, nil
 
 	default:
 		return nil, fmt.Errorf("unsupported session type: %s", info.Type)

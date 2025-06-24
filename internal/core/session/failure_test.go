@@ -87,10 +87,11 @@ func TestSessionFailureDetection(t *testing.T) {
 		}
 
 		// Create session
-		sess := CreateTmuxSession(context.Background(), info, manager, mockAdapter, ws, nil)
+		sess, err := CreateTmuxSession(context.Background(), info, manager, mockAdapter, ws, nil)
+		require.NoError(t, err)
 
 		// Create tmux session first
-		err := mockAdapter.CreateSession(info.TmuxSession, ws.Path)
+		err = mockAdapter.CreateSession(info.TmuxSession, ws.Path)
 		require.NoError(t, err)
 
 		// Manually transition to running state for test
@@ -136,10 +137,11 @@ func TestSessionFailureDetection(t *testing.T) {
 		}
 
 		// Create session
-		sess := CreateTmuxSession(context.Background(), info, manager, mockAdapter, ws, nil)
+		sess, err := CreateTmuxSession(context.Background(), info, manager, mockAdapter, ws, nil)
+		require.NoError(t, err)
 
 		// Create tmux session
-		err := mockAdapter.CreateSession(info.TmuxSession, ws.Path)
+		err = mockAdapter.CreateSession(info.TmuxSession, ws.Path)
 		require.NoError(t, err)
 
 		// Manually transition to running state for test
@@ -183,10 +185,11 @@ func TestSessionFailureDetection(t *testing.T) {
 		}
 
 		// Create session with mock process checker
-		sess := CreateTmuxSession(context.Background(), info, manager, mockAdapter, ws, nil, WithProcessChecker(mockProcessChecker))
+		sess, err := CreateTmuxSession(context.Background(), info, manager, mockAdapter, ws, nil, WithProcessChecker(mockProcessChecker))
+		require.NoError(t, err)
 
 		// Create tmux session
-		err := mockAdapter.CreateSession(info.TmuxSession, ws.Path)
+		err = mockAdapter.CreateSession(info.TmuxSession, ws.Path)
 		require.NoError(t, err)
 
 		// Manually transition to running state for test
@@ -231,10 +234,11 @@ func TestSessionFailureDetection(t *testing.T) {
 		}
 
 		// Create session with mock process checker
-		sess := CreateTmuxSession(context.Background(), info, manager, mockAdapter, ws, nil, WithProcessChecker(mockProcessChecker))
+		sess, err := CreateTmuxSession(context.Background(), info, manager, mockAdapter, ws, nil, WithProcessChecker(mockProcessChecker))
+		require.NoError(t, err)
 
 		// Create tmux session
-		err := mockAdapter.CreateSession(info.TmuxSession, ws.Path)
+		err = mockAdapter.CreateSession(info.TmuxSession, ws.Path)
 		require.NoError(t, err)
 
 		// Manually transition to running state for test
@@ -283,10 +287,11 @@ func TestSessionFailureDetection(t *testing.T) {
 		}
 
 		// Create session with mock process checker
-		sess := CreateTmuxSession(context.Background(), info, manager, mockAdapter, ws, nil, WithProcessChecker(mockProcessChecker))
+		sess, err := CreateTmuxSession(context.Background(), info, manager, mockAdapter, ws, nil, WithProcessChecker(mockProcessChecker))
+		require.NoError(t, err)
 
 		// Create tmux session
-		err := mockAdapter.CreateSession(info.TmuxSession, ws.Path)
+		err = mockAdapter.CreateSession(info.TmuxSession, ws.Path)
 		require.NoError(t, err)
 
 		// Manually transition to running state for test
@@ -337,10 +342,11 @@ func TestSessionFailureDetection(t *testing.T) {
 		}
 
 		// Create session with mock process checker
-		sess := CreateTmuxSession(context.Background(), info, manager, mockAdapter, ws, nil, WithProcessChecker(mockProcessChecker))
+		sess, err := CreateTmuxSession(context.Background(), info, manager, mockAdapter, ws, nil, WithProcessChecker(mockProcessChecker))
+		require.NoError(t, err)
 
 		// Create tmux session
-		err := mockAdapter.CreateSession(info.TmuxSession, ws.Path)
+		err = mockAdapter.CreateSession(info.TmuxSession, ws.Path)
 		require.NoError(t, err)
 
 		// Manually transition to running state for test
@@ -388,10 +394,11 @@ func TestSessionFailureDetection(t *testing.T) {
 		}
 
 		// Create session with mock process checker
-		sess := CreateTmuxSession(context.Background(), info, manager, mockAdapter, ws, nil, WithProcessChecker(mockProcessChecker))
+		sess, err := CreateTmuxSession(context.Background(), info, manager, mockAdapter, ws, nil, WithProcessChecker(mockProcessChecker))
+		require.NoError(t, err)
 
 		// Create tmux session
-		err := mockAdapter.CreateSession(info.TmuxSession, ws.Path)
+		err = mockAdapter.CreateSession(info.TmuxSession, ws.Path)
 		require.NoError(t, err)
 
 		// Manually transition to running state for test
