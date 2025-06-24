@@ -59,6 +59,19 @@ func (s Status) IsRunning() bool {
 	return false
 }
 
+// allowedTransitions defines the valid state transitions
+var allowedTransitions = map[Status][]Status{
+	StatusCreated:  {StatusStarting, StatusFailed, StatusOrphaned},
+	StatusStarting: {StatusRunning, StatusFailed, StatusOrphaned},
+	StatusRunning:  {StatusStopping, StatusCompleted, StatusFailed, StatusOrphaned},
+	StatusStopping: {StatusStopped, StatusFailed, StatusOrphaned},
+	// Terminal states have no valid transitions
+	StatusCompleted: {},
+	StatusStopped:   {},
+	StatusFailed:    {},
+	StatusOrphaned:  {},
+}
+
 // CanTransitionTo checks if a transition to the target status is allowed
 func (s Status) CanTransitionTo(target Status) bool {
 	allowed, exists := allowedTransitions[s]
@@ -72,19 +85,6 @@ func (s Status) CanTransitionTo(target Status) bool {
 		}
 	}
 	return false
-}
-
-// allowedTransitions defines the valid state transitions
-var allowedTransitions = map[Status][]Status{
-	StatusCreated:  {StatusStarting, StatusFailed, StatusOrphaned},
-	StatusStarting: {StatusRunning, StatusFailed, StatusOrphaned},
-	StatusRunning:  {StatusStopping, StatusCompleted, StatusFailed, StatusOrphaned},
-	StatusStopping: {StatusStopped, StatusFailed, StatusOrphaned},
-	// Terminal states have no valid transitions
-	StatusCompleted: {},
-	StatusStopped:   {},
-	StatusFailed:    {},
-	StatusOrphaned:  {},
 }
 
 // ValidateTransition returns an error if the transition is not allowed
