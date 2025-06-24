@@ -85,6 +85,14 @@ func sendInputToSession(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to send input to session: %w", err)
 	}
 
+	// Save the session to persist activity tracking updates
+	// This is necessary because SendInput updates LastOutputTime but
+	// doesn't have a context parameter to save it (see issue #209)
+	if err := sessionManager.Save(cmd.Context(), sess.Info()); err != nil {
+		// Log warning but don't fail the command
+		ui.OutputLine("Warning: failed to update activity tracking: %v", err)
+	}
+
 	// Display success message
 	ui.OutputLine("Input sent to session %s", sessionID)
 
