@@ -17,7 +17,7 @@ Session lifecycle management in Amux requires reliable state tracking across mul
 5. Track activity metrics to help implementations determine if sessions need attention
 6. Persist state information for recovery after crashes
 
-The initial implementation used simple in-memory state tracking, which was insufficient for production use.
+The initial implementation used simple in-memory state tracking, which was insufficient for production use. We also needed to balance between providing useful information (like idle detection) while keeping the state model simple and focused on actual lifecycle states rather than transient conditions.
 
 ## Decision
 
@@ -38,40 +38,54 @@ We created a dedicated `state` package with a `Manager` type (not "StateMachine"
 We use a simplified state model focusing on lifecycle states:
 
 - `created`: Session has been created but not started
-- `starting`: Session is in the process of starting
-- `running`: Session is active (generic running state)
+- `starting`: Session is in the process of starting (acquiring resources, creating tmux session)
+- `running`: Session is active and executing
 - `stopping`: Session is in the process of stopping
 - `stopped`: Session has been stopped by user
 - `failed`: Session failed to start or crashed
-- `completed`: Session finished successfully
-- `orphaned`: Session's workspace was deleted
+- `completed`: Session finished successfully (command exited with code 0)
+- `orphaned`: Session's workspace was deleted while session was active
 
 ### State Transition Rules
 
 Valid transitions are explicitly defined:
 
-- `created` → `starting`
-- `starting` → `running`, `failed`
-- `running` → `stopping`, `failed`, `completed`
+- `created` → `starting`, `failed`, `orphaned`
+- `starting` → `running`, `failed`, `orphaned`
+- `running` → `stopping`, `failed`, `completed`, `orphaned`
 - `stopping` → `stopped`, `failed`
+- Terminal states (`stopped`, `failed`, `completed`, `orphaned`) have no outgoing transitions
 
 ### Activity Tracking vs State
 
 The state manager tracks activity metrics but does not interpret them:
 
 ```go
-type SessionMetrics struct {
-    State            Status
-    StateChangedAt   time.Time
+type Data struct {
+    State          Status    `json:"state"`
+    StateChangedAt time.Time `json:"state_changed_at"`
+    UpdatedBy      int       `json:"updated_by"`
+    SessionID      string    `json:"session_id"`
+    WorkspaceID    string    `json:"workspace_id"`
 
     // Activity measurements (facts, not interpretations)
-    LastActivityHash uint32
-    LastActivityAt   time.Time
-    LastCheckedAt    time.Time
+    LastActivityHash uint32    `json:"last_activity_hash,omitempty"`
+    LastActivityAt   time.Time `json:"last_activity_at,omitempty"`
+    LastCheckedAt    time.Time `json:"last_checked_at,omitempty"`
 }
 ```
 
 Session implementations decide what the activity data means based on their context (e.g., a REPL might consider 30 seconds as idle, while a compilation might need 5 minutes).
+
+### UI Presentation
+
+The UI presents activity information as attributes of running sessions rather than separate states:
+
+```text
+SESSION  NAME    DESCRIPTION        AGENT    WORKSPACE    STATUS                    IN STATUS  TOTAL TIME
+1        dev     Development env    claude   fix-auth     running (idle 2m 15s)     3m 5s      15m 23s
+2        build   Building project   bash     main         running                   45s        45s
+```
 
 ### Package Structure
 
@@ -91,6 +105,17 @@ internal/core/session/
 3. **Activity Detection**: Compares output hashes to detect activity
 4. **Process Monitoring**: Checks tmux session existence and shell process status
 5. **Graceful Degradation**: Continues with current state if updates fail
+
+### Implementation Approach
+
+The implementation was done in phases:
+
+1. **Phase 1**: Created state machine with full state model including working/idle states
+2. **Phase 2**: Refactored to separate concerns - state manager tracks facts, not interpretations
+3. **Phase 3**: Created dedicated package structure for better visibility control
+4. **Phase 4**: Simplified state model by removing working/idle states entirely
+
+This iterative approach allowed us to validate the core mechanics before simplifying to the final design.
 
 ## Consequences
 
