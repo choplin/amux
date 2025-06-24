@@ -2,35 +2,14 @@ package state
 
 import (
 	"context"
+	"log/slog"
 	"testing"
 	"time"
 )
 
-// mockLogger implements the Logger interface for testing
-type mockLogger struct {
-	messages []string
-}
-
-func (m *mockLogger) Debug(msg string, args ...interface{}) {
-	m.messages = append(m.messages, "DEBUG: "+msg)
-}
-
-func (m *mockLogger) Info(msg string, args ...interface{}) {
-	m.messages = append(m.messages, "INFO: "+msg)
-}
-
-func (m *mockLogger) Warn(msg string, args ...interface{}) {
-	m.messages = append(m.messages, "WARN: "+msg)
-}
-
-func (m *mockLogger) Error(msg string, args ...interface{}) {
-	m.messages = append(m.messages, "ERROR: "+msg)
-}
-
 func TestManager_CurrentState(t *testing.T) {
 	tmpDir := t.TempDir()
-	logger := &mockLogger{}
-	manager := NewManager("session-123", "workspace-456", tmpDir, logger)
+	manager := NewManager("session-123", "workspace-456", tmpDir, slog.Default())
 
 	// Test default state (no file exists)
 	state, err := manager.CurrentState()
@@ -42,7 +21,7 @@ func TestManager_CurrentState(t *testing.T) {
 	}
 
 	// Create a state file
-	stateData := &StateData{
+	stateData := &Data{
 		Status:           StatusRunning,
 		StatusChangedAt:  time.Now(),
 		LastActivityTime: time.Now(),
@@ -100,8 +79,7 @@ func TestManager_TransitionTo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tmpDir := t.TempDir()
-			logger := &mockLogger{}
-			manager := NewManager("session-123", "workspace-456", tmpDir, logger)
+			manager := NewManager("session-123", "workspace-456", tmpDir, slog.Default())
 
 			// Set initial state if not created
 			if tt.initialState != StatusCreated {
@@ -116,6 +94,9 @@ func TestManager_TransitionTo(t *testing.T) {
 					_ = manager.TransitionTo(context.Background(), StatusStarting)
 					_ = manager.TransitionTo(context.Background(), StatusRunning)
 					_ = manager.TransitionTo(context.Background(), StatusStopping)
+				case StatusCreated, StatusCompleted, StatusStopped, StatusFailed, StatusOrphaned:
+					// These are either the initial state or terminal states
+					// that cannot be set up through transitions
 				}
 			}
 
@@ -152,8 +133,7 @@ func TestManager_TransitionTo(t *testing.T) {
 
 func TestManager_StateChangeHandlers(t *testing.T) {
 	tmpDir := t.TempDir()
-	logger := &mockLogger{}
-	manager := NewManager("session-123", "workspace-456", tmpDir, logger)
+	manager := NewManager("session-123", "workspace-456", tmpDir, slog.Default())
 
 	// Track handler calls
 	handlerCalls := make([]string, 0)
@@ -169,8 +149,8 @@ func TestManager_StateChangeHandlers(t *testing.T) {
 		return nil
 	}
 
-	manager.AddStateChangeHandler(handler1)
-	manager.AddStateChangeHandler(handler2)
+	manager.AddChangeHandler(handler1)
+	manager.AddChangeHandler(handler2)
 
 	// Perform transition
 	err := manager.TransitionTo(context.Background(), StatusStarting)
@@ -192,15 +172,14 @@ func TestManager_StateChangeHandlers(t *testing.T) {
 
 func TestManager_UpdateActivity(t *testing.T) {
 	tmpDir := t.TempDir()
-	logger := &mockLogger{}
-	manager := NewManager("session-123", "workspace-456", tmpDir, logger)
+	manager := NewManager("session-123", "workspace-456", tmpDir, slog.Default())
 
 	// Transition to running state
 	_ = manager.TransitionTo(context.Background(), StatusStarting)
 	_ = manager.TransitionTo(context.Background(), StatusRunning)
 
 	// Get initial state data
-	data1, err := manager.StateData()
+	data1, err := manager.GetData()
 	if err != nil {
 		t.Fatalf("StateData() error = %v", err)
 	}
@@ -215,7 +194,7 @@ func TestManager_UpdateActivity(t *testing.T) {
 	}
 
 	// Get updated state data
-	data2, err := manager.StateData()
+	data2, err := manager.GetData()
 	if err != nil {
 		t.Fatalf("StateData() error = %v", err)
 	}
@@ -236,15 +215,15 @@ func TestManager_UpdateActivity(t *testing.T) {
 
 func TestManager_StatePersistence(t *testing.T) {
 	tmpDir := t.TempDir()
-	logger := &mockLogger{}
+	// Test with nil logger (should use default)
 
 	// Create first manager and set state
-	manager1 := NewManager("session-123", "workspace-456", tmpDir, logger)
+	manager1 := NewManager("session-123", "workspace-456", tmpDir, nil)
 	_ = manager1.TransitionTo(context.Background(), StatusStarting)
 	_ = manager1.TransitionTo(context.Background(), StatusRunning)
 
 	// Create second manager with same paths
-	manager2 := NewManager("session-123", "workspace-456", tmpDir, logger)
+	manager2 := NewManager("session-123", "workspace-456", tmpDir, nil)
 
 	// Verify state is persisted
 	state, err := manager2.CurrentState()
@@ -259,8 +238,7 @@ func TestManager_StatePersistence(t *testing.T) {
 
 func TestManager_ConcurrentAccess(t *testing.T) {
 	tmpDir := t.TempDir()
-	logger := &mockLogger{}
-	manager := NewManager("session-123", "workspace-456", tmpDir, logger)
+	manager := NewManager("session-123", "workspace-456", tmpDir, slog.Default())
 
 	// Run concurrent transitions
 	done := make(chan bool, 3)

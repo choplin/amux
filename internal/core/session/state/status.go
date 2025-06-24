@@ -40,9 +40,11 @@ func (s Status) IsTerminal() bool {
 	switch s {
 	case StatusCompleted, StatusStopped, StatusFailed, StatusOrphaned:
 		return true
-	default:
+	case StatusCreated, StatusStarting, StatusRunning, StatusStopping:
 		return false
 	}
+	// This should never be reached if all Status values are handled
+	return false
 }
 
 // IsRunning returns true if the status represents an active state
@@ -50,9 +52,11 @@ func (s Status) IsRunning() bool {
 	switch s {
 	case StatusStarting, StatusRunning, StatusStopping:
 		return true
-	default:
+	case StatusCreated, StatusCompleted, StatusStopped, StatusFailed, StatusOrphaned:
 		return false
 	}
+	// This should never be reached if all Status values are handled
+	return false
 }
 
 // CanTransitionTo checks if a transition to the target status is allowed

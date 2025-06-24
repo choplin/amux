@@ -1,3 +1,4 @@
+// Package state provides session state management functionality
 package state
 
 import "fmt"

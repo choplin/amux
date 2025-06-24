@@ -4,53 +4,49 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
 )
 
-// Logger interface for state manager logging
-type Logger interface {
-	Debug(msg string, args ...interface{})
-	Info(msg string, args ...interface{})
-	Warn(msg string, args ...interface{})
-	Error(msg string, args ...interface{})
-}
-
-// StateChangeHandler is called when state transitions occur
-type StateChangeHandler func(ctx context.Context, from, to Status, sessionID, workspaceID string) error
+// ChangeHandler is called when state transitions occur
+type ChangeHandler func(ctx context.Context, from, to Status, sessionID, workspaceID string) error
 
 // Manager manages session state transitions
 type Manager struct {
 	sessionID     string
 	workspaceID   string
 	stateFilePath string
-	handlers      []StateChangeHandler
-	logger        Logger
+	handlers      []ChangeHandler
+	logger        *slog.Logger
 	mu            sync.Mutex
 }
 
-// StateData represents the persisted state information
-type StateData struct {
+// Data represents the persisted state information
+type Data struct {
 	Status           Status    `json:"status"`
 	StatusChangedAt  time.Time `json:"status_changed_at"`
 	LastActivityTime time.Time `json:"last_activity_time"`
 }
 
 // NewManager creates a new state manager
-func NewManager(sessionID, workspaceID, stateDir string, logger Logger) *Manager {
+func NewManager(sessionID, workspaceID, stateDir string, logger *slog.Logger) *Manager {
+	if logger == nil {
+		logger = slog.Default()
+	}
 	return &Manager{
 		sessionID:     sessionID,
 		workspaceID:   workspaceID,
 		stateFilePath: filepath.Join(stateDir, "state.json"),
-		handlers:      make([]StateChangeHandler, 0),
+		handlers:      make([]ChangeHandler, 0),
 		logger:        logger,
 	}
 }
 
-// AddStateChangeHandler adds a handler to be called on state transitions
-func (m *Manager) AddStateChangeHandler(handler StateChangeHandler) {
+// AddChangeHandler adds a handler to be called on state transitions
+func (m *Manager) AddChangeHandler(handler ChangeHandler) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.handlers = append(m.handlers, handler)
@@ -73,8 +69,8 @@ func (m *Manager) CurrentState() (Status, error) {
 	return data.Status, nil
 }
 
-// StateData returns the full state data
-func (m *Manager) StateData() (*StateData, error) {
+// GetData returns the full state data
+func (m *Manager) GetData() (*Data, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -94,7 +90,7 @@ func (m *Manager) TransitionTo(ctx context.Context, newStatus Status) error {
 
 	// Default state if file doesn't exist
 	if data == nil {
-		data = &StateData{
+		data = &Data{
 			Status:           StatusCreated,
 			StatusChangedAt:  time.Now(),
 			LastActivityTime: time.Now(),
@@ -114,23 +110,19 @@ func (m *Manager) TransitionTo(ctx context.Context, newStatus Status) error {
 	}
 
 	// Log transition
-	if m.logger != nil {
-		m.logger.Debug("state transition",
-			"session", m.sessionID,
-			"from", currentStatus,
-			"to", newStatus)
-	}
+	m.logger.Debug("state transition",
+		"session", m.sessionID,
+		"from", currentStatus,
+		"to", newStatus)
 
 	// Call handlers before transition
 	for _, handler := range m.handlers {
 		if err := handler(ctx, currentStatus, newStatus, m.sessionID, m.workspaceID); err != nil {
-			if m.logger != nil {
-				m.logger.Error("state change handler failed",
-					"session", m.sessionID,
-					"from", currentStatus,
-					"to", newStatus,
-					"error", err)
-			}
+			m.logger.Error("state change handler failed",
+				"session", m.sessionID,
+				"from", currentStatus,
+				"to", newStatus,
+				"error", err)
 			return fmt.Errorf("state change handler failed: %w", err)
 		}
 	}
@@ -146,12 +138,10 @@ func (m *Manager) TransitionTo(ctx context.Context, newStatus Status) error {
 		return fmt.Errorf("failed to save state: %w", err)
 	}
 
-	if m.logger != nil {
-		m.logger.Info("state transition completed",
-			"session", m.sessionID,
-			"from", currentStatus,
-			"to", newStatus)
-	}
+	m.logger.Info("state transition completed",
+		"session", m.sessionID,
+		"from", currentStatus,
+		"to", newStatus)
 
 	return nil
 }
@@ -172,14 +162,16 @@ func (m *Manager) UpdateActivity() error {
 }
 
 // loadState loads state from file
-func (m *Manager) loadState() (*StateData, error) {
+func (m *Manager) loadState() (*Data, error) {
 	file, err := os.Open(m.stateFilePath)
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
-	var data StateData
+	var data Data
 	if err := json.NewDecoder(file).Decode(&data); err != nil {
 		return nil, fmt.Errorf("failed to decode state: %w", err)
 	}
@@ -188,7 +180,7 @@ func (m *Manager) loadState() (*StateData, error) {
 }
 
 // saveState saves state to file
-func (m *Manager) saveState(data *StateData) error {
+func (m *Manager) saveState(data *Data) error {
 	// Ensure directory exists
 	dir := filepath.Dir(m.stateFilePath)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -205,19 +197,19 @@ func (m *Manager) saveState(data *StateData) error {
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(data); err != nil {
-		file.Close()
-		os.Remove(tmpFile)
+		_ = file.Close()
+		_ = os.Remove(tmpFile)
 		return fmt.Errorf("failed to encode state: %w", err)
 	}
 
 	if err := file.Close(); err != nil {
-		os.Remove(tmpFile)
+		_ = os.Remove(tmpFile)
 		return fmt.Errorf("failed to close file: %w", err)
 	}
 
 	// Atomic rename
 	if err := os.Rename(tmpFile, m.stateFilePath); err != nil {
-		os.Remove(tmpFile)
+		_ = os.Remove(tmpFile)
 		return fmt.Errorf("failed to rename file: %w", err)
 	}
 
