@@ -7,7 +7,6 @@ import (
 	"github.com/aki/amux/internal/core/agent"
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/idmap"
-	"github.com/aki/amux/internal/core/logger"
 	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/workspace"
 )
@@ -23,10 +22,7 @@ func createSessionManager(configManager *config.Manager, wsManager *workspace.Ma
 	// Create agent manager
 	agentManager := agent.NewManager(configManager)
 
-	// Create logger
-	log := logger.Default()
-
-	manager, err := session.NewManager(configManager.GetAmuxDir(), wsManager, agentManager, idMapper, session.WithLogger(log))
+	manager, err := session.NewManager(configManager.GetAmuxDir(), wsManager, agentManager, idMapper)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session manager: %w", err)
 	}

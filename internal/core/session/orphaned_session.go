@@ -3,8 +3,8 @@ package session
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
-	"github.com/aki/amux/internal/core/logger"
 	"github.com/aki/amux/internal/core/session/state"
 )
 
@@ -13,7 +13,6 @@ type orphanedSessionImpl struct {
 	info    *Info
 	manager *Manager
 	state.Manager
-	logger logger.Logger
 }
 
 // CreateOrphanedSession creates a session in orphaned state
@@ -21,7 +20,6 @@ func CreateOrphanedSession(ctx context.Context, info *Info, manager *Manager, re
 	s := &orphanedSessionImpl{
 		info:    info,
 		manager: manager,
-		logger:  logger.Nop(),
 	}
 
 	// Initialize state manager
@@ -34,7 +32,7 @@ func CreateOrphanedSession(ctx context.Context, info *Info, manager *Manager, re
 	// Set to orphaned state
 	if err := s.TransitionTo(ctx, state.StatusOrphaned); err != nil {
 		// If we can't transition, it might already be orphaned
-		s.logger.Warn("failed to transition to orphaned state", "error", err)
+		slog.Warn("failed to transition to orphaned state", "error", err)
 	}
 
 	// Set error reason

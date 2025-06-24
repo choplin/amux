@@ -13,7 +13,6 @@ import (
 	"github.com/aki/amux/internal/adapters/tmux"
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/idmap"
-	"github.com/aki/amux/internal/core/logger"
 	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/tail"
 	"github.com/aki/amux/internal/core/workspace"
@@ -53,7 +52,7 @@ func TestTailer_Follow(t *testing.T) {
 	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
 	require.NoError(t, err)
 	// Create session manager with mock adapter
-	sessionManager, err := session.NewManager(configManager.GetAmuxDir(), wsManager, nil, idMapper, session.WithLogger(logger.Nop()))
+	sessionManager, err := session.NewManager(configManager.GetAmuxDir(), wsManager, nil, idMapper)
 	require.NoError(t, err)
 
 	// Replace tmux adapter with mock
@@ -210,7 +209,7 @@ func TestFollowFunc(t *testing.T) {
 	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
 	require.NoError(t, err)
 	// Create session manager with mock adapter
-	sessionManager, err := session.NewManager(configManager.GetAmuxDir(), wsManager, nil, idMapper, session.WithLogger(logger.Nop()))
+	sessionManager, err := session.NewManager(configManager.GetAmuxDir(), wsManager, nil, idMapper)
 	require.NoError(t, err)
 
 	// Replace tmux adapter with mock
