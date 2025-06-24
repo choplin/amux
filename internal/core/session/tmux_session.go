@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"hash/fnv"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -80,13 +79,9 @@ func CreateTmuxSession(ctx context.Context, info *Info, manager *Manager, tmuxAd
 	}
 
 	stateDir := filepath.Join(info.StoragePath, "state")
-	// Convert logger to slog
-	var slogger *slog.Logger
-	if s.logger != nil {
-		// Create a simple slog adapter
-		slogger = slog.New(slog.NewTextHandler(os.Stderr, nil))
-	}
-	s.stateManager = state.NewManager(info.ID, info.WorkspaceID, stateDir, slogger)
+	// TODO: Remove this workaround after migrating to direct slog usage (issue #208)
+	// For now, let state.NewManager use slog.Default()
+	s.stateManager = state.NewManager(info.ID, info.WorkspaceID, stateDir, nil)
 
 	return s, nil
 }
