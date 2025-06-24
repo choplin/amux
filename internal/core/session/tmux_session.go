@@ -73,15 +73,14 @@ func CreateTmuxSession(ctx context.Context, info *Info, manager *Manager, tmuxAd
 		opt(s)
 	}
 
-	// Initialize state manager - StoragePath is required
-	if info.StoragePath == "" {
-		return nil, fmt.Errorf("CreateTmuxSession: StoragePath is required")
+	// Initialize state manager - StateDir is required
+	if info.StateDir == "" {
+		return nil, fmt.Errorf("CreateTmuxSession: StateDir is required")
 	}
 
-	stateDir := filepath.Join(info.StoragePath, "state")
 	// TODO: Remove this workaround after migrating to direct slog usage (issue #208)
 	// For now, let state.InitManager use slog.Default()
-	s.Manager = state.InitManager(info.ID, info.WorkspaceID, stateDir, nil)
+	s.Manager = state.InitManager(info.ID, info.WorkspaceID, info.StateDir, nil)
 
 	return s, nil
 }

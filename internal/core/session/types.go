@@ -108,6 +108,7 @@ type Info struct {
 	StoppedAt     *time.Time        `yaml:"stopped_at,omitempty"`
 	Error         string            `yaml:"error,omitempty"`
 	StoragePath   string            `yaml:"storage_path,omitempty"`
+	StateDir      string            `yaml:"state_dir,omitempty"`
 	Name          string            `yaml:"name,omitempty"`
 	Description   string            `yaml:"description,omitempty"`
 }

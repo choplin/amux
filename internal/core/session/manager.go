@@ -134,6 +134,12 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 		return nil, fmt.Errorf("failed to create session storage: %w", err)
 	}
 
+	// Create state directory - consistent for all session types
+	stateDir := filepath.Join(m.sessionsDir, sessionID.String(), "state")
+	if err := os.MkdirAll(stateDir, 0o755); err != nil {
+		return nil, fmt.Errorf("failed to create state directory: %w", err)
+	}
+
 	// Create session info
 	info := &Info{
 		ID:          sessionID.String(),
@@ -150,6 +156,7 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 		InitialPrompt: opts.InitialPrompt,
 		CreatedAt:     now,
 		StoragePath:   storagePath,
+		StateDir:      stateDir,
 		Name:          opts.Name,
 		Description:   opts.Description,
 	}

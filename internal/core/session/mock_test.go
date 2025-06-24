@@ -60,6 +60,7 @@ func TestTmuxSession_WithMock(t *testing.T) {
 		},
 		CreatedAt:   now,
 		StoragePath: t.TempDir(),
+		StateDir:    t.TempDir(),
 	}
 
 	// Save info
@@ -274,6 +275,7 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 		Command:     "test-command",
 		CreatedAt:   now,
 		StoragePath: t.TempDir(),
+		StateDir:    t.TempDir(),
 	}
 
 	// Save info

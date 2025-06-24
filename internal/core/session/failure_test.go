@@ -84,6 +84,7 @@ func TestSessionFailureDetection(t *testing.T) {
 			TmuxSession: "test-tmux-session",
 			PID:         12345,
 			StoragePath: t.TempDir(),
+			StateDir:    t.TempDir(),
 		}
 
 		// Create session
@@ -134,6 +135,7 @@ func TestSessionFailureDetection(t *testing.T) {
 			TmuxSession: "test-tmux-session-2",
 			PID:         12346,
 			StoragePath: t.TempDir(),
+			StateDir:    t.TempDir(),
 		}
 
 		// Create session
@@ -182,6 +184,7 @@ func TestSessionFailureDetection(t *testing.T) {
 			TmuxSession: "test-tmux-session-completed",
 			PID:         12348,
 			StoragePath: t.TempDir(),
+			StateDir:    t.TempDir(),
 		}
 
 		// Create session with mock process checker
@@ -231,6 +234,7 @@ func TestSessionFailureDetection(t *testing.T) {
 			TmuxSession: "test-tmux-session-3",
 			PID:         12347,
 			StoragePath: t.TempDir(),
+			StateDir:    t.TempDir(),
 		}
 
 		// Create session with mock process checker
@@ -284,6 +288,7 @@ func TestSessionFailureDetection(t *testing.T) {
 			TmuxSession: "test-tmux-session-exit-failed",
 			PID:         12350,
 			StoragePath: storageDir,
+			StateDir:    t.TempDir(),
 		}
 
 		// Create session with mock process checker
@@ -339,6 +344,7 @@ func TestSessionFailureDetection(t *testing.T) {
 			TmuxSession: "test-tmux-session-exit-success",
 			PID:         12351,
 			StoragePath: storageDir,
+			StateDir:    t.TempDir(),
 		}
 
 		// Create session with mock process checker
@@ -391,6 +397,7 @@ func TestSessionFailureDetection(t *testing.T) {
 			TmuxSession: "test-tmux-session-transition",
 			PID:         12349,
 			StoragePath: t.TempDir(),
+			StateDir:    t.TempDir(),
 		}
 
 		// Create session with mock process checker
