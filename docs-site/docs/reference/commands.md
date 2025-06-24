@@ -177,7 +177,6 @@ amux run <agent-id> [flags]
 - `--command`, `-c` - Override agent command
 - `--env`, `-e` - Environment variables (KEY=VALUE)
 - `--initial-prompt`, `-p` - Initial prompt to send after starting
-- `--auto-attach` - Automatically attach to session after creation (default: true)
 
 **Examples:**
 
