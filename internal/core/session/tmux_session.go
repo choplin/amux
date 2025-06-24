@@ -354,14 +354,10 @@ func (s *tmuxSessionImpl) SendInput(input string) error {
 	}
 
 	// Update last activity time for activity tracking
+	// Note: This only updates in-memory state. Persistence should be handled
+	// by the caller or through periodic saves if needed.
 	now := time.Now()
 	s.info.ActivityTracking.LastOutputTime = now
-
-	// Save the updated info
-	if err := s.manager.Save(context.Background(), s.info); err != nil {
-		// Log error but don't fail the input operation
-		s.logger.Warn("failed to save activity update after input", "error", err)
-	}
 
 	return nil
 }
