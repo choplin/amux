@@ -74,35 +74,37 @@ func CreateTmuxSession(ctx context.Context, info *Info, manager *Manager, tmuxAd
 		opt(s)
 	}
 
-	// Initialize state manager
-	if info.StoragePath != "" {
-		stateDir := filepath.Join(info.StoragePath, "state")
-		// Convert logger to slog
-		var slogger *slog.Logger
-		if s.logger != nil {
-			// Create a simple slog adapter
-			slogger = slog.New(slog.NewTextHandler(os.Stderr, nil))
-		}
-		s.stateManager = state.NewManager(info.ID, info.WorkspaceID, stateDir, slogger)
+	// Initialize state manager - StoragePath is required
+	if info.StoragePath == "" {
+		panic("CreateTmuxSession: StoragePath is required")
+	}
 
-		// Set initial state based on current status
-		if s.info.StatusState.Status != "" {
-			// Map old status to new state
-			mappedStatus := mapOldStatusToNew(s.info.StatusState.Status)
-			currentState, err := s.stateManager.CurrentState()
+	stateDir := filepath.Join(info.StoragePath, "state")
+	// Convert logger to slog
+	var slogger *slog.Logger
+	if s.logger != nil {
+		// Create a simple slog adapter
+		slogger = slog.New(slog.NewTextHandler(os.Stderr, nil))
+	}
+	s.stateManager = state.NewManager(info.ID, info.WorkspaceID, stateDir, slogger)
 
-			// Only try to set state if it's different or there was an error reading current state
-			if err != nil || currentState != mappedStatus {
-				// For sessions being migrated, we need to handle the case where
-				// they're in states that can't be reached through normal transitions
-				if mappedStatus == state.StatusRunning && (err != nil || currentState == state.StatusCreated) {
-					// Transition through intermediate states to reach Running
-					_ = s.stateManager.TransitionTo(ctx, state.StatusStarting)
-					_ = s.stateManager.TransitionTo(ctx, state.StatusRunning)
-				} else {
-					// Try direct transition, ignore error for invalid transitions
-					_ = s.stateManager.TransitionTo(ctx, mappedStatus)
-				}
+	// Set initial state based on current status
+	if s.info.StatusState.Status != "" {
+		// Map old status to new state
+		mappedStatus := mapOldStatusToNew(s.info.StatusState.Status)
+		currentState, err := s.stateManager.CurrentState()
+
+		// Only try to set state if it's different or there was an error reading current state
+		if err != nil || currentState != mappedStatus {
+			// For sessions being migrated, we need to handle the case where
+			// they're in states that can't be reached through normal transitions
+			if mappedStatus == state.StatusRunning && (err != nil || currentState == state.StatusCreated) {
+				// Transition through intermediate states to reach Running
+				_ = s.stateManager.TransitionTo(ctx, state.StatusStarting)
+				_ = s.stateManager.TransitionTo(ctx, state.StatusRunning)
+			} else {
+				// Try direct transition, ignore error for invalid transitions
+				_ = s.stateManager.TransitionTo(ctx, mappedStatus)
 			}
 		}
 	}

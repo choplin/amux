@@ -52,8 +52,9 @@ func TestTmuxSession_StartStop(t *testing.T) {
 			StatusChangedAt: now,
 			LastOutputTime:  now,
 		},
-		Command:   "echo 'Test session started'",
-		CreatedAt: now,
+		Command:     "echo 'Test session started'",
+		CreatedAt:   now,
+		StoragePath: t.TempDir(),
 	}
 
 	// Save info
@@ -142,6 +143,7 @@ func TestTmuxSession_WithInitialPrompt(t *testing.T) {
 		Command:       "bash", // Start bash to receive the prompt
 		InitialPrompt: testPrompt,
 		CreatedAt:     now,
+		StoragePath:   t.TempDir(),
 	}
 
 	// Save info
@@ -227,8 +229,9 @@ func TestTmuxSession_StatusTracking(t *testing.T) {
 			StatusChangedAt: now,
 			LastOutputTime:  now,
 		},
-		Command:   "bash",
-		CreatedAt: now,
+		Command:     "bash",
+		CreatedAt:   now,
+		StoragePath: t.TempDir(),
 	}
 
 	// Save info
@@ -321,7 +324,8 @@ func TestTmuxSession_WithEnvironment(t *testing.T) {
 			"CUSTOM_VAR":  "custom_value",
 			"ANOTHER_VAR": "another_value",
 		},
-		CreatedAt: now,
+		CreatedAt:   now,
+		StoragePath: t.TempDir(),
 	}
 
 	// Save info
@@ -421,8 +425,9 @@ func TestTmuxSession_WithShellAndWindowName(t *testing.T) {
 			StatusChangedAt: now,
 			LastOutputTime:  now,
 		},
-		Command:   "echo 'Custom shell started'",
-		CreatedAt: now,
+		Command:     "echo 'Custom shell started'",
+		CreatedAt:   now,
+		StoragePath: t.TempDir(),
 	}
 
 	// Save info

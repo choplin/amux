@@ -8,6 +8,7 @@ import (
 
 	"github.com/aki/amux/internal/adapters/tmux"
 	"github.com/aki/amux/internal/core/idmap"
+	"github.com/aki/amux/internal/core/session/state"
 	"github.com/aki/amux/internal/core/workspace"
 )
 
@@ -57,7 +58,8 @@ func TestTmuxSession_WithMock(t *testing.T) {
 		Environment: map[string]string{
 			"TEST_VAR": "test_value",
 		},
-		CreatedAt: now,
+		CreatedAt:   now,
+		StoragePath: t.TempDir(),
 	}
 
 	// Save info
@@ -266,8 +268,9 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 			StatusChangedAt: now,
 			LastOutputTime:  now,
 		},
-		Command:   "test-command",
-		CreatedAt: now,
+		Command:     "test-command",
+		CreatedAt:   now,
+		StoragePath: t.TempDir(),
 	}
 
 	// Save info
@@ -279,8 +282,15 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 	session := CreateTmuxSession(context.Background(), info, manager, mockAdapter, ws, nil).(*tmuxSessionImpl)
 
 	// Initialize the session as if it started
-	session.info.StatusState.Status = StatusRunning
+	// Need to properly transition through states for StateManager
 	session.info.TmuxSession = "test-session"
+	ctx := context.Background()
+	if session.stateManager != nil {
+		// Transition to running state properly
+		_ = session.stateManager.TransitionTo(ctx, state.StatusStarting)
+		_ = session.stateManager.TransitionTo(ctx, state.StatusRunning)
+	}
+	session.info.StatusState.Status = StatusRunning
 
 	// Create the session in the mock adapter
 	err = mockAdapter.CreateSession("test-session", ws.Path)

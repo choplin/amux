@@ -82,6 +82,7 @@ func TestSessionFailureDetection(t *testing.T) {
 			},
 			TmuxSession: "test-tmux-session",
 			PID:         12345,
+			StoragePath: t.TempDir(),
 		}
 
 		// Create session
@@ -122,6 +123,7 @@ func TestSessionFailureDetection(t *testing.T) {
 			},
 			TmuxSession: "test-tmux-session-2",
 			PID:         12346,
+			StoragePath: t.TempDir(),
 		}
 
 		// Create session
@@ -160,6 +162,7 @@ func TestSessionFailureDetection(t *testing.T) {
 			},
 			TmuxSession: "test-tmux-session-completed",
 			PID:         12348,
+			StoragePath: t.TempDir(),
 		}
 
 		// Create session with mock process checker
@@ -192,13 +195,14 @@ func TestSessionFailureDetection(t *testing.T) {
 			WorkspaceID: ws.ID,
 			AgentID:     "test-agent",
 			StatusState: StatusState{
-				Status:          StatusWorking,
+				Status:          StatusRunning,
 				StatusChangedAt: time.Now(),
 				LastOutputHash:  12345,
 				LastOutputTime:  time.Now(),
 			},
 			TmuxSession: "test-tmux-session-3",
 			PID:         12347,
+			StoragePath: t.TempDir(),
 		}
 
 		// Create session with mock process checker
@@ -219,7 +223,7 @@ func TestSessionFailureDetection(t *testing.T) {
 		require.NoError(t, err)
 
 		// Should remain working
-		assert.Equal(t, StatusWorking, sess.Status())
+		assert.Equal(t, StatusRunning, sess.Status())
 		assert.Empty(t, sess.Info().Error)
 	})
 
@@ -331,6 +335,7 @@ func TestSessionFailureDetection(t *testing.T) {
 			},
 			TmuxSession: "test-tmux-session-transition",
 			PID:         12349,
+			StoragePath: t.TempDir(),
 		}
 
 		// Create session with mock process checker
