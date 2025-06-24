@@ -171,7 +171,7 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 	}
 
 	// Create and cache session
-	sess := NewTmuxSession(info, m, m.tmuxAdapter, ws, agentConfig) //nolint:contextcheck // NewTmuxSession doesn't perform I/O
+	sess := CreateTmuxSession(ctx, info, m, m.tmuxAdapter, ws, agentConfig)
 	m.mu.Lock()
 	m.sessions[sessionID.String()] = sess
 	m.mu.Unlock()
@@ -361,7 +361,7 @@ func (m *Manager) createSessionFromInfo(ctx context.Context, info *Info) (Sessio
 			}
 		}
 
-		return NewTmuxSession(info, m, m.tmuxAdapter, ws, agentConfig), nil //nolint:contextcheck // NewTmuxSession doesn't perform I/O
+		return CreateTmuxSession(ctx, info, m, m.tmuxAdapter, ws, agentConfig), nil
 
 	default:
 		return nil, fmt.Errorf("unsupported session type: %s", info.Type)

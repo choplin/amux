@@ -178,18 +178,21 @@ For example:
 ### About the `docs/` Directory
 
 The `docs/` directory should only contain **stable documentation** that reflects the current state of the codebase:
+
 - Architecture Decision Records (ADRs) in `docs/adr/`
 - User guides and references
 - API documentation
 - Any documentation that describes how the project currently works
 
 **DO NOT** put the following in `docs/`:
+
 - Planning documents
 - Temporary design documents
 - Work-in-progress documentation
 - Meeting notes or brainstorming documents
 
 For temporary planning documents, use:
+
 - Workspace storage (via `workspace_storage_write` MCP tool)
 - GitHub issues or PR descriptions
 - External planning tools

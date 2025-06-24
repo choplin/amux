@@ -57,8 +57,8 @@ func WithProcessChecker(checker process.Checker) TmuxSessionOption {
 	}
 }
 
-// NewTmuxSession creates a new tmux-backed session
-func NewTmuxSession(info *Info, manager *Manager, tmuxAdapter tmux.Adapter, workspace *workspace.Workspace, agentConfig *config.Agent, opts ...TmuxSessionOption) TerminalSession {
+// CreateTmuxSession creates and initializes a new tmux-backed session
+func CreateTmuxSession(ctx context.Context, info *Info, manager *Manager, tmuxAdapter tmux.Adapter, workspace *workspace.Workspace, agentConfig *config.Agent, opts ...TmuxSessionOption) TerminalSession {
 	s := &tmuxSessionImpl{
 		info:           info,
 		manager:        manager,
@@ -97,11 +97,11 @@ func NewTmuxSession(info *Info, manager *Manager, tmuxAdapter tmux.Adapter, work
 				// they're in states that can't be reached through normal transitions
 				if mappedStatus == state.StatusRunning && (err != nil || currentState == state.StatusCreated) {
 					// Transition through intermediate states to reach Running
-					_ = s.stateManager.TransitionTo(context.Background(), state.StatusStarting)
-					_ = s.stateManager.TransitionTo(context.Background(), state.StatusRunning)
+					_ = s.stateManager.TransitionTo(ctx, state.StatusStarting)
+					_ = s.stateManager.TransitionTo(ctx, state.StatusRunning)
 				} else {
 					// Try direct transition, ignore error for invalid transitions
-					_ = s.stateManager.TransitionTo(context.Background(), mappedStatus)
+					_ = s.stateManager.TransitionTo(ctx, mappedStatus)
 				}
 			}
 		}
