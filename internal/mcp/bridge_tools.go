@@ -48,15 +48,17 @@ func (s *ServerV2) getWorkspaceList(ctx context.Context) ([]workspaceInfo, error
 	workspaceList := make([]workspaceInfo, len(workspaces))
 	for i, ws := range workspaces {
 		info := workspaceInfo{
-			ID:          ws.ID,
-			Index:       ws.Index,
-			Name:        ws.Name,
-			Branch:      ws.Branch,
-			BaseBranch:  ws.BaseBranch,
-			Description: ws.Description,
-			StoragePath: ws.StoragePath,
-			CreatedAt:   ws.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
-			UpdatedAt:   ws.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
+			ID:             ws.ID,
+			Index:          ws.Index,
+			Name:           ws.Name,
+			Branch:         ws.Branch,
+			BaseBranch:     ws.BaseBranch,
+			Description:    ws.Description,
+			StoragePath:    ws.StoragePath,
+			Status:         getWorkspaceStatusString(ws),
+			SemaphoreCount: ws.GetHolderCount(),
+			CreatedAt:      ws.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+			UpdatedAt:      ws.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		}
 		info.Resources.Detail = fmt.Sprintf("amux://workspace/%s", ws.ID)
 		info.Resources.Files = fmt.Sprintf("amux://workspace/%s/files", ws.ID)
@@ -65,6 +67,31 @@ func (s *ServerV2) getWorkspaceList(ctx context.Context) ([]workspaceInfo, error
 	}
 
 	return workspaceList, nil
+}
+
+// getWorkspaceStatusString returns a human-readable status string for the workspace
+func getWorkspaceStatusString(ws *workspace.Workspace) string {
+	// First check workspace consistency
+	switch ws.Status {
+	case workspace.StatusConsistent:
+		// Workspace is consistent, show holder status
+		switch ws.GetHolderCount() {
+		case 0:
+			return "available"
+		case 1:
+			return "held-by-1-session"
+		default:
+			return fmt.Sprintf("held-by-%d-sessions", ws.GetHolderCount())
+		}
+	case workspace.StatusFolderMissing:
+		return "folder-missing"
+	case workspace.StatusWorktreeMissing:
+		return "worktree-missing"
+	case workspace.StatusOrphaned:
+		return "orphaned"
+	default:
+		return "unknown"
+	}
 }
 
 // Shared logic for getting workspace details

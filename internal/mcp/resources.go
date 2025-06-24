@@ -24,16 +24,18 @@ func (s *ServerV2) registerResources() error {
 
 // workspaceInfo is the common structure for workspace information
 type workspaceInfo struct {
-	ID          string `json:"id"`
-	Index       string `json:"index"`
-	Name        string `json:"name"`
-	Branch      string `json:"branch"`
-	BaseBranch  string `json:"baseBranch"`
-	Description string `json:"description,omitempty"`
-	StoragePath string `json:"storagePath,omitempty"`
-	CreatedAt   string `json:"createdAt"`
-	UpdatedAt   string `json:"updatedAt"`
-	Resources   struct {
+	ID             string `json:"id"`
+	Index          string `json:"index"`
+	Name           string `json:"name"`
+	Branch         string `json:"branch"`
+	BaseBranch     string `json:"baseBranch"`
+	Description    string `json:"description,omitempty"`
+	StoragePath    string `json:"storagePath,omitempty"`
+	Status         string `json:"status"`
+	SemaphoreCount int    `json:"semaphoreCount"`
+	CreatedAt      string `json:"createdAt"`
+	UpdatedAt      string `json:"updatedAt"`
+	Resources      struct {
 		Detail  string `json:"detail"`
 		Files   string `json:"files"`
 		Context string `json:"context"`

@@ -203,8 +203,8 @@ func PrintWorkspaceListWithHolders(entries []WorkspaceListEntry) {
 		return
 	}
 
-	// Create table with sessions column
-	tbl := NewTable("ID", "NAME", "BRANCH", "AGE", "STATUS", "SESSIONS", "DESCRIPTION")
+	// Create table with merged status column
+	tbl := NewTable("ID", "NAME", "BRANCH", "AGE", "STATUS", "DESCRIPTION")
 
 	// Add rows
 	for _, entry := range entries {
@@ -219,11 +219,21 @@ func PrintWorkspaceListWithHolders(entries []WorkspaceListEntry) {
 			description = "-"
 		}
 
-		// Format status with appropriate icon
+		// Format merged status column
 		var status string
+
+		// First check workspace consistency
 		switch w.Status {
 		case workspace.StatusConsistent:
-			status = SuccessStyle.Render("✓ ok")
+			// Workspace is consistent, show holder status
+			switch entry.HolderCount {
+			case 0:
+				status = SuccessStyle.Render("✓ available")
+			case 1:
+				status = WarningStyle.Render("⚠ held by 1 session")
+			default:
+				status = WarningStyle.Render(fmt.Sprintf("⚠ held by %d sessions", entry.HolderCount))
+			}
 		case workspace.StatusFolderMissing:
 			status = WarningStyle.Render("⚠ folder missing")
 		case workspace.StatusWorktreeMissing:
@@ -234,18 +244,7 @@ func PrintWorkspaceListWithHolders(entries []WorkspaceListEntry) {
 			status = DimStyle.Render("unknown")
 		}
 
-		// Format sessions column
-		var sessions string
-		switch entry.HolderCount {
-		case 0:
-			sessions = SuccessStyle.Render("None")
-		case 1:
-			sessions = WarningStyle.Render("1 active")
-		default:
-			sessions = WarningStyle.Render(fmt.Sprintf("%d active", entry.HolderCount))
-		}
-
-		tbl.AddRow(id, w.Name, w.Branch, age, status, sessions, description)
+		tbl.AddRow(id, w.Name, w.Branch, age, status, description)
 	}
 
 	// Print with header
