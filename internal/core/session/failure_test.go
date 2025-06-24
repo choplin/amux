@@ -12,6 +12,7 @@ import (
 
 	"github.com/aki/amux/internal/adapters/tmux"
 	"github.com/aki/amux/internal/core/idmap"
+	"github.com/aki/amux/internal/core/session/state"
 	"github.com/aki/amux/internal/core/workspace"
 )
 
@@ -77,7 +78,7 @@ func TestSessionFailureDetection(t *testing.T) {
 			WorkspaceID: ws.ID,
 			AgentID:     "test-agent",
 			StatusState: StatusState{
-				Status:          StatusRunning,
+				Status:          StatusCreated,
 				StatusChangedAt: time.Now(),
 			},
 			TmuxSession: "test-tmux-session",
@@ -91,6 +92,14 @@ func TestSessionFailureDetection(t *testing.T) {
 		// Create tmux session first
 		err := mockAdapter.CreateSession(info.TmuxSession, ws.Path)
 		require.NoError(t, err)
+
+		// Manually transition to running state for test
+		tmuxSess := sess.(*tmuxSessionImpl)
+		err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusStarting)
+		require.NoError(t, err)
+		err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusRunning)
+		require.NoError(t, err)
+		tmuxSess.info.StatusState.Status = StatusRunning
 
 		// Verify session is running
 		assert.Equal(t, StatusRunning, sess.Status())
@@ -118,7 +127,7 @@ func TestSessionFailureDetection(t *testing.T) {
 			WorkspaceID: ws.ID,
 			AgentID:     "test-agent",
 			StatusState: StatusState{
-				Status:          StatusRunning,
+				Status:          StatusCreated,
 				StatusChangedAt: time.Now(),
 			},
 			TmuxSession: "test-tmux-session-2",
@@ -132,6 +141,14 @@ func TestSessionFailureDetection(t *testing.T) {
 		// Create tmux session
 		err := mockAdapter.CreateSession(info.TmuxSession, ws.Path)
 		require.NoError(t, err)
+
+		// Manually transition to running state for test
+		tmuxSess := sess.(*tmuxSessionImpl)
+		err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusStarting)
+		require.NoError(t, err)
+		err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusRunning)
+		require.NoError(t, err)
+		tmuxSess.info.StatusState.Status = StatusRunning
 
 		// Mark pane as dead
 		err = mockAdapter.SetPaneDead(info.TmuxSession, true)
@@ -157,7 +174,7 @@ func TestSessionFailureDetection(t *testing.T) {
 			WorkspaceID: ws.ID,
 			AgentID:     "test-agent",
 			StatusState: StatusState{
-				Status:          StatusRunning,
+				Status:          StatusCreated,
 				StatusChangedAt: time.Now(),
 			},
 			TmuxSession: "test-tmux-session-completed",
@@ -171,6 +188,14 @@ func TestSessionFailureDetection(t *testing.T) {
 		// Create tmux session
 		err := mockAdapter.CreateSession(info.TmuxSession, ws.Path)
 		require.NoError(t, err)
+
+		// Manually transition to running state for test
+		tmuxSess := sess.(*tmuxSessionImpl)
+		err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusStarting)
+		require.NoError(t, err)
+		err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusRunning)
+		require.NoError(t, err)
+		tmuxSess.info.StatusState.Status = StatusRunning
 
 		// Set process to have no children
 		mockProcessChecker.SetHasChildren(info.PID, false)
@@ -195,7 +220,7 @@ func TestSessionFailureDetection(t *testing.T) {
 			WorkspaceID: ws.ID,
 			AgentID:     "test-agent",
 			StatusState: StatusState{
-				Status:          StatusRunning,
+				Status:          StatusCreated,
 				StatusChangedAt: time.Now(),
 				LastOutputHash:  12345,
 				LastOutputTime:  time.Now(),
@@ -211,6 +236,14 @@ func TestSessionFailureDetection(t *testing.T) {
 		// Create tmux session
 		err := mockAdapter.CreateSession(info.TmuxSession, ws.Path)
 		require.NoError(t, err)
+
+		// Manually transition to running state for test
+		tmuxSess := sess.(*tmuxSessionImpl)
+		err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusStarting)
+		require.NoError(t, err)
+		err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusRunning)
+		require.NoError(t, err)
+		tmuxSess.info.StatusState.Status = StatusRunning
 
 		// Set some output
 		mockAdapter.SetPaneContent(info.TmuxSession, "test output")
@@ -241,7 +274,7 @@ func TestSessionFailureDetection(t *testing.T) {
 			WorkspaceID: ws.ID,
 			AgentID:     "test-agent",
 			StatusState: StatusState{
-				Status:          StatusRunning,
+				Status:          StatusCreated,
 				StatusChangedAt: time.Now(),
 			},
 			TmuxSession: "test-tmux-session-exit-failed",
@@ -255,6 +288,14 @@ func TestSessionFailureDetection(t *testing.T) {
 		// Create tmux session
 		err := mockAdapter.CreateSession(info.TmuxSession, ws.Path)
 		require.NoError(t, err)
+
+		// Manually transition to running state for test
+		tmuxSess := sess.(*tmuxSessionImpl)
+		err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusStarting)
+		require.NoError(t, err)
+		err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusRunning)
+		require.NoError(t, err)
+		tmuxSess.info.StatusState.Status = StatusRunning
 
 		// Pre-create exit status file since mock doesn't execute shell commands
 		exitStatusPath := filepath.Join(storageDir, "exit_status")
@@ -287,7 +328,7 @@ func TestSessionFailureDetection(t *testing.T) {
 			WorkspaceID: ws.ID,
 			AgentID:     "test-agent",
 			StatusState: StatusState{
-				Status:          StatusRunning,
+				Status:          StatusCreated,
 				StatusChangedAt: time.Now(),
 			},
 			TmuxSession: "test-tmux-session-exit-success",
@@ -301,6 +342,14 @@ func TestSessionFailureDetection(t *testing.T) {
 		// Create tmux session
 		err := mockAdapter.CreateSession(info.TmuxSession, ws.Path)
 		require.NoError(t, err)
+
+		// Manually transition to running state for test
+		tmuxSess := sess.(*tmuxSessionImpl)
+		err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusStarting)
+		require.NoError(t, err)
+		err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusRunning)
+		require.NoError(t, err)
+		tmuxSess.info.StatusState.Status = StatusRunning
 
 		// Pre-create exit status file since mock doesn't execute shell commands
 		exitStatusPath := filepath.Join(storageDir, "exit_status")
@@ -330,7 +379,7 @@ func TestSessionFailureDetection(t *testing.T) {
 			WorkspaceID: ws.ID,
 			AgentID:     "test-agent",
 			StatusState: StatusState{
-				Status:          StatusRunning,
+				Status:          StatusCreated,
 				StatusChangedAt: time.Now(),
 			},
 			TmuxSession: "test-tmux-session-transition",
@@ -344,6 +393,14 @@ func TestSessionFailureDetection(t *testing.T) {
 		// Create tmux session
 		err := mockAdapter.CreateSession(info.TmuxSession, ws.Path)
 		require.NoError(t, err)
+
+		// Manually transition to running state for test
+		tmuxSess := sess.(*tmuxSessionImpl)
+		err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusStarting)
+		require.NoError(t, err)
+		err = tmuxSess.stateManager.TransitionTo(context.Background(), state.StatusRunning)
+		require.NoError(t, err)
+		tmuxSess.info.StatusState.Status = StatusRunning
 
 		// Initially has children
 		mockProcessChecker.SetHasChildren(info.PID, true)

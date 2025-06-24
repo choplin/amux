@@ -88,40 +88,6 @@ func CreateTmuxSession(ctx context.Context, info *Info, manager *Manager, tmuxAd
 	}
 	s.stateManager = state.NewManager(info.ID, info.WorkspaceID, stateDir, slogger)
 
-	// Set initial state based on current status
-	if s.info.StatusState.Status != "" {
-		// Map old status to new state
-		mappedStatus := mapOldStatusToNew(s.info.StatusState.Status)
-		currentState, err := s.stateManager.CurrentState()
-
-		// Only try to set state if it's different or there was an error reading current state
-		if err != nil || currentState != mappedStatus {
-			// For sessions being migrated, we need to handle the case where
-			// they're in states that can't be reached through normal transitions
-			if mappedStatus == state.StatusRunning && (err != nil || currentState == state.StatusCreated) {
-				// Transition through intermediate states to reach Running
-				_ = s.stateManager.TransitionTo(ctx, state.StatusStarting)
-				_ = s.stateManager.TransitionTo(ctx, state.StatusRunning)
-			} else {
-				// Try direct transition, ignore error for invalid transitions
-				_ = s.stateManager.TransitionTo(ctx, mappedStatus)
-			}
-		}
-	}
-
-	// Initialize StatusState if not set (e.g., when loading from store)
-	if s.info.StatusState.StatusChangedAt.IsZero() {
-		s.info.StatusState.StatusChangedAt = time.Now()
-	}
-	if s.info.StatusState.LastOutputTime.IsZero() {
-		s.info.StatusState.LastOutputTime = time.Now()
-	}
-
-	// Ensure type is set
-	if s.info.Type == "" {
-		s.info.Type = TypeTmux
-	}
-
 	return s
 }
 
@@ -152,16 +118,20 @@ func (s *tmuxSessionImpl) Status() Status {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	// Get status from state manager if available
-	if s.stateManager != nil {
-		if currentState, err := s.stateManager.CurrentState(); err == nil {
-			// Map state.Status back to session.Status
-			return mapStateStatusToSession(currentState)
-		}
+	// Get status from state manager
+	if s.stateManager == nil {
+		panic("tmuxSessionImpl: StateManager is required")
 	}
 
-	// Fallback to StatusState for backward compatibility
-	return s.info.StatusState.Status
+	currentState, err := s.stateManager.CurrentState()
+	if err != nil {
+		// This should not happen in normal operation
+		s.logger.Error("failed to get current state", "error", err)
+		return StatusFailed
+	}
+
+	// Map state.Status back to session.Status
+	return mapStateStatusToSession(currentState)
 }
 
 func (s *tmuxSessionImpl) Info() *Info {
@@ -298,7 +268,7 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 
 	// Update session info
 	now := time.Now()
-	s.info.StatusState.Status = StatusRunning // Update for backward compatibility
+	s.info.StatusState.Status = StatusRunning
 	s.info.StatusState.StatusChangedAt = now
 	s.info.StatusState.LastOutputTime = now // Reset output tracking
 	s.info.StatusState.LastOutputHash = 0   // Reset hash
@@ -359,7 +329,7 @@ func (s *tmuxSessionImpl) Stop(ctx context.Context) error {
 		}
 	}
 
-	// Update status for backward compatibility
+	// Update status
 	now := time.Now()
 	s.info.StatusState.Status = StatusStopped
 	s.info.StatusState.StatusChangedAt = now
@@ -607,34 +577,6 @@ func (s *tmuxSessionImpl) captureExitStatus() (int, error) {
 	}
 
 	return exitCode, nil
-}
-
-// mapOldStatusToNew maps old status values to new state machine statuses
-func mapOldStatusToNew(oldStatus Status) state.Status {
-	switch oldStatus {
-	case StatusCreated:
-		return state.StatusCreated
-	case StatusWorking, StatusIdle:
-		// Both working and idle map to running
-		return state.StatusRunning
-	case StatusStarting:
-		return state.StatusStarting
-	case StatusRunning:
-		return state.StatusRunning
-	case StatusStopping:
-		return state.StatusStopping
-	case StatusCompleted:
-		return state.StatusCompleted
-	case StatusStopped:
-		return state.StatusStopped
-	case StatusFailed:
-		return state.StatusFailed
-	case StatusOrphaned:
-		return state.StatusOrphaned
-	default:
-		// Default to created for unknown statuses
-		return state.StatusCreated
-	}
 }
 
 // mapStateStatusToSession maps state.Status back to session.Status

@@ -322,9 +322,9 @@ func (m *Manager) CleanupOrphaned() error {
 
 // createSessionFromInfo creates the appropriate session implementation from stored info
 func (m *Manager) createSessionFromInfo(ctx context.Context, info *Info) (Session, error) {
-	// Default to tmux if type not set (for backward compatibility)
+	// Type is required
 	if info.Type == "" {
-		info.Type = TypeTmux
+		return nil, fmt.Errorf("session type is required")
 	}
 
 	// Create session based on type
@@ -532,7 +532,7 @@ func (m *Manager) getSessionPath(id string) string {
 	return filepath.Join(m.sessionsDir, id, "session.yaml")
 }
 
-// Implement Store interface methods for backward compatibility
+// Implement Store interface methods
 
 // Save implements Store.Save
 func (m *Manager) Save(ctx context.Context, info *Info) error {

@@ -472,7 +472,7 @@ func TestManager_RemoveCompletedSession(t *testing.T) {
 		}
 	}
 
-	// Also update internal state for backward compatibility
+	// Also update internal state
 	tmuxSess.mu.Lock()
 	tmuxSess.info.StatusState.Status = StatusCompleted
 	tmuxSess.info.StatusState.StatusChangedAt = time.Now()

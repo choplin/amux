@@ -86,13 +86,6 @@ const (
 	StatusFailed Status = "failed"
 	// StatusOrphaned indicates a session with missing dependencies (e.g., deleted workspace)
 	StatusOrphaned Status = "orphaned"
-
-	// StatusWorking is deprecated: kept for backward compatibility
-	// This status is no longer used and will be migrated to StatusRunning
-	StatusWorking Status = "working"
-	// StatusIdle is deprecated: kept for backward compatibility
-	// This status is no longer used and will be migrated to StatusRunning
-	StatusIdle Status = "idle"
 )
 
 // StatusState holds runtime state for status tracking

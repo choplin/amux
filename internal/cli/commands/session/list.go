@@ -105,9 +105,6 @@ func listSessions(cmd *cobra.Command, args []string) error {
 			statusStr = ui.ErrorStyle.Render(statusStr)
 		case session.StatusOrphaned:
 			statusStr = ui.WarningStyle.Render(statusStr)
-		case session.StatusWorking, session.StatusIdle:
-			// These are deprecated but handle them for backward compatibility
-			statusStr = ui.SuccessStyle.Render("running")
 		}
 
 		// Show time in current status
