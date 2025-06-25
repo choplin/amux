@@ -224,14 +224,15 @@ func TestManager_GetDefaultCommand(t *testing.T) {
 		t.Errorf("Expected command 'gpt', got '%s'", cmd)
 	}
 
-	// Test non-existent agent (should use agent ID)
-	cmd, err = manager.GetDefaultCommand("unknown")
-	if err != nil {
-		t.Fatalf("Failed to get default command: %v", err)
+	// Test non-existent agent (should return error)
+	_, err = manager.GetDefaultCommand("unknown")
+	if err == nil {
+		t.Error("Expected error for non-existent agent")
 	}
-	if cmd != "unknown" {
-		t.Errorf("Expected command 'unknown', got '%s'", cmd)
-	}
+
+	// Test tmux agent without command should fall back to shell or bash
+	// Note: Due to schema validation, we can't directly test with empty command,
+	// but the implementation now falls back to shell/bash instead of erroring.
 }
 
 func TestManager_GetEnvironment(t *testing.T) {

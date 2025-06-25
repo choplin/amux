@@ -101,12 +101,9 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 		sessionID = GenerateID()
 	}
 
-	// Set defaults
-	if opts.Command == "" {
-		opts.Command = "bash"
-	}
+	// Set default agent ID if not provided
 	if opts.AgentID == "" {
-		opts.AgentID = "default"
+		opts.AgentID = agent.DefaultAgentID
 	}
 
 	// Get agent configuration if available
@@ -114,7 +111,19 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 	if m.agentManager != nil {
 		if agent, err := m.agentManager.GetAgent(opts.AgentID); err == nil {
 			agentConfig = agent
+
+			// If no command specified, try to get it from agent config
+			if opts.Command == "" && agent.Type == config.AgentTypeTmux {
+				if params, err := agent.GetTmuxParams(); err == nil && params.Command != "" {
+					opts.Command = params.Command
+				}
+			}
 		}
+	}
+
+	// Set default command only if still not set
+	if opts.Command == "" {
+		opts.Command = agent.DefaultShell
 	}
 
 	now := time.Now()

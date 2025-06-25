@@ -65,7 +65,9 @@ type Agent struct {
 
 // TmuxParams contains tmux-specific session parameters
 type TmuxParams struct {
-	Command    string `yaml:"command"`
+	Command string `yaml:"command"`
+	// TODO(#218): The Shell field will be removed in favor of the tmux execution model.
+	// Command will accept either string (shell execution) or []string (direct execution).
 	Shell      string `yaml:"shell,omitempty"`
 	WindowName string `yaml:"windowName,omitempty"`
 	Detached   bool   `yaml:"detached,omitempty"`

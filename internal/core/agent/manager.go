@@ -7,6 +7,14 @@ import (
 	"github.com/aki/amux/internal/core/config"
 )
 
+const (
+	// DefaultShell is the fallback shell used when no command or shell is configured
+	DefaultShell = "bash"
+
+	// DefaultAgentID is the default agent identifier when none is specified
+	DefaultAgentID = "default"
+)
+
 // Manager manages agent configurations
 type Manager struct {
 	configManager *config.Manager
@@ -105,27 +113,38 @@ func (m *Manager) RemoveAgent(id string) error {
 }
 
 // GetDefaultCommand returns the command to run for an agent
-// Falls back to agent ID if no command is specified
+// Returns error if no command is configured
 func (m *Manager) GetDefaultCommand(agentID string) (string, error) {
 	agent, err := m.GetAgent(agentID)
 	if err != nil {
-		// If agent not found, use the agent ID as command
-		return agentID, nil //nolint:nilerr // Fallback to agent ID if not configured
+		return "", fmt.Errorf("agent %q not found", agentID)
 	}
 
 	// Get command based on agent type
 	switch agent.Type {
 	case config.AgentTypeTmux:
 		params, err := agent.GetTmuxParams()
-		if err == nil && params.Command != "" {
+		if err != nil {
+			return "", fmt.Errorf("failed to get tmux params: %w", err)
+		}
+		if params.Command != "" {
 			return params.Command, nil
 		}
+		// TODO(#218): This fallback logic will be removed when we refactor to follow
+		// the tmux command execution model. The shell field will be obsoleted and
+		// command will handle both string (shell execution) and array (direct execution).
+		// If no command is specified, use the shell if configured
+		if params.Shell != "" {
+			return params.Shell, nil
+		}
+		// Fall back to the default shell
+		return DefaultShell, nil
 	case config.AgentTypeClaudeCode, config.AgentTypeAPI:
 		// Future: handle other types
+		return "", fmt.Errorf("agent type %q not yet supported", agent.Type)
+	default:
+		return "", fmt.Errorf("unknown agent type %q", agent.Type)
 	}
-
-	// Default to agent ID as command
-	return agentID, nil
 }
 
 // GetEnvironment returns the environment variables for an agent
