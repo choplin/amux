@@ -103,7 +103,7 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 
 	// Set default agent ID if not provided
 	if opts.AgentID == "" {
-		opts.AgentID = "default"
+		opts.AgentID = agent.DefaultAgentID
 	}
 
 	// Get agent configuration if available

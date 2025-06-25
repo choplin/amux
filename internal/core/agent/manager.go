@@ -10,6 +10,9 @@ import (
 const (
 	// DefaultShell is the fallback shell used when no command or shell is configured
 	DefaultShell = "bash"
+
+	// DefaultAgentID is the default agent identifier when none is specified
+	DefaultAgentID = "default"
 )
 
 // Manager manages agent configurations
