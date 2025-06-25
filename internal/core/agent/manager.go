@@ -119,10 +119,15 @@ func (m *Manager) GetDefaultCommand(agentID string) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("failed to get tmux params: %w", err)
 		}
-		if params.Command == "" {
-			return "", fmt.Errorf("no command configured for agent %q (type: %s)", agentID, agent.Type)
+		if params.Command != "" {
+			return params.Command, nil
 		}
-		return params.Command, nil
+		// If no command is specified, use the shell if configured
+		if params.Shell != "" {
+			return params.Shell, nil
+		}
+		// Fall back to bash as the default shell
+		return "bash", nil
 	case config.AgentTypeClaudeCode, config.AgentTypeAPI:
 		// Future: handle other types
 		return "", fmt.Errorf("agent type %q not yet supported", agent.Type)

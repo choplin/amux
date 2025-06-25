@@ -230,11 +230,9 @@ func TestManager_GetDefaultCommand(t *testing.T) {
 		t.Error("Expected error for non-existent agent")
 	}
 
-	// Test tmux agent without command
-	// Note: We can't use AddAgent with empty command due to schema validation,
-	// but we can test the error handling by mocking a scenario where
-	// GetTmuxParams returns empty command. This ensures the error message
-	// format is correct.
+	// Test tmux agent without command should fall back to shell or bash
+	// Note: Due to schema validation, we can't directly test with empty command,
+	// but the implementation now falls back to shell/bash instead of erroring.
 }
 
 func TestManager_GetEnvironment(t *testing.T) {
