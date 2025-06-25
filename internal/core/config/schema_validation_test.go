@@ -180,7 +180,6 @@ agents:
       - assistant
     params:
       command: claude
-      shell: /bin/zsh
       windowName: claude-window
       detached: true`,
 			wantErr: false,
@@ -240,7 +239,8 @@ agents:
 		agent := cfg.Agents["claude"]
 		params, err := agent.GetTmuxParams()
 		require.NoError(t, err)
-		assert.Equal(t, "claude", params.Command)
+		assert.Equal(t, "claude", params.Command.Single)
+		assert.False(t, params.Command.IsArray())
 	})
 
 	t.Run("invalid configuration", func(t *testing.T) {

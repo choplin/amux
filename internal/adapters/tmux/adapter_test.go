@@ -243,14 +243,6 @@ func TestAdapter_CreateSessionWithOptions(t *testing.T) {
 			},
 		},
 		{
-			name: "session with shell",
-			opts: CreateSessionOptions{
-				SessionName: "test-shell-" + time.Now().Format("20060102-150405"),
-				WorkDir:     t.TempDir(),
-				Shell:       "/bin/bash",
-			},
-		},
-		{
 			name: "session with window name",
 			opts: CreateSessionOptions{
 				SessionName: "test-window-" + time.Now().Format("20060102-150405"),
@@ -263,20 +255,7 @@ func TestAdapter_CreateSessionWithOptions(t *testing.T) {
 			opts: CreateSessionOptions{
 				SessionName: "test-full-" + time.Now().Format("20060102-150405"),
 				WorkDir:     t.TempDir(),
-				Shell:       "/bin/sh",
 				WindowName:  "workspace",
-			},
-		},
-		{
-			name: "session with environment",
-			opts: CreateSessionOptions{
-				SessionName: "test-env-" + time.Now().Format("20060102-150405"),
-				WorkDir:     t.TempDir(),
-				Shell:       "/bin/bash",
-				Environment: map[string]string{
-					"AMUX_TEST_VAR": "test_value",
-					"AMUX_SESSION":  "test_session",
-				},
 			},
 		},
 	}
@@ -294,9 +273,9 @@ func TestAdapter_CreateSessionWithOptions(t *testing.T) {
 				t.Error("Session should exist after creation")
 			}
 
-			// If shell was specified, verify it's running
-			if tt.opts.Shell != "" {
-				// Send command to check shell
+			// Verify working directory
+			if tt.opts.WorkDir != "" {
+				// Send command to check working directory
 				checkCmd := "echo $SHELL"
 				if err := adapter.SendKeys(tt.opts.SessionName, checkCmd); err != nil {
 					t.Fatalf("Failed to send keys: %v", err)

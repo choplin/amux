@@ -56,11 +56,6 @@ func (a *RealAdapter) CreateSessionWithOptions(opts CreateSessionOptions) error 
 		args = append(args, "-e", fmt.Sprintf("%s=%s", key, value))
 	}
 
-	// Add shell as initial command if specified
-	if opts.Shell != "" {
-		args = append(args, opts.Shell)
-	}
-
 	// Create new session in detached mode with working directory
 	// Set TERM to avoid terminal issues
 	cmd := exec.Command(a.tmuxPath, args...)

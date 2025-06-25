@@ -18,7 +18,6 @@ type MockAdapter struct {
 type MockSession struct {
 	name        string
 	workDir     string
-	shell       string
 	windowName  string
 	environment map[string]string
 	output      []string
@@ -92,7 +91,6 @@ func (m *MockAdapter) CreateSessionWithOptions(opts CreateSessionOptions) error 
 	m.sessions[opts.SessionName] = &MockSession{
 		name:        opts.SessionName,
 		workDir:     opts.WorkDir,
-		shell:       opts.Shell,
 		windowName:  opts.WindowName,
 		environment: env,
 		output:      []string{},

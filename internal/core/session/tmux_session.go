@@ -159,11 +159,10 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 		s.info.AgentID,
 		time.Now().Unix())
 
-	// Get shell and window name from agent configuration
-	var shell, windowName string
+	// Get window name from agent configuration
+	var windowName string
 	if s.agentConfig != nil && s.agentConfig.Type == config.AgentTypeTmux {
 		if tmuxParams, err := s.agentConfig.GetTmuxParams(); err == nil {
-			shell = tmuxParams.Shell
 			windowName = tmuxParams.WindowName
 		}
 	}
@@ -180,7 +179,6 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 	opts := tmux.CreateSessionOptions{
 		SessionName: tmuxSession,
 		WorkDir:     s.workspace.Path,
-		Shell:       shell,
 		WindowName:  windowName,
 		Environment: environment,
 	}

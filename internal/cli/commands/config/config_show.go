@@ -70,8 +70,12 @@ func showConfigPretty(cfg *config.Config) error {
 			}
 			ui.OutputLine("    Type: %s", agent.Type)
 			if agent.Type == config.AgentTypeTmux {
-				if params, err := agent.GetTmuxParams(); err == nil && params.Command != "" {
-					ui.OutputLine("    Command: %s", params.Command)
+				if params, err := agent.GetTmuxParams(); err == nil {
+					if params.Command.IsArray() {
+						ui.OutputLine("    Command: %v", params.Command.Array)
+					} else if params.Command.Single != "" {
+						ui.OutputLine("    Command: %s", params.Command.Single)
+					}
 				}
 			}
 			if agent.WorkingDir != "" {

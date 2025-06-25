@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -114,8 +115,13 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 
 			// If no command specified, try to get it from agent config
 			if opts.Command == "" && agent.Type == config.AgentTypeTmux {
-				if params, err := agent.GetTmuxParams(); err == nil && params.Command != "" {
-					opts.Command = params.Command
+				if params, err := agent.GetTmuxParams(); err == nil {
+					if params.Command.IsArray() {
+						// For array commands, join with spaces
+						opts.Command = strings.Join(params.Command.Array, " ")
+					} else if params.Command.Single != "" {
+						opts.Command = params.Command.Single
+					}
 				}
 			}
 		}
@@ -123,7 +129,7 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 
 	// Set default command only if still not set
 	if opts.Command == "" {
-		opts.Command = agent.DefaultShell
+		opts.Command = "bash" // Default shell
 	}
 
 	now := time.Now()

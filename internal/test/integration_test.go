@@ -41,7 +41,7 @@ func TestIntegration_FullWorkflow(t *testing.T) {
 			"TEST_ENV": "integration",
 		},
 		Params: &config.TmuxParams{
-			Command: "echo 'Test agent running'",
+			Command: config.Command{Single: "echo 'Test agent running'"},
 		},
 	}
 
@@ -197,21 +197,21 @@ func TestIntegration_MultipleAgents(t *testing.T) {
 		Name: "Agent 1",
 		Type: config.AgentTypeTmux,
 		Params: &config.TmuxParams{
-			Command: "echo 'Agent 1'",
+			Command: config.Command{Single: "echo 'Agent 1'"},
 		},
 	}
 	cfg.Agents["agent2"] = config.Agent{
 		Name: "Agent 2",
 		Type: config.AgentTypeTmux,
 		Params: &config.TmuxParams{
-			Command: "echo 'Agent 2'",
+			Command: config.Command{Single: "echo 'Agent 2'"},
 		},
 	}
 	cfg.Agents["agent3"] = config.Agent{
 		Name: "Agent 3",
 		Type: config.AgentTypeTmux,
 		Params: &config.TmuxParams{
-			Command: "echo 'Agent 3'",
+			Command: config.Command{Single: "echo 'Agent 3'"},
 		},
 	}
 
