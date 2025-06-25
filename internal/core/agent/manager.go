@@ -120,7 +120,7 @@ func (m *Manager) GetDefaultCommand(agentID string) (string, error) {
 			return "", fmt.Errorf("failed to get tmux params: %w", err)
 		}
 		if params.Command == "" {
-			return "", fmt.Errorf("no command configured for agent %q", agentID)
+			return "", fmt.Errorf("no command configured for agent %q (type: %s)", agentID, agent.Type)
 		}
 		return params.Command, nil
 	case config.AgentTypeClaudeCode, config.AgentTypeAPI:
