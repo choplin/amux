@@ -7,6 +7,11 @@ import (
 	"github.com/aki/amux/internal/core/config"
 )
 
+const (
+	// DefaultShell is the fallback shell used when no command or shell is configured
+	DefaultShell = "bash"
+)
+
 // Manager manages agent configurations
 type Manager struct {
 	configManager *config.Manager
@@ -126,8 +131,8 @@ func (m *Manager) GetDefaultCommand(agentID string) (string, error) {
 		if params.Shell != "" {
 			return params.Shell, nil
 		}
-		// Fall back to bash as the default shell
-		return "bash", nil
+		// Fall back to the default shell
+		return DefaultShell, nil
 	case config.AgentTypeClaudeCode, config.AgentTypeAPI:
 		// Future: handle other types
 		return "", fmt.Errorf("agent type %q not yet supported", agent.Type)

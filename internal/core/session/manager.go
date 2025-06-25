@@ -123,7 +123,7 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 
 	// Set default command only if still not set
 	if opts.Command == "" {
-		opts.Command = "bash"
+		opts.Command = agent.DefaultShell
 	}
 
 	now := time.Now()
