@@ -129,7 +129,12 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 
 	// Set default command only if still not set
 	if opts.Command == "" {
-		opts.Command = "bash" // Default shell
+		// Use user's default shell, fallback to sh if not set
+		if shell := os.Getenv("SHELL"); shell != "" {
+			opts.Command = shell
+		} else {
+			opts.Command = "sh" // POSIX-compliant fallback
+		}
 	}
 
 	now := time.Now()
