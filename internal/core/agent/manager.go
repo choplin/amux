@@ -130,6 +130,9 @@ func (m *Manager) GetDefaultCommand(agentID string) (string, error) {
 		if params.Command != "" {
 			return params.Command, nil
 		}
+		// TODO(#218): This fallback logic will be removed when we refactor to follow
+		// the tmux command execution model. The shell field will be obsoleted and
+		// command will handle both string (shell execution) and array (direct execution).
 		// If no command is specified, use the shell if configured
 		if params.Shell != "" {
 			return params.Shell, nil
