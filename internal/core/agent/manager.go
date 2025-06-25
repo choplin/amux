@@ -105,27 +105,30 @@ func (m *Manager) RemoveAgent(id string) error {
 }
 
 // GetDefaultCommand returns the command to run for an agent
-// Falls back to agent ID if no command is specified
+// Returns error if no command is configured
 func (m *Manager) GetDefaultCommand(agentID string) (string, error) {
 	agent, err := m.GetAgent(agentID)
 	if err != nil {
-		// If agent not found, use the agent ID as command
-		return agentID, nil //nolint:nilerr // Fallback to agent ID if not configured
+		return "", fmt.Errorf("agent %q not found", agentID)
 	}
 
 	// Get command based on agent type
 	switch agent.Type {
 	case config.AgentTypeTmux:
 		params, err := agent.GetTmuxParams()
-		if err == nil && params.Command != "" {
-			return params.Command, nil
+		if err != nil {
+			return "", fmt.Errorf("failed to get tmux params: %w", err)
 		}
+		if params.Command == "" {
+			return "", fmt.Errorf("no command configured for agent %q", agentID)
+		}
+		return params.Command, nil
 	case config.AgentTypeClaudeCode, config.AgentTypeAPI:
 		// Future: handle other types
+		return "", fmt.Errorf("agent type %q not yet supported", agent.Type)
+	default:
+		return "", fmt.Errorf("unknown agent type %q", agent.Type)
 	}
-
-	// Default to agent ID as command
-	return agentID, nil
 }
 
 // GetEnvironment returns the environment variables for an agent

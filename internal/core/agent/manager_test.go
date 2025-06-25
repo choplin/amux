@@ -224,13 +224,10 @@ func TestManager_GetDefaultCommand(t *testing.T) {
 		t.Errorf("Expected command 'gpt', got '%s'", cmd)
 	}
 
-	// Test non-existent agent (should use agent ID)
-	cmd, err = manager.GetDefaultCommand("unknown")
-	if err != nil {
-		t.Fatalf("Failed to get default command: %v", err)
-	}
-	if cmd != "unknown" {
-		t.Errorf("Expected command 'unknown', got '%s'", cmd)
+	// Test non-existent agent (should return error)
+	_, err = manager.GetDefaultCommand("unknown")
+	if err == nil {
+		t.Error("Expected error for non-existent agent")
 	}
 }
 
