@@ -21,15 +21,6 @@ func TestMockAdapter_CreateSessionWithOptions(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "session with shell",
-			opts: CreateSessionOptions{
-				SessionName: "test-session-shell",
-				WorkDir:     "/tmp/test",
-				Shell:       "/bin/zsh",
-			},
-			wantErr: false,
-		},
-		{
 			name: "session with window name",
 			opts: CreateSessionOptions{
 				SessionName: "test-session-window",
@@ -43,7 +34,6 @@ func TestMockAdapter_CreateSessionWithOptions(t *testing.T) {
 			opts: CreateSessionOptions{
 				SessionName: "test-session-full",
 				WorkDir:     "/tmp/test",
-				Shell:       "/bin/bash",
 				WindowName:  "workspace",
 			},
 			wantErr: false,
@@ -68,10 +58,6 @@ func TestMockAdapter_CreateSessionWithOptions(t *testing.T) {
 				session, exists := sessions[tt.opts.SessionName]
 				if !exists {
 					t.Fatalf("Session %s not found in sessions map", tt.opts.SessionName)
-				}
-
-				if session.shell != tt.opts.Shell {
-					t.Errorf("Expected shell %s, got %s", tt.opts.Shell, session.shell)
 				}
 
 				if session.windowName != tt.opts.WindowName {
@@ -109,10 +95,7 @@ func TestMockAdapter_CreateSessionBackwardCompatibility(t *testing.T) {
 		t.Errorf("Expected work dir /tmp/legacy, got %s", session.workDir)
 	}
 
-	// Shell and windowName should be empty for legacy sessions
-	if session.shell != "" {
-		t.Errorf("Expected empty shell, got %s", session.shell)
-	}
+	// windowName should be empty for legacy sessions
 
 	if session.windowName != "" {
 		t.Errorf("Expected empty window name, got %s", session.windowName)

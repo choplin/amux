@@ -145,13 +145,21 @@
                 "additionalProperties": false,
                 "properties": {
                   "command": {
-                    "type": "string",
-                    "description": "Command to execute in the tmux session",
-                    "minLength": 1
-                  },
-                  "shell": {
-                    "type": "string",
-                    "description": "Shell to use for the session"
+                    "oneOf": [
+                      {
+                        "type": "string",
+                        "description": "Command to execute in the tmux session (executed via shell)",
+                        "minLength": 1
+                      },
+                      {
+                        "type": "array",
+                        "description": "Command and arguments to execute directly without shell",
+                        "items": {
+                          "type": "string"
+                        },
+                        "minItems": 1
+                      }
+                    ]
                   },
                   "windowName": {
                     "type": "string",

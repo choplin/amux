@@ -4,7 +4,6 @@ package tmux
 type CreateSessionOptions struct {
 	SessionName string
 	WorkDir     string
-	Shell       string            // Optional: custom shell to use (e.g., /bin/zsh)
 	WindowName  string            // Optional: custom window name
 	Environment map[string]string // Optional: environment variables to set
 }

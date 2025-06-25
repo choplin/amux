@@ -169,7 +169,6 @@ agents:
       TEST_VAR: test_value
     params:
       command: claude
-      shell: /bin/bash
       windowName: claude-window
   aider:
     name: Aider
@@ -215,7 +214,6 @@ agents:
 	assert.Contains(t, output, "Name: Claude")
 	assert.Contains(t, output, "Type: tmux")
 	assert.Contains(t, output, "Command: claude")
-	assert.Contains(t, output, "Shell: /bin/bash")
 	assert.Contains(t, output, "Window Name: claude-window")
 	assert.Contains(t, output, "Description: Test agent")
 	assert.Contains(t, output, "Environment Variables: 1")

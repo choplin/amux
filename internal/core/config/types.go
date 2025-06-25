@@ -63,15 +63,79 @@ type Agent struct {
 	Params interface{} `yaml:"params,omitempty"`
 }
 
+// Command represents a command that can be either a string or an array of strings
+type Command struct {
+	// Single is set when the command is a string
+	Single string
+	// Array is set when the command is an array
+	Array []string
+}
+
+// IsArray returns true if the command is an array
+func (c Command) IsArray() bool {
+	return c.Array != nil
+}
+
+// String returns the command as a string
+// For array commands, it returns the first element or empty string
+func (c Command) String() string {
+	if c.IsArray() {
+		if len(c.Array) > 0 {
+			return c.Array[0]
+		}
+		return ""
+	}
+	return c.Single
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler to handle both string and []string
+func (c *Command) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	// First try to unmarshal as interface{} to check the type
+	var raw interface{}
+	if err := unmarshal(&raw); err != nil {
+		return err
+	}
+
+	switch v := raw.(type) {
+	case string:
+		c.Single = v
+		c.Array = nil
+		return nil
+	case []interface{}:
+		// Convert []interface{} to []string
+		arr := make([]string, len(v))
+		for i, item := range v {
+			str, ok := item.(string)
+			if !ok {
+				return fmt.Errorf("array element %d must be a string, got %T", i, item)
+			}
+			arr[i] = str
+		}
+		c.Array = arr
+		c.Single = ""
+		return nil
+	case nil:
+		return fmt.Errorf("command cannot be null")
+	default:
+		return fmt.Errorf("command must be either a string or an array of strings, got %T", v)
+	}
+}
+
+// MarshalYAML implements yaml.Marshaler to output as string or array
+func (c Command) MarshalYAML() (interface{}, error) {
+	if c.IsArray() {
+		return c.Array, nil
+	}
+	return c.Single, nil
+}
+
 // TmuxParams contains tmux-specific session parameters
 type TmuxParams struct {
-	Command string `yaml:"command"`
-	// TODO(#218): The Shell field will be removed in favor of the tmux execution model.
-	// Command will accept either string (shell execution) or []string (direct execution).
-	Shell      string `yaml:"shell,omitempty"`
-	WindowName string `yaml:"windowName,omitempty"`
-	Detached   bool   `yaml:"detached,omitempty"`
-	AutoAttach bool   `yaml:"autoAttach,omitempty"`
+	// Command can be either string (shell execution) or []string (direct execution)
+	Command    Command `yaml:"command"`
+	WindowName string  `yaml:"windowName,omitempty"`
+	Detached   bool    `yaml:"detached,omitempty"`
+	AutoAttach bool    `yaml:"autoAttach,omitempty"`
 }
 
 // GetTmuxParams returns tmux parameters if this is a tmux agent
@@ -163,7 +227,7 @@ func DefaultConfig() *Config {
 				Type:        AgentTypeTmux,
 				Description: "Claude AI assistant for terminal-based development",
 				Params: &TmuxParams{
-					Command: "claude",
+					Command: Command{Single: "claude"},
 				},
 			},
 		},

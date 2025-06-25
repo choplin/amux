@@ -31,14 +31,14 @@ func setupTestManager(t *testing.T) (*Manager, string) {
 					"ANTHROPIC_API_KEY": "test-key",
 				},
 				Params: &config.TmuxParams{
-					Command: "claude",
+					Command: config.Command{Single: "claude"},
 				},
 			},
 			"gpt": {
 				Name: "GPT",
 				Type: config.AgentTypeTmux,
 				Params: &config.TmuxParams{
-					Command: "gpt",
+					Command: config.Command{Single: "gpt"},
 				},
 			},
 		},
@@ -70,8 +70,8 @@ func TestManager_GetAgent(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to get tmux options: %v", err)
 	}
-	if params.Command != "claude" {
-		t.Errorf("Expected tmux command 'claude', got '%s'", params.Command)
+	if params.Command.Single != "claude" {
+		t.Errorf("Expected tmux command 'claude', got '%s'", params.Command.Single)
 	}
 
 	if agent.Environment["ANTHROPIC_API_KEY"] != "test-key" {
@@ -115,7 +115,7 @@ func TestManager_AddAgent(t *testing.T) {
 			"GOOGLE_API_KEY": "test-key",
 		},
 		Params: &config.TmuxParams{
-			Command: "gemini",
+			Command: config.Command{Single: "gemini"},
 		},
 	}
 
@@ -146,7 +146,7 @@ func TestManager_UpdateAgent(t *testing.T) {
 			"DEBUG":             "true",
 		},
 		Params: &config.TmuxParams{
-			Command: "claude-v2",
+			Command: config.Command{Single: "claude-v2"},
 		},
 	}
 
@@ -169,8 +169,8 @@ func TestManager_UpdateAgent(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to get tmux options: %v", err)
 	}
-	if params.Command != "claude-v2" {
-		t.Errorf("Expected updated tmux command 'claude-v2', got '%s'", params.Command)
+	if params.Command.Single != "claude-v2" {
+		t.Errorf("Expected updated tmux command 'claude-v2', got '%s'", params.Command.Single)
 	}
 
 	if len(agent.Environment) != 2 {
@@ -215,24 +215,31 @@ func TestManager_GetDefaultCommand(t *testing.T) {
 		t.Errorf("Expected command 'claude', got '%s'", cmd)
 	}
 
-	// Test agent without command (should use agent ID)
-	cmd, err = manager.GetDefaultCommand("gpt")
-	if err != nil {
-		t.Fatalf("Failed to get default command: %v", err)
-	}
-	if cmd != "gpt" {
-		t.Errorf("Expected command 'gpt', got '%s'", cmd)
-	}
-
 	// Test non-existent agent (should return error)
 	_, err = manager.GetDefaultCommand("unknown")
 	if err == nil {
 		t.Error("Expected error for non-existent agent")
 	}
 
-	// Test tmux agent without command should fall back to shell or bash
-	// Note: Due to schema validation, we can't directly test with empty command,
-	// but the implementation now falls back to shell/bash instead of erroring.
+	// Test tmux agent with array command
+	pythonServerAgent := config.Agent{
+		Name: "Python Server",
+		Type: config.AgentTypeTmux,
+		Params: &config.TmuxParams{
+			Command: config.Command{Array: []string{"python", "-m", "http.server", "8080"}},
+		},
+	}
+	if err := manager.AddAgent("python-server", pythonServerAgent); err != nil {
+		t.Fatalf("Failed to add python-server agent: %v", err)
+	}
+
+	cmd, err = manager.GetDefaultCommand("python-server")
+	if err != nil {
+		t.Fatalf("Failed to get default command for array: %v", err)
+	}
+	if cmd != "python -m http.server 8080" {
+		t.Errorf("Expected command 'python -m http.server 8080', got '%s'", cmd)
+	}
 }
 
 func TestManager_GetEnvironment(t *testing.T) {

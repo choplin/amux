@@ -29,7 +29,7 @@ func TestConfigShowCommand(t *testing.T) {
 				Name: "Test Agent",
 				Type: config.AgentTypeTmux,
 				Params: &config.TmuxParams{
-					Command: "test-command",
+					Command: config.Command{Single: "test-command"},
 				},
 			},
 		},

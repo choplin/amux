@@ -3,14 +3,12 @@ package agent
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/aki/amux/internal/core/config"
 )
 
 const (
-	// DefaultShell is the fallback shell used when no command or shell is configured
-	DefaultShell = "bash"
-
 	// DefaultAgentID is the default agent identifier when none is specified
 	DefaultAgentID = "default"
 )
@@ -113,7 +111,7 @@ func (m *Manager) RemoveAgent(id string) error {
 }
 
 // GetDefaultCommand returns the command to run for an agent
-// Returns error if no command is configured
+// Returns the command as a string, handling both string and array formats
 func (m *Manager) GetDefaultCommand(agentID string) (string, error) {
 	agent, err := m.GetAgent(agentID)
 	if err != nil {
@@ -127,18 +125,26 @@ func (m *Manager) GetDefaultCommand(agentID string) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("failed to get tmux params: %w", err)
 		}
-		if params.Command != "" {
-			return params.Command, nil
+
+		// Handle the new Command type
+		if params.Command.IsArray() {
+			// For array commands, join with spaces for shell execution
+			// This maintains backward compatibility while supporting array format
+			if len(params.Command.Array) == 0 {
+				return "", fmt.Errorf("empty command array")
+			}
+			// For now, we'll execute array commands through shell
+			// In the future, we might want to handle this differently
+			return strings.Join(params.Command.Array, " "), nil
 		}
-		// TODO(#218): This fallback logic will be removed when we refactor to follow
-		// the tmux command execution model. The shell field will be obsoleted and
-		// command will handle both string (shell execution) and array (direct execution).
-		// If no command is specified, use the shell if configured
-		if params.Shell != "" {
-			return params.Shell, nil
+
+		// For string commands, return as-is
+		if params.Command.Single != "" {
+			return params.Command.Single, nil
 		}
-		// Fall back to the default shell
-		return DefaultShell, nil
+
+		// No command configured
+		return "", fmt.Errorf("no command configured for agent %q", agentID)
 	case config.AgentTypeClaudeCode, config.AgentTypeAPI:
 		// Future: handle other types
 		return "", fmt.Errorf("agent type %q not yet supported", agent.Type)
