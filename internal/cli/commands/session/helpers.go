@@ -4,30 +4,15 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/aki/amux/internal/core/agent"
 	"github.com/aki/amux/internal/core/config"
-	"github.com/aki/amux/internal/core/idmap"
 	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/workspace"
 )
 
 // createSessionManager is a helper to create a session manager with all dependencies
 func createSessionManager(configManager *config.Manager, wsManager *workspace.Manager) (*session.Manager, error) {
-	// Get ID mapper
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
-	if err != nil {
-		return nil, fmt.Errorf("failed to create ID mapper: %w", err)
-	}
-
-	// Create agent manager
-	agentManager := agent.NewManager(configManager)
-
-	manager, err := session.NewManager(configManager.GetAmuxDir(), wsManager, agentManager, idMapper)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create session manager: %w", err)
-	}
-
-	return manager, nil
+	factory := session.NewFactory()
+	return factory.CreateManager(configManager, wsManager)
 }
 
 // createAutoWorkspace creates a new workspace with a name based on session ID
