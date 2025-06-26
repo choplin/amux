@@ -6,7 +6,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/aki/amux/internal/cli/ui"
-	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/workspace"
 )
@@ -43,21 +42,8 @@ Use --force to automatically stop a running session before removal.`,
 func removeSession(cmd *cobra.Command, args []string, keepWorkspace bool, force bool) error {
 	sessionID := args[0]
 
-	// Find project root
-	projectRoot, err := config.FindProjectRoot()
-	if err != nil {
-		return err
-	}
-
-	// Create managers
-	configManager := config.NewManager(projectRoot)
-	wsManager, err := workspace.NewManager(configManager)
-	if err != nil {
-		return fmt.Errorf("failed to create workspace manager: %w", err)
-	}
-
-	// Create session manager
-	sessionManager, err := createSessionManager(configManager, wsManager)
+	// Get managers
+	sessionManager, wsManager, err := GetManagers()
 	if err != nil {
 		return err
 	}

@@ -6,9 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/aki/amux/internal/cli/ui"
-	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/session"
-	"github.com/aki/amux/internal/core/workspace"
 )
 
 // sendInputCmd returns the 'session send-input' command
@@ -45,22 +43,10 @@ func sendInputToSession(cmd *cobra.Command, args []string) error {
 	sessionID := args[0]
 	inputText := args[1]
 
-	// Find project root
-	projectRoot, err := config.FindProjectRoot()
+	// Get session manager
+	sessionManager, err := GetSessionManager()
 	if err != nil {
-		return fmt.Errorf("failed to find project root: %w", err)
-	}
-
-	// Create managers
-	configManager := config.NewManager(projectRoot)
-	wsManager, err := workspace.NewManager(configManager)
-	if err != nil {
-		return fmt.Errorf("failed to create workspace manager: %w", err)
-	}
-
-	sessionManager, err := createSessionManager(configManager, wsManager)
-	if err != nil {
-		return fmt.Errorf("failed to create session manager: %w", err)
+		return err
 	}
 
 	// Get the session

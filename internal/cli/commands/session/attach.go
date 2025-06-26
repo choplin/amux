@@ -10,10 +10,8 @@ import (
 
 	"github.com/aki/amux/internal/adapters/tmux"
 	"github.com/aki/amux/internal/cli/ui"
-	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/terminal"
-	"github.com/aki/amux/internal/core/workspace"
 )
 
 func attachCmd() *cobra.Command {
@@ -32,21 +30,8 @@ Use Ctrl-B D to detach from the session without stopping it.`,
 func attachSession(cmd *cobra.Command, args []string) error {
 	sessionID := args[0]
 
-	// Find project root
-	projectRoot, err := config.FindProjectRoot()
-	if err != nil {
-		return err
-	}
-
-	// Create managers
-	configManager := config.NewManager(projectRoot)
-	wsManager, err := workspace.NewManager(configManager)
-	if err != nil {
-		return fmt.Errorf("failed to create workspace manager: %w", err)
-	}
-
-	// Create session manager
-	sessionManager, err := createSessionManager(configManager, wsManager)
+	// Get session manager
+	sessionManager, err := GetSessionManager()
 	if err != nil {
 		return err
 	}

@@ -10,55 +10,48 @@ import (
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
-
 	"github.com/mark3labs/mcp-go/server"
 
+	"github.com/aki/amux/internal/app"
 	"github.com/aki/amux/internal/core/config"
-
 	"github.com/aki/amux/internal/core/workspace"
 )
 
 // ServerV2 implements the MCP server using mcp-go
 type ServerV2 struct {
-	mcpServer *server.MCPServer
-
-	configManager *config.Manager
-
-	workspaceManager *workspace.Manager
-
-	transport string
-
+	mcpServer  *server.MCPServer
+	container  *app.Container
+	transport  string
 	httpConfig *config.HTTPConfig
+
+	// Cached references for convenience
+	configManager    *config.Manager
+	workspaceManager *workspace.Manager
 }
 
 // NewServerV2 creates a new MCP server using mcp-go
 func NewServerV2(configManager *config.Manager, transport string, httpConfig *config.HTTPConfig) (*ServerV2, error) {
-	workspaceManager, err := workspace.NewManager(configManager)
+	// Create container with all dependencies
+	container, err := app.NewContainer(configManager.GetProjectRoot())
 	if err != nil {
-		return nil, fmt.Errorf("failed to create workspace manager: %w", err)
+		return nil, fmt.Errorf("failed to create container: %w", err)
 	}
 
 	// Create MCP server
-
 	mcpServer := server.NewMCPServer(
-
 		"amux",
-
 		"1.0.0",
-
 		server.WithLogging(),
 	)
 
 	s := &ServerV2{
 		mcpServer: mcpServer,
 
-		configManager: configManager,
-
-		workspaceManager: workspaceManager,
-
-		transport: transport,
-
-		httpConfig: httpConfig,
+		container:        container,
+		transport:        transport,
+		httpConfig:       httpConfig,
+		configManager:    container.ConfigManager,
+		workspaceManager: container.WorkspaceManager,
 	}
 
 	// Register all tools

@@ -10,7 +10,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/aki/amux/internal/cli/ui"
-	"github.com/aki/amux/internal/core/agent"
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/hooks"
 	"github.com/aki/amux/internal/core/session"
@@ -59,17 +58,10 @@ Examples:
 func runSession(cmd *cobra.Command, args []string) error {
 	agentID := args[0]
 
-	// Find project root
-	projectRoot, err := config.FindProjectRoot()
+	// Get all managers
+	sessionManager, wsManager, agentManager, err := GetAllManagers()
 	if err != nil {
 		return err
-	}
-
-	// Create managers
-	configManager := config.NewManager(projectRoot)
-	wsManager, err := workspace.NewManager(configManager)
-	if err != nil {
-		return fmt.Errorf("failed to create workspace manager: %w", err)
 	}
 
 	// Generate session ID upfront
@@ -90,9 +82,6 @@ func runSession(cmd *cobra.Command, args []string) error {
 		}
 		ui.Success("Workspace created successfully: %s", ws.Name)
 	}
-
-	// Create agent manager
-	agentManager := agent.NewManager(configManager)
 
 	// Get agent configuration
 	agentConfig, _ := agentManager.GetAgent(agentID)
@@ -121,12 +110,6 @@ func runSession(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("invalid environment variable format: %s (expected KEY=VALUE)", envVar)
 		}
 		env[parts[0]] = parts[1]
-	}
-
-	// Create session manager
-	sessionManager, err := createSessionManager(configManager, wsManager)
-	if err != nil {
-		return err
 	}
 
 	// Determine session type from agent config

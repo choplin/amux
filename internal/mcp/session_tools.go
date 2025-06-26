@@ -7,7 +7,6 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 
-	"github.com/aki/amux/internal/core/agent"
 	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/workspace"
 )
@@ -173,7 +172,7 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 		response["attach_amux"] = fmt.Sprintf("amux session attach %s", attachID)
 
 		// Check if agent has autoAttach but we're in MCP context
-		agentManager := agent.NewManager(s.configManager)
+		agentManager := s.container.AgentManager
 		if agentConfig, _ := agentManager.GetAgent(agentID); agentConfig != nil {
 			if tmuxParams, err := agentConfig.GetTmuxParams(); err == nil && tmuxParams != nil && tmuxParams.AutoAttach {
 				response["auto_attach_skipped"] = "Auto-attach is not available in MCP context (no TTY)"
