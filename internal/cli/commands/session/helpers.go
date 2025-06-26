@@ -12,7 +12,7 @@ import (
 )
 
 // GetSessionManager creates a session manager with all dependencies.
-// This is the public version for use by subpackages.
+// This is used by the storage subpackage to avoid import cycles.
 func GetSessionManager() (*session.Manager, error) {
 	// Find project root
 	projectRoot, err := config.FindProjectRoot()
