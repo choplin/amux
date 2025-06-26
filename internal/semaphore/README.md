@@ -124,8 +124,6 @@ type FileSemaphore struct {
 ### Functions
 
 #### New
-
-
 ```go
 func New(path string, capacity int) (*FileSemaphore, error)
 
@@ -133,62 +131,41 @@ func New(path string, capacity int) (*FileSemaphore, error)
 
 Creates a new file-based semaphore. If capacity < 1, it defaults to 1.
 
-
 #### Acquire
-
-
 ```go
 func (s *FileSemaphore) Acquire(holder Holder) error
 ```
-
-
 Attempts to acquire the semaphore for a holder. Returns `ErrNoCapacity` if the semaphore is full, or `ErrAlreadyHeld` if this holder already has the semaphore.
 
-
 #### Release
-
 ```go
-
 func (s *FileSemaphore) Release(holderID string) error
 ```
-
 
 Releases the semaphore for a specific holder ID. Returns `ErrNotHeld` if the holder doesn't have the semaphore.
 
 #### Remove
-
-
 ```go
 func (s *FileSemaphore) Remove(holderIDs ...string) error
 
 ```
 
 Removes one or more holders from the semaphore. Useful for cleaning up after crashed processes. This operation is idempotent - removing non-existent holders doesn't cause an error.
-
-
 #### Holders
-
 
 ```go
 func (s *FileSemaphore) Holders() []string
 ```
 
-
 Returns the IDs of all current holders.
-
-
 #### Count
-
 ```go
 
 func (s *FileSemaphore) Count() int
 ```
-
-
 Returns the number of current holders.
 
 #### Available
-
 ```go
 func (s *FileSemaphore) Available() int
 ```
@@ -196,7 +173,6 @@ func (s *FileSemaphore) Available() int
 Returns the number of available slots.
 
 #### Close
-
 ```go
 func (s *FileSemaphore) Close() error
 ```
@@ -248,7 +224,6 @@ The library uses OS-level file locking (`flock` on Unix) to ensure process safet
 
 All writes are performed atomically:
 
-
 1. Write to a temporary file (`.tmp` suffix)
 2. Atomically rename to the target file
 3. Clean up temporary file on failure
@@ -257,11 +232,9 @@ All writes are performed atomically:
 
 The library is safe for concurrent use across multiple processes. File locking ensures that only one process can modify the semaphore state at a time.
 
-
 ## Testing
 
 The package includes comprehensive tests:
-
 - Unit tests for all operations
 - Concurrent access tests (multiple goroutines)
 - Process safety tests (multiple processes)
@@ -269,7 +242,6 @@ The package includes comprehensive tests:
 - Atomic operation tests
 
 Run tests:
-
 ```bash
 go test ./internal/semaphore/...
 ```
