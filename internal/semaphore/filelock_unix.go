@@ -1,4 +1,5 @@
-// Package semaphore provides file-based semaphore implementation for process synchronization
+//go:build !windows
+
 package semaphore
 
 import (
@@ -8,7 +9,7 @@ import (
 	"syscall"
 )
 
-// fileLock provides file-based locking for process synchronization
+// fileLock provides file locking functionality using Unix flock
 type fileLock struct {
 	file *os.File
 }
@@ -28,7 +29,6 @@ func newFileLock(path string) (*fileLock, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open lock file: %w", err)
 	}
-
 	return &fileLock{file: file}, nil
 }
 
@@ -48,7 +48,7 @@ func (fl *fileLock) unlock() error {
 	return nil
 }
 
-// close closes the lock file
+// close closes the file
 func (fl *fileLock) close() error {
 	return fl.file.Close()
 }
