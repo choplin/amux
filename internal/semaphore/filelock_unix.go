@@ -1,5 +1,6 @@
 //go:build !windows
 
+// Package semaphore provides file-based semaphore implementation for process synchronization.
 package semaphore
 
 import (
