@@ -11,6 +11,33 @@ import (
 	"github.com/aki/amux/internal/core/workspace"
 )
 
+// GetSessionManager creates a session manager with all dependencies.
+// This is the public version for use by subpackages.
+func GetSessionManager() (*session.Manager, error) {
+	// Find project root
+	projectRoot, err := config.FindProjectRoot()
+	if err != nil {
+		return nil, err
+	}
+
+	// Create configuration manager
+	configManager := config.NewManager(projectRoot)
+
+	// Ensure initialized
+	if !configManager.IsInitialized() {
+		return nil, fmt.Errorf("amux not initialized. Run 'amux init' first")
+	}
+
+	// Create workspace manager
+	wsManager, err := workspace.NewManager(configManager)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create workspace manager: %w", err)
+	}
+
+	// Create session manager
+	return createSessionManager(configManager, wsManager)
+}
+
 // createSessionManager is a helper to create a session manager with all dependencies
 func createSessionManager(configManager *config.Manager, wsManager *workspace.Manager) (*session.Manager, error) {
 	// Get ID mapper

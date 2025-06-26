@@ -39,7 +39,7 @@ func runCreateWorkspace(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("cannot specify both --branch (-b) and --checkout (-c) flags")
 	}
 
-	manager, err := getWorkspaceManager()
+	manager, err := GetWorkspaceManager()
 	if err != nil {
 		return err
 	}

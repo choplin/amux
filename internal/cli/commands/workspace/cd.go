@@ -32,7 +32,7 @@ Examples:
 func runCdWorkspace(cmd *cobra.Command, args []string) error {
 	identifier := args[0]
 
-	manager, err := getWorkspaceManager()
+	manager, err := GetWorkspaceManager()
 	if err != nil {
 		return err
 	}

@@ -10,6 +10,8 @@ import (
 	"github.com/aki/amux/internal/core/workspace"
 )
 
+// getSessionManager creates a session manager for storage commands.
+// This is a local helper to avoid import cycles with the parent package.
 func getSessionManager() (*session.Manager, error) {
 	// Find project root
 	projectRoot, err := config.FindProjectRoot()
