@@ -71,4 +71,3 @@ The library could be extended with:
 - Distributed locking support (etcd, Redis)
 - Metrics and monitoring hooks
 - Priority queue for waiting holders
-
