@@ -17,6 +17,7 @@ The amux codebase had scattered dependency initialization across multiple locati
 5. IDMapper was created separately by both workspace.Manager and session.Factory
 
 This scattered approach led to:
+
 - Code duplication across different parts of the codebase
 - Inconsistent initialization patterns
 - Difficulty in testing (hard to inject test doubles)
@@ -34,6 +35,7 @@ We will implement a simple Container pattern to centralize dependency creation a
 5. Maintain backward compatibility by not changing manager APIs
 
 The Container structure:
+
 ```go
 type Container struct {
     ProjectRoot      string
