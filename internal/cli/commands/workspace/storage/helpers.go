@@ -1,4 +1,4 @@
-package workspace
+package storage
 
 import (
 	"fmt"
@@ -7,9 +7,9 @@ import (
 	"github.com/aki/amux/internal/core/workspace"
 )
 
-// GetWorkspaceManager creates a workspace manager with all dependencies.
-// This is the public version for use by subpackages.
-func GetWorkspaceManager() (*workspace.Manager, error) {
+// getWorkspaceManager creates a workspace manager for storage commands.
+// This is a local helper to avoid import cycles with the parent package.
+func getWorkspaceManager() (*workspace.Manager, error) {
 	// Find project root
 	projectRoot, err := config.FindProjectRoot()
 	if err != nil {

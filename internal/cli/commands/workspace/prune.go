@@ -16,7 +16,7 @@ var pruneWorkspaceCmd = &cobra.Command{
 }
 
 func runPruneWorkspace(cmd *cobra.Command, args []string) error {
-	manager, err := getWorkspaceManager()
+	manager, err := GetWorkspaceManager()
 	if err != nil {
 		return err
 	}

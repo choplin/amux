@@ -2,6 +2,7 @@
 package workspace
 
 import (
+	"github.com/aki/amux/internal/cli/commands/workspace/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -40,6 +41,7 @@ func init() {
 	workspaceCmd.AddCommand(removeWorkspaceCmd)
 	workspaceCmd.AddCommand(pruneWorkspaceCmd)
 	workspaceCmd.AddCommand(cdWorkspaceCmd)
+	workspaceCmd.AddCommand(storage.Command())
 
 	// Create command flags
 	createWorkspaceCmd.Flags().StringVar(&createBaseBranch, "base", "", "Base branch for new branches")

@@ -2,6 +2,7 @@
 package session
 
 import (
+	"github.com/aki/amux/internal/cli/commands/session/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -41,6 +42,7 @@ manage their lifecycle.`,
 	cmd.AddCommand(logsCmd())
 	cmd.AddCommand(removeCmd())
 	cmd.AddCommand(sendInputCmd())
+	cmd.AddCommand(storage.Command())
 
 	return cmd
 }
