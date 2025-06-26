@@ -1,3 +1,6 @@
+// Package semaphore provides a file-based semaphore implementation for
+// coordinating access to shared resources across multiple processes.
+// See ADR-032 for design decisions.
 package semaphore
 
 import (
