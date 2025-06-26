@@ -12,30 +12,41 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
-	"github.com/aki/amux/internal/app"
+	"github.com/aki/amux/internal/core/agent"
 	"github.com/aki/amux/internal/core/config"
+	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/workspace"
 )
 
 // ServerV2 implements the MCP server using mcp-go
 type ServerV2 struct {
 	mcpServer  *server.MCPServer
-	container  *app.Container
 	transport  string
 	httpConfig *config.HTTPConfig
 
-	// Cached references for convenience
+	// Manager references
 	configManager    *config.Manager
 	workspaceManager *workspace.Manager
+	sessionManager   *session.Manager
+	agentManager     *agent.Manager
 }
 
 // NewServerV2 creates a new MCP server using mcp-go
 func NewServerV2(configManager *config.Manager, transport string, httpConfig *config.HTTPConfig) (*ServerV2, error) {
-	// Create container with all dependencies
-	container, err := app.NewContainer(configManager.GetProjectRoot())
+	// Create workspace manager
+	workspaceManager, err := workspace.SetupManager(configManager.GetProjectRoot())
 	if err != nil {
-		return nil, fmt.Errorf("failed to create container: %w", err)
+		return nil, fmt.Errorf("failed to create workspace manager: %w", err)
 	}
+
+	// Create session manager using the same workspace manager
+	sessionManager, err := session.SetupManagerWithWorkspace(configManager.GetProjectRoot(), workspaceManager)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create session manager: %w", err)
+	}
+
+	// Create agent manager
+	agentManager := agent.NewManager(configManager)
 
 	// Create MCP server
 	mcpServer := server.NewMCPServer(
@@ -45,13 +56,13 @@ func NewServerV2(configManager *config.Manager, transport string, httpConfig *co
 	)
 
 	s := &ServerV2{
-		mcpServer: mcpServer,
-
-		container:        container,
+		mcpServer:        mcpServer,
 		transport:        transport,
 		httpConfig:       httpConfig,
-		configManager:    container.ConfigManager,
-		workspaceManager: container.WorkspaceManager,
+		configManager:    configManager,
+		workspaceManager: workspaceManager,
+		sessionManager:   sessionManager,
+		agentManager:     agentManager,
 	}
 
 	// Register all tools

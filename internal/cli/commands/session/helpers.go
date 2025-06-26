@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/aki/amux/internal/app"
 	"github.com/aki/amux/internal/core/agent"
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/session"
@@ -20,17 +19,12 @@ func GetSessionManager() (*session.Manager, error) {
 		return nil, err
 	}
 
-	// Create container with all dependencies
-	container, err := app.NewContainer(projectRoot)
-	if err != nil {
-		return nil, err
-	}
-
-	return container.SessionManager, nil
+	// Use the setup function to create a properly configured session manager
+	return session.SetupManager(projectRoot)
 }
 
 // GetManagers creates both session and workspace managers with all dependencies.
-// This avoids creating the container twice when both managers are needed.
+// This avoids creating the managers twice when both are needed.
 func GetManagers() (*session.Manager, *workspace.Manager, error) {
 	// Find project root
 	projectRoot, err := config.FindProjectRoot()
@@ -38,13 +32,19 @@ func GetManagers() (*session.Manager, *workspace.Manager, error) {
 		return nil, nil, err
 	}
 
-	// Create container with all dependencies
-	container, err := app.NewContainer(projectRoot)
+	// Create workspace manager first
+	workspaceManager, err := workspace.SetupManager(projectRoot)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return container.SessionManager, container.WorkspaceManager, nil
+	// Create session manager using the same workspace manager
+	sessionManager, err := session.SetupManagerWithWorkspace(projectRoot, workspaceManager)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return sessionManager, workspaceManager, nil
 }
 
 // GetAllManagers creates all managers with all dependencies.
@@ -56,13 +56,25 @@ func GetAllManagers() (*session.Manager, *workspace.Manager, *agent.Manager, err
 		return nil, nil, nil, err
 	}
 
-	// Create container with all dependencies
-	container, err := app.NewContainer(projectRoot)
+	// Create workspace manager first
+	workspaceManager, err := workspace.SetupManager(projectRoot)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	return container.SessionManager, container.WorkspaceManager, container.AgentManager, nil
+	// Create session manager using the same workspace manager
+	sessionManager, err := session.SetupManagerWithWorkspace(projectRoot, workspaceManager)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	// Create config manager for agent manager
+	configManager := config.NewManager(projectRoot)
+
+	// Create agent manager
+	agentManager := agent.NewManager(configManager)
+
+	return sessionManager, workspaceManager, agentManager, nil
 }
 
 // createAutoWorkspace creates a new workspace with a name based on session ID

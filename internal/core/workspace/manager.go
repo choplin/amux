@@ -52,6 +52,26 @@ func NewManager(configManager *config.Manager) (*Manager, error) {
 	}, nil
 }
 
+// NewManagerWithIDMapper creates a new workspace manager with a provided ID mapper.
+// This allows sharing the ID mapper between multiple managers.
+func NewManagerWithIDMapper(configManager *config.Manager, idMapper *idmap.IDMapper) (*Manager, error) {
+	gitOps := git.NewOperations(configManager.GetProjectRoot())
+
+	if !gitOps.IsGitRepository() {
+		return nil, fmt.Errorf("not a git repository")
+	}
+
+	workspacesDir := configManager.GetWorkspacesDir()
+
+	return &Manager{
+		configManager: configManager,
+		gitOps:        gitOps,
+		workspacesDir: workspacesDir,
+		idMapper:      idMapper,
+		fm:            filemanager.NewManager[Workspace](),
+	}, nil
+}
+
 // Create creates a new workspace
 func (m *Manager) Create(ctx context.Context, opts CreateOptions) (*Workspace, error) {
 	// Generate workspace ID
@@ -512,4 +532,9 @@ func generateID(name string) string {
 	randomSuffix := uuid.New().String()[:8]
 
 	return fmt.Sprintf("workspace-%s-%d-%s", safeName, timestamp, randomSuffix)
+}
+
+// GetIDMapper returns the ID mapper used by the workspace manager
+func (m *Manager) GetIDMapper() *idmap.IDMapper {
+	return m.idMapper
 }

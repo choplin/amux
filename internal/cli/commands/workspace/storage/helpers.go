@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"github.com/aki/amux/internal/app"
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/workspace"
 )
@@ -15,11 +14,6 @@ func getWorkspaceManager() (*workspace.Manager, error) {
 		return nil, err
 	}
 
-	// Create container with all dependencies
-	container, err := app.NewContainer(projectRoot)
-	if err != nil {
-		return nil, err
-	}
-
-	return container.WorkspaceManager, nil
+	// Use the setup function to create a properly configured workspace manager
+	return workspace.SetupManager(projectRoot)
 }
