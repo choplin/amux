@@ -66,10 +66,10 @@ amux/
    - ❌ MCP-only or CLI-only features (unless absolutely necessary, e.g., `amux mcp` command to start MCP server)
    - ❌ Duplicated logic between CLI and MCP
 
-3. **Current Issues** (need fixing)
-   - Hook execution: Only works in CLI, not executed via MCP
-   - Storage operations: Same logic duplicated in CLI and MCP
-   - Auto-workspace creation: CLI-only feature, not supported in MCP
+3. **Properly Implemented Features** ✅
+   - Hook execution: Works in both CLI and MCP through manager layers
+   - Storage operations: Shared implementation, no duplication
+   - Auto-workspace creation: Supported in both CLI and MCP
 
 4. **Correct Implementation Pattern**
 
