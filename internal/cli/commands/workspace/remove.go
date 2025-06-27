@@ -10,7 +10,6 @@ import (
 
 	"github.com/aki/amux/internal/cli/ui"
 	"github.com/aki/amux/internal/core/config"
-	"github.com/aki/amux/internal/core/hooks"
 	"github.com/aki/amux/internal/core/workspace"
 )
 
@@ -73,16 +72,9 @@ func runRemoveWorkspace(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Execute pre-removal hooks unless --no-hooks was specified
-	if !removeNoHooks {
-		if err := executeWorkspaceHooks(ws, hooks.EventWorkspaceRemove); err != nil {
-			ui.Error("Hook execution failed: %v", err)
-			ui.Warning("Stopping removal due to hook failure")
-			return err
-		}
-	}
-
-	if err := manager.Remove(cmd.Context(), workspace.Identifier(ws.ID)); err != nil {
+	if err := manager.Remove(cmd.Context(), workspace.Identifier(ws.ID), workspace.RemoveOptions{
+		NoHooks: removeNoHooks,
+	}); err != nil {
 		return fmt.Errorf("failed to remove workspace: %w", err)
 	}
 

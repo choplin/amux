@@ -14,6 +14,7 @@ import (
 
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/git"
+	"github.com/aki/amux/internal/core/hooks"
 	"github.com/aki/amux/internal/core/idmap"
 	"github.com/aki/amux/internal/filemanager"
 )
@@ -174,6 +175,15 @@ func (m *Manager) Create(ctx context.Context, opts CreateOptions) (*Workspace, e
 	}
 
 	// No template files needed - workspaces are clean git worktrees
+
+	// Execute hooks unless disabled
+	if !opts.NoHooks {
+		if err := m.executeHooks(workspace, hooks.EventWorkspaceCreate); err != nil {
+			// Log error but don't fail workspace creation
+			// This matches the current CLI behavior
+			return workspace, nil
+		}
+	}
 
 	return workspace, nil
 }
@@ -349,10 +359,18 @@ func (m *Manager) ResolveWorkspace(ctx context.Context, identifier Identifier) (
 }
 
 // Remove deletes a workspace by identifier (ID, index, or name)
-func (m *Manager) Remove(ctx context.Context, identifier Identifier) error {
+func (m *Manager) Remove(ctx context.Context, identifier Identifier, opts RemoveOptions) error {
 	workspace, err := m.ResolveWorkspace(ctx, identifier)
 	if err != nil {
 		return err
+	}
+
+	// Execute hooks before removal unless disabled
+	if !opts.NoHooks {
+		if err := m.executeHooks(workspace, hooks.EventWorkspaceRemove); err != nil {
+			// Log error but continue with removal
+			// This matches the current CLI behavior
+		}
 	}
 
 	// Check consistency to determine the right cleanup approach
@@ -420,7 +438,7 @@ func (m *Manager) Cleanup(ctx context.Context, opts CleanupOptions) ([]string, e
 	for _, workspace := range workspaces {
 		if workspace.UpdatedAt.Before(cutoff) {
 			if !opts.DryRun {
-				if err := m.Remove(ctx, Identifier(workspace.ID)); err != nil {
+				if err := m.Remove(ctx, Identifier(workspace.ID), RemoveOptions{NoHooks: false}); err != nil {
 					// Log error but continue with other workspaces
 					fmt.Fprintf(os.Stderr, "Failed to remove workspace %s: %v\n", workspace.ID, err)
 					continue
@@ -509,6 +527,51 @@ func (m *Manager) saveWorkspace(ctx context.Context, workspace *Workspace) error
 	}
 
 	return m.fm.Write(ctx, workspaceMetaPath, workspace)
+}
+
+// executeHooks runs hooks for the given workspace event
+func (m *Manager) executeHooks(ws *Workspace, event hooks.Event) error {
+	configDir := m.configManager.GetAmuxDir()
+
+	// Load hooks configuration
+	hooksConfig, err := hooks.LoadConfig(configDir)
+	if err != nil {
+		return fmt.Errorf("failed to load hooks: %w", err)
+	}
+
+	// Get hooks for this event
+	eventHooks := hooksConfig.GetHooksForEvent(event)
+	if len(eventHooks) == 0 {
+		return nil // No hooks configured
+	}
+
+	// Check if hooks are trusted
+	trusted, err := hooks.IsTrusted(configDir, hooksConfig)
+	if err != nil {
+		return fmt.Errorf("failed to check hook trust: %w", err)
+	}
+
+	if !trusted {
+		// Don't execute untrusted hooks
+		return nil
+	}
+
+	// Prepare environment variables
+	env := map[string]string{
+		"AMUX_WORKSPACE_ID":          ws.ID,
+		"AMUX_WORKSPACE_NAME":        ws.Name,
+		"AMUX_WORKSPACE_PATH":        ws.Path,
+		"AMUX_WORKSPACE_BRANCH":      ws.Branch,
+		"AMUX_WORKSPACE_BASE_BRANCH": ws.BaseBranch,
+		"AMUX_EVENT":                 string(event),
+		"AMUX_EVENT_TIME":            time.Now().Format(time.RFC3339),
+		"AMUX_PROJECT_ROOT":          m.configManager.GetProjectRoot(),
+		"AMUX_CONFIG_DIR":            configDir,
+	}
+
+	// Execute hooks in workspace directory
+	executor := hooks.NewExecutor(configDir, env).WithWorkingDir(ws.Path)
+	return executor.ExecuteHooks(event, eventHooks)
 }
 
 // generateID generates a unique workspace ID

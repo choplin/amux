@@ -184,7 +184,7 @@ func (s *ServerV2) handleWorkspaceRemove(ctx context.Context, request mcp.CallTo
 		return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 	}
 
-	if err := s.workspaceManager.Remove(ctx, workspace.Identifier(ws.ID)); err != nil {
+	if err := s.workspaceManager.Remove(ctx, workspace.Identifier(ws.ID), workspace.RemoveOptions{NoHooks: false}); err != nil {
 		return nil, fmt.Errorf("failed to remove workspace: %w", err)
 	}
 

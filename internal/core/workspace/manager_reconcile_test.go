@@ -105,8 +105,8 @@ func TestManager_ListReconciliation(t *testing.T) {
 	}
 
 	// Clean up
-	manager.Remove(ctx, workspace.Identifier(ws1.ID))
-	manager.Remove(ctx, workspace.Identifier(ws3.ID))
+	manager.Remove(ctx, workspace.Identifier(ws1.ID), workspace.RemoveOptions{})
+	manager.Remove(ctx, workspace.Identifier(ws3.ID), workspace.RemoveOptions{})
 }
 
 func TestManager_GetReconciliation(t *testing.T) {

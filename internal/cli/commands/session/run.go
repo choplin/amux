@@ -12,7 +12,6 @@ import (
 
 	"github.com/aki/amux/internal/cli/ui"
 	"github.com/aki/amux/internal/core/config"
-	"github.com/aki/amux/internal/core/hooks"
 	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/workspace"
 )
@@ -133,12 +132,6 @@ func runSession(cmd *cobra.Command, args []string) error {
 	ui.PrintKeyValue("Session", displayID)
 	ui.PrintKeyValue("Workspace", ws.Name)
 	ui.PrintKeyValue("Agent", agentID)
-
-	// Execute session start hooks
-	if err := executeSessionHooks(sess, ws, hooks.EventSessionStart); err != nil {
-		ui.Error("Hook execution failed: %v", err)
-		// Don't fail the session start, just warn
-	}
 
 	// Handle auto-attach for tmux sessions if applicable
 	info := sess.Info()

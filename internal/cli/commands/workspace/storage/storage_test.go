@@ -164,6 +164,6 @@ func TestStorageCommands(t *testing.T) {
 	})
 
 	// Cleanup
-	err = wsManager.Remove(ctx, workspace.Identifier(ws.ID))
+	err = wsManager.Remove(ctx, workspace.Identifier(ws.ID), workspace.RemoveOptions{})
 	assert.NoError(t, err)
 }

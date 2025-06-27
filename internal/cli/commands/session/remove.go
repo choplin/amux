@@ -116,7 +116,7 @@ func removeSession(cmd *cobra.Command, args []string, keepWorkspace bool, force 
 
 			if !workspaceInUse {
 				// Remove the workspace
-				if err := wsManager.Remove(cmd.Context(), workspace.Identifier(workspaceID)); err != nil {
+				if err := wsManager.Remove(cmd.Context(), workspace.Identifier(workspaceID), workspace.RemoveOptions{NoHooks: false}); err != nil {
 					ui.Warning("Failed to remove auto-created workspace %s: %v", ws.Name, err)
 				} else {
 					ui.OutputLine("Removed auto-created workspace: '%s'", ws.Name)

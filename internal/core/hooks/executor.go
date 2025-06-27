@@ -10,8 +10,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/aki/amux/internal/cli/ui"
 )
 
 // Executor executes hooks
@@ -56,18 +54,14 @@ func (e *Executor) ExecuteHooks(event Event, hooks []Hook) error {
 		return nil
 	}
 
-	ui.OutputLine("")
-	ui.OutputLine("Running hooks for '%s'...", event)
-
 	for i, hook := range hooks {
 		result, err := e.executeHook(&hook, i+1, len(hooks))
 		if err != nil {
 			switch hook.OnError {
 			case ErrorStrategyFail:
-				ui.Error("Hook execution failed")
 				return fmt.Errorf("hook '%s' failed: %w", hook.Name, err)
 			case ErrorStrategyWarn:
-				ui.Warning("Hook failed but continuing (on_error: warn)")
+				// Continue execution
 			case ErrorStrategyIgnore:
 				// Silent continue
 			}
@@ -78,8 +72,6 @@ func (e *Executor) ExecuteHooks(event Event, hooks []Hook) error {
 		}
 	}
 
-	ui.OutputLine("")
-	ui.Success("Hooks completed successfully")
 	return nil
 }
 
@@ -112,11 +104,7 @@ func (e *Executor) executeHook(hook *Hook, index, total int) (*ExecutionResult, 
 		timeout = 5 * time.Minute // Default timeout
 	}
 
-	// Show progress
-	ui.OutputLine("  [%d/%d] %s", index, total, hook.Name)
-
 	if e.dryRun {
-		ui.OutputLine("    > [DRY RUN] Would execute: %s", cmdStr)
 		return &ExecutionResult{Hook: hook}, nil
 	}
 
@@ -174,13 +162,8 @@ func (e *Executor) executeHook(hook *Hook, index, total int) (*ExecutionResult, 
 			result.Error = err
 		}
 
-		duration := result.EndTime.Sub(result.StartTime)
-		ui.OutputLine("    ✗ Failed in %.1fs", duration.Seconds())
 		return result, err
 	}
-
-	duration := result.EndTime.Sub(result.StartTime)
-	ui.OutputLine("    ✓ Completed in %.1fs", duration.Seconds())
 
 	return result, nil
 }

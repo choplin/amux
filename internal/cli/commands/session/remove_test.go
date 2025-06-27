@@ -233,7 +233,7 @@ func TestRemoveSession(t *testing.T) {
 		t.Cleanup(func() {
 			// Try to remove workspace if it still exists
 			if _, err := wsManager.ResolveWorkspace(context.Background(), workspace.Identifier(ws3.ID)); err == nil {
-				_ = wsManager.Remove(context.Background(), workspace.Identifier(ws3.ID))
+				_ = wsManager.Remove(context.Background(), workspace.Identifier(ws3.ID), workspace.RemoveOptions{})
 			}
 		})
 

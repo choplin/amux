@@ -86,6 +86,7 @@ type Options struct {
 	InitialPrompt string            // Optional: initial prompt to send after starting
 	Name          string            // Optional: human-readable name for the session
 	Description   string            // Optional: description of session purpose
+	NoHooks       bool              // Skip hook execution
 }
 
 // Info contains metadata about a session

@@ -46,7 +46,7 @@ func TestWorkspaceRemovalSafetyCheck(t *testing.T) {
 	t.Cleanup(func() {
 		// Clean up: change to repo dir first, then remove workspace
 		os.Chdir(repoDir)
-		if err := manager.Remove(context.Background(), workspace.Identifier(ws.ID)); err != nil {
+		if err := manager.Remove(context.Background(), workspace.Identifier(ws.ID), workspace.RemoveOptions{}); err != nil {
 			t.Logf("Failed to remove workspace %s: %v", ws.ID, err)
 		}
 	})
@@ -164,7 +164,7 @@ func TestWorkspaceCdCommand(t *testing.T) {
 	}
 	// Ensure cleanup happens after all subtests complete
 	t.Cleanup(func() {
-		if err := manager.Remove(context.Background(), workspace.Identifier(ws.ID)); err != nil {
+		if err := manager.Remove(context.Background(), workspace.Identifier(ws.ID), workspace.RemoveOptions{}); err != nil {
 			t.Logf("Failed to remove workspace %s: %v", ws.ID, err)
 		}
 	})

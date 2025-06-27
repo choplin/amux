@@ -183,6 +183,6 @@ func TestSessionStorageCommands(t *testing.T) {
 	// Cleanup
 	err = os.RemoveAll(sessionDir)
 	assert.NoError(t, err)
-	err = wsManager.Remove(ctx, workspace.Identifier(ws.ID))
+	err = wsManager.Remove(ctx, workspace.Identifier(ws.ID), workspace.RemoveOptions{})
 	assert.NoError(t, err)
 }

@@ -63,7 +63,7 @@ func TestSessionFailureDetection(t *testing.T) {
 	}
 
 	// Create manager
-	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, nil, idMapper)
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, configManager, idMapper)
 	if err != nil {
 		t.Fatalf("Failed to create manager: %v", err)
 	}

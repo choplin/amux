@@ -11,6 +11,7 @@ import (
 
 	"github.com/aki/amux/internal/adapters/tmux"
 	"github.com/aki/amux/internal/core/config"
+	"github.com/aki/amux/internal/core/hooks"
 	"github.com/aki/amux/internal/core/idmap"
 	"github.com/aki/amux/internal/core/workspace"
 	"github.com/aki/amux/internal/filemanager"
@@ -208,6 +209,15 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 	m.mu.Lock()
 	m.sessions[sessionID.String()] = sess
 	m.mu.Unlock()
+
+	// Execute hooks unless disabled
+	if !opts.NoHooks {
+		if err := m.executeSessionHooks(sess, ws, hooks.EventSessionStart); err != nil {
+			// Log error but don't fail session creation
+			// This matches the current CLI behavior
+			slog.Error("hook execution failed", "error", err)
+		}
+	}
 
 	return sess, nil
 }
@@ -620,4 +630,86 @@ func (m *Manager) CreateSessionStorage(sessionID string) (string, error) {
 		return "", err
 	}
 	return storagePath, nil
+}
+
+// StopSession stops a session with hook execution
+func (m *Manager) StopSession(ctx context.Context, sess Session, noHooks bool) error {
+	// Get workspace for hooks
+	info := sess.Info()
+	var ws *workspace.Workspace
+	if info.WorkspaceID != "" && !noHooks {
+		ws, _ = m.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(info.WorkspaceID))
+	}
+
+	// Execute session stop hooks (before stopping)
+	if ws != nil && !noHooks {
+		if err := m.executeSessionHooks(sess, ws, hooks.EventSessionStop); err != nil {
+			// Log error but continue with stop
+			slog.Error("hook execution failed", "error", err)
+		}
+	}
+
+	// Stop session
+	return sess.Stop(ctx)
+}
+
+// executeSessionHooks executes hooks for session events
+func (m *Manager) executeSessionHooks(sess Session, ws *workspace.Workspace, event hooks.Event) error {
+	if ws == nil {
+		return fmt.Errorf("session hooks require workspace assignment")
+	}
+
+	configDir := m.configManager.GetAmuxDir()
+
+	// Load hooks configuration
+	hooksConfig, err := hooks.LoadConfig(configDir)
+	if err != nil {
+		return fmt.Errorf("failed to load hooks: %w", err)
+	}
+
+	// Get hooks for this event
+	eventHooks := hooksConfig.GetHooksForEvent(event)
+	if len(eventHooks) == 0 {
+		return nil // No hooks configured
+	}
+
+	// Check if hooks are trusted
+	trusted, err := hooks.IsTrusted(configDir, hooksConfig)
+	if err != nil {
+		return fmt.Errorf("failed to check hook trust: %w", err)
+	}
+
+	if !trusted {
+		// Don't execute untrusted hooks
+		return nil
+	}
+
+	// Get session info
+	info := sess.Info()
+
+	// Prepare environment variables
+	env := map[string]string{
+		// Session-specific variables
+		"AMUX_SESSION_ID":          info.ID,
+		"AMUX_SESSION_INDEX":       info.Index,
+		"AMUX_SESSION_AGENT_ID":    info.AgentID,
+		"AMUX_SESSION_NAME":        info.Name,
+		"AMUX_SESSION_DESCRIPTION": info.Description,
+		"AMUX_SESSION_COMMAND":     info.Command,
+		// Workspace variables
+		"AMUX_WORKSPACE_ID":          ws.ID,
+		"AMUX_WORKSPACE_NAME":        ws.Name,
+		"AMUX_WORKSPACE_PATH":        ws.Path,
+		"AMUX_WORKSPACE_BRANCH":      ws.Branch,
+		"AMUX_WORKSPACE_BASE_BRANCH": ws.BaseBranch,
+		// Event and context
+		"AMUX_EVENT":        string(event),
+		"AMUX_EVENT_TIME":   time.Now().Format(time.RFC3339),
+		"AMUX_PROJECT_ROOT": m.configManager.GetProjectRoot(),
+		"AMUX_CONFIG_DIR":   configDir,
+	}
+
+	// Execute hooks in workspace directory
+	executor := hooks.NewExecutor(configDir, env).WithWorkingDir(ws.Path)
+	return executor.ExecuteHooks(event, eventHooks)
 }

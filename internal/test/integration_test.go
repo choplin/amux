@@ -164,7 +164,7 @@ func TestIntegration_FullWorkflow(t *testing.T) {
 	}
 
 	// Clean up workspace
-	if err := wsManager.Remove(context.Background(), workspace.Identifier(ws.ID)); err != nil {
+	if err := wsManager.Remove(context.Background(), workspace.Identifier(ws.ID), workspace.RemoveOptions{}); err != nil {
 		t.Errorf("Failed to remove workspace: %v", err)
 	}
 }

@@ -112,11 +112,17 @@ type CreateOptions struct {
 	BranchMode  BranchMode // How to handle the branch (default: BranchModeCreate)
 	Description string
 	AutoCreated bool // Internal: whether workspace was auto-created by session
+	NoHooks     bool // Skip hook execution
 }
 
 // ListOptions represents options for listing workspaces
 type ListOptions struct {
 	// Reserved for future filtering options
+}
+
+// RemoveOptions represents options for removing a workspace
+type RemoveOptions struct {
+	NoHooks bool // Skip hook execution
 }
 
 // CleanupOptions represents options for cleaning up old workspaces

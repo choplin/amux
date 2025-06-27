@@ -13,12 +13,14 @@ import (
 
 // SessionRunParams contains parameters for session_run tool
 type SessionRunParams struct {
-	WorkspaceID string            `json:"workspace_identifier" jsonschema:"required,description=Workspace ID, index, or name to run the session in"`
-	AgentID     string            `json:"agent_id" jsonschema:"required,description=Agent ID to run (e.g. 'claude' 'gpt')"`
-	Name        string            `json:"name,omitempty" jsonschema:"description=Human-readable name for the session"`
-	Description string            `json:"description,omitempty" jsonschema:"description=Description of the session purpose"`
-	Command     string            `json:"command,omitempty" jsonschema:"description=Override the agent's default command"`
-	Environment map[string]string `json:"environment,omitempty" jsonschema:"description=Additional environment variables"`
+	WorkspaceID    string            `json:"workspace_identifier,omitempty" jsonschema:"description=Workspace ID, index, or name. If not provided, a new workspace will be auto-created"`
+	AgentID        string            `json:"agent_id" jsonschema:"required,description=Agent ID to run (e.g. 'claude' 'gpt')"`
+	Name           string            `json:"name,omitempty" jsonschema:"description=Human-readable name for the session"`
+	Description    string            `json:"description,omitempty" jsonschema:"description=Description of the session purpose"`
+	Command        string            `json:"command,omitempty" jsonschema:"description=Override the agent's default command"`
+	Environment    map[string]string `json:"environment,omitempty" jsonschema:"description=Additional environment variables"`
+	WorkspaceName  string            `json:"workspace_name,omitempty" jsonschema:"description=Name for the auto-created workspace (only used when workspace_identifier is not specified)"`
+	WorkspaceDescr string            `json:"workspace_description,omitempty" jsonschema:"description=Description for the auto-created workspace (only used when workspace_identifier is not specified)"`
 }
 
 // SessionIDParams contains parameters for session operations
@@ -71,25 +73,55 @@ func (s *ServerV2) registerSessionTools() error {
 func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	args := request.GetArguments()
 
-	// Extract required parameters
-	workspaceID, ok := args["workspace_identifier"].(string)
-	if !ok {
-		return nil, fmt.Errorf("invalid or missing workspace_identifier argument")
-	}
-
+	// Extract required agent ID
 	agentID, ok := args["agent_id"].(string)
 	if !ok {
 		return nil, fmt.Errorf("invalid or missing agent_id argument")
 	}
 
-	// Resolve workspace
-	ws, err := s.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(workspaceID))
-	if err != nil {
-		// Check if it's a not found error
-		if strings.Contains(err.Error(), "not found") {
-			return nil, WorkspaceNotFoundError(workspaceID)
+	// Get or create workspace
+	var ws *workspace.Workspace
+	workspaceID, hasWorkspace := args["workspace_identifier"].(string)
+
+	if hasWorkspace && workspaceID != "" {
+		// Resolve existing workspace
+		var err error
+		ws, err = s.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(workspaceID))
+		if err != nil {
+			// Check if it's a not found error
+			if strings.Contains(err.Error(), "not found") {
+				return nil, WorkspaceNotFoundError(workspaceID)
+			}
+			return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 		}
-		return nil, fmt.Errorf("failed to resolve workspace: %w", err)
+	} else {
+		// Auto-create a new workspace
+		sessionID := session.GenerateID()
+
+		// Use provided workspace name or generate based on session ID
+		workspaceName, _ := args["workspace_name"].(string)
+		if workspaceName == "" {
+			workspaceName = fmt.Sprintf("session-%s", sessionID.Short())
+		}
+
+		// Use provided workspace description or generate default
+		workspaceDesc, _ := args["workspace_description"].(string)
+		if workspaceDesc == "" {
+			workspaceDesc = fmt.Sprintf("Auto-created for session %s", sessionID.Short())
+		}
+
+		// Create workspace
+		opts := workspace.CreateOptions{
+			Name:        workspaceName,
+			Description: workspaceDesc,
+			AutoCreated: true,
+		}
+
+		var err error
+		ws, err = s.workspaceManager.Create(ctx, opts)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create auto-workspace: %w", err)
+		}
 	}
 
 	// Build session options
@@ -179,6 +211,11 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 		}
 	}
 
+	// Add auto-creation info if workspace was auto-created
+	if ws.AutoCreated {
+		response["workspace_auto_created"] = true
+	}
+
 	// Add success message to response
 	response["message"] = "Session started successfully!"
 
@@ -210,8 +247,8 @@ func (s *ServerV2) handleSessionStop(ctx context.Context, request mcp.CallToolRe
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
 
-	// Stop session
-	if err := sess.Stop(ctx); err != nil {
+	// Stop session with hook execution
+	if err := sessionManager.StopSession(ctx, sess, false); err != nil {
 		return nil, fmt.Errorf("failed to stop session: %w", err)
 	}
 
