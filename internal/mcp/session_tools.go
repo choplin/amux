@@ -13,14 +13,12 @@ import (
 
 // SessionRunParams contains parameters for session_run tool
 type SessionRunParams struct {
-	WorkspaceID    string            `json:"workspace_identifier,omitempty" jsonschema:"description=Workspace ID, index, or name. If not provided, a new workspace will be auto-created"`
-	AgentID        string            `json:"agent_id" jsonschema:"required,description=Agent ID to run (e.g. 'claude' 'gpt')"`
-	Name           string            `json:"name,omitempty" jsonschema:"description=Human-readable name for the session"`
-	Description    string            `json:"description,omitempty" jsonschema:"description=Description of the session purpose"`
-	Command        string            `json:"command,omitempty" jsonschema:"description=Override the agent's default command"`
-	Environment    map[string]string `json:"environment,omitempty" jsonschema:"description=Additional environment variables"`
-	WorkspaceName  string            `json:"workspace_name,omitempty" jsonschema:"description=Name for the auto-created workspace (only used when workspace_identifier is not specified)"`
-	WorkspaceDescr string            `json:"workspace_description,omitempty" jsonschema:"description=Description for the auto-created workspace (only used when workspace_identifier is not specified)"`
+	WorkspaceID string            `json:"workspace_identifier,omitempty" jsonschema:"description=Workspace ID, index, or name. If not provided, a new workspace will be auto-created"`
+	AgentID     string            `json:"agent_id" jsonschema:"required,description=Agent ID to run (e.g. 'claude' 'gpt')"`
+	Name        string            `json:"name,omitempty" jsonschema:"description=Human-readable name for the session"`
+	Description string            `json:"description,omitempty" jsonschema:"description=Description of the session purpose"`
+	Command     string            `json:"command,omitempty" jsonschema:"description=Override the agent's default command"`
+	Environment map[string]string `json:"environment,omitempty" jsonschema:"description=Additional environment variables"`
 }
 
 // SessionIDParams contains parameters for session operations
@@ -79,56 +77,16 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 		return nil, fmt.Errorf("invalid or missing agent_id argument")
 	}
 
-	// Get or create workspace
-	var ws *workspace.Workspace
-	workspaceID, hasWorkspace := args["workspace_identifier"].(string)
-
-	if hasWorkspace && workspaceID != "" {
-		// Resolve existing workspace
-		var err error
-		ws, err = s.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(workspaceID))
-		if err != nil {
-			// Check if it's a not found error
-			if strings.Contains(err.Error(), "not found") {
-				return nil, WorkspaceNotFoundError(workspaceID)
-			}
-			return nil, fmt.Errorf("failed to resolve workspace: %w", err)
-		}
-	} else {
-		// Auto-create a new workspace
-		sessionID := session.GenerateID()
-
-		// Use provided workspace name or generate based on session ID
-		workspaceName, _ := args["workspace_name"].(string)
-		if workspaceName == "" {
-			workspaceName = fmt.Sprintf("session-%s", sessionID.Short())
-		}
-
-		// Use provided workspace description or generate default
-		workspaceDesc, _ := args["workspace_description"].(string)
-		if workspaceDesc == "" {
-			workspaceDesc = fmt.Sprintf("Auto-created for session %s", sessionID.Short())
-		}
-
-		// Create workspace
-		opts := workspace.CreateOptions{
-			Name:        workspaceName,
-			Description: workspaceDesc,
-			AutoCreated: true,
-		}
-
-		var err error
-		ws, err = s.workspaceManager.Create(ctx, opts)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create auto-workspace: %w", err)
-		}
-	}
-
 	// Build session options
 	opts := session.Options{
-		WorkspaceID: ws.ID,
-		AgentID:     agentID,
+		AgentID: agentID,
 	}
+
+	// Set workspace ID if specified
+	if workspaceID, ok := args["workspace_identifier"].(string); ok && workspaceID != "" {
+		opts.WorkspaceID = workspaceID
+	}
+	// If WorkspaceID is empty, session manager will auto-create a workspace
 
 	// Optional name
 	if name, ok := args["name"].(string); ok && name != "" {
@@ -177,17 +135,16 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 
 	// Build response
 	response := map[string]interface{}{
-		"id":             info.ID,
-		"index":          info.Index,
-		"name":           info.Name,
-		"description":    info.Description,
-		"workspace_id":   info.WorkspaceID,
-		"workspace_name": ws.Name,
-		"agent_id":       info.AgentID,
-		"status":         string(sess.Status()),
-		"command":        info.Command,
-		"tmux_session":   info.TmuxSession,
-		"created_at":     info.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		"id":           info.ID,
+		"index":        info.Index,
+		"name":         info.Name,
+		"description":  info.Description,
+		"workspace_id": info.WorkspaceID,
+		"agent_id":     info.AgentID,
+		"status":       string(sess.Status()),
+		"command":      info.Command,
+		"tmux_session": info.TmuxSession,
+		"created_at":   info.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 
 	if info.StartedAt != nil {
@@ -211,9 +168,11 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 		}
 	}
 
-	// Add auto-creation info if workspace was auto-created
-	if ws.AutoCreated {
-		response["workspace_auto_created"] = true
+	// Get workspace info to check if auto-created
+	if ws, err := s.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(sess.WorkspaceID())); err == nil {
+		if ws.AutoCreated {
+			response["workspace_auto_created"] = true
+		}
 	}
 
 	// Add success message to response

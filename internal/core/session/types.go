@@ -79,7 +79,7 @@ type ActivityTracking struct {
 type Options struct {
 	ID            ID                // Optional: pre-generated session ID
 	Type          Type              // Optional: session type (defaults to tmux)
-	WorkspaceID   string            // Required: workspace to run in
+	WorkspaceID   string            // Optional: workspace to run in (auto-created if empty)
 	AgentID       string            // Required: agent to run
 	Command       string            // Optional: override agent command
 	Environment   map[string]string // Optional: additional env vars

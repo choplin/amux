@@ -70,12 +70,6 @@ func (m *Manager) SetTmuxAdapter(adapter tmux.Adapter) {
 
 // CreateSession creates a new session
 func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, error) {
-	// Validate workspace exists
-	ws, err := m.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(opts.WorkspaceID))
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve workspace: %w", err)
-	}
-
 	// Set default session type if not specified
 	sessionType := opts.Type
 	if sessionType == "" {
@@ -104,6 +98,40 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 	// Set default agent ID if not provided
 	if opts.AgentID == "" {
 		opts.AgentID = "default"
+	}
+
+	// Auto-create workspace if not specified
+	var ws *workspace.Workspace
+	var err error
+	if opts.WorkspaceID == "" {
+		// Generate workspace name based on session name or ID
+		workspaceName := opts.Name
+		if workspaceName == "" {
+			workspaceName = fmt.Sprintf("session-%s", sessionID.Short())
+		}
+
+		// Generate workspace description
+		workspaceDesc := fmt.Sprintf("Auto-created for session %s", sessionID.Short())
+		if opts.Description != "" {
+			workspaceDesc = opts.Description
+		}
+
+		ws, err = m.workspaceManager.Create(ctx, workspace.CreateOptions{
+			Name:        workspaceName,
+			Description: workspaceDesc,
+			AutoCreated: true,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create auto-workspace: %w", err)
+		}
+
+		opts.WorkspaceID = ws.ID
+	} else {
+		// Validate workspace exists
+		ws, err = m.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(opts.WorkspaceID))
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve workspace: %w", err)
+		}
 	}
 
 	// Get agent configuration

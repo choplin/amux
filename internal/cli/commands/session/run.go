@@ -1,7 +1,6 @@
 package session
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -51,6 +50,7 @@ Examples:
 	cmd.Flags().StringVarP(&runSessionDescription, "session-description", "", "", "Description of the session purpose")
 	cmd.Flags().StringVarP(&runName, "name", "n", "", "Name for the auto-created workspace (only used when --workspace is not specified)")
 	cmd.Flags().StringVarP(&runDescription, "description", "d", "", "Description for the auto-created workspace (only used when --workspace is not specified)")
+	cmd.Flags().BoolVar(&runNoHooks, "no-hooks", false, "Skip hook execution")
 
 	return cmd
 }
@@ -74,21 +74,14 @@ func runSession(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Get or create workspace
-	var ws *workspace.Workspace
+	// Get workspace ID if specified
+	var workspaceID string
 	if runWorkspace != "" {
-		ws, err = wsManager.ResolveWorkspace(cmd.Context(), workspace.Identifier(runWorkspace))
+		ws, err := wsManager.ResolveWorkspace(cmd.Context(), workspace.Identifier(runWorkspace))
 		if err != nil {
 			return fmt.Errorf("failed to resolve workspace: %w", err)
 		}
-	} else {
-		// Auto-create a new workspace
-		sessionID := session.GenerateID()
-		ws, err = createAutoWorkspace(cmd.Context(), wsManager, string(sessionID), runName, runDescription)
-		if err != nil {
-			return fmt.Errorf("failed to create auto-workspace: %w", err)
-		}
-		ui.Success("Workspace created successfully: %s", ws.Name)
+		workspaceID = ws.ID
 	}
 
 	// Parse environment variables from CLI
@@ -103,18 +96,28 @@ func runSession(cmd *cobra.Command, args []string) error {
 
 	// Create session
 	opts := session.Options{
-		WorkspaceID:   ws.ID,
+		WorkspaceID:   workspaceID, // Empty if not specified - will auto-create
 		AgentID:       agentID,
 		Command:       runCommand, // Optional override from CLI
 		Environment:   env,        // Environment variables from CLI
 		InitialPrompt: runInitialPrompt,
 		Name:          runSessionName,
 		Description:   runSessionDescription,
+		NoHooks:       runNoHooks,
 	}
 
 	sess, err := sessionManager.CreateSession(cmd.Context(), opts)
 	if err != nil {
 		return fmt.Errorf("failed to create session: %w", err)
+	}
+
+	// Show workspace creation message if auto-created
+	if runWorkspace == "" {
+		// Get the workspace that was created
+		ws, err := wsManager.ResolveWorkspace(cmd.Context(), workspace.Identifier(sess.WorkspaceID()))
+		if err == nil {
+			ui.Success("Workspace created successfully: %s", ws.Name)
+		}
 	}
 
 	displayID := sess.ID()
@@ -130,7 +133,6 @@ func runSession(cmd *cobra.Command, args []string) error {
 	ui.Success("Session started successfully")
 	ui.OutputLine("")
 	ui.PrintKeyValue("Session", displayID)
-	ui.PrintKeyValue("Workspace", ws.Name)
 	ui.PrintKeyValue("Agent", agentID)
 
 	// Handle auto-attach for tmux sessions if applicable
@@ -156,25 +158,4 @@ func runSession(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
-}
-
-// createAutoWorkspace creates a new workspace for the session
-func createAutoWorkspace(ctx context.Context, wsManager *workspace.Manager, sessionID, name, description string) (*workspace.Workspace, error) {
-	// Use provided name or generate based on session ID
-	workspaceName := name
-	if workspaceName == "" {
-		workspaceName = fmt.Sprintf("session-%s", sessionID[:8])
-	}
-
-	// Create workspace with the session ID in description
-	workspaceDesc := description
-	if workspaceDesc == "" {
-		workspaceDesc = fmt.Sprintf("Auto-created for session %s", sessionID[:8])
-	}
-	opts := workspace.CreateOptions{
-		Name:        workspaceName,
-		Description: workspaceDesc,
-	}
-
-	return wsManager.Create(ctx, opts)
 }
