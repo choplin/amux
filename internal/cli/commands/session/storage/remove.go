@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/aki/amux/internal/cli/ui"
+	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/session"
 	"github.com/spf13/cobra"
 )
@@ -31,7 +32,11 @@ func runRemove(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 
 	// Get session manager
-	manager, err := getSessionManager()
+	projectRoot, err := config.FindProjectRoot()
+	if err != nil {
+		return err
+	}
+	manager, err := session.SetupManager(projectRoot)
 	if err != nil {
 		return err
 	}

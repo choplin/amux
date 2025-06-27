@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/aki/amux/internal/cli/ui"
+	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/hooks"
 	"github.com/aki/amux/internal/core/workspace"
 )
@@ -39,7 +40,11 @@ func runCreateWorkspace(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("cannot specify both --branch (-b) and --checkout (-c) flags")
 	}
 
-	manager, err := GetWorkspaceManager()
+	projectRoot, err := config.FindProjectRoot()
+	if err != nil {
+		return err
+	}
+	manager, err := workspace.SetupManager(projectRoot)
 	if err != nil {
 		return err
 	}

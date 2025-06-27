@@ -10,6 +10,7 @@ import (
 
 	"github.com/aki/amux/internal/adapters/tmux"
 	"github.com/aki/amux/internal/cli/ui"
+	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/terminal"
 )
@@ -31,7 +32,11 @@ func attachSession(cmd *cobra.Command, args []string) error {
 	sessionID := args[0]
 
 	// Get session manager
-	sessionManager, err := GetSessionManager()
+	projectRoot, err := config.FindProjectRoot()
+	if err != nil {
+		return err
+	}
+	sessionManager, err := session.SetupManager(projectRoot)
 	if err != nil {
 		return err
 	}

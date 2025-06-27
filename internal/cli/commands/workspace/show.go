@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/aki/amux/internal/cli/ui"
+	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/workspace"
 )
 
@@ -19,7 +20,11 @@ var showWorkspaceCmd = &cobra.Command{
 func runShowWorkspace(cmd *cobra.Command, args []string) error {
 	identifier := args[0]
 
-	manager, err := GetWorkspaceManager()
+	projectRoot, err := config.FindProjectRoot()
+	if err != nil {
+		return err
+	}
+	manager, err := workspace.SetupManager(projectRoot)
 	if err != nil {
 		return err
 	}

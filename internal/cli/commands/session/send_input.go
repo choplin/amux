@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/aki/amux/internal/cli/ui"
+	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/session"
 )
 
@@ -44,7 +45,11 @@ func sendInputToSession(cmd *cobra.Command, args []string) error {
 	inputText := args[1]
 
 	// Get session manager
-	sessionManager, err := GetSessionManager()
+	projectRoot, err := config.FindProjectRoot()
+	if err != nil {
+		return err
+	}
+	sessionManager, err := session.SetupManager(projectRoot)
 	if err != nil {
 		return err
 	}

@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/aki/amux/internal/cli/ui"
+	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/workspace"
 )
@@ -25,7 +26,15 @@ Shows session ID, agent, workspace, status, and runtime.`,
 
 func listSessions(cmd *cobra.Command, args []string) error {
 	// Get managers
-	sessionManager, wsManager, err := GetManagers()
+	projectRoot, err := config.FindProjectRoot()
+	if err != nil {
+		return err
+	}
+	wsManager, err := workspace.SetupManager(projectRoot)
+	if err != nil {
+		return err
+	}
+	sessionManager, err := session.SetupManagerWithWorkspace(projectRoot, wsManager)
 	if err != nil {
 		return err
 	}

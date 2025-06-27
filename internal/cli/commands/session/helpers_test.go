@@ -32,15 +32,15 @@ func TestCreateAutoWorkspace(t *testing.T) {
 	sessionID := session.GenerateID()
 
 	// Test auto workspace creation with default name and description
-	ws, err := createAutoWorkspace(context.Background(), wsManager, sessionID, "", "")
+	ws, err := createAutoWorkspace(context.Background(), wsManager, string(sessionID), "", "")
 	require.NoError(t, err)
 	assert.NotNil(t, ws)
 
 	// Expected name format: session-{first-8-chars-of-uuid}
-	expectedName := fmt.Sprintf("session-%s", sessionID.Short())
+	expectedName := fmt.Sprintf("session-%s", string(sessionID)[:8])
 	assert.Equal(t, expectedName, ws.Name)
-	assert.Contains(t, ws.Description, "Auto-created workspace for session")
-	assert.Contains(t, ws.Description, sessionID.Short())
+	assert.Contains(t, ws.Description, "Auto-created for session")
+	assert.Contains(t, ws.Description, string(sessionID)[:8])
 	assert.Equal(t, "main", ws.BaseBranch)
 }
 
@@ -62,16 +62,16 @@ func TestCreateAutoWorkspaceUniqueness(t *testing.T) {
 	sessionID1 := session.GenerateID()
 	sessionID2 := session.GenerateID()
 
-	ws1, err := createAutoWorkspace(context.Background(), wsManager, sessionID1, "", "")
+	ws1, err := createAutoWorkspace(context.Background(), wsManager, string(sessionID1), "", "")
 	require.NoError(t, err)
 
-	ws2, err := createAutoWorkspace(context.Background(), wsManager, sessionID2, "", "")
+	ws2, err := createAutoWorkspace(context.Background(), wsManager, string(sessionID2), "", "")
 	require.NoError(t, err)
 
 	// Ensure workspace names are different
 	assert.NotEqual(t, ws1.Name, ws2.Name)
-	assert.Equal(t, fmt.Sprintf("session-%s", sessionID1.Short()), ws1.Name)
-	assert.Equal(t, fmt.Sprintf("session-%s", sessionID2.Short()), ws2.Name)
+	assert.Equal(t, fmt.Sprintf("session-%s", string(sessionID1)[:8]), ws1.Name)
+	assert.Equal(t, fmt.Sprintf("session-%s", string(sessionID2)[:8]), ws2.Name)
 }
 
 func TestCreateAutoWorkspaceWithCustomNameAndDescription(t *testing.T) {
@@ -94,7 +94,7 @@ func TestCreateAutoWorkspaceWithCustomNameAndDescription(t *testing.T) {
 	// Test auto workspace creation with custom name and description
 	customName := "my-custom-workspace"
 	customDescription := "This is a custom workspace for testing"
-	ws, err := createAutoWorkspace(context.Background(), wsManager, sessionID, customName, customDescription)
+	ws, err := createAutoWorkspace(context.Background(), wsManager, string(sessionID), customName, customDescription)
 	require.NoError(t, err)
 	assert.NotNil(t, ws)
 
@@ -123,12 +123,12 @@ func TestCreateAutoWorkspaceWithCustomNameOnly(t *testing.T) {
 
 	// Test auto workspace creation with custom name only
 	customName := "custom-name-only"
-	ws, err := createAutoWorkspace(context.Background(), wsManager, sessionID, customName, "")
+	ws, err := createAutoWorkspace(context.Background(), wsManager, string(sessionID), customName, "")
 	require.NoError(t, err)
 	assert.NotNil(t, ws)
 
 	// Verify custom name is used and default description is generated
 	assert.Equal(t, customName, ws.Name)
-	assert.Contains(t, ws.Description, "Auto-created workspace for session")
-	assert.Contains(t, ws.Description, sessionID.Short())
+	assert.Contains(t, ws.Description, "Auto-created for session")
+	assert.Contains(t, ws.Description, string(sessionID)[:8])
 }

@@ -1,6 +1,7 @@
 package session
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/aki/amux/internal/cli/ui"
+	"github.com/aki/amux/internal/core/agent"
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/hooks"
 	"github.com/aki/amux/internal/core/session"
@@ -59,10 +61,20 @@ func runSession(cmd *cobra.Command, args []string) error {
 	agentID := args[0]
 
 	// Get all managers
-	sessionManager, wsManager, agentManager, err := GetAllManagers()
+	projectRoot, err := config.FindProjectRoot()
 	if err != nil {
 		return err
 	}
+	wsManager, err := workspace.SetupManager(projectRoot)
+	if err != nil {
+		return err
+	}
+	sessionManager, err := session.SetupManagerWithWorkspace(projectRoot, wsManager)
+	if err != nil {
+		return err
+	}
+	configManager := config.NewManager(projectRoot)
+	agentManager := agent.NewManager(configManager)
 
 	// Generate session ID upfront
 	sessionID := session.GenerateID()
@@ -76,7 +88,7 @@ func runSession(cmd *cobra.Command, args []string) error {
 		}
 	} else {
 		// Auto-create a new workspace using session ID
-		ws, err = createAutoWorkspace(cmd.Context(), wsManager, sessionID, runName, runDescription)
+		ws, err = createAutoWorkspace(cmd.Context(), wsManager, string(sessionID), runName, runDescription)
 		if err != nil {
 			return fmt.Errorf("failed to create auto-workspace: %w", err)
 		}
@@ -196,4 +208,25 @@ func runSession(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+// createAutoWorkspace creates a new workspace for the session
+func createAutoWorkspace(ctx context.Context, wsManager *workspace.Manager, sessionID, name, description string) (*workspace.Workspace, error) {
+	// Use provided name or generate based on session ID
+	workspaceName := name
+	if workspaceName == "" {
+		workspaceName = fmt.Sprintf("session-%s", sessionID[:8])
+	}
+
+	// Create workspace with the session ID in description
+	workspaceDesc := description
+	if workspaceDesc == "" {
+		workspaceDesc = fmt.Sprintf("Auto-created for session %s", sessionID[:8])
+	}
+	opts := workspace.CreateOptions{
+		Name:        workspaceName,
+		Description: workspaceDesc,
+	}
+
+	return wsManager.Create(ctx, opts)
 }

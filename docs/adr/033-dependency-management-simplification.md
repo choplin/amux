@@ -16,6 +16,7 @@ The amux codebase had scattered dependency initialization across multiple locati
 4. **IDMapper duplication**: Both WorkspaceManager and SessionManager created separate IDMapper instances
 
 This scattered approach led to:
+
 - Code duplication across different parts of the codebase (~70% duplication in initialization code)
 - Inconsistent initialization patterns
 - Difficulty in testing (hard to inject test doubles)
@@ -45,7 +46,6 @@ func SetupManager(projectRoot string) (*Manager, error)
 func SetupManager(projectRoot string) (*Manager, error)
 func SetupManagerWithWorkspace(projectRoot string, workspaceManager *workspace.Manager) (*Manager, error)
 ```
-
 
 ## Consequences
 

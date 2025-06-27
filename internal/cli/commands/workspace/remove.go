@@ -25,7 +25,11 @@ var removeWorkspaceCmd = &cobra.Command{
 func runRemoveWorkspace(cmd *cobra.Command, args []string) error {
 	identifier := args[0]
 
-	manager, err := GetWorkspaceManager()
+	projectRoot, err := config.FindProjectRoot()
+	if err != nil {
+		return err
+	}
+	manager, err := workspace.SetupManager(projectRoot)
 	if err != nil {
 		return err
 	}

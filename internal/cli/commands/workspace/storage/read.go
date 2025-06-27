@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/workspace"
 	"github.com/spf13/cobra"
 )
@@ -23,7 +24,11 @@ func runRead(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 
 	// Get workspace manager
-	manager, err := getWorkspaceManager()
+	projectRoot, err := config.FindProjectRoot()
+	if err != nil {
+		return err
+	}
+	manager, err := workspace.SetupManager(projectRoot)
 	if err != nil {
 		return err
 	}
