@@ -1,4 +1,4 @@
-# 34. Setup Functions Over Container Pattern
+# 33. Dependency Management Simplification
 
 Date: 2025-06-27
 
@@ -8,18 +8,25 @@ Accepted
 
 ## Context
 
-ADR 033 introduced a Container pattern to centralize dependency initialization. While this reduced code duplication by ~70%, it created new problems:
+The amux codebase had scattered dependency initialization across multiple locations:
 
-1. **Transitive dependencies**: The Container made every helper depend on all managers, even unused ones
-2. **Hidden complexity**: The Container pattern hid but didn't reduce the actual dependency complexity
-3. **Not Go-idiomatic**: Container/DI patterns are uncommon in Go, preferring explicit initialization
-4. **IDMapper duplication**: The Container created its own IDMapper while WorkspaceManager created another
+1. **CLI commands** had helper functions (`GetWorkspaceManager()`, `GetSessionManager()`) that each created their own manager instances
+2. **MCP server** created managers independently with its own initialization logic
+3. **Test setup** code duplicated manager creation in various test helpers
+4. **IDMapper duplication**: Both WorkspaceManager and SessionManager created separate IDMapper instances
 
-Analysis showed that most CLI commands only need 1-2 managers, not all of them. The Container forced unnecessary dependencies throughout the codebase.
+This scattered approach led to:
+- Code duplication across different parts of the codebase (~70% duplication in initialization code)
+- Inconsistent initialization patterns
+- Difficulty in testing (hard to inject test doubles)
+- Potential for initialization order bugs
+- No single source of truth for dependency relationships
+
+Analysis showed that most CLI commands only need 1-2 managers, not all of them. Creating a central dependency container would force unnecessary transitive dependencies throughout the codebase.
 
 ## Decision
 
-Replace the Container pattern with package-local setup functions:
+Implement package-local setup functions to centralize dependency initialization while maintaining clean separation:
 
 1. Each core package provides its own `SetupManager()` function
 2. These functions handle all internal dependency initialization
@@ -39,7 +46,6 @@ func SetupManager(projectRoot string) (*Manager, error)
 func SetupManagerWithWorkspace(projectRoot string, workspaceManager *workspace.Manager) (*Manager, error)
 ```
 
-This supersedes ADR 033's Container pattern.
 
 ## Consequences
 
