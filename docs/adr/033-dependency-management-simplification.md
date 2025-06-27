@@ -35,6 +35,7 @@ Implement package-local setup functions to centralize dependency initialization 
 4. The public API consists of only two main entry points:
    - `workspace.SetupManager(projectRoot)`
    - `session.SetupManager(projectRoot)`
+5. Remove all helper wrapper functions - commands call setup functions directly
 
 Implementation details:
 
@@ -57,6 +58,7 @@ func SetupManagerWithWorkspace(projectRoot string, workspaceManager *workspace.M
 - **Fixes IDMapper sharing**: WorkspaceManager now accepts external IDMapper via `NewManagerWithIDMapper()`
 - **Clearer dependencies**: Each command imports only what it needs
 - **Simpler to understand**: No DI framework or pattern to learn
+- **No unnecessary abstractions**: Removed helper wrappers that added no value
 
 ### Negative
 
