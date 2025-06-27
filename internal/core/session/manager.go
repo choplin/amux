@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/aki/amux/internal/adapters/tmux"
-	"github.com/aki/amux/internal/core/agent"
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/idmap"
 	"github.com/aki/amux/internal/core/workspace"
@@ -23,7 +22,7 @@ type Manager struct {
 	sessionsDir      string
 	fileManager      *filemanager.Manager[Info]
 	workspaceManager *workspace.Manager
-	agentManager     *agent.Manager
+	configManager    *config.Manager
 	tmuxAdapter      tmux.Adapter
 	sessions         map[string]Session
 	idMapper         *idmap.Mapper[idmap.SessionID]
@@ -34,7 +33,7 @@ type Manager struct {
 type ManagerOption func(*Manager)
 
 // NewManager creates a new session manager
-func NewManager(basePath string, workspaceManager *workspace.Manager, agentManager *agent.Manager, idMapper *idmap.Mapper[idmap.SessionID], opts ...ManagerOption) (*Manager, error) {
+func NewManager(basePath string, workspaceManager *workspace.Manager, configManager *config.Manager, idMapper *idmap.Mapper[idmap.SessionID], opts ...ManagerOption) (*Manager, error) {
 	// Ensure sessions directory exists
 	sessionsDir := filepath.Join(basePath, "sessions")
 	if err := os.MkdirAll(sessionsDir, 0o755); err != nil {
@@ -48,7 +47,7 @@ func NewManager(basePath string, workspaceManager *workspace.Manager, agentManag
 		sessionsDir:      sessionsDir,
 		fileManager:      filemanager.NewManager[Info](),
 		workspaceManager: workspaceManager,
-		agentManager:     agentManager,
+		configManager:    configManager,
 		idMapper:         idMapper,
 		tmuxAdapter:      tmuxAdapter,
 		sessions:         make(map[string]Session),
@@ -104,13 +103,13 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 
 	// Set default agent ID if not provided
 	if opts.AgentID == "" {
-		opts.AgentID = agent.DefaultAgentID
+		opts.AgentID = "default"
 	}
 
 	// Get agent configuration if available
 	var agentConfig *config.Agent
-	if m.agentManager != nil {
-		if agent, err := m.agentManager.GetAgent(opts.AgentID); err == nil {
+	if m.configManager != nil {
+		if agent, err := m.configManager.GetAgent(opts.AgentID); err == nil {
 			agentConfig = agent
 
 			// If no command specified, try to get it from agent config
@@ -373,8 +372,8 @@ func (m *Manager) createSessionFromInfo(ctx context.Context, info *Info) (Sessio
 
 		// Get agent configuration if available
 		var agentConfig *config.Agent
-		if m.agentManager != nil {
-			if agent, err := m.agentManager.GetAgent(info.AgentID); err == nil {
+		if m.configManager != nil {
+			if agent, err := m.configManager.GetAgent(info.AgentID); err == nil {
 				agentConfig = agent
 			}
 		}

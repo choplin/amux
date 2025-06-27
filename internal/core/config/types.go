@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -210,6 +211,73 @@ func remarshalParams(from, to interface{}) error {
 		return err
 	}
 	return yaml.Unmarshal(data, to)
+}
+
+// GetAgent returns the agent with the specified ID
+func (c *Config) GetAgent(id string) (*Agent, error) {
+	agent, exists := c.Agents[id]
+	if !exists {
+		return nil, fmt.Errorf("agent %q not found", id)
+	}
+	return &agent, nil
+}
+
+// GetAgentType returns the type of the specified agent
+func (c *Config) GetAgentType(id string) (AgentType, error) {
+	agent, err := c.GetAgent(id)
+	if err != nil {
+		return "", err
+	}
+	return agent.Type, nil
+}
+
+// TmuxAgent represents a type-safe tmux agent configuration
+type TmuxAgent struct {
+	*Agent
+	Params *TmuxParams
+}
+
+// GetTmuxAgent returns the agent as a TmuxAgent if it's a tmux type
+func (c *Config) GetTmuxAgent(id string) (*TmuxAgent, error) {
+	agent, err := c.GetAgent(id)
+	if err != nil {
+		return nil, err
+	}
+
+	if agent.Type != AgentTypeTmux {
+		return nil, fmt.Errorf("agent %q is not a tmux agent (type: %s)", id, agent.Type)
+	}
+
+	params, err := agent.GetTmuxParams()
+	if err != nil {
+		return nil, err
+	}
+
+	return &TmuxAgent{
+		Agent:  agent,
+		Params: params,
+	}, nil
+}
+
+// GetCommand returns the command as a string
+func (t *TmuxAgent) GetCommand() string {
+	if t.Params.Command.IsArray() {
+		return strings.Join(t.Params.Command.Array, " ")
+	}
+	return t.Params.Command.Single
+}
+
+// GetEnvironment returns the environment variables
+func (t *TmuxAgent) GetEnvironment() map[string]string {
+	if t.Environment == nil {
+		return make(map[string]string)
+	}
+	return t.Environment
+}
+
+// ShouldAutoAttach returns whether to auto-attach to the session
+func (t *TmuxAgent) ShouldAutoAttach() bool {
+	return t.Params.AutoAttach
 }
 
 // DefaultConfig returns the default Amux configuration

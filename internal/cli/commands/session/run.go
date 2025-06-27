@@ -11,7 +11,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/aki/amux/internal/cli/ui"
-	"github.com/aki/amux/internal/core/agent"
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/hooks"
 	"github.com/aki/amux/internal/core/session"
@@ -60,11 +59,17 @@ Examples:
 func runSession(cmd *cobra.Command, args []string) error {
 	agentID := args[0]
 
-	// Get all managers
+	// Get project root and load config
 	projectRoot, err := config.FindProjectRoot()
 	if err != nil {
 		return err
 	}
+	cfg, err := config.LoadProjectConfig(projectRoot)
+	if err != nil {
+		return err
+	}
+
+	// Get managers
 	wsManager, err := workspace.SetupManager(projectRoot)
 	if err != nil {
 		return err
@@ -73,8 +78,6 @@ func runSession(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	configManager := config.NewManager(projectRoot)
-	agentManager := agent.NewManager(configManager)
 
 	// Generate session ID upfront
 	sessionID := session.GenerateID()
@@ -95,24 +98,41 @@ func runSession(cmd *cobra.Command, args []string) error {
 		ui.Success("Workspace created successfully: %s", ws.Name)
 	}
 
-	// Get agent configuration
-	agentConfig, _ := agentManager.GetAgent(agentID)
+	// Get agent configuration with type safety
+	var command string
+	var env map[string]string
+	var sessionType session.Type
+	var shouldAutoAttach bool
 
-	// Determine command to use
-	command := runCommand
-	if command == "" {
-		// Use agent's configured command or fall back to agent ID
-		command, _ = agentManager.GetDefaultCommand(agentID)
-	}
+	// Try to get agent as TmuxAgent first
+	tmuxAgent, err := cfg.GetTmuxAgent(agentID)
+	if err == nil {
+		// It's a tmux agent
+		sessionType = session.TypeTmux
+		shouldAutoAttach = tmuxAgent.ShouldAutoAttach()
 
-	// Merge environment variables
-	env := make(map[string]string)
-
-	// First, add agent's default environment
-	if agentConfig != nil && agentConfig.Environment != nil {
-		for k, v := range agentConfig.Environment {
-			env[k] = v
+		// Determine command to use
+		command = runCommand
+		if command == "" {
+			command = tmuxAgent.GetCommand()
 		}
+
+		// Get environment variables
+		env = tmuxAgent.GetEnvironment()
+	} else {
+		// Try generic agent for future types
+		agent, err := cfg.GetAgent(agentID)
+		if err != nil {
+			return fmt.Errorf("agent %q not found", agentID)
+		}
+
+		// Default to tmux type for now
+		sessionType = session.TypeTmux
+		command = runCommand
+		if command == "" {
+			command = agentID // fallback to agent ID
+		}
+		env = agent.Environment
 	}
 
 	// Then, override with command-line environment
@@ -124,16 +144,16 @@ func runSession(cmd *cobra.Command, args []string) error {
 		env[parts[0]] = parts[1]
 	}
 
-	// Determine session type from agent config
-	sessionType := session.TypeTmux // Default
-	if agentConfig != nil {
-		// Convert agent type to session type
-		switch agentConfig.Type {
-		case config.AgentTypeTmux:
-			sessionType = session.TypeTmux
-		case config.AgentTypeClaudeCode, config.AgentTypeAPI:
-			// Future: add more type mappings as needed
+	// Override or merge command-line environment variables
+	if env == nil {
+		env = make(map[string]string)
+	}
+	for _, envVar := range runEnv {
+		parts := strings.SplitN(envVar, "=", 2)
+		if len(parts) != 2 {
+			return fmt.Errorf("invalid environment variable format: %s (expected KEY=VALUE)", envVar)
 		}
+		env[parts[0]] = parts[1]
 	}
 
 	// Create session
@@ -179,14 +199,6 @@ func runSession(cmd *cobra.Command, args []string) error {
 	// Handle auto-attach for tmux sessions
 	info := sess.Info()
 	if info.TmuxSession != "" {
-		// Check if we should auto-attach based on agent config
-		shouldAutoAttach := false
-		if agentConfig != nil {
-			if tmuxParams, err := agentConfig.GetTmuxParams(); err == nil && tmuxParams != nil {
-				shouldAutoAttach = tmuxParams.AutoAttach
-			}
-		}
-
 		// Check if we can auto-attach (TTY available and autoAttach enabled)
 		if shouldAutoAttach && term.IsTerminal(os.Stdin.Fd()) {
 			ui.OutputLine("\nAuto-attaching to session...")

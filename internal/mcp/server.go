@@ -12,7 +12,6 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
-	"github.com/aki/amux/internal/core/agent"
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/workspace"
@@ -28,7 +27,6 @@ type ServerV2 struct {
 	configManager    *config.Manager
 	workspaceManager *workspace.Manager
 	sessionManager   *session.Manager
-	agentManager     *agent.Manager
 }
 
 // NewServerV2 creates a new MCP server using mcp-go
@@ -45,9 +43,6 @@ func NewServerV2(configManager *config.Manager, transport string, httpConfig *co
 		return nil, fmt.Errorf("failed to create session manager: %w", err)
 	}
 
-	// Create agent manager
-	agentManager := agent.NewManager(configManager)
-
 	// Create MCP server
 	mcpServer := server.NewMCPServer(
 		"amux",
@@ -62,7 +57,6 @@ func NewServerV2(configManager *config.Manager, transport string, httpConfig *co
 		configManager:    configManager,
 		workspaceManager: workspaceManager,
 		sessionManager:   sessionManager,
-		agentManager:     agentManager,
 	}
 
 	// Register all tools

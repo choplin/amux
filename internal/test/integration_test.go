@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/aki/amux/internal/adapters/tmux"
-	"github.com/aki/amux/internal/core/agent"
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/workspace"
@@ -72,11 +71,8 @@ func TestIntegration_FullWorkflow(t *testing.T) {
 
 	// Context functionality has been deprecated in favor of storage directories
 
-	// Create agent manager
-	agentManager := agent.NewManager(configManager)
-
 	// Create session manager with mock adapter
-	sessionManager, err := session.NewManager(configManager.GetAmuxDir(), wsManager, agentManager, nil)
+	sessionManager, err := session.NewManager(configManager.GetAmuxDir(), wsManager, configManager, nil)
 	if err != nil {
 		t.Fatalf("Failed to create session manager: %v", err)
 	}
@@ -86,11 +82,11 @@ func TestIntegration_FullWorkflow(t *testing.T) {
 	sessionManager.SetTmuxAdapter(mockAdapter)
 
 	// Get agent configuration (for debugging if needed)
-	_, _ = agentManager.GetAgent("test-agent")
+	_, _ = configManager.GetAgent("test-agent")
 
 	// Get command and environment from agent config
-	command, _ := agentManager.GetDefaultCommand("test-agent")
-	env, _ := agentManager.GetEnvironment("test-agent")
+	command := "test-command"
+	env := make(map[string]string)
 
 	// Create a session with agent configuration
 	opts := session.Options{
@@ -225,11 +221,8 @@ func TestIntegration_MultipleAgents(t *testing.T) {
 		t.Fatalf("Failed to create workspace manager: %v", err)
 	}
 
-	// Create agent manager
-	agentManager := agent.NewManager(configManager)
-
 	// Create session manager with mock
-	sessionManager, err := session.NewManager(configManager.GetAmuxDir(), wsManager, agentManager, nil)
+	sessionManager, err := session.NewManager(configManager.GetAmuxDir(), wsManager, configManager, nil)
 	if err != nil {
 		t.Fatalf("Failed to create session manager: %v", err)
 	}

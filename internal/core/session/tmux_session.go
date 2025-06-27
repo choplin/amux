@@ -169,9 +169,15 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 
 	// Merge environment variables:
 	// 1. AMUX standard environment variables
-	// 2. Session environment (from agent config and CLI -e)
+	// 2. Agent environment (from agent config)
+	// 3. Session environment (from CLI -e)
+	agentEnv := make(map[string]string)
+	if s.agentConfig != nil {
+		agentEnv = s.agentConfig.Environment
+	}
 	environment := mergeEnvironment(
 		getAMUXEnvironment(s),
+		agentEnv,
 		s.info.Environment,
 	)
 

@@ -4,7 +4,6 @@ package session
 import (
 	"fmt"
 
-	"github.com/aki/amux/internal/core/agent"
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/idmap"
 	"github.com/aki/amux/internal/core/workspace"
@@ -28,14 +27,11 @@ func SetupManager(projectRoot string) (*Manager, error) {
 		return nil, fmt.Errorf("failed to create workspace manager: %w", err)
 	}
 
-	// Initialize agent manager
-	agentManager := agent.NewManager(configManager)
-
 	// Create session manager
 	sessionManager, err := NewManager(
 		configManager.GetAmuxDir(),
 		workspaceManager,
-		agentManager,
+		configManager,
 		idMapper,
 	)
 	if err != nil {

@@ -3,7 +3,6 @@ package session
 import (
 	"fmt"
 
-	"github.com/aki/amux/internal/core/agent"
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/idmap"
 	"github.com/aki/amux/internal/core/workspace"
@@ -25,11 +24,8 @@ func (f *Factory) CreateManager(configManager *config.Manager, workspaceManager 
 		return nil, fmt.Errorf("failed to create session ID mapper: %w", err)
 	}
 
-	// Create agent manager
-	agentManager := agent.NewManager(configManager)
-
 	// Create session manager
-	manager, err := NewManager(configManager.GetAmuxDir(), workspaceManager, agentManager, idMapper)
+	manager, err := NewManager(configManager.GetAmuxDir(), workspaceManager, configManager, idMapper)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session manager: %w", err)
 	}
@@ -42,8 +38,8 @@ func (f *Factory) CreateManager(configManager *config.Manager, workspaceManager 
 func (f *Factory) CreateManagerWithDependencies(
 	basePath string,
 	workspaceManager *workspace.Manager,
-	agentManager *agent.Manager,
+	configManager *config.Manager,
 	idMapper *idmap.Mapper[idmap.SessionID],
 ) (*Manager, error) {
-	return NewManager(basePath, workspaceManager, agentManager, idMapper)
+	return NewManager(basePath, workspaceManager, configManager, idMapper)
 }
