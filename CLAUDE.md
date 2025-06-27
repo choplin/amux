@@ -50,6 +50,48 @@ amux/
 
 ## Development Standards
 
+### Interface Parity Principle (CLI/MCP同等性の原則)
+
+**重要**: すべての機能はCLIとMCP両方から同じように動作する必要があります。
+
+#### 実装ガイドライン
+
+1. **ビジネスロジックの配置**
+   - すべてのビジネスロジックは適切なマネージャー層に実装
+   - CLIコマンドとMCPツールは薄いラッパーとして実装
+   - 同じマネージャーメソッドを呼ぶことで機能の一貫性を保証
+
+2. **避けるべきパターン**
+   - ❌ CLIコマンド内でのビジネスロジック実装
+   - ❌ MCP専用またはCLI専用の機能実装
+   - ❌ 同じロジックの重複実装
+
+3. **現在の問題点** (要修正)
+   - フック実行: CLIのみで実行され、MCP経由では実行されない
+   - ストレージ操作: CLIとMCPで同じロジックが重複
+   - 自動ワークスペース作成: CLI専用機能でMCP未対応
+
+4. **正しい実装例**
+   ```go
+   // ✅ Good: マネージャーに実装
+   func (m *SessionManager) CreateSession(opts Options) {
+       // フック実行もここで
+       if err := m.executeHooks(hooks.EventSessionStart); err != nil {
+           // ...
+       }
+   }
+
+   // CLI: 薄いラッパー
+   func runSession(cmd *cobra.Command, args []string) error {
+       return sessionManager.CreateSession(opts)
+   }
+
+   // MCP: 同じく薄いラッパー
+   func (s *Server) handleSessionRun(req Request) (*Result, error) {
+       return s.sessionManager.CreateSession(opts)
+   }
+   ```
+
 ### Code Style Rules
 
 1. **Go Code Formatting**: Use `goimports` and `gofumpt` via golangci-lint for consistent formatting
