@@ -146,8 +146,11 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 					}
 				}
 			}
+		case config.AgentTypeClaudeCode, config.AgentTypeAPI:
+			// These agent types are not yet implemented
+			return nil, fmt.Errorf("agent type %q is not yet implemented", agent.Type)
 		default:
-			return nil, fmt.Errorf("unsupported agent type: %s", agent.Type)
+			return nil, fmt.Errorf("unknown agent type %q", agent.Type)
 		}
 	}
 
@@ -212,7 +215,7 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 
 	// Execute hooks unless disabled
 	if !opts.NoHooks {
-		if err := m.executeSessionHooks(sess, ws, hooks.EventSessionStart); err != nil {
+		if err := m.executeSessionHooks(ctx, sess, ws, hooks.EventSessionStart); err != nil {
 			// Log error but don't fail session creation
 			// This matches the current CLI behavior
 			slog.Error("hook execution failed", "error", err)
@@ -643,7 +646,7 @@ func (m *Manager) StopSession(ctx context.Context, sess Session, noHooks bool) e
 
 	// Execute session stop hooks (before stopping)
 	if ws != nil && !noHooks {
-		if err := m.executeSessionHooks(sess, ws, hooks.EventSessionStop); err != nil {
+		if err := m.executeSessionHooks(ctx, sess, ws, hooks.EventSessionStop); err != nil {
 			// Log error but continue with stop
 			slog.Error("hook execution failed", "error", err)
 		}
@@ -654,7 +657,7 @@ func (m *Manager) StopSession(ctx context.Context, sess Session, noHooks bool) e
 }
 
 // executeSessionHooks executes hooks for session events
-func (m *Manager) executeSessionHooks(sess Session, ws *workspace.Workspace, event hooks.Event) error {
+func (m *Manager) executeSessionHooks(ctx context.Context, sess Session, ws *workspace.Workspace, event hooks.Event) error {
 	if ws == nil {
 		return fmt.Errorf("session hooks require workspace assignment")
 	}
@@ -711,5 +714,5 @@ func (m *Manager) executeSessionHooks(sess Session, ws *workspace.Workspace, eve
 
 	// Execute hooks in workspace directory
 	executor := hooks.NewExecutor(configDir, env).WithWorkingDir(ws.Path)
-	return executor.ExecuteHooks(event, eventHooks)
+	return executor.ExecuteHooks(ctx, event, eventHooks)
 }

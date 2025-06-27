@@ -2,6 +2,7 @@ package hooks_test
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -27,7 +28,7 @@ func TestExecutor_ExecuteHooks(t *testing.T) {
 		var output bytes.Buffer
 		executor := hooks.NewExecutor(tmpDir, nil).WithOutput(&output)
 
-		err := executor.ExecuteHooks(hooks.EventWorkspaceCreate, []hooks.Hook{hook})
+		err := executor.ExecuteHooks(context.Background(), hooks.EventWorkspaceCreate, []hooks.Hook{hook})
 		require.NoError(t, err)
 
 		assert.Contains(t, output.String(), "hello")
@@ -50,7 +51,7 @@ func TestExecutor_ExecuteHooks(t *testing.T) {
 		var output bytes.Buffer
 		executor := hooks.NewExecutor(tmpDir, nil).WithOutput(&output)
 
-		err = executor.ExecuteHooks(hooks.EventWorkspaceCreate, []hooks.Hook{hook})
+		err = executor.ExecuteHooks(context.Background(), hooks.EventWorkspaceCreate, []hooks.Hook{hook})
 		if runtime.GOOS == "windows" {
 			// Scripts might not work on Windows in CI
 			t.Skip("Skipping script test on Windows")
@@ -76,7 +77,7 @@ func TestExecutor_ExecuteHooks(t *testing.T) {
 
 		executor := hooks.NewExecutor(tmpDir, nil).WithOutput(&bytes.Buffer{})
 
-		err := executor.ExecuteHooks(hooks.EventWorkspaceCreate, []hooks.Hook{hook})
+		err := executor.ExecuteHooks(context.Background(), hooks.EventWorkspaceCreate, []hooks.Hook{hook})
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed")
 	})
@@ -106,7 +107,7 @@ func TestExecutor_ExecuteHooks(t *testing.T) {
 		var output bytes.Buffer
 		executor := hooks.NewExecutor(tmpDir, nil).WithOutput(&output)
 
-		err := executor.ExecuteHooks(hooks.EventWorkspaceCreate, testHooks)
+		err := executor.ExecuteHooks(context.Background(), hooks.EventWorkspaceCreate, testHooks)
 		require.NoError(t, err)
 
 		assert.Contains(t, output.String(), "success")
@@ -132,7 +133,7 @@ func TestExecutor_ExecuteHooks(t *testing.T) {
 		var output bytes.Buffer
 		executor := hooks.NewExecutor(tmpDir, nil).WithOutput(&output)
 
-		err = executor.ExecuteHooks(hooks.EventWorkspaceCreate, []hooks.Hook{hook})
+		err = executor.ExecuteHooks(context.Background(), hooks.EventWorkspaceCreate, []hooks.Hook{hook})
 		if runtime.GOOS == "windows" {
 			// Scripts might not work on Windows in CI
 			t.Skip("Skipping env var test on Windows")
@@ -155,7 +156,7 @@ func TestExecutor_ExecuteHooks(t *testing.T) {
 			WithOutput(&output).
 			WithDryRun(true)
 
-		err := executor.ExecuteHooks(hooks.EventWorkspaceCreate, []hooks.Hook{hook})
+		err := executor.ExecuteHooks(context.Background(), hooks.EventWorkspaceCreate, []hooks.Hook{hook})
 		require.NoError(t, err)
 
 		outputStr := output.String()

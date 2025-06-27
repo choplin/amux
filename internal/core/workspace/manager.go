@@ -4,6 +4,7 @@ package workspace
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
@@ -178,10 +179,11 @@ func (m *Manager) Create(ctx context.Context, opts CreateOptions) (*Workspace, e
 
 	// Execute hooks unless disabled
 	if !opts.NoHooks {
-		if err := m.executeHooks(workspace, hooks.EventWorkspaceCreate); err != nil {
+		if err := m.executeHooks(ctx, workspace, hooks.EventWorkspaceCreate); err != nil {
 			// Log error but don't fail workspace creation
 			// This matches the current CLI behavior
-			return workspace, nil
+			// Just log the error
+			slog.Error("hook execution failed", "error", err)
 		}
 	}
 
@@ -367,9 +369,10 @@ func (m *Manager) Remove(ctx context.Context, identifier Identifier, opts Remove
 
 	// Execute hooks before removal unless disabled
 	if !opts.NoHooks {
-		if err := m.executeHooks(workspace, hooks.EventWorkspaceRemove); err != nil {
+		if err := m.executeHooks(ctx, workspace, hooks.EventWorkspaceRemove); err != nil {
 			// Log error but continue with removal
 			// This matches the current CLI behavior
+			slog.Error("hook execution failed", "error", err)
 		}
 	}
 
@@ -530,7 +533,7 @@ func (m *Manager) saveWorkspace(ctx context.Context, workspace *Workspace) error
 }
 
 // executeHooks runs hooks for the given workspace event
-func (m *Manager) executeHooks(ws *Workspace, event hooks.Event) error {
+func (m *Manager) executeHooks(ctx context.Context, ws *Workspace, event hooks.Event) error {
 	configDir := m.configManager.GetAmuxDir()
 
 	// Load hooks configuration
@@ -571,7 +574,7 @@ func (m *Manager) executeHooks(ws *Workspace, event hooks.Event) error {
 
 	// Execute hooks in workspace directory
 	executor := hooks.NewExecutor(configDir, env).WithWorkingDir(ws.Path)
-	return executor.ExecuteHooks(event, eventHooks)
+	return executor.ExecuteHooks(ctx, event, eventHooks)
 }
 
 // generateID generates a unique workspace ID

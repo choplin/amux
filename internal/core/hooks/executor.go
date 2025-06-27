@@ -49,13 +49,13 @@ func (e *Executor) WithWorkingDir(dir string) *Executor {
 }
 
 // ExecuteHooks executes all hooks for the given event
-func (e *Executor) ExecuteHooks(event Event, hooks []Hook) error {
+func (e *Executor) ExecuteHooks(ctx context.Context, event Event, hooks []Hook) error {
 	if len(hooks) == 0 {
 		return nil
 	}
 
 	for i, hook := range hooks {
-		result, err := e.executeHook(&hook, i+1, len(hooks))
+		result, err := e.executeHook(ctx, &hook, i+1, len(hooks))
 		if err != nil {
 			switch hook.OnError {
 			case ErrorStrategyFail:
@@ -76,7 +76,7 @@ func (e *Executor) ExecuteHooks(event Event, hooks []Hook) error {
 }
 
 // executeHook executes a single hook
-func (e *Executor) executeHook(hook *Hook, index, total int) (*ExecutionResult, error) {
+func (e *Executor) executeHook(ctx context.Context, hook *Hook, index, total int) (*ExecutionResult, error) {
 	// Determine what to execute
 	var cmdStr string
 	if hook.Command != "" {
@@ -109,7 +109,7 @@ func (e *Executor) executeHook(hook *Hook, index, total int) (*ExecutionResult, 
 	}
 
 	// Create context with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	// Parse command
