@@ -59,12 +59,8 @@ Examples:
 func runSession(cmd *cobra.Command, args []string) error {
 	agentID := args[0]
 
-	// Get project root and load config
+	// Get project root
 	projectRoot, err := config.FindProjectRoot()
-	if err != nil {
-		return err
-	}
-	cfg, err := config.LoadProjectConfig(projectRoot)
 	if err != nil {
 		return err
 	}
@@ -79,10 +75,7 @@ func runSession(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Generate session ID upfront
-	sessionID := session.GenerateID()
-
-	// Get or select workspace
+	// Get or create workspace
 	var ws *workspace.Workspace
 	if runWorkspace != "" {
 		ws, err = wsManager.ResolveWorkspace(cmd.Context(), workspace.Identifier(runWorkspace))
@@ -90,7 +83,8 @@ func runSession(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to resolve workspace: %w", err)
 		}
 	} else {
-		// Auto-create a new workspace using session ID
+		// Auto-create a new workspace
+		sessionID := session.GenerateID()
 		ws, err = createAutoWorkspace(cmd.Context(), wsManager, string(sessionID), runName, runDescription)
 		if err != nil {
 			return fmt.Errorf("failed to create auto-workspace: %w", err)
@@ -98,56 +92,8 @@ func runSession(cmd *cobra.Command, args []string) error {
 		ui.Success("Workspace created successfully: %s", ws.Name)
 	}
 
-	// Get agent configuration with type safety
-	var command string
-	var env map[string]string
-	var sessionType session.Type
-	var shouldAutoAttach bool
-
-	// Try to get agent as TmuxAgent first
-	tmuxAgent, err := cfg.GetTmuxAgent(agentID)
-	if err == nil {
-		// It's a tmux agent
-		sessionType = session.TypeTmux
-		shouldAutoAttach = tmuxAgent.ShouldAutoAttach()
-
-		// Determine command to use
-		command = runCommand
-		if command == "" {
-			command = tmuxAgent.GetCommand()
-		}
-
-		// Get environment variables
-		env = tmuxAgent.GetEnvironment()
-	} else {
-		// Try generic agent for future types
-		agent, err := cfg.GetAgent(agentID)
-		if err != nil {
-			return fmt.Errorf("agent %q not found", agentID)
-		}
-
-		// Default to tmux type for now
-		sessionType = session.TypeTmux
-		command = runCommand
-		if command == "" {
-			command = agentID // fallback to agent ID
-		}
-		env = agent.Environment
-	}
-
-	// Then, override with command-line environment
-	for _, envVar := range runEnv {
-		parts := strings.SplitN(envVar, "=", 2)
-		if len(parts) != 2 {
-			return fmt.Errorf("invalid environment variable format: %s (expected KEY=VALUE)", envVar)
-		}
-		env[parts[0]] = parts[1]
-	}
-
-	// Override or merge command-line environment variables
-	if env == nil {
-		env = make(map[string]string)
-	}
+	// Parse environment variables from CLI
+	env := make(map[string]string)
 	for _, envVar := range runEnv {
 		parts := strings.SplitN(envVar, "=", 2)
 		if len(parts) != 2 {
@@ -158,12 +104,10 @@ func runSession(cmd *cobra.Command, args []string) error {
 
 	// Create session
 	opts := session.Options{
-		ID:            sessionID,
-		Type:          sessionType,
 		WorkspaceID:   ws.ID,
 		AgentID:       agentID,
-		Command:       command,
-		Environment:   env,
+		Command:       runCommand, // Optional override from CLI
+		Environment:   env,        // Environment variables from CLI
 		InitialPrompt: runInitialPrompt,
 		Name:          runSessionName,
 		Description:   runSessionDescription,
@@ -196,20 +140,19 @@ func runSession(cmd *cobra.Command, args []string) error {
 		// Don't fail the session start, just warn
 	}
 
-	// Handle auto-attach for tmux sessions
+	// Handle auto-attach for tmux sessions if applicable
 	info := sess.Info()
-	if info.TmuxSession != "" {
-		// Check if we can auto-attach (TTY available and autoAttach enabled)
-		if shouldAutoAttach && term.IsTerminal(os.Stdin.Fd()) {
-			ui.OutputLine("\nAuto-attaching to session...")
-			tmuxCmd := exec.Command("tmux", "attach-session", "-t", info.TmuxSession)
-			tmuxCmd.Stdin = os.Stdin
-			tmuxCmd.Stdout = os.Stdout
-			tmuxCmd.Stderr = os.Stderr
-			return tmuxCmd.Run()
-		}
+	if info.TmuxSession != "" && info.ShouldAutoAttach && term.IsTerminal(os.Stdin.Fd()) {
+		ui.OutputLine("\nAuto-attaching to session...")
+		tmuxCmd := exec.Command("tmux", "attach-session", "-t", info.TmuxSession)
+		tmuxCmd.Stdin = os.Stdin
+		tmuxCmd.Stdout = os.Stdout
+		tmuxCmd.Stderr = os.Stderr
+		return tmuxCmd.Run()
+	}
 
-		// Show manual attach instructions
+	// Show attach instructions for tmux sessions
+	if info.TmuxSession != "" {
 		ui.OutputLine("\nTo attach to this session, run:")
 		ui.OutputLine("  tmux attach-session -t %s", info.TmuxSession)
 		attachID := sess.ID()

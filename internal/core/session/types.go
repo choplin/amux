@@ -109,6 +109,7 @@ type Info struct {
 	StateDir         string            `yaml:"state_dir,omitempty"`
 	Name             string            `yaml:"name,omitempty"`
 	Description      string            `yaml:"description,omitempty"`
+	ShouldAutoAttach bool              `yaml:"-"` // Derived from agent config, not persisted
 }
 
 // Session represents an active or inactive agent session

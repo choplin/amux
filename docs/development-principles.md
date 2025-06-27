@@ -7,12 +7,14 @@
 **Purpose**: Thin layer for CLI interaction only.
 
 **Responsibilities**:
+
 - Parse command-line arguments and flags
 - Call business logic methods
 - Display results using UI helpers
 - Handle CLI-specific errors (e.g., wrong number of arguments)
 
 **What NOT to do**:
+
 - Business logic
 - Direct file I/O
 - Complex data transformations
@@ -20,6 +22,7 @@
 - Decision making based on data types or states
 
 **Example**:
+
 ```go
 // GOOD: Thin command that delegates to business logic
 func runSession(cmd *cobra.Command, args []string) error {
@@ -65,17 +68,20 @@ func runSession(cmd *cobra.Command, args []string) error {
 **Purpose**: Core application logic and domain models.
 
 **Responsibilities**:
+
 - Implement business rules
 - Manage state and lifecycle
 - Coordinate between different components
 - Make decisions based on data
 
 **Principles**:
+
 - Managers handle complex operations and coordination
 - Types/models are simple data structures with minimal methods
 - Configuration is read-only static data
 
 **Example**:
+
 ```go
 // session.Manager handles all session creation logic
 func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, error) {
@@ -100,17 +106,20 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 **Purpose**: Read and provide access to configuration data.
 
 **Responsibilities**:
+
 - Load configuration from files
 - Validate configuration
 - Provide type-safe access to configuration
 - Cache configuration in memory
 
 **What NOT to do**:
+
 - Execute business logic
 - Make decisions (beyond validation)
 - Manage lifecycle of other components
 
 **Example**:
+
 ```go
 // config.Manager provides access to configuration
 func (m *Manager) GetAgent(id string) (*Agent, error) {
@@ -153,6 +162,7 @@ func (m *Manager) GetTmuxAgent(id string) (*TmuxAgent, error) {
 ### 2. Static vs Dynamic
 
 - **Static**: Configuration files, agent definitions
+
   - Read once, used many times
   - No state management needed
   - Simple getters are sufficient
@@ -165,12 +175,14 @@ func (m *Manager) GetTmuxAgent(id string) (*TmuxAgent, error) {
 ### 3. Manager Pattern
 
 Use managers when you need:
+
 - State management
 - Lifecycle management
 - Coordination between components
 - Complex operations
 
 Don't use managers for:
+
 - Simple data access (use direct getters)
 - Static configuration (use simple loaders)
 - Pure calculations (use functions)

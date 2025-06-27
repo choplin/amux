@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
@@ -106,23 +105,48 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 		opts.AgentID = "default"
 	}
 
-	// Get agent configuration if available
+	// Get agent configuration
 	var agentConfig *config.Agent
+	var shouldAutoAttach bool
 	if m.configManager != nil {
-		if agent, err := m.configManager.GetAgent(opts.AgentID); err == nil {
-			agentConfig = agent
+		agent, err := m.configManager.GetAgent(opts.AgentID)
+		if err != nil {
+			return nil, fmt.Errorf("agent %q not found: %w", opts.AgentID, err)
+		}
+		agentConfig = agent
 
-			// If no command specified, try to get it from agent config
-			if opts.Command == "" && agent.Type == config.AgentTypeTmux {
-				if params, err := agent.GetTmuxParams(); err == nil {
-					if params.Command.IsArray() {
-						// For array commands, join with spaces
-						opts.Command = strings.Join(params.Command.Array, " ")
-					} else if params.Command.Single != "" {
-						opts.Command = params.Command.Single
+		// Determine session type from agent type
+		switch agent.Type {
+		case config.AgentTypeTmux:
+			sessionType = TypeTmux
+
+			// Get tmux-specific configuration
+			cfg, err := m.configManager.Load()
+			if err != nil {
+				return nil, fmt.Errorf("failed to load config: %w", err)
+			}
+
+			if tmuxAgent, err := cfg.GetTmuxAgent(opts.AgentID); err == nil {
+				shouldAutoAttach = tmuxAgent.ShouldAutoAttach()
+
+				// If no command specified, use agent's default
+				if opts.Command == "" {
+					opts.Command = tmuxAgent.GetCommand()
+				}
+
+				// Merge agent environment with session environment
+				// Session environment (from CLI) takes precedence
+				if opts.Environment == nil {
+					opts.Environment = make(map[string]string)
+				}
+				for k, v := range tmuxAgent.GetEnvironment() {
+					if _, exists := opts.Environment[k]; !exists {
+						opts.Environment[k] = v
 					}
 				}
 			}
+		default:
+			return nil, fmt.Errorf("unsupported agent type: %s", agent.Type)
 		}
 	}
 
@@ -149,14 +173,15 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 		ActivityTracking: ActivityTracking{
 			LastOutputTime: now,
 		},
-		Command:       opts.Command,
-		Environment:   opts.Environment,
-		InitialPrompt: opts.InitialPrompt,
-		CreatedAt:     now,
-		StoragePath:   storagePath,
-		StateDir:      stateDir,
-		Name:          opts.Name,
-		Description:   opts.Description,
+		Command:          opts.Command,
+		Environment:      opts.Environment,
+		InitialPrompt:    opts.InitialPrompt,
+		CreatedAt:        now,
+		StoragePath:      storagePath,
+		StateDir:         stateDir,
+		Name:             opts.Name,
+		Description:      opts.Description,
+		ShouldAutoAttach: shouldAutoAttach,
 	}
 
 	// Save session info to file
