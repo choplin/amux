@@ -26,7 +26,7 @@ type Manager struct {
 	agentManager     *agent.Manager
 	tmuxAdapter      tmux.Adapter
 	sessions         map[string]Session
-	idMapper         *idmap.IDMapper
+	idMapper         *idmap.Mapper[idmap.SessionID]
 	mu               sync.RWMutex
 }
 
@@ -34,7 +34,7 @@ type Manager struct {
 type ManagerOption func(*Manager)
 
 // NewManager creates a new session manager
-func NewManager(basePath string, workspaceManager *workspace.Manager, agentManager *agent.Manager, idMapper *idmap.IDMapper, opts ...ManagerOption) (*Manager, error) {
+func NewManager(basePath string, workspaceManager *workspace.Manager, agentManager *agent.Manager, idMapper *idmap.Mapper[idmap.SessionID], opts ...ManagerOption) (*Manager, error) {
 	// Ensure sessions directory exists
 	sessionsDir := filepath.Join(basePath, "sessions")
 	if err := os.MkdirAll(sessionsDir, 0o755); err != nil {
@@ -167,7 +167,7 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 
 	// Generate and assign index
 	if m.idMapper != nil {
-		index, err := m.idMapper.AddSession(info.ID)
+		index, err := m.idMapper.Add(idmap.SessionID(info.ID))
 		if err != nil {
 			// Don't fail if index generation fails
 			info.Index = ""
@@ -239,7 +239,7 @@ func (m *Manager) ListSessions(ctx context.Context) ([]Session, error) {
 
 		// Populate short ID
 		if m.idMapper != nil {
-			if index, exists := m.idMapper.GetSessionIndex(info.ID); exists {
+			if index, exists := m.idMapper.GetIndex(idmap.SessionID(info.ID)); exists {
 				info.Index = index
 			}
 		}
@@ -271,7 +271,12 @@ func (m *Manager) ListSessions(ctx context.Context) ([]Session, error) {
 
 	// Reconcile index state with actual sessions
 	if m.idMapper != nil {
-		if orphanedCount, err := m.idMapper.ReconcileSessions(existingIDs); err == nil && orphanedCount > 0 {
+		// Convert string IDs to SessionID type
+		sessionIDs := make([]idmap.SessionID, len(existingIDs))
+		for i, id := range existingIDs {
+			sessionIDs[i] = idmap.SessionID(id)
+		}
+		if orphanedCount, err := m.idMapper.Reconcile(sessionIDs); err == nil && orphanedCount > 0 {
 			slog.Debug("Cleaned up orphaned session indices", "count", orphanedCount)
 		}
 	}
@@ -311,7 +316,7 @@ func (m *Manager) Remove(ctx context.Context, id ID) error {
 
 	// Remove short ID mapping
 	if m.idMapper != nil {
-		_ = m.idMapper.RemoveSession(string(id))
+		_ = m.idMapper.Remove(idmap.SessionID(id))
 	}
 
 	// Remove from cache
@@ -401,8 +406,8 @@ func (m *Manager) ResolveSession(ctx context.Context, identifier Identifier) (Se
 
 	// 2. Try as index (short ID)
 	if m.idMapper != nil {
-		if fullID, exists := m.idMapper.GetSessionFull(string(identifier)); exists {
-			session, err := m.Get(ctx, ID(fullID))
+		if fullID, exists := m.idMapper.GetFull(string(identifier)); exists {
+			session, err := m.Get(ctx, ID(string(fullID)))
 			if err == nil {
 				return session, nil
 			}

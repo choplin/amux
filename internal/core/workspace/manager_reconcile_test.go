@@ -31,7 +31,7 @@ func TestManager_ListReconciliation(t *testing.T) {
 	}
 
 	// Create ID mapper to check indices
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewWorkspaceIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		t.Fatalf("Failed to create ID mapper: %v", err)
 	}
@@ -63,13 +63,13 @@ func TestManager_ListReconciliation(t *testing.T) {
 	}
 
 	// Verify all have indices
-	if _, exists := idMapper.GetWorkspaceIndex(ws1.ID); !exists {
+	if _, exists := idMapper.GetIndex(idmap.WorkspaceID(ws1.ID)); !exists {
 		t.Error("Expected ws1 to have an index")
 	}
-	if _, exists := idMapper.GetWorkspaceIndex(ws2.ID); !exists {
+	if _, exists := idMapper.GetIndex(idmap.WorkspaceID(ws2.ID)); !exists {
 		t.Error("Expected ws2 to have an index")
 	}
-	if _, exists := idMapper.GetWorkspaceIndex(ws3.ID); !exists {
+	if _, exists := idMapper.GetIndex(idmap.WorkspaceID(ws3.ID)); !exists {
 		t.Error("Expected ws3 to have an index")
 	}
 
@@ -92,15 +92,15 @@ func TestManager_ListReconciliation(t *testing.T) {
 	}
 
 	// Verify ws2's index was cleaned up
-	if _, exists := idMapper.GetWorkspaceIndex(ws2.ID); exists {
+	if _, exists := idMapper.GetIndex(idmap.WorkspaceID(ws2.ID)); exists {
 		t.Error("Expected ws2 index to be removed after reconciliation")
 	}
 
 	// Verify ws1 and ws3 still have indices
-	if _, exists := idMapper.GetWorkspaceIndex(ws1.ID); !exists {
+	if _, exists := idMapper.GetIndex(idmap.WorkspaceID(ws1.ID)); !exists {
 		t.Error("Expected ws1 to still have an index")
 	}
-	if _, exists := idMapper.GetWorkspaceIndex(ws3.ID); !exists {
+	if _, exists := idMapper.GetIndex(idmap.WorkspaceID(ws3.ID)); !exists {
 		t.Error("Expected ws3 to still have an index")
 	}
 
@@ -128,7 +128,7 @@ func TestManager_GetReconciliation(t *testing.T) {
 	}
 
 	// Create ID mapper to check indices
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewWorkspaceIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		t.Fatalf("Failed to create ID mapper: %v", err)
 	}
@@ -144,7 +144,7 @@ func TestManager_GetReconciliation(t *testing.T) {
 	}
 
 	// Verify it has an index
-	if _, exists := idMapper.GetWorkspaceIndex(ws.ID); !exists {
+	if _, exists := idMapper.GetIndex(idmap.WorkspaceID(ws.ID)); !exists {
 		t.Error("Expected workspace to have an index")
 	}
 
@@ -162,7 +162,7 @@ func TestManager_GetReconciliation(t *testing.T) {
 	}
 
 	// Verify the index still exists (Get does not reconcile)
-	if _, exists := idMapper.GetWorkspaceIndex(ws.ID); !exists {
+	if _, exists := idMapper.GetIndex(idmap.WorkspaceID(ws.ID)); !exists {
 		t.Error("Expected workspace index to still exist after failed Get (reconciliation only happens during List)")
 	}
 
@@ -173,7 +173,7 @@ func TestManager_GetReconciliation(t *testing.T) {
 	}
 
 	// Now the index should be cleaned up
-	if _, exists := idMapper.GetWorkspaceIndex(ws.ID); exists {
+	if _, exists := idMapper.GetIndex(idmap.WorkspaceID(ws.ID)); exists {
 		t.Error("Expected workspace index to be removed after List reconciliation")
 	}
 }

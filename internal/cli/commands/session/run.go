@@ -69,7 +69,7 @@ func runSession(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	sessionManager, err := session.SetupManagerWithWorkspace(projectRoot, wsManager)
+	sessionManager, err := session.SetupManager(projectRoot)
 	if err != nil {
 		return err
 	}

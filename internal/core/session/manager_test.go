@@ -27,7 +27,7 @@ func TestManager_CreateSession(t *testing.T) {
 	}
 
 	// Create ID mapper
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewSessionIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		t.Fatalf("Failed to create ID mapper: %v", err)
 	}
@@ -95,7 +95,7 @@ func TestManager_CreateSessionWithNameAndDescription(t *testing.T) {
 	}
 
 	// Create ID mapper
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewSessionIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		t.Fatalf("Failed to create ID mapper: %v", err)
 	}
@@ -161,7 +161,7 @@ func TestManager_CreateSessionWithInitialPrompt(t *testing.T) {
 	}
 
 	// Create ID mapper
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewSessionIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		t.Fatalf("Failed to create ID mapper: %v", err)
 	}
@@ -219,7 +219,7 @@ func TestManager_Get(t *testing.T) {
 	}
 
 	// Create ID mapper
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewSessionIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		t.Fatalf("Failed to create ID mapper: %v", err)
 	}
@@ -271,7 +271,7 @@ func TestManager_ListSessions(t *testing.T) {
 	}
 
 	// Create ID mapper
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewSessionIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		t.Fatalf("Failed to create ID mapper: %v", err)
 	}
@@ -359,7 +359,7 @@ func TestManager_Remove(t *testing.T) {
 	}
 
 	// Create ID mapper
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewSessionIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		t.Fatalf("Failed to create ID mapper: %v", err)
 	}
@@ -427,7 +427,7 @@ func TestManager_RemoveCompletedSession(t *testing.T) {
 		t.Fatalf("Failed to create workspace: %v", err)
 	}
 
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewSessionIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		t.Fatalf("Failed to create ID mapper: %v", err)
 	}
@@ -513,7 +513,7 @@ func TestManager_CreateSessionWithoutTmux(t *testing.T) {
 	}
 
 	// Create ID mapper
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewSessionIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		t.Fatalf("Failed to create ID mapper: %v", err)
 	}
@@ -557,7 +557,7 @@ func TestManager_GetWithoutTmux(t *testing.T) {
 	}
 
 	// Create ID mapper
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewSessionIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		t.Fatalf("Failed to create ID mapper: %v", err)
 	}
@@ -606,7 +606,7 @@ func TestManager_StoreOperations(t *testing.T) {
 	_, wsManager, configManager := setupTestEnvironment(t)
 
 	// Create ID mapper
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewSessionIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		t.Fatalf("Failed to create ID mapper: %v", err)
 	}
@@ -685,7 +685,7 @@ func TestManager_ListSessionsWithDeletedWorkspace(t *testing.T) {
 	}
 
 	// Create ID mapper
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewSessionIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		t.Fatalf("Failed to create ID mapper: %v", err)
 	}

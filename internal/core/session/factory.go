@@ -19,10 +19,10 @@ func NewFactory() *Factory {
 
 // CreateManager creates a new session manager with all dependencies
 func (f *Factory) CreateManager(configManager *config.Manager, workspaceManager *workspace.Manager) (*Manager, error) {
-	// Create ID mapper
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	// Create session ID mapper
+	idMapper, err := idmap.NewSessionIDMapper(configManager.GetAmuxDir())
 	if err != nil {
-		return nil, fmt.Errorf("failed to create ID mapper: %w", err)
+		return nil, fmt.Errorf("failed to create session ID mapper: %w", err)
 	}
 
 	// Create agent manager
@@ -43,7 +43,7 @@ func (f *Factory) CreateManagerWithDependencies(
 	basePath string,
 	workspaceManager *workspace.Manager,
 	agentManager *agent.Manager,
-	idMapper *idmap.IDMapper,
+	idMapper *idmap.Mapper[idmap.SessionID],
 ) (*Manager, error) {
 	return NewManager(basePath, workspaceManager, agentManager, idMapper)
 }

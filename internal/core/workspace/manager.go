@@ -23,7 +23,7 @@ type Manager struct {
 	configManager *config.Manager
 	gitOps        *git.Operations
 	workspacesDir string
-	idMapper      *idmap.IDMapper
+	idMapper      *idmap.Mapper[idmap.WorkspaceID]
 	fm            *filemanager.Manager[Workspace]
 }
 
@@ -37,10 +37,10 @@ func NewManager(configManager *config.Manager) (*Manager, error) {
 
 	workspacesDir := configManager.GetWorkspacesDir()
 
-	// Initialize ID mapper
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	// Initialize workspace ID mapper
+	idMapper, err := idmap.NewWorkspaceIDMapper(configManager.GetAmuxDir())
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize ID mapper: %w", err)
+		return nil, fmt.Errorf("failed to initialize workspace ID mapper: %w", err)
 	}
 
 	return &Manager{
@@ -54,7 +54,7 @@ func NewManager(configManager *config.Manager) (*Manager, error) {
 
 // NewManagerWithIDMapper creates a new workspace manager with a provided ID mapper.
 // This allows sharing the ID mapper between multiple managers.
-func NewManagerWithIDMapper(configManager *config.Manager, idMapper *idmap.IDMapper) (*Manager, error) {
+func NewManagerWithIDMapper(configManager *config.Manager, idMapper *idmap.Mapper[idmap.WorkspaceID]) (*Manager, error) {
 	gitOps := git.NewOperations(configManager.GetProjectRoot())
 
 	if !gitOps.IsGitRepository() {
@@ -164,7 +164,7 @@ func (m *Manager) Create(ctx context.Context, opts CreateOptions) (*Workspace, e
 	}
 
 	// Generate and assign index
-	index, err := m.idMapper.AddWorkspace(workspace.ID)
+	index, err := m.idMapper.Add(idmap.WorkspaceID(workspace.ID))
 	if err != nil {
 		// Don't fail if index generation fails, just log it
 		// The workspace is already created successfully
@@ -194,7 +194,7 @@ func (m *Manager) Get(ctx context.Context, id ID) (*Workspace, error) {
 	workspace.UpdatedAt = m.getLastModified(workspace.Path)
 
 	// Populate index
-	if index, exists := m.idMapper.GetWorkspaceIndex(workspace.ID); exists {
+	if index, exists := m.idMapper.GetIndex(idmap.WorkspaceID(workspace.ID)); exists {
 		workspace.Index = index
 	}
 
@@ -238,7 +238,7 @@ func (m *Manager) List(ctx context.Context, opts ListOptions) ([]*Workspace, err
 		workspace.UpdatedAt = m.getLastModified(workspace.Path)
 
 		// Populate index
-		if index, exists := m.idMapper.GetWorkspaceIndex(workspace.ID); exists {
+		if index, exists := m.idMapper.GetIndex(idmap.WorkspaceID(workspace.ID)); exists {
 			workspace.Index = index
 		}
 
@@ -249,7 +249,12 @@ func (m *Manager) List(ctx context.Context, opts ListOptions) ([]*Workspace, err
 	}
 
 	// Reconcile index state with actual workspaces
-	orphanedCount, err := m.idMapper.ReconcileWorkspaces(existingIDs)
+	// Convert string IDs to WorkspaceID type
+	workspaceIDs := make([]idmap.WorkspaceID, len(existingIDs))
+	for i, id := range existingIDs {
+		workspaceIDs[i] = idmap.WorkspaceID(id)
+	}
+	orphanedCount, err := m.idMapper.Reconcile(workspaceIDs)
 	if err != nil {
 		// Log error but continue - don't fail the list operation
 		_ = err // Ignore error to satisfy linter
@@ -312,8 +317,8 @@ func (m *Manager) ResolveWorkspace(ctx context.Context, identifier Identifier) (
 	}
 
 	// 2. Try as index
-	if fullID, exists := m.idMapper.GetWorkspaceFull(string(identifier)); exists {
-		ws, err = m.Get(ctx, ID(fullID))
+	if fullID, exists := m.idMapper.GetFull(string(identifier)); exists {
+		ws, err = m.Get(ctx, ID(string(fullID)))
 		if err == nil {
 			return ws, nil
 		}
@@ -389,7 +394,7 @@ func (m *Manager) Remove(ctx context.Context, identifier Identifier) error {
 	}
 
 	// Remove index mapping
-	_ = m.idMapper.RemoveWorkspace(workspace.ID)
+	_ = m.idMapper.Remove(idmap.WorkspaceID(workspace.ID))
 
 	// Clean up entire workspace directory (which contains worktree and workspace.yaml)
 	workspaceDir := filepath.Join(m.workspacesDir, workspace.ID)
@@ -532,9 +537,4 @@ func generateID(name string) string {
 	randomSuffix := uuid.New().String()[:8]
 
 	return fmt.Sprintf("workspace-%s-%d-%s", safeName, timestamp, randomSuffix)
-}
-
-// GetIDMapper returns the ID mapper used by the workspace manager
-func (m *Manager) GetIDMapper() *idmap.IDMapper {
-	return m.idMapper
 }

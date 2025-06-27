@@ -14,13 +14,13 @@ func SetupManager(projectRoot string) (*Manager, error) {
 	// Initialize config manager
 	configManager := config.NewManager(projectRoot)
 
-	// Initialize ID mapper (shared between workspace and session managers)
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	// Initialize workspace ID mapper
+	idMapper, err := idmap.NewWorkspaceIDMapper(configManager.GetAmuxDir())
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize ID mapper: %w", err)
+		return nil, fmt.Errorf("failed to initialize workspace ID mapper: %w", err)
 	}
 
-	// Create workspace manager with the shared ID mapper
+	// Create workspace manager with workspace-specific ID mapper
 	manager, err := NewManagerWithIDMapper(configManager, idMapper)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create workspace manager: %w", err)

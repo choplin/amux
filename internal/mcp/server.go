@@ -39,8 +39,8 @@ func NewServerV2(configManager *config.Manager, transport string, httpConfig *co
 		return nil, fmt.Errorf("failed to create workspace manager: %w", err)
 	}
 
-	// Create session manager using the same workspace manager
-	sessionManager, err := session.SetupManagerWithWorkspace(configManager.GetProjectRoot(), workspaceManager)
+	// Create session manager independently
+	sessionManager, err := session.SetupManager(configManager.GetProjectRoot())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create session manager: %w", err)
 	}

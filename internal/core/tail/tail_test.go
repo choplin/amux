@@ -49,7 +49,7 @@ func TestTailer_Follow(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create dependencies
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewSessionIDMapper(configManager.GetAmuxDir())
 	require.NoError(t, err)
 	// Create session manager with mock adapter
 	sessionManager, err := session.NewManager(configManager.GetAmuxDir(), wsManager, nil, idMapper)
@@ -206,7 +206,7 @@ func TestFollowFunc(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create dependencies
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewSessionIDMapper(configManager.GetAmuxDir())
 	require.NoError(t, err)
 	// Create session manager with mock adapter
 	sessionManager, err := session.NewManager(configManager.GetAmuxDir(), wsManager, nil, idMapper)

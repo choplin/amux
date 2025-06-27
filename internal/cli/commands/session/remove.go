@@ -52,7 +52,7 @@ func removeSession(cmd *cobra.Command, args []string, keepWorkspace bool, force 
 	if err != nil {
 		return err
 	}
-	sessionManager, err := session.SetupManagerWithWorkspace(projectRoot, wsManager)
+	sessionManager, err := session.SetupManager(projectRoot)
 	if err != nil {
 		return err
 	}

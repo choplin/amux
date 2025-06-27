@@ -51,7 +51,7 @@ func TestRemoveSession(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create session manager
-	sessionManager, err := session.SetupManagerWithWorkspace(repoDir, wsManager)
+	sessionManager, err := session.SetupManager(repoDir)
 	require.NoError(t, err)
 
 	t.Run("cannot remove running session", func(t *testing.T) {

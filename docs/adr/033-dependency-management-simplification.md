@@ -31,21 +31,26 @@ Implement package-local setup functions to centralize dependency initialization 
 
 1. Each core package provides its own `SetupManager()` function
 2. These functions handle all internal dependency initialization
-3. Dependencies are explicitly passed where needed
-4. The public API consists of only two main entry points:
+3. **Separate ID spaces**: Workspace and session ID spaces are completely independent
+4. **Generic IDMapper**: Use a generic `Mapper[T]` type for type-safe ID management
+5. The public API consists of only two main entry points:
    - `workspace.SetupManager(projectRoot)`
    - `session.SetupManager(projectRoot)`
-5. Remove all helper wrapper functions - commands call setup functions directly
+6. Remove all helper wrapper functions - commands call setup functions directly
 
 Implementation details:
 
 ```go
+// In idmap package - generic mapper with type safety
+type Mapper[T ~string] struct { ... }
+func NewWorkspaceIDMapper(amuxDir string) (*Mapper[WorkspaceID], error)
+func NewSessionIDMapper(amuxDir string) (*Mapper[SessionID], error)
+
 // In workspace package
 func SetupManager(projectRoot string) (*Manager, error)
 
 // In session package
 func SetupManager(projectRoot string) (*Manager, error)
-func SetupManagerWithWorkspace(projectRoot string, workspaceManager *workspace.Manager) (*Manager, error)
 ```
 
 ## Consequences
@@ -55,10 +60,11 @@ func SetupManagerWithWorkspace(projectRoot string, workspaceManager *workspace.M
 - **Reduced complexity**: Dependencies reduced by ~80% compared to Container
 - **Go-idiomatic**: Each package is self-contained with explicit dependencies
 - **Better encapsulation**: Implementation details (ConfigManager, AgentManager, IDMapper) are hidden
-- **Fixes IDMapper sharing**: WorkspaceManager now accepts external IDMapper via `NewManagerWithIDMapper()`
+- **Type-safe ID management**: Generic `Mapper[T]` prevents mixing workspace and session IDs
+- **Separate ID spaces**: Workspace and session IDs are completely independent, as they should be
 - **Clearer dependencies**: Each command imports only what it needs
 - **Simpler to understand**: No DI framework or pattern to learn
-- **No unnecessary abstractions**: Removed helper wrappers that added no value
+- **No unnecessary abstractions**: Removed helper wrappers and `SetupManagerWithWorkspace`
 
 ### Negative
 
