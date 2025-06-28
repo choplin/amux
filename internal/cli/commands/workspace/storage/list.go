@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/aki/amux/internal/cli/ui"
 	"github.com/aki/amux/internal/core/config"
@@ -80,15 +81,52 @@ func runList(cmd *cobra.Command, args []string) error {
 		ui.PrintSectionHeader("", "Storage contents", len(result.Files))
 	}
 
+	// Show total items first
+	ui.Output("Total: %d items\n\n", len(result.Files))
+
+	// Create table for better formatting
+	tbl := ui.NewTable("NAME", "TYPE", "SIZE")
+
 	for _, file := range result.Files {
-		if file.IsDir {
-			ui.Output("%s/", file.Name)
+		var fileType string
+		var displayName string
+
+		if file.IsSymlink {
+			displayName = file.Name
+			if file.LinkTarget != "" {
+				// Shorten the link target for display
+				target := file.LinkTarget
+				if len(target) > 50 {
+					// Show only the last part of the path
+					parts := strings.Split(target, "/")
+					if len(parts) > 2 {
+						target = "..." + strings.Join(parts[len(parts)-2:], "/")
+					}
+				}
+				displayName = fmt.Sprintf("%s -> %s", file.Name, target)
+			}
+			if file.IsDir {
+				fileType = "Symlink (dir)"
+			} else {
+				fileType = "Symlink"
+			}
 		} else {
-			ui.Output("%s (%d bytes)", file.Name, file.Size)
+			displayName = file.Name
+			if file.IsDir {
+				fileType = "Directory"
+			} else {
+				fileType = "File"
+			}
+		}
+
+		if file.IsDir {
+			tbl.AddRow(displayName, fileType, "-")
+		} else {
+			tbl.AddRow(displayName, fileType, ui.FormatSize(file.Size))
 		}
 	}
 
-	ui.Info("Total: %d items", len(result.Files))
+	tbl.Print()
 
 	return nil
 }

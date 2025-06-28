@@ -157,10 +157,11 @@ func (m *Manager[T]) ListFiles(ctx context.Context, relativePath string) (*ListR
 	if !info.IsDir() {
 		result.IsTargetFile = true
 		result.Files = []FileInfo{{
-			Name:    info.Name(),
-			Size:    info.Size(),
-			IsDir:   false,
-			ModTime: info.ModTime(),
+			Name:      info.Name(),
+			Size:      info.Size(),
+			IsDir:     false,
+			IsSymlink: false,
+			ModTime:   info.ModTime(),
 		}}
 		return result, nil
 	}
@@ -173,15 +174,39 @@ func (m *Manager[T]) ListFiles(ctx context.Context, relativePath string) (*ListR
 
 	files := make([]FileInfo, 0, len(entries))
 	for _, entry := range entries {
-		info, err := entry.Info()
+		entryPath := filepath.Join(fullPath, entry.Name())
+
+		// Get entry info (doesn't follow symlinks)
+		entryInfo, err := entry.Info()
 		if err != nil {
 			continue // Skip files we can't stat
 		}
+
+		// Check if it's a symlink
+		isSymlink := entryInfo.Mode()&os.ModeSymlink != 0
+		var linkTarget string
+		var targetInfo os.FileInfo
+
+		if isSymlink {
+			// Read the symlink target
+			linkTarget, _ = os.Readlink(entryPath)
+			// Get target info (follows symlinks)
+			targetInfo, err = os.Stat(entryPath)
+			if err != nil {
+				// Broken symlink, use entry info
+				targetInfo = entryInfo
+			}
+		} else {
+			targetInfo = entryInfo
+		}
+
 		files = append(files, FileInfo{
-			Name:    entry.Name(),
-			Size:    info.Size(),
-			IsDir:   entry.IsDir(),
-			ModTime: info.ModTime(),
+			Name:       entry.Name(),
+			Size:       targetInfo.Size(),
+			IsDir:      targetInfo.IsDir(),
+			IsSymlink:  isSymlink,
+			LinkTarget: linkTarget,
+			ModTime:    targetInfo.ModTime(),
 		})
 	}
 
