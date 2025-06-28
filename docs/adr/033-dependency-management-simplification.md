@@ -59,7 +59,7 @@ func SetupManager(projectRoot string) (*Manager, error)
 
 - **Reduced complexity**: Dependencies reduced by ~80% compared to Container
 - **Go-idiomatic**: Each package is self-contained with explicit dependencies
-- **Better encapsulation**: Implementation details (ConfigManager, AgentManager, IDMapper) are hidden
+- **Better encapsulation**: Implementation details (ConfigManager, IDMapper) are hidden
 - **Type-safe ID management**: Generic `Mapper[T]` prevents mixing workspace and session IDs
 - **Separate ID spaces**: Workspace and session IDs are completely independent, as they should be
 - **Clearer dependencies**: Each command imports only what it needs

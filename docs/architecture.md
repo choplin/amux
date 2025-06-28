@@ -46,13 +46,13 @@ SessionManager
 └── Session Cache (in-memory)
 ```
 
-### 3. Agent Configuration
+### 3. Configuration Management
 
-**Purpose**: Manages AI agent settings and defaults
+**Purpose**: Manages project configuration including agent definitions
 
 **Components**:
 
-- `agent.Manager` - Agent configuration CRUD
+- `config.Manager` - Configuration file management
 - Agent definitions in config.yaml
 - Environment variable management
 - Command defaults
@@ -63,10 +63,11 @@ SessionManager
 agents:
   claude:
     name: Claude
-    type: claude
-    command: claude
-    environment:
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    type: tmux
+    params:
+      command: claude
+      environment:
+        ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
 ```
 
 ### 4. Working Context
@@ -75,16 +76,14 @@ agents:
 
 **Components**:
 
-- `context.Manager` - Context file management
-- Template initialization
-- Progress tracking utilities
+- Context file templates
+- Workspace metadata tracking
+- Session storage directories
 
 **Context Files**:
 
-- `background.md` - Task requirements
-- `plan.md` - Implementation approach
-- `working-log.md` - Progress tracking
-- `results-summary.md` - Final outcomes
+- Workspace context files stored at `.amux/workspaces/{id}/context.md`
+- Session storage for agent-specific data
 
 ### 5. Storage Management
 

@@ -11,8 +11,7 @@ Amux uses a simple, explicit dependency management pattern that provides a clean
    - `SessionManager` - All session-related operations
 
 2. **Hidden Implementation Details**: Other managers and dependencies are internal implementation details:
-   - `ConfigManager` - Configuration management
-   - `AgentManager` - Agent definitions and lookup
+   - `ConfigManager` - Configuration management including agent definitions
    - `IDMapper` - Numeric ID to full ID mapping
    - `GitOperations` - Git worktree operations
    - `TmuxAdapter` - Tmux integration
@@ -34,13 +33,12 @@ Amux uses a simple, explicit dependency management pattern that provides a clean
 │            Internal Dependencies                │
 │                                                 │
 │  ConfigManager ──┬──► WorkspaceManager         │
-│       │          │         │                   │
-│       │          │         ▼                   │
-│       │          │    IDMapper                 │
-│       │          │         ▲                   │
-│       │          │         │                   │
-│       ▼          │         │                   │
-│  AgentManager    └──► SessionManager           │
+│                  │         │                   │
+│                  │         ▼                   │
+│                  │    IDMapper                 │
+│                  │         ▲                   │
+│                  │         │                   │
+│                  └──► SessionManager           │
 │                                                 │
 └─────────────────────────────────────────────────┘
 ```
@@ -82,9 +80,8 @@ func SetupSessionManager(projectRoot string) (*session.Manager, error) {
         return nil, fmt.Errorf("failed to create workspace manager: %w", err)
     }
 
-    // Create other dependencies
-    agentManager := agent.NewManager(configManager)
-    idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+    // Create ID mapper
+    idMapper, err := idmap.NewSessionIDMapper(configManager.GetAmuxDir())
     if err != nil {
         return nil, fmt.Errorf("failed to create ID mapper: %w", err)
     }
@@ -93,7 +90,7 @@ func SetupSessionManager(projectRoot string) (*session.Manager, error) {
     return session.NewManager(
         configManager.GetAmuxDir(),
         wsManager,
-        agentManager,
+        configManager,
         idMapper,
     )
 }
