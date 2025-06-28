@@ -9,16 +9,21 @@ import (
 	"strings"
 )
 
-// Manager provides storage operations for workspaces and sessions
-type Manager struct{}
-
-// NewManager creates a new storage manager
-func NewManager() *Manager {
-	return &Manager{}
+// Manager provides storage operations for entities with storage
+type Manager[T Provider] struct {
+	entity T
 }
 
-// ReadFile reads a file from the storage path
-func (m *Manager) ReadFile(ctx context.Context, storagePath, relativePath string) ([]byte, error) {
+// NewManager creates a new storage manager for the given entity
+func NewManager[T Provider](entity T) *Manager[T] {
+	return &Manager[T]{
+		entity: entity,
+	}
+}
+
+// ReadFile reads a file from the entity's storage path
+func (m *Manager[T]) ReadFile(ctx context.Context, relativePath string) ([]byte, error) {
+	storagePath := m.entity.GetStoragePath()
 	if storagePath == "" {
 		return nil, ErrStoragePathEmpty{}
 	}
@@ -43,8 +48,9 @@ func (m *Manager) ReadFile(ctx context.Context, storagePath, relativePath string
 	return content, nil
 }
 
-// WriteFile writes content to a file in the storage path
-func (m *Manager) WriteFile(ctx context.Context, storagePath, relativePath string, content []byte) error {
+// WriteFile writes content to a file in the entity's storage path
+func (m *Manager[T]) WriteFile(ctx context.Context, relativePath string, content []byte) error {
+	storagePath := m.entity.GetStoragePath()
 	if storagePath == "" {
 		return ErrStoragePathEmpty{}
 	}
@@ -71,8 +77,9 @@ func (m *Manager) WriteFile(ctx context.Context, storagePath, relativePath strin
 	return nil
 }
 
-// Remove removes a file or directory from the storage path
-func (m *Manager) Remove(ctx context.Context, storagePath, relativePath string, recursive bool) (*RemoveResult, error) {
+// Remove removes a file or directory from the entity's storage path
+func (m *Manager[T]) Remove(ctx context.Context, relativePath string, recursive bool) (*RemoveResult, error) {
+	storagePath := m.entity.GetStoragePath()
 	if storagePath == "" {
 		return nil, ErrStoragePathEmpty{}
 	}
@@ -117,8 +124,9 @@ func (m *Manager) Remove(ctx context.Context, storagePath, relativePath string, 
 	return result, nil
 }
 
-// ListFiles lists files in the storage path
-func (m *Manager) ListFiles(ctx context.Context, storagePath, relativePath string) (*ListResult, error) {
+// ListFiles lists files in the entity's storage path
+func (m *Manager[T]) ListFiles(ctx context.Context, relativePath string) (*ListResult, error) {
+	storagePath := m.entity.GetStoragePath()
 	if storagePath == "" {
 		return nil, ErrStoragePathEmpty{}
 	}
@@ -182,7 +190,7 @@ func (m *Manager) ListFiles(ctx context.Context, storagePath, relativePath strin
 }
 
 // validatePath ensures the path is within the storage directory
-func (m *Manager) validatePath(storagePath, fullPath string) error {
+func (m *Manager[T]) validatePath(storagePath, fullPath string) error {
 	cleanPath := filepath.Clean(fullPath)
 	cleanStoragePath := filepath.Clean(storagePath)
 	if !strings.HasPrefix(cleanPath, cleanStoragePath) {

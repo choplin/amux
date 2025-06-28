@@ -137,6 +137,9 @@ type Session interface {
 	// Info returns the full session information
 	Info() *Info
 
+	// GetStoragePath returns the storage path for the session
+	GetStoragePath() string
+
 	// Start starts the session
 	Start(ctx context.Context) error
 

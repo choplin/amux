@@ -39,14 +39,8 @@ func runList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to resolve session: %w", err)
 	}
 
-	// Get session info
-	info := sess.Info()
-	if info.StoragePath == "" {
-		return fmt.Errorf("storage path not found for session")
-	}
-
 	// Create storage manager
-	storageManager := storage.NewManager()
+	storageManager := storage.NewManager(sess)
 
 	// Determine the path to list
 	subPath := ""
@@ -55,7 +49,7 @@ func runList(cmd *cobra.Command, args []string) error {
 	}
 
 	// List files
-	result, err := storageManager.ListFiles(ctx, info.StoragePath, subPath)
+	result, err := storageManager.ListFiles(ctx, subPath)
 	if err != nil {
 		var notFound storage.ErrNotFound
 		if errors.As(err, &notFound) {

@@ -94,6 +94,11 @@ type Workspace struct {
 	Status         ConsistencyStatus `yaml:"-" json:"status"`
 }
 
+// GetStoragePath returns the storage path for the workspace
+func (w *Workspace) GetStoragePath() string {
+	return w.StoragePath
+}
+
 // BranchMode specifies how to handle branch creation/checkout
 type BranchMode int
 

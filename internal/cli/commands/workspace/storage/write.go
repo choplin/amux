@@ -71,11 +71,11 @@ func runWrite(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create storage manager
-	storageManager := storage.NewManager()
+	storageManager := storage.NewManager(ws)
 
 	// Write the file
 	path := args[1]
-	if err := storageManager.WriteFile(ctx, ws.StoragePath, path, content); err != nil {
+	if err := storageManager.WriteFile(ctx, path, content); err != nil {
 		return err
 	}
 

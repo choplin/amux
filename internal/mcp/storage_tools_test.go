@@ -140,11 +140,9 @@ func TestSeparatedStorageTools(t *testing.T) {
 		err = sess.Start(ctx)
 		require.NoError(t, err)
 
-		// Get session info to find storage path
-		sessInfo := sess.Info()
-
 		// Create session storage directory
-		err = os.MkdirAll(sessInfo.StoragePath, 0o755)
+		storagePath := sess.GetStoragePath()
+		err = os.MkdirAll(storagePath, 0o755)
 		require.NoError(t, err)
 
 		t.Run("session_storage_write creates file", func(t *testing.T) {
@@ -164,14 +162,14 @@ func TestSeparatedStorageTools(t *testing.T) {
 			assert.NotNil(t, result)
 
 			// Verify file was created
-			content, err := os.ReadFile(filepath.Join(sessInfo.StoragePath, "session-test.txt"))
+			content, err := os.ReadFile(filepath.Join(storagePath, "session-test.txt"))
 			require.NoError(t, err)
 			assert.Equal(t, "Session data", string(content))
 		})
 
 		t.Run("session_storage_read reads file", func(t *testing.T) {
 			// Create a test file first
-			testFile := filepath.Join(sessInfo.StoragePath, "read-test.txt")
+			testFile := filepath.Join(storagePath, "read-test.txt")
 			err := os.WriteFile(testFile, []byte("Session content"), 0o644)
 			require.NoError(t, err)
 

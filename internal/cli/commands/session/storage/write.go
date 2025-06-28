@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/aki/amux/internal/cli/ui"
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/session"
+	"github.com/aki/amux/internal/core/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -57,22 +57,8 @@ func runWrite(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to resolve session: %w", err)
 	}
 
-	// Get session info
-	info := sess.Info()
-	if info.StoragePath == "" {
-		return fmt.Errorf("storage path not found for session")
-	}
-
-	// Construct full path
-	path := args[1]
-	fullPath := filepath.Join(info.StoragePath, path)
-
-	// Ensure the path is within the storage directory
-	cleanPath := filepath.Clean(fullPath)
-	cleanStoragePath := filepath.Clean(info.StoragePath)
-	if !strings.HasPrefix(cleanPath, cleanStoragePath) {
-		return fmt.Errorf("path traversal attempt detected")
-	}
+	// Create storage manager
+	storageManager := storage.NewManager(sess)
 
 	// Get content
 	var content []byte
@@ -87,15 +73,10 @@ func runWrite(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Create directory if needed
-	dir := filepath.Dir(fullPath)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
-
 	// Write the file
-	if err := os.WriteFile(fullPath, content, 0o644); err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
+	path := args[1]
+	if err := storageManager.WriteFile(ctx, path, content); err != nil {
+		return err
 	}
 
 	ui.Success("Successfully wrote %d bytes to %s", len(content), path)

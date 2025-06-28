@@ -38,18 +38,12 @@ func runRead(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to resolve session: %w", err)
 	}
 
-	// Get session info
-	info := sess.Info()
-	if info.StoragePath == "" {
-		return fmt.Errorf("storage path not found for session")
-	}
-
 	// Create storage manager
-	storageManager := storage.NewManager()
+	storageManager := storage.NewManager(sess)
 
 	// Read the file
 	path := args[1]
-	content, err := storageManager.ReadFile(ctx, info.StoragePath, path)
+	content, err := storageManager.ReadFile(ctx, path)
 	if err != nil {
 		var notFound storage.ErrNotFound
 		if errors.As(err, &notFound) {

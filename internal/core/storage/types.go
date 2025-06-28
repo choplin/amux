@@ -2,6 +2,11 @@ package storage
 
 import "time"
 
+// Provider is an interface for entities that have storage
+type Provider interface {
+	GetStoragePath() string
+}
+
 // FileInfo represents information about a file or directory
 type FileInfo struct {
 	Name    string

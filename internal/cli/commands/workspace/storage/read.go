@@ -39,11 +39,11 @@ func runRead(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create storage manager
-	storageManager := storage.NewManager()
+	storageManager := storage.NewManager(ws)
 
 	// Read the file
 	path := args[1]
-	content, err := storageManager.ReadFile(ctx, ws.StoragePath, path)
+	content, err := storageManager.ReadFile(ctx, path)
 	if err != nil {
 		var notFound storage.ErrNotFound
 		if errors.As(err, &notFound) {

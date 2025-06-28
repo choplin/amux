@@ -123,6 +123,10 @@ func (s *tmuxSessionImpl) Info() *Info {
 	return &info
 }
 
+func (s *tmuxSessionImpl) GetStoragePath() string {
+	return s.info.StateDir
+}
+
 func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

@@ -40,7 +40,7 @@ func runList(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create storage manager
-	storageManager := storage.NewManager()
+	storageManager := storage.NewManager(ws)
 
 	// Determine the path to list
 	subPath := ""
@@ -49,7 +49,7 @@ func runList(cmd *cobra.Command, args []string) error {
 	}
 
 	// List files
-	result, err := storageManager.ListFiles(ctx, ws.StoragePath, subPath)
+	result, err := storageManager.ListFiles(ctx, subPath)
 	if err != nil {
 		var notFound storage.ErrNotFound
 		if errors.As(err, &notFound) {

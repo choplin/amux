@@ -46,11 +46,11 @@ func runRemove(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create storage manager
-	storageManager := storage.NewManager()
+	storageManager := storage.NewManager(ws)
 
 	// Remove the path
 	path := args[1]
-	result, err := storageManager.Remove(ctx, ws.StoragePath, path, removeRecursive)
+	result, err := storageManager.Remove(ctx, path, removeRecursive)
 	if err != nil {
 		return err
 	}

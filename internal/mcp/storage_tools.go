@@ -152,10 +152,10 @@ func (s *ServerV2) handleWorkspaceStorageRead(ctx context.Context, request mcp.C
 	}
 
 	// Create storage manager
-	storageManager := storage.NewManager()
+	storageManager := storage.NewManager(ws)
 
 	// Read the file
-	content, err := storageManager.ReadFile(ctx, ws.StoragePath, path)
+	content, err := storageManager.ReadFile(ctx, path)
 	if err != nil {
 		if strings.Contains(err.Error(), "file not found") {
 			return nil, FileNotFoundError(path)
@@ -190,10 +190,10 @@ func (s *ServerV2) handleWorkspaceStorageWrite(ctx context.Context, request mcp.
 	}
 
 	// Create storage manager
-	storageManager := storage.NewManager()
+	storageManager := storage.NewManager(ws)
 
 	// Write the file
-	if err := storageManager.WriteFile(ctx, ws.StoragePath, path, []byte(content)); err != nil {
+	if err := storageManager.WriteFile(ctx, path, []byte(content)); err != nil {
 		return nil, err
 	}
 
@@ -223,10 +223,10 @@ func (s *ServerV2) handleWorkspaceStorageList(ctx context.Context, request mcp.C
 	}
 
 	// Create storage manager
-	storageManager := storage.NewManager()
+	storageManager := storage.NewManager(ws)
 
 	// List files
-	listResult, err := storageManager.ListFiles(ctx, ws.StoragePath, subPath)
+	listResult, err := storageManager.ListFiles(ctx, subPath)
 	if err != nil {
 		if strings.Contains(err.Error(), "path does not exist") {
 			return nil, DirectoryNotFoundError(subPath)
@@ -270,13 +270,11 @@ func (s *ServerV2) handleSessionStorageRead(ctx context.Context, request mcp.Cal
 	if err != nil {
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
-	storagePath := sess.Info().StoragePath
-
 	// Create storage manager
-	storageManager := storage.NewManager()
+	storageManager := storage.NewManager(sess)
 
 	// Read the file
-	content, err := storageManager.ReadFile(ctx, storagePath, path)
+	content, err := storageManager.ReadFile(ctx, path)
 	if err != nil {
 		if strings.Contains(err.Error(), "file not found") {
 			return nil, FileNotFoundError(path)
@@ -310,13 +308,11 @@ func (s *ServerV2) handleSessionStorageWrite(ctx context.Context, request mcp.Ca
 	if err != nil {
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
-	storagePath := sess.Info().StoragePath
-
 	// Create storage manager
-	storageManager := storage.NewManager()
+	storageManager := storage.NewManager(sess)
 
 	// Write the file
-	if err := storageManager.WriteFile(ctx, storagePath, path, []byte(content)); err != nil {
+	if err := storageManager.WriteFile(ctx, path, []byte(content)); err != nil {
 		return nil, err
 	}
 
@@ -345,13 +341,11 @@ func (s *ServerV2) handleSessionStorageList(ctx context.Context, request mcp.Cal
 	if err != nil {
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
-	storagePath := sess.Info().StoragePath
-
 	// Create storage manager
-	storageManager := storage.NewManager()
+	storageManager := storage.NewManager(sess)
 
 	// List files
-	listResult, err := storageManager.ListFiles(ctx, storagePath, subPath)
+	listResult, err := storageManager.ListFiles(ctx, subPath)
 	if err != nil {
 		if strings.Contains(err.Error(), "path does not exist") {
 			return nil, DirectoryNotFoundError(subPath)

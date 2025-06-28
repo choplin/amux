@@ -45,18 +45,12 @@ func runRemove(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to resolve session: %w", err)
 	}
 
-	// Get session info
-	info := sess.Info()
-	if info.StoragePath == "" {
-		return fmt.Errorf("storage path not found for session")
-	}
-
 	// Create storage manager
-	storageManager := storage.NewManager()
+	storageManager := storage.NewManager(sess)
 
 	// Remove the path
 	path := args[1]
-	result, err := storageManager.Remove(ctx, info.StoragePath, path, removeRecursive)
+	result, err := storageManager.Remove(ctx, path, removeRecursive)
 	if err != nil {
 		return err
 	}
