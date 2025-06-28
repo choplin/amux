@@ -513,3 +513,26 @@ func generateID(name string) string {
 
 	return fmt.Sprintf("workspace-%s-%d-%s", safeName, timestamp, randomSuffix)
 }
+
+// RemoveWithSessionCheck removes a workspace with active session checking
+func (m *Manager) RemoveWithSessionCheck(ctx context.Context, identifier Identifier, force bool) error {
+	// Resolve workspace
+	workspace, err := m.ResolveWorkspace(ctx, identifier)
+	if err != nil {
+		return err
+	}
+
+	// Check for active sessions
+	sessionIDs, err := workspace.SessionIDs()
+	if err != nil {
+		return fmt.Errorf("failed to check active sessions: %w", err)
+	}
+
+	// If there are active sessions and force is not specified, return error
+	if len(sessionIDs) > 0 && !force {
+		return fmt.Errorf("cannot remove workspace '%s' - currently in use by %d session(s)", workspace.Name, len(sessionIDs))
+	}
+
+	// Proceed with normal removal
+	return m.Remove(ctx, identifier)
+}
