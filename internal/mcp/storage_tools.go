@@ -3,11 +3,10 @@ package mcp
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/aki/amux/internal/core/session"
+	"github.com/aki/amux/internal/core/storage"
 	"github.com/aki/amux/internal/core/workspace"
 	"github.com/mark3labs/mcp-go/mcp"
 )
@@ -151,26 +150,14 @@ func (s *ServerV2) handleWorkspaceStorageRead(ctx context.Context, request mcp.C
 		}
 		return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 	}
-	storagePath := ws.StoragePath
 
-	if storagePath == "" {
-		return nil, fmt.Errorf("storage path not found")
-	}
-
-	// Construct full path
-	fullPath := filepath.Join(storagePath, path)
-
-	// Ensure the path is within the storage directory
-	cleanPath := filepath.Clean(fullPath)
-	cleanStoragePath := filepath.Clean(storagePath)
-	if !strings.HasPrefix(cleanPath, cleanStoragePath) {
-		return nil, fmt.Errorf("path traversal attempt detected")
-	}
+	// Create storage manager
+	storageManager := storage.NewManager()
 
 	// Read the file
-	content, err := os.ReadFile(fullPath)
+	content, err := storageManager.ReadFile(ctx, ws.StoragePath, path)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if strings.Contains(err.Error(), "file not found") {
 			return nil, FileNotFoundError(path)
 		}
 		return nil, fmt.Errorf("failed to read file: %w", err)
@@ -201,31 +188,13 @@ func (s *ServerV2) handleWorkspaceStorageWrite(ctx context.Context, request mcp.
 		}
 		return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 	}
-	storagePath := ws.StoragePath
 
-	if storagePath == "" {
-		return nil, fmt.Errorf("storage path not found")
-	}
-
-	// Construct full path
-	fullPath := filepath.Join(storagePath, path)
-
-	// Ensure the path is within the storage directory
-	cleanPath := filepath.Clean(fullPath)
-	cleanStoragePath := filepath.Clean(storagePath)
-	if !strings.HasPrefix(cleanPath, cleanStoragePath) {
-		return nil, fmt.Errorf("path traversal attempt detected")
-	}
-
-	// Create directory if needed
-	dir := filepath.Dir(fullPath)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return nil, fmt.Errorf("failed to create directory: %w", err)
-	}
+	// Create storage manager
+	storageManager := storage.NewManager()
 
 	// Write the file
-	if err := os.WriteFile(fullPath, []byte(content), 0o644); err != nil {
-		return nil, fmt.Errorf("failed to write file: %w", err)
+	if err := storageManager.WriteFile(ctx, ws.StoragePath, path, []byte(content)); err != nil {
+		return nil, err
 	}
 
 	// Create enhanced result
@@ -252,50 +221,36 @@ func (s *ServerV2) handleWorkspaceStorageList(ctx context.Context, request mcp.C
 		}
 		return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 	}
-	storagePath := ws.StoragePath
 
-	if storagePath == "" {
-		return nil, fmt.Errorf("storage path not found")
-	}
+	// Create storage manager
+	storageManager := storage.NewManager()
 
-	// Construct full path
-	listPath := storagePath
-	if subPath != "" {
-		listPath = filepath.Join(storagePath, subPath)
-		// Ensure the path is within the storage directory
-		cleanListPath := filepath.Clean(listPath)
-		cleanStoragePath := filepath.Clean(storagePath)
-		if !strings.HasPrefix(cleanListPath, cleanStoragePath) {
-			return nil, fmt.Errorf("path traversal attempt detected")
-		}
-	}
-
-	// List directory contents
-	entries, err := os.ReadDir(listPath)
+	// List files
+	listResult, err := storageManager.ListFiles(ctx, ws.StoragePath, subPath)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if strings.Contains(err.Error(), "path does not exist") {
 			return nil, DirectoryNotFoundError(subPath)
 		}
-		return nil, fmt.Errorf("failed to list directory: %w", err)
+		return nil, err
 	}
 
 	var files []string
-	for _, entry := range entries {
-		name := entry.Name()
-		if entry.IsDir() {
+	for _, file := range listResult.Files {
+		name := file.Name
+		if file.IsDir {
 			name += "/"
 		}
 		files = append(files, name)
 	}
 
 	// Create enhanced result
-	listResult := map[string]interface{}{
+	result := map[string]interface{}{
 		"path":  subPath,
 		"files": files,
 		"count": len(files),
 	}
 
-	return createEnhancedResult("workspace_storage_list", listResult, nil)
+	return createEnhancedResult("workspace_storage_list", result, nil)
 }
 
 // Session storage handlers
@@ -317,24 +272,13 @@ func (s *ServerV2) handleSessionStorageRead(ctx context.Context, request mcp.Cal
 	}
 	storagePath := sess.Info().StoragePath
 
-	if storagePath == "" {
-		return nil, fmt.Errorf("storage path not found")
-	}
-
-	// Construct full path
-	fullPath := filepath.Join(storagePath, path)
-
-	// Ensure the path is within the storage directory
-	cleanPath := filepath.Clean(fullPath)
-	cleanStoragePath := filepath.Clean(storagePath)
-	if !strings.HasPrefix(cleanPath, cleanStoragePath) {
-		return nil, fmt.Errorf("path traversal attempt detected")
-	}
+	// Create storage manager
+	storageManager := storage.NewManager()
 
 	// Read the file
-	content, err := os.ReadFile(fullPath)
+	content, err := storageManager.ReadFile(ctx, storagePath, path)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if strings.Contains(err.Error(), "file not found") {
 			return nil, FileNotFoundError(path)
 		}
 		return nil, fmt.Errorf("failed to read file: %w", err)
@@ -368,29 +312,12 @@ func (s *ServerV2) handleSessionStorageWrite(ctx context.Context, request mcp.Ca
 	}
 	storagePath := sess.Info().StoragePath
 
-	if storagePath == "" {
-		return nil, fmt.Errorf("storage path not found")
-	}
-
-	// Construct full path
-	fullPath := filepath.Join(storagePath, path)
-
-	// Ensure the path is within the storage directory
-	cleanPath := filepath.Clean(fullPath)
-	cleanStoragePath := filepath.Clean(storagePath)
-	if !strings.HasPrefix(cleanPath, cleanStoragePath) {
-		return nil, fmt.Errorf("path traversal attempt detected")
-	}
-
-	// Create directory if needed
-	dir := filepath.Dir(fullPath)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return nil, fmt.Errorf("failed to create directory: %w", err)
-	}
+	// Create storage manager
+	storageManager := storage.NewManager()
 
 	// Write the file
-	if err := os.WriteFile(fullPath, []byte(content), 0o644); err != nil {
-		return nil, fmt.Errorf("failed to write file: %w", err)
+	if err := storageManager.WriteFile(ctx, storagePath, path, []byte(content)); err != nil {
+		return nil, err
 	}
 
 	// Create enhanced result
@@ -420,46 +347,33 @@ func (s *ServerV2) handleSessionStorageList(ctx context.Context, request mcp.Cal
 	}
 	storagePath := sess.Info().StoragePath
 
-	if storagePath == "" {
-		return nil, fmt.Errorf("storage path not found")
-	}
+	// Create storage manager
+	storageManager := storage.NewManager()
 
-	// Construct full path
-	listPath := storagePath
-	if subPath != "" {
-		listPath = filepath.Join(storagePath, subPath)
-		// Ensure the path is within the storage directory
-		cleanListPath := filepath.Clean(listPath)
-		cleanStoragePath := filepath.Clean(storagePath)
-		if !strings.HasPrefix(cleanListPath, cleanStoragePath) {
-			return nil, fmt.Errorf("path traversal attempt detected")
-		}
-	}
-
-	// List directory contents
-	entries, err := os.ReadDir(listPath)
+	// List files
+	listResult, err := storageManager.ListFiles(ctx, storagePath, subPath)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if strings.Contains(err.Error(), "path does not exist") {
 			return nil, DirectoryNotFoundError(subPath)
 		}
-		return nil, fmt.Errorf("failed to list directory: %w", err)
+		return nil, err
 	}
 
 	var files []string
-	for _, entry := range entries {
-		name := entry.Name()
-		if entry.IsDir() {
+	for _, file := range listResult.Files {
+		name := file.Name
+		if file.IsDir {
 			name += "/"
 		}
 		files = append(files, name)
 	}
 
 	// Create enhanced result
-	listResult := map[string]interface{}{
+	result := map[string]interface{}{
 		"path":  subPath,
 		"files": files,
 		"count": len(files),
 	}
 
-	return createEnhancedResult("session_storage_list", listResult, nil)
+	return createEnhancedResult("session_storage_list", result, nil)
 }

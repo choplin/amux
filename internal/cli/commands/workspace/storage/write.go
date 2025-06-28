@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/aki/amux/internal/cli/ui"
 	"github.com/aki/amux/internal/core/config"
+	"github.com/aki/amux/internal/core/storage"
 	"github.com/aki/amux/internal/core/workspace"
 	"github.com/spf13/cobra"
 )
@@ -57,21 +57,6 @@ func runWrite(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to resolve workspace: %w", err)
 	}
 
-	if ws.StoragePath == "" {
-		return fmt.Errorf("storage path not found for workspace")
-	}
-
-	// Construct full path
-	path := args[1]
-	fullPath := filepath.Join(ws.StoragePath, path)
-
-	// Ensure the path is within the storage directory
-	cleanPath := filepath.Clean(fullPath)
-	cleanStoragePath := filepath.Clean(ws.StoragePath)
-	if !strings.HasPrefix(cleanPath, cleanStoragePath) {
-		return fmt.Errorf("path traversal attempt detected")
-	}
-
 	// Get content
 	var content []byte
 	if len(args) > 2 {
@@ -85,15 +70,13 @@ func runWrite(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Create directory if needed
-	dir := filepath.Dir(fullPath)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
+	// Create storage manager
+	storageManager := storage.NewManager()
 
 	// Write the file
-	if err := os.WriteFile(fullPath, content, 0o644); err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
+	path := args[1]
+	if err := storageManager.WriteFile(ctx, ws.StoragePath, path, content); err != nil {
+		return err
 	}
 
 	ui.Success("Successfully wrote %d bytes to %s", len(content), path)
