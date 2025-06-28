@@ -123,6 +123,22 @@ func PrintWorkspace(w *workspace.Workspace) {
 		statusStr = DimStyle.Render("Unknown")
 	}
 	OutputLine("   %s %s", DimStyle.Render("Status:"), statusStr)
+
+	// Show active sessions
+	sessionCount := w.SessionCount()
+	if sessionCount > 0 {
+		sessionIDs, err := w.SessionIDs()
+		if err == nil && len(sessionIDs) > 0 {
+			OutputLine("   %s %d active session(s):", DimStyle.Render("Sessions:"), sessionCount)
+			for _, sessionID := range sessionIDs {
+				OutputLine("     - %s", sessionID)
+			}
+		} else {
+			OutputLine("   %s %d", DimStyle.Render("Sessions:"), sessionCount)
+		}
+	} else {
+		OutputLine("   %s %s", DimStyle.Render("Sessions:"), DimStyle.Render("none"))
+	}
 }
 
 // FormatDuration formats a duration into a human-readable string
@@ -147,7 +163,7 @@ func PrintWorkspaceList(workspaces []*workspace.Workspace) {
 	}
 
 	// Create table
-	tbl := NewTable("ID", "NAME", "BRANCH", "AGE", "STATUS", "DESCRIPTION")
+	tbl := NewTable("ID", "NAME", "BRANCH", "SESSIONS", "AGE", "STATUS", "DESCRIPTION")
 
 	// Add rows
 	for _, w := range workspaces {
@@ -176,7 +192,10 @@ func PrintWorkspaceList(workspaces []*workspace.Workspace) {
 			status = DimStyle.Render("unknown")
 		}
 
-		tbl.AddRow(id, w.Name, w.Branch, age, status, description)
+		// Get session count
+		sessions := fmt.Sprintf("%d", w.SessionCount())
+
+		tbl.AddRow(id, w.Name, w.Branch, sessions, age, status, description)
 	}
 
 	// Print with header
