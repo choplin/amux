@@ -197,7 +197,7 @@ func (m *Manager) Get(ctx context.Context, id ID) (*Workspace, error) {
 	workspace, _, err := m.fm.Read(ctx, workspaceMetaPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("workspace not found: %s", id)
+			return nil, ErrNotFound{Identifier: string(id)}
 		}
 		return nil, fmt.Errorf("failed to read workspace: %w", err)
 	}
@@ -351,7 +351,7 @@ func (m *Manager) ResolveWorkspace(ctx context.Context, identifier Identifier) (
 
 	switch len(matches) {
 	case 0:
-		return nil, fmt.Errorf("workspace not found: %s", identifier)
+		return nil, ErrNotFound{Identifier: string(identifier)}
 	case 1:
 		return matches[0], nil
 	default:

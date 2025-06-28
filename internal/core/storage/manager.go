@@ -20,7 +20,7 @@ func NewManager() *Manager {
 // ReadFile reads a file from the storage path
 func (m *Manager) ReadFile(ctx context.Context, storagePath, relativePath string) ([]byte, error) {
 	if storagePath == "" {
-		return nil, fmt.Errorf("storage path not found")
+		return nil, ErrStoragePathEmpty{}
 	}
 
 	// Construct full path
@@ -35,7 +35,7 @@ func (m *Manager) ReadFile(ctx context.Context, storagePath, relativePath string
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("file not found: %s", relativePath)
+			return nil, ErrNotFound{Path: relativePath}
 		}
 		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
@@ -46,7 +46,7 @@ func (m *Manager) ReadFile(ctx context.Context, storagePath, relativePath string
 // WriteFile writes content to a file in the storage path
 func (m *Manager) WriteFile(ctx context.Context, storagePath, relativePath string, content []byte) error {
 	if storagePath == "" {
-		return fmt.Errorf("storage path not found")
+		return ErrStoragePathEmpty{}
 	}
 
 	// Construct full path
@@ -74,7 +74,7 @@ func (m *Manager) WriteFile(ctx context.Context, storagePath, relativePath strin
 // Remove removes a file or directory from the storage path
 func (m *Manager) Remove(ctx context.Context, storagePath, relativePath string, recursive bool) (*RemoveResult, error) {
 	if storagePath == "" {
-		return nil, fmt.Errorf("storage path not found")
+		return nil, ErrStoragePathEmpty{}
 	}
 
 	// Construct full path
@@ -89,7 +89,7 @@ func (m *Manager) Remove(ctx context.Context, storagePath, relativePath string, 
 	info, err := os.Stat(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("file not found: %s", relativePath)
+			return nil, ErrNotFound{Path: relativePath}
 		}
 		return nil, fmt.Errorf("failed to stat path: %w", err)
 	}
@@ -120,7 +120,7 @@ func (m *Manager) Remove(ctx context.Context, storagePath, relativePath string, 
 // ListFiles lists files in the storage path
 func (m *Manager) ListFiles(ctx context.Context, storagePath, relativePath string) (*ListResult, error) {
 	if storagePath == "" {
-		return nil, fmt.Errorf("storage path not found")
+		return nil, ErrStoragePathEmpty{}
 	}
 
 	// Construct full path
@@ -135,7 +135,7 @@ func (m *Manager) ListFiles(ctx context.Context, storagePath, relativePath strin
 	info, err := os.Stat(fullPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("path does not exist: %s", relativePath)
+			return nil, ErrNotFound{Path: relativePath}
 		}
 		return nil, fmt.Errorf("failed to stat path: %w", err)
 	}
@@ -186,7 +186,7 @@ func (m *Manager) validatePath(storagePath, fullPath string) error {
 	cleanPath := filepath.Clean(fullPath)
 	cleanStoragePath := filepath.Clean(storagePath)
 	if !strings.HasPrefix(cleanPath, cleanStoragePath) {
-		return fmt.Errorf("path traversal attempt detected")
+		return ErrPathTraversal{}
 	}
 	return nil
 }

@@ -2,8 +2,8 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/storage"
@@ -35,9 +35,6 @@ func runRead(cmd *cobra.Command, args []string) error {
 	// Resolve workspace
 	ws, err := manager.ResolveWorkspace(ctx, workspace.Identifier(args[0]))
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			return fmt.Errorf("workspace not found: %s", args[0])
-		}
 		return fmt.Errorf("failed to resolve workspace: %w", err)
 	}
 
@@ -48,6 +45,10 @@ func runRead(cmd *cobra.Command, args []string) error {
 	path := args[1]
 	content, err := storageManager.ReadFile(ctx, ws.StoragePath, path)
 	if err != nil {
+		var notFound storage.ErrNotFound
+		if errors.As(err, &notFound) {
+			return fmt.Errorf("file not found: %s", path)
+		}
 		return err
 	}
 

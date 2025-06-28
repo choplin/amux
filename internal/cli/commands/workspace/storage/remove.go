@@ -3,7 +3,6 @@ package storage
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/aki/amux/internal/cli/ui"
 	"github.com/aki/amux/internal/core/config"
@@ -43,9 +42,6 @@ func runRemove(cmd *cobra.Command, args []string) error {
 	// Resolve workspace
 	ws, err := manager.ResolveWorkspace(ctx, workspace.Identifier(args[0]))
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			return fmt.Errorf("workspace not found: %s", args[0])
-		}
 		return fmt.Errorf("failed to resolve workspace: %w", err)
 	}
 
