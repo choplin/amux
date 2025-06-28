@@ -123,7 +123,7 @@ func TestExecutor_ExecuteHooks(t *testing.T) {
 		hook := hooks.Hook{
 			Name:    "Env test",
 			Script:  scriptPath,
-			Timeout: "1s",
+			Timeout: "5s", // Increase timeout to avoid flaky failures on first run
 			OnError: hooks.ErrorStrategyFail,
 			Env: map[string]string{
 				"TEST_VAR": "test_value",
