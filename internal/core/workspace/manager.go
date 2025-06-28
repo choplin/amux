@@ -649,5 +649,5 @@ func (m *Manager) RemoveWithSessionCheck(ctx context.Context, identifier Identif
 	}
 
 	// Proceed with normal removal
-	return m.Remove(ctx, identifier)
+	return m.Remove(ctx, identifier, RemoveOptions{})
 }

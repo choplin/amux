@@ -72,6 +72,11 @@ func CreateTmuxSession(ctx context.Context, info *Info, manager *Manager, tmuxAd
 	// Initialize state manager with default slog logger
 	s.Manager = state.InitManager(info.ID, info.WorkspaceID, info.StateDir, nil)
 
+	// Add semaphore handler if workspace manager is available
+	if manager != nil && manager.workspaceManager != nil {
+		s.AddChangeHandler(createSemaphoreHandler(manager.workspaceManager))
+	}
+
 	return s, nil
 }
 
