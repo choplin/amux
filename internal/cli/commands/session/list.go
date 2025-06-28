@@ -132,7 +132,6 @@ func listSessions(cmd *cobra.Command, args []string) error {
 	// Print with header
 	ui.PrintSectionHeader("🤖", "Active Sessions", len(sessions))
 	tbl.Print()
-	ui.OutputLine("")
 
 	return nil
 }
