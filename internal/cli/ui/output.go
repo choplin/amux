@@ -123,6 +123,22 @@ func PrintWorkspace(w *workspace.Workspace) {
 		statusStr = DimStyle.Render("Unknown")
 	}
 	OutputLine("   %s %s", DimStyle.Render("Status:"), statusStr)
+
+	// Show active sessions
+	sessionCount := w.SessionCount()
+	if sessionCount > 0 {
+		sessionIDs, err := w.SessionIDs()
+		if err == nil && len(sessionIDs) > 0 {
+			OutputLine("   %s %d active session(s):", DimStyle.Render("Sessions:"), sessionCount)
+			for _, sessionID := range sessionIDs {
+				OutputLine("     - %s", sessionID)
+			}
+		} else {
+			OutputLine("   %s %d", DimStyle.Render("Sessions:"), sessionCount)
+		}
+	} else {
+		OutputLine("   %s %s", DimStyle.Render("Sessions:"), DimStyle.Render("none"))
+	}
 }
 
 // FormatDuration formats a duration into a human-readable string
@@ -161,8 +177,11 @@ func PrintWorkspaceList(workspaces []*workspace.Workspace) {
 			description = "-"
 		}
 
-		// Format status with appropriate icon
+		// Format status with appropriate icon and session info
 		var status string
+		sessionCount := w.SessionCount()
+
+		// Base status
 		switch w.Status {
 		case workspace.StatusConsistent:
 			status = SuccessStyle.Render("✓ ok")
@@ -174,6 +193,16 @@ func PrintWorkspaceList(workspaces []*workspace.Workspace) {
 			status = ErrorStyle.Render("✗ orphaned")
 		default:
 			status = DimStyle.Render("unknown")
+		}
+
+		// Add session info if any sessions are active
+		if sessionCount > 0 {
+			sessionInfo := fmt.Sprintf("%d active", sessionCount)
+			// Highlight if 3 or more sessions
+			if sessionCount >= 3 {
+				sessionInfo = WarningStyle.Render(sessionInfo)
+			}
+			status = fmt.Sprintf("%s • %s", status, sessionInfo)
 		}
 
 		tbl.AddRow(id, w.Name, w.Branch, age, status, description)

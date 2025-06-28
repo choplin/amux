@@ -37,6 +37,26 @@ func runRemoveWorkspace(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to resolve workspace: %w", err)
 	}
 
+	// Check for active sessions
+	sessionIDs, err := ws.SessionIDs()
+	if err != nil {
+		// If we can't check sessions, fall back to normal removal with warning
+		ui.Warning("Could not check for active sessions: %v", err)
+	} else if len(sessionIDs) > 0 && !removeForce {
+		// Show error with session information
+		ui.Error("Cannot remove workspace '%s' - currently in use by %d session(s):", ws.Name, len(sessionIDs))
+
+		// TODO: Show detailed session information once we have session manager in CLI
+		// For now, just show session IDs
+		for _, sessionID := range sessionIDs {
+			ui.OutputLine("  - %s", sessionID)
+		}
+
+		ui.OutputLine("")
+		ui.OutputLine("Use --force to remove anyway, or stop the sessions first")
+		return fmt.Errorf("workspace in use")
+	}
+
 	// Get current working directory for safety check
 	cwd, err := os.Getwd()
 	if err != nil {
