@@ -70,22 +70,7 @@ agents:
         ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
 ```
 
-### 4. Working Context
-
-**Purpose**: Provides structured context files for AI agents
-
-**Components**:
-
-- Context file templates
-- Workspace metadata tracking
-- Session storage directories
-
-**Context Files**:
-
-- Workspace context files stored at `.amux/workspaces/{id}/context.md`
-- Session storage for agent-specific data
-
-### 5. Storage Management
+### 4. Storage Management
 
 **Purpose**: Provides unified file operations for workspace and session storage
 
@@ -101,7 +86,13 @@ agents:
 - Type-safe results for different operations
 - Maintains complete functionality including operation-specific messaging
 
-### 6. MCP Server
+**Usage Examples**:
+
+- Workspace storage for agent-specific files and notes
+- Session storage for command outputs and temporary data
+- Context files (e.g., `.amux/workspaces/{id}/context.md`) for tracking work progress
+
+### 5. MCP Server
 
 **Purpose**: Enables AI agents to interact with Amux
 
@@ -139,7 +130,7 @@ Session Manager
     ↓
 Create Session Info → Store in FileStore
     ↓
-Initialize Context → Create template files
+Create Storage Directories
     ↓
 Create Tmux Session → Set environment vars
     ↓
@@ -157,7 +148,7 @@ Git Worktree Create → New branch
     ↓
 Initialize Metadata → .amux/workspace.yaml
     ↓
-Create Context → Template files
+Create Storage → Empty directories
     ↓
 Return Workspace Info
 ```
