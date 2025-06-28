@@ -11,6 +11,12 @@ import (
 
 // RegisterDefaults registers the default runtime implementations
 func RegisterDefaults() error {
+	// Check if already registered to avoid duplicate registration
+	if len(runtime.List()) > 0 {
+		// Runtimes already registered
+		return nil
+	}
+
 	// Register local runtime
 	localRT := local.New()
 	if err := runtime.Register("local", localRT, local.LocalOptions{

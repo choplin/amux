@@ -54,7 +54,8 @@ const (
 // Agent represents an AI agent configuration
 type Agent struct {
 	Name        string            `yaml:"name"`
-	Type        AgentType         `yaml:"type"` // Required: agent session type
+	Type        AgentType         `yaml:"type"`              // Required: agent session type
+	Runtime     string            `yaml:"runtime,omitempty"` // New: runtime type ("local", "tmux")
 	Description string            `yaml:"description,omitempty"`
 	Environment map[string]string `yaml:"environment,omitempty"`
 	WorkingDir  string            `yaml:"workingDir,omitempty"`
@@ -62,6 +63,12 @@ type Agent struct {
 
 	// Type-specific parameters - actual type depends on Type field
 	Params interface{} `yaml:"params,omitempty"`
+
+	// Runtime-specific options - replaces Params in v0.2.0
+	RuntimeOptions interface{} `yaml:"runtimeOptions,omitempty"`
+
+	// Default command to execute
+	DefaultCommand []string `yaml:"defaultCommand,omitempty"`
 }
 
 // Command represents a command that can be either a string or an array of strings
@@ -153,17 +160,82 @@ func (a *Agent) GetTmuxParams() (*TmuxParams, error) {
 	return params, nil
 }
 
+// GetRuntimeType returns the runtime type for this agent
+// If Runtime field is set, it takes precedence over Type field
+func (a *Agent) GetRuntimeType() string {
+	// Use explicit runtime if specified
+	if a.Runtime != "" {
+		return a.Runtime
+	}
+
+	// Otherwise, map from agent type for backward compatibility
+	switch a.Type {
+	case AgentTypeTmux:
+		return "tmux"
+	default:
+		return "local"
+	}
+}
+
+// GetRuntimeOptions returns the runtime options for this agent
+// It prioritizes RuntimeOptions over legacy Params field
+func (a *Agent) GetRuntimeOptions() interface{} {
+	// Use new RuntimeOptions if available
+	if a.RuntimeOptions != nil {
+		return a.RuntimeOptions
+	}
+
+	// Fall back to Params for backward compatibility
+	// This handles conversion from TmuxParams to runtime options
+	if a.Type == AgentTypeTmux && a.Params != nil {
+		if tmuxParams, ok := a.Params.(*TmuxParams); ok {
+			// Convert TmuxParams to runtime options format
+			// This will be used by the runtime package
+			return tmuxParams
+		}
+	}
+
+	return nil
+}
+
+// GetCommand returns the command to execute
+// It prioritizes DefaultCommand over legacy command in Params
+func (a *Agent) GetCommand() []string {
+	// Use new DefaultCommand if available
+	if len(a.DefaultCommand) > 0 {
+		return a.DefaultCommand
+	}
+
+	// Fall back to command in params for backward compatibility
+	if a.Type == AgentTypeTmux && a.Params != nil {
+		if tmuxParams, ok := a.Params.(*TmuxParams); ok {
+			if tmuxParams.Command.IsArray() {
+				return tmuxParams.Command.Array
+			}
+			if tmuxParams.Command.Single != "" {
+				// For shell execution compatibility
+				return []string{"sh", "-c", tmuxParams.Command.Single}
+			}
+		}
+	}
+
+	return nil
+}
+
 // UnmarshalYAML implements custom YAML unmarshaling to handle type-specific parameters
 func (a *Agent) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	// Temporary struct for initial unmarshaling
 	var raw struct {
-		Name        string            `yaml:"name"`
-		Type        string            `yaml:"type"`
-		Description string            `yaml:"description,omitempty"`
-		Environment map[string]string `yaml:"environment,omitempty"`
-		WorkingDir  string            `yaml:"workingDir,omitempty"`
-		Tags        []string          `yaml:"tags,omitempty"`
-		Params      interface{}       `yaml:"params,omitempty"`
+		Name           string            `yaml:"name"`
+		Type           string            `yaml:"type"`
+		Runtime        string            `yaml:"runtime,omitempty"`
+		Description    string            `yaml:"description,omitempty"`
+		Environment    map[string]string `yaml:"environment,omitempty"`
+		WorkingDir     string            `yaml:"workingDir,omitempty"`
+		Tags           []string          `yaml:"tags,omitempty"`
+		Params         interface{}       `yaml:"params,omitempty"`
+		RuntimeOptions interface{}       `yaml:"runtimeOptions,omitempty"`
+		DefaultCommand []string          `yaml:"defaultCommand,omitempty"`
 	}
 
 	if err := unmarshal(&raw); err != nil {
@@ -172,12 +244,15 @@ func (a *Agent) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	// Copy basic fields
 	*a = Agent{
-		Name:        raw.Name,
-		Type:        AgentType(raw.Type),
-		Description: raw.Description,
-		Environment: raw.Environment,
-		WorkingDir:  raw.WorkingDir,
-		Tags:        raw.Tags,
+		Name:           raw.Name,
+		Type:           AgentType(raw.Type),
+		Runtime:        raw.Runtime,
+		Description:    raw.Description,
+		Environment:    raw.Environment,
+		WorkingDir:     raw.WorkingDir,
+		Tags:           raw.Tags,
+		RuntimeOptions: raw.RuntimeOptions,
+		DefaultCommand: raw.DefaultCommand,
 	}
 
 	// Convert params to appropriate concrete type based on agent type
