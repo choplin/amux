@@ -30,5 +30,5 @@ func NewTable(headers ...interface{}) table.Table {
 
 // PrintSectionHeader prints a consistent section header
 func PrintSectionHeader(icon string, title string, count int) {
-	OutputLine("\n%s %s (%d)", icon, title, count)
+	OutputLine("%s %s (%d)", icon, title, count)
 }
