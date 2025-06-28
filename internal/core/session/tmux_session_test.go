@@ -30,13 +30,13 @@ func TestTmuxSession_StartStop(t *testing.T) {
 	}
 
 	// Create ID mapper
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewSessionIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		t.Fatalf("Failed to create ID mapper: %v", err)
 	}
 
 	// Create manager
-	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, nil, idMapper)
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, configManager, idMapper)
 	if err != nil {
 		t.Fatalf("Failed to create manager: %v", err)
 	}
@@ -119,13 +119,13 @@ func TestTmuxSession_WithInitialPrompt(t *testing.T) {
 	}
 
 	// Create ID mapper
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewSessionIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		t.Fatalf("Failed to create ID mapper: %v", err)
 	}
 
 	// Create manager
-	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, nil, idMapper)
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, configManager, idMapper)
 	if err != nil {
 		t.Fatalf("Failed to create manager: %v", err)
 	}
@@ -211,13 +211,13 @@ func TestTmuxSession_StatusTracking(t *testing.T) {
 	}
 
 	// Create ID mapper
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewSessionIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		t.Fatalf("Failed to create ID mapper: %v", err)
 	}
 
 	// Create manager
-	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, nil, idMapper)
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, configManager, idMapper)
 	if err != nil {
 		t.Fatalf("Failed to create manager: %v", err)
 	}
@@ -299,13 +299,13 @@ func TestTmuxSession_WithEnvironment(t *testing.T) {
 	}
 
 	// Create ID mapper
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewSessionIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		t.Fatalf("Failed to create ID mapper: %v", err)
 	}
 
 	// Create manager
-	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, nil, idMapper)
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, configManager, idMapper)
 	if err != nil {
 		t.Fatalf("Failed to create manager: %v", err)
 	}
@@ -411,13 +411,13 @@ func TestTmuxSession_WithShellAndWindowName(t *testing.T) {
 	}
 
 	// Create ID mapper
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewSessionIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		t.Fatalf("Failed to create ID mapper: %v", err)
 	}
 
 	// Create manager
-	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, nil, idMapper)
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, configManager, idMapper)
 	if err != nil {
 		t.Fatalf("Failed to create manager: %v", err)
 	}

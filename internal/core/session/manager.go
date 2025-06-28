@@ -6,13 +6,12 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/aki/amux/internal/adapters/tmux"
-	"github.com/aki/amux/internal/core/agent"
 	"github.com/aki/amux/internal/core/config"
+	"github.com/aki/amux/internal/core/hooks"
 	"github.com/aki/amux/internal/core/idmap"
 	"github.com/aki/amux/internal/core/workspace"
 	"github.com/aki/amux/internal/filemanager"
@@ -23,10 +22,10 @@ type Manager struct {
 	sessionsDir      string
 	fileManager      *filemanager.Manager[Info]
 	workspaceManager *workspace.Manager
-	agentManager     *agent.Manager
+	configManager    *config.Manager
 	tmuxAdapter      tmux.Adapter
 	sessions         map[string]Session
-	idMapper         *idmap.IDMapper
+	idMapper         *idmap.Mapper[idmap.SessionID]
 	mu               sync.RWMutex
 }
 
@@ -34,7 +33,7 @@ type Manager struct {
 type ManagerOption func(*Manager)
 
 // NewManager creates a new session manager
-func NewManager(basePath string, workspaceManager *workspace.Manager, agentManager *agent.Manager, idMapper *idmap.IDMapper, opts ...ManagerOption) (*Manager, error) {
+func NewManager(basePath string, workspaceManager *workspace.Manager, configManager *config.Manager, idMapper *idmap.Mapper[idmap.SessionID], opts ...ManagerOption) (*Manager, error) {
 	// Ensure sessions directory exists
 	sessionsDir := filepath.Join(basePath, "sessions")
 	if err := os.MkdirAll(sessionsDir, 0o755); err != nil {
@@ -48,7 +47,7 @@ func NewManager(basePath string, workspaceManager *workspace.Manager, agentManag
 		sessionsDir:      sessionsDir,
 		fileManager:      filemanager.NewManager[Info](),
 		workspaceManager: workspaceManager,
-		agentManager:     agentManager,
+		configManager:    configManager,
 		idMapper:         idMapper,
 		tmuxAdapter:      tmuxAdapter,
 		sessions:         make(map[string]Session),
@@ -71,12 +70,6 @@ func (m *Manager) SetTmuxAdapter(adapter tmux.Adapter) {
 
 // CreateSession creates a new session
 func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, error) {
-	// Validate workspace exists
-	ws, err := m.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(opts.WorkspaceID))
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve workspace: %w", err)
-	}
-
 	// Set default session type if not specified
 	sessionType := opts.Type
 	if sessionType == "" {
@@ -104,26 +97,91 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 
 	// Set default agent ID if not provided
 	if opts.AgentID == "" {
-		opts.AgentID = agent.DefaultAgentID
+		opts.AgentID = "default"
 	}
 
-	// Get agent configuration if available
-	var agentConfig *config.Agent
-	if m.agentManager != nil {
-		if agent, err := m.agentManager.GetAgent(opts.AgentID); err == nil {
-			agentConfig = agent
+	// Handle workspace creation or validation
+	var ws *workspace.Workspace
+	var err error
+	if opts.AutoCreateWorkspace && opts.WorkspaceID == "" {
+		// Generate workspace name based on session name or ID
+		workspaceName := opts.Name
+		if workspaceName == "" {
+			workspaceName = fmt.Sprintf("session-%s", sessionID.Short())
+		}
 
-			// If no command specified, try to get it from agent config
-			if opts.Command == "" && agent.Type == config.AgentTypeTmux {
-				if params, err := agent.GetTmuxParams(); err == nil {
-					if params.Command.IsArray() {
-						// For array commands, join with spaces
-						opts.Command = strings.Join(params.Command.Array, " ")
-					} else if params.Command.Single != "" {
-						opts.Command = params.Command.Single
+		// Generate workspace description
+		workspaceDesc := fmt.Sprintf("Auto-created for session %s", sessionID.Short())
+		if opts.Description != "" {
+			workspaceDesc = opts.Description
+		}
+
+		ws, err = m.workspaceManager.Create(ctx, workspace.CreateOptions{
+			Name:        workspaceName,
+			Description: workspaceDesc,
+			AutoCreated: true,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create auto-workspace: %w", err)
+		}
+
+		opts.WorkspaceID = ws.ID
+	} else if opts.WorkspaceID != "" {
+		// Validate workspace exists
+		ws, err = m.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(opts.WorkspaceID))
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve workspace: %w", err)
+		}
+	} else {
+		// No workspace ID and auto-create not requested
+		return nil, fmt.Errorf("workspace is required: specify --workspace or use auto-creation")
+	}
+
+	// Get agent configuration
+	var agentConfig *config.Agent
+	var shouldAutoAttach bool
+	if m.configManager != nil {
+		agent, err := m.configManager.GetAgent(opts.AgentID)
+		if err != nil {
+			return nil, fmt.Errorf("agent %q not found: %w", opts.AgentID, err)
+		}
+		agentConfig = agent
+
+		// Determine session type from agent type
+		switch agent.Type {
+		case config.AgentTypeTmux:
+			sessionType = TypeTmux
+
+			// Get tmux-specific configuration
+			cfg, err := m.configManager.Load()
+			if err != nil {
+				return nil, fmt.Errorf("failed to load config: %w", err)
+			}
+
+			if tmuxAgent, err := cfg.GetTmuxAgent(opts.AgentID); err == nil {
+				shouldAutoAttach = tmuxAgent.ShouldAutoAttach()
+
+				// If no command specified, use agent's default
+				if opts.Command == "" {
+					opts.Command = tmuxAgent.GetCommand()
+				}
+
+				// Merge agent environment with session environment
+				// Session environment (from CLI) takes precedence
+				if opts.Environment == nil {
+					opts.Environment = make(map[string]string)
+				}
+				for k, v := range tmuxAgent.GetEnvironment() {
+					if _, exists := opts.Environment[k]; !exists {
+						opts.Environment[k] = v
 					}
 				}
 			}
+		case config.AgentTypeClaudeCode, config.AgentTypeAPI:
+			// These agent types are not yet implemented
+			return nil, fmt.Errorf("agent type %q is not yet implemented", agent.Type)
+		default:
+			return nil, fmt.Errorf("unknown agent type %q", agent.Type)
 		}
 	}
 
@@ -150,14 +208,15 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 		ActivityTracking: ActivityTracking{
 			LastOutputTime: now,
 		},
-		Command:       opts.Command,
-		Environment:   opts.Environment,
-		InitialPrompt: opts.InitialPrompt,
-		CreatedAt:     now,
-		StoragePath:   storagePath,
-		StateDir:      stateDir,
-		Name:          opts.Name,
-		Description:   opts.Description,
+		Command:          opts.Command,
+		Environment:      opts.Environment,
+		InitialPrompt:    opts.InitialPrompt,
+		CreatedAt:        now,
+		StoragePath:      storagePath,
+		StateDir:         stateDir,
+		Name:             opts.Name,
+		Description:      opts.Description,
+		ShouldAutoAttach: shouldAutoAttach,
 	}
 
 	// Save session info to file
@@ -167,7 +226,7 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 
 	// Generate and assign index
 	if m.idMapper != nil {
-		index, err := m.idMapper.AddSession(info.ID)
+		index, err := m.idMapper.Add(idmap.SessionID(info.ID))
 		if err != nil {
 			// Don't fail if index generation fails
 			info.Index = ""
@@ -184,6 +243,15 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 	m.mu.Lock()
 	m.sessions[sessionID.String()] = sess
 	m.mu.Unlock()
+
+	// Execute hooks unless disabled
+	if !opts.NoHooks {
+		if err := m.executeSessionHooks(ctx, sess, ws, hooks.EventSessionStart); err != nil {
+			// Log error but don't fail session creation
+			// This matches the current CLI behavior
+			slog.Error("hook execution failed", "error", err)
+		}
+	}
 
 	return sess, nil
 }
@@ -239,7 +307,7 @@ func (m *Manager) ListSessions(ctx context.Context) ([]Session, error) {
 
 		// Populate short ID
 		if m.idMapper != nil {
-			if index, exists := m.idMapper.GetSessionIndex(info.ID); exists {
+			if index, exists := m.idMapper.GetIndex(idmap.SessionID(info.ID)); exists {
 				info.Index = index
 			}
 		}
@@ -271,7 +339,12 @@ func (m *Manager) ListSessions(ctx context.Context) ([]Session, error) {
 
 	// Reconcile index state with actual sessions
 	if m.idMapper != nil {
-		if orphanedCount, err := m.idMapper.ReconcileSessions(existingIDs); err == nil && orphanedCount > 0 {
+		// Convert string IDs to SessionID type
+		sessionIDs := make([]idmap.SessionID, len(existingIDs))
+		for i, id := range existingIDs {
+			sessionIDs[i] = idmap.SessionID(id)
+		}
+		if orphanedCount, err := m.idMapper.Reconcile(sessionIDs); err == nil && orphanedCount > 0 {
 			slog.Debug("Cleaned up orphaned session indices", "count", orphanedCount)
 		}
 	}
@@ -311,7 +384,7 @@ func (m *Manager) Remove(ctx context.Context, id ID) error {
 
 	// Remove short ID mapping
 	if m.idMapper != nil {
-		_ = m.idMapper.RemoveSession(string(id))
+		_ = m.idMapper.Remove(idmap.SessionID(id))
 	}
 
 	// Remove from cache
@@ -368,8 +441,8 @@ func (m *Manager) createSessionFromInfo(ctx context.Context, info *Info) (Sessio
 
 		// Get agent configuration if available
 		var agentConfig *config.Agent
-		if m.agentManager != nil {
-			if agent, err := m.agentManager.GetAgent(info.AgentID); err == nil {
+		if m.configManager != nil {
+			if agent, err := m.configManager.GetAgent(info.AgentID); err == nil {
 				agentConfig = agent
 			}
 		}
@@ -401,8 +474,8 @@ func (m *Manager) ResolveSession(ctx context.Context, identifier Identifier) (Se
 
 	// 2. Try as index (short ID)
 	if m.idMapper != nil {
-		if fullID, exists := m.idMapper.GetSessionFull(string(identifier)); exists {
-			session, err := m.Get(ctx, ID(fullID))
+		if fullID, exists := m.idMapper.GetFull(string(identifier)); exists {
+			session, err := m.Get(ctx, ID(string(fullID)))
 			if err == nil {
 				return session, nil
 			}
@@ -591,4 +664,86 @@ func (m *Manager) CreateSessionStorage(sessionID string) (string, error) {
 		return "", err
 	}
 	return storagePath, nil
+}
+
+// StopSession stops a session with hook execution
+func (m *Manager) StopSession(ctx context.Context, sess Session, noHooks bool) error {
+	// Get workspace for hooks
+	info := sess.Info()
+	var ws *workspace.Workspace
+	if info.WorkspaceID != "" && !noHooks {
+		ws, _ = m.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(info.WorkspaceID))
+	}
+
+	// Execute session stop hooks (before stopping)
+	if ws != nil && !noHooks {
+		if err := m.executeSessionHooks(ctx, sess, ws, hooks.EventSessionStop); err != nil {
+			// Log error but continue with stop
+			slog.Error("hook execution failed", "error", err)
+		}
+	}
+
+	// Stop session
+	return sess.Stop(ctx)
+}
+
+// executeSessionHooks executes hooks for session events
+func (m *Manager) executeSessionHooks(ctx context.Context, sess Session, ws *workspace.Workspace, event hooks.Event) error {
+	if ws == nil {
+		return fmt.Errorf("session hooks require workspace assignment")
+	}
+
+	configDir := m.configManager.GetAmuxDir()
+
+	// Load hooks configuration
+	hooksConfig, err := hooks.LoadConfig(configDir)
+	if err != nil {
+		return fmt.Errorf("failed to load hooks: %w", err)
+	}
+
+	// Get hooks for this event
+	eventHooks := hooksConfig.GetHooksForEvent(event)
+	if len(eventHooks) == 0 {
+		return nil // No hooks configured
+	}
+
+	// Check if hooks are trusted
+	trusted, err := hooks.IsTrusted(configDir, hooksConfig)
+	if err != nil {
+		return fmt.Errorf("failed to check hook trust: %w", err)
+	}
+
+	if !trusted {
+		// Don't execute untrusted hooks
+		return nil
+	}
+
+	// Get session info
+	info := sess.Info()
+
+	// Prepare environment variables
+	env := map[string]string{
+		// Session-specific variables
+		"AMUX_SESSION_ID":          info.ID,
+		"AMUX_SESSION_INDEX":       info.Index,
+		"AMUX_SESSION_AGENT_ID":    info.AgentID,
+		"AMUX_SESSION_NAME":        info.Name,
+		"AMUX_SESSION_DESCRIPTION": info.Description,
+		"AMUX_SESSION_COMMAND":     info.Command,
+		// Workspace variables
+		"AMUX_WORKSPACE_ID":          ws.ID,
+		"AMUX_WORKSPACE_NAME":        ws.Name,
+		"AMUX_WORKSPACE_PATH":        ws.Path,
+		"AMUX_WORKSPACE_BRANCH":      ws.Branch,
+		"AMUX_WORKSPACE_BASE_BRANCH": ws.BaseBranch,
+		// Event and context
+		"AMUX_EVENT":        string(event),
+		"AMUX_EVENT_TIME":   time.Now().Format(time.RFC3339),
+		"AMUX_PROJECT_ROOT": m.configManager.GetProjectRoot(),
+		"AMUX_CONFIG_DIR":   configDir,
+	}
+
+	// Execute hooks in workspace directory
+	executor := hooks.NewExecutor(configDir, env).WithWorkingDir(ws.Path)
+	return executor.ExecuteHooks(ctx, event, eventHooks)
 }

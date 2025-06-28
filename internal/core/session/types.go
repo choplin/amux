@@ -77,15 +77,17 @@ type ActivityTracking struct {
 
 // Options contains options for creating a new session
 type Options struct {
-	ID            ID                // Optional: pre-generated session ID
-	Type          Type              // Optional: session type (defaults to tmux)
-	WorkspaceID   string            // Required: workspace to run in
-	AgentID       string            // Required: agent to run
-	Command       string            // Optional: override agent command
-	Environment   map[string]string // Optional: additional env vars
-	InitialPrompt string            // Optional: initial prompt to send after starting
-	Name          string            // Optional: human-readable name for the session
-	Description   string            // Optional: description of session purpose
+	ID                  ID                // Optional: pre-generated session ID
+	Type                Type              // Optional: session type (defaults to tmux)
+	WorkspaceID         string            // Optional: workspace to run in
+	AutoCreateWorkspace bool              // Create a new workspace if WorkspaceID is not provided
+	AgentID             string            // Required: agent to run
+	Command             string            // Optional: override agent command
+	Environment         map[string]string // Optional: additional env vars
+	InitialPrompt       string            // Optional: initial prompt to send after starting
+	Name                string            // Optional: human-readable name for the session
+	Description         string            // Optional: description of session purpose
+	NoHooks             bool              // Skip hook execution
 }
 
 // Info contains metadata about a session
@@ -109,6 +111,7 @@ type Info struct {
 	StateDir         string            `yaml:"state_dir,omitempty"`
 	Name             string            `yaml:"name,omitempty"`
 	Description      string            `yaml:"description,omitempty"`
+	ShouldAutoAttach bool              `yaml:"-"` // Derived from agent config, not persisted
 }
 
 // Session represents an active or inactive agent session
@@ -133,6 +136,9 @@ type Session interface {
 
 	// Info returns the full session information
 	Info() *Info
+
+	// GetStoragePath returns the storage path for the session
+	GetStoragePath() string
 
 	// Start starts the session
 	Start(ctx context.Context) error

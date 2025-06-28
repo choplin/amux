@@ -7,14 +7,13 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 
-	"github.com/aki/amux/internal/core/agent"
 	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/workspace"
 )
 
 // SessionRunParams contains parameters for session_run tool
 type SessionRunParams struct {
-	WorkspaceID string            `json:"workspace_identifier" jsonschema:"required,description=Workspace ID, index, or name to run the session in"`
+	WorkspaceID string            `json:"workspace_identifier,omitempty" jsonschema:"description=Workspace ID, index, or name. If not provided, a new workspace will be auto-created"`
 	AgentID     string            `json:"agent_id" jsonschema:"required,description=Agent ID to run (e.g. 'claude' 'gpt')"`
 	Name        string            `json:"name,omitempty" jsonschema:"description=Human-readable name for the session"`
 	Description string            `json:"description,omitempty" jsonschema:"description=Description of the session purpose"`
@@ -72,31 +71,23 @@ func (s *ServerV2) registerSessionTools() error {
 func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	args := request.GetArguments()
 
-	// Extract required parameters
-	workspaceID, ok := args["workspace_identifier"].(string)
-	if !ok {
-		return nil, fmt.Errorf("invalid or missing workspace_identifier argument")
-	}
-
+	// Extract required agent ID
 	agentID, ok := args["agent_id"].(string)
 	if !ok {
 		return nil, fmt.Errorf("invalid or missing agent_id argument")
 	}
 
-	// Resolve workspace
-	ws, err := s.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(workspaceID))
-	if err != nil {
-		// Check if it's a not found error
-		if strings.Contains(err.Error(), "not found") {
-			return nil, WorkspaceNotFoundError(workspaceID)
-		}
-		return nil, fmt.Errorf("failed to resolve workspace: %w", err)
-	}
-
 	// Build session options
 	opts := session.Options{
-		WorkspaceID: ws.ID,
-		AgentID:     agentID,
+		AgentID: agentID,
+	}
+
+	// Set workspace ID if specified
+	if workspaceID, ok := args["workspace_identifier"].(string); ok && workspaceID != "" {
+		opts.WorkspaceID = workspaceID
+	} else {
+		// No workspace specified, enable auto-creation
+		opts.AutoCreateWorkspace = true
 	}
 
 	// Optional name
@@ -146,17 +137,16 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 
 	// Build response
 	response := map[string]interface{}{
-		"id":             info.ID,
-		"index":          info.Index,
-		"name":           info.Name,
-		"description":    info.Description,
-		"workspace_id":   info.WorkspaceID,
-		"workspace_name": ws.Name,
-		"agent_id":       info.AgentID,
-		"status":         string(sess.Status()),
-		"command":        info.Command,
-		"tmux_session":   info.TmuxSession,
-		"created_at":     info.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		"id":           info.ID,
+		"index":        info.Index,
+		"name":         info.Name,
+		"description":  info.Description,
+		"workspace_id": info.WorkspaceID,
+		"agent_id":     info.AgentID,
+		"status":       string(sess.Status()),
+		"command":      info.Command,
+		"tmux_session": info.TmuxSession,
+		"created_at":   info.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 
 	if info.StartedAt != nil {
@@ -173,11 +163,18 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 		response["attach_amux"] = fmt.Sprintf("amux session attach %s", attachID)
 
 		// Check if agent has autoAttach but we're in MCP context
-		agentManager := agent.NewManager(s.configManager)
-		if agentConfig, _ := agentManager.GetAgent(agentID); agentConfig != nil {
+		if agentConfig, _ := s.configManager.GetAgent(agentID); agentConfig != nil {
 			if tmuxParams, err := agentConfig.GetTmuxParams(); err == nil && tmuxParams != nil && tmuxParams.AutoAttach {
 				response["auto_attach_skipped"] = "Auto-attach is not available in MCP context (no TTY)"
 			}
+		}
+	}
+
+	// Get workspace info to check if auto-created
+	if ws, err := s.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(sess.WorkspaceID())); err == nil {
+		if ws.AutoCreated {
+			response["workspace_auto_created"] = true
+			response["workspace_name"] = ws.Name
 		}
 	}
 
@@ -212,8 +209,8 @@ func (s *ServerV2) handleSessionStop(ctx context.Context, request mcp.CallToolRe
 		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
 
-	// Stop session
-	if err := sess.Stop(ctx); err != nil {
+	// Stop session with hook execution
+	if err := sessionManager.StopSession(ctx, sess, false); err != nil {
 		return nil, fmt.Errorf("failed to stop session: %w", err)
 	}
 

@@ -293,6 +293,6 @@ func (s *ServerV2) handleSessionOutputResource(ctx context.Context, request mcp.
 
 // createSessionManager is a helper to create a session manager with all dependencies
 func (s *ServerV2) createSessionManager() (*session.Manager, error) {
-	factory := session.NewFactory()
-	return factory.CreateManager(s.configManager, s.workspaceManager)
+	// Return the session manager initialized in the server
+	return s.sessionManager, nil
 }

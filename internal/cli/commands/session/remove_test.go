@@ -51,7 +51,7 @@ func TestRemoveSession(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create session manager
-	sessionManager, err := createSessionManager(configManager, wsManager)
+	sessionManager, err := session.SetupManager(repoDir)
 	require.NoError(t, err)
 
 	t.Run("cannot remove running session", func(t *testing.T) {
@@ -233,7 +233,7 @@ func TestRemoveSession(t *testing.T) {
 		t.Cleanup(func() {
 			// Try to remove workspace if it still exists
 			if _, err := wsManager.ResolveWorkspace(context.Background(), workspace.Identifier(ws3.ID)); err == nil {
-				_ = wsManager.Remove(context.Background(), workspace.Identifier(ws3.ID))
+				_ = wsManager.Remove(context.Background(), workspace.Identifier(ws3.ID), workspace.RemoveOptions{})
 			}
 		})
 

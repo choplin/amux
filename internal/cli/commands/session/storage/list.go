@@ -2,13 +2,13 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/aki/amux/internal/cli/ui"
+	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/session"
+	"github.com/aki/amux/internal/core/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -24,7 +24,11 @@ func runList(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 
 	// Get session manager
-	manager, err := getSessionManager()
+	projectRoot, err := config.FindProjectRoot()
+	if err != nil {
+		return err
+	}
+	manager, err := session.SetupManager(projectRoot)
 	if err != nil {
 		return err
 	}
@@ -32,82 +36,59 @@ func runList(cmd *cobra.Command, args []string) error {
 	// Resolve session
 	sess, err := manager.ResolveSession(ctx, session.Identifier(args[0]))
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			return fmt.Errorf("session not found: %s", args[0])
-		}
 		return fmt.Errorf("failed to resolve session: %w", err)
 	}
 
-	// Get session info
-	info := sess.Info()
-	if info.StoragePath == "" {
-		return fmt.Errorf("storage path not found for session")
-	}
+	// Create storage manager
+	storageManager := storage.NewManager(sess)
 
 	// Determine the path to list
-	basePath := info.StoragePath
 	subPath := ""
 	if len(args) > 1 {
 		subPath = args[1]
 	}
 
-	// Construct full path
-	fullPath := filepath.Join(basePath, subPath)
-
-	// Ensure the path is within the storage directory
-	cleanPath := filepath.Clean(fullPath)
-	cleanBasePath := filepath.Clean(basePath)
-	if !strings.HasPrefix(cleanPath, cleanBasePath) {
-		return fmt.Errorf("path traversal attempt detected")
-	}
-
-	// Check if the path exists
-	fileInfo, err := os.Stat(fullPath)
+	// List files
+	result, err := storageManager.ListFiles(ctx, subPath)
 	if err != nil {
-		if os.IsNotExist(err) {
+		var notFound storage.ErrNotFound
+		if errors.As(err, &notFound) {
 			ui.Warning("Path does not exist: %s", subPath)
 			return nil
 		}
-		return fmt.Errorf("failed to stat path: %w", err)
+		return err
 	}
 
-	// If it's a file, show file info
-	if !fileInfo.IsDir() {
-		ui.Success("File: %s", subPath)
-		ui.Output("Size: %d bytes", fileInfo.Size())
-		ui.Output("Modified: %s", fileInfo.ModTime().Format("2006-01-02 15:04:05"))
+	// Handle empty directory
+	if len(result.Files) == 0 {
+		ui.Info("Directory is empty")
 		return nil
 	}
 
-	// List directory contents
-	entries, err := os.ReadDir(fullPath)
-	if err != nil {
-		return fmt.Errorf("failed to read directory: %w", err)
-	}
-
-	if len(entries) == 0 {
-		ui.Info("Directory is empty")
+	// Check if listing a single file
+	if result.IsTargetFile {
+		ui.Success("File: %s", subPath)
+		ui.Output("Size: %d bytes", result.Files[0].Size)
+		ui.Output("Modified: %s", result.Files[0].ModTime.Format("2006-01-02 15:04:05"))
 		return nil
 	}
 
 	// Display the listing
 	if subPath != "" {
-		ui.PrintSectionHeader("", fmt.Sprintf("Contents of %s", subPath), len(entries))
+		ui.PrintSectionHeader("", fmt.Sprintf("Contents of %s", subPath), len(result.Files))
 	} else {
-		ui.PrintSectionHeader("", "Storage contents", len(entries))
+		ui.PrintSectionHeader("", "Storage contents", len(result.Files))
 	}
 
-	for _, entry := range entries {
-		name := entry.Name()
-		if entry.IsDir() {
-			ui.Output("%s/", name)
+	for _, file := range result.Files {
+		if file.IsDir {
+			ui.Output("%s/", file.Name)
 		} else {
-			info, _ := entry.Info()
-			ui.Output("%s (%d bytes)", name, info.Size())
+			ui.Output("%s (%d bytes)", file.Name, file.Size)
 		}
 	}
 
-	ui.Info("Total: %d items", len(entries))
+	ui.Info("Total: %d items", len(result.Files))
 
 	return nil
 }

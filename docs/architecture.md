@@ -46,13 +46,13 @@ SessionManager
 └── Session Cache (in-memory)
 ```
 
-### 3. Agent Configuration
+### 3. Configuration Management
 
-**Purpose**: Manages AI agent settings and defaults
+**Purpose**: Manages project configuration including agent definitions
 
 **Components**:
 
-- `agent.Manager` - Agent configuration CRUD
+- `config.Manager` - Configuration file management
 - Agent definitions in config.yaml
 - Environment variable management
 - Command defaults
@@ -63,28 +63,34 @@ SessionManager
 agents:
   claude:
     name: Claude
-    type: claude
-    command: claude
-    environment:
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    type: tmux
+    params:
+      command: claude
+      environment:
+        ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
 ```
 
-### 4. Working Context
+### 4. Storage Management
 
-**Purpose**: Provides structured context files for AI agents
+**Purpose**: Provides unified file operations for workspace and session storage
 
 **Components**:
 
-- `context.Manager` - Context file management
-- Template initialization
-- Progress tracking utilities
+- `storage.Manager` - Core file operations (read, write, list, remove)
+- Path validation to prevent directory traversal
+- Consistent error handling across CLI and MCP
 
-**Context Files**:
+**Key Features**:
 
-- `background.md` - Task requirements
-- `plan.md` - Implementation approach
-- `working-log.md` - Progress tracking
-- `results-summary.md` - Final outcomes
+- Single implementation used by both CLI commands and MCP tools
+- Type-safe results for different operations
+- Maintains complete functionality including operation-specific messaging
+
+**Usage Examples**:
+
+- Workspace storage for agent-specific files and notes
+- Session storage for command outputs and temporary data
+- Context files (e.g., `.amux/workspaces/{id}/context.md`) for tracking work progress
 
 ### 5. MCP Server
 
@@ -100,6 +106,8 @@ agents:
 
 - `workspace_create` - Create new workspace
 - `workspace_remove` - Remove workspace
+- `workspace_storage_read/write/list` - Storage operations
+- `session_storage_read/write/list` - Session storage operations
 
 **Bridge Tools** (for clients without resource support):
 
@@ -122,7 +130,7 @@ Session Manager
     ↓
 Create Session Info → Store in FileStore
     ↓
-Initialize Context → Create template files
+Create Storage Directories
     ↓
 Create Tmux Session → Set environment vars
     ↓
@@ -140,7 +148,7 @@ Git Worktree Create → New branch
     ↓
 Initialize Metadata → .amux/workspace.yaml
     ↓
-Create Context → Template files
+Create Storage → Empty directories
     ↓
 Return Workspace Info
 ```

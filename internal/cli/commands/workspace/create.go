@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/aki/amux/internal/cli/ui"
-	"github.com/aki/amux/internal/core/hooks"
+	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/workspace"
 )
 
@@ -39,7 +39,11 @@ func runCreateWorkspace(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("cannot specify both --branch (-b) and --checkout (-c) flags")
 	}
 
-	manager, err := GetWorkspaceManager()
+	projectRoot, err := config.FindProjectRoot()
+	if err != nil {
+		return err
+	}
+	manager, err := workspace.SetupManager(projectRoot)
 	if err != nil {
 		return err
 	}
@@ -49,6 +53,7 @@ func runCreateWorkspace(cmd *cobra.Command, args []string) error {
 		BaseBranch:  createBaseBranch,
 		Description: createDescription,
 		BranchMode:  workspace.BranchModeCreate, // Default to create mode
+		NoHooks:     createNoHooks,
 	}
 
 	// Set Branch field based on which flag was used
@@ -74,16 +79,6 @@ func runCreateWorkspace(cmd *cobra.Command, args []string) error {
 	ui.PrintKeyValue("ID", id)
 	ui.PrintKeyValue("Branch", ws.Branch)
 	ui.PrintKeyValue("Path", ws.Path)
-
-	// Execute hooks unless --no-hooks was specified
-	if !createNoHooks {
-		if err := executeWorkspaceHooks(ws, hooks.EventWorkspaceCreate); err != nil {
-			// Hooks failed but workspace was created
-			ui.Error("Hook execution failed: %v", err)
-			ui.Warning("Workspace was created but hooks did not run successfully")
-			return nil
-		}
-	}
 
 	return nil
 }

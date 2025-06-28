@@ -25,21 +25,16 @@ Shows session ID, agent, workspace, status, and runtime.`,
 }
 
 func listSessions(cmd *cobra.Command, args []string) error {
-	// Find project root
+	// Get managers
 	projectRoot, err := config.FindProjectRoot()
 	if err != nil {
 		return err
 	}
-
-	// Create managers
-	configManager := config.NewManager(projectRoot)
-	wsManager, err := workspace.NewManager(configManager)
+	wsManager, err := workspace.SetupManager(projectRoot)
 	if err != nil {
-		return fmt.Errorf("failed to create workspace manager: %w", err)
+		return err
 	}
-
-	// Create session manager
-	sessionManager, err := createSessionManager(configManager, wsManager)
+	sessionManager, err := session.SetupManager(projectRoot)
 	if err != nil {
 		return err
 	}

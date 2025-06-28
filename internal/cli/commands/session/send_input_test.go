@@ -57,7 +57,8 @@ func TestSendInputToSession(t *testing.T) {
 		// Could fail either at project root detection or session lookup
 		assert.True(t,
 			strings.Contains(err.Error(), "project root") ||
-				strings.Contains(err.Error(), "session not found"),
-			"Expected error about project root or session not found, got: %v", err)
+				strings.Contains(err.Error(), "session not found") ||
+				strings.Contains(err.Error(), "not in an Amux project"),
+			"Expected error about project root, session not found, or not in Amux project, got: %v", err)
 	})
 }

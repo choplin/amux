@@ -160,20 +160,25 @@ func TestSessionRun(t *testing.T) {
 		}
 	})
 
-	t.Run("fails with invalid workspace", func(t *testing.T) {
+	t.Run("auto-creates workspace when not specified", func(t *testing.T) {
 		req := mcp.CallToolRequest{
 			Params: mcp.CallToolParams{
 				Name: "session_run",
 				Arguments: map[string]interface{}{
-					"workspace_id": "non-existent",
-					"agent_id":     "test-agent",
+					// workspace_identifier is omitted
+					"agent_id": "test-agent",
 				},
 			},
 		}
 
-		_, err := testServer.handleSessionRun(context.Background(), req)
-		if err == nil {
-			t.Error("expected error for non-existent workspace, got nil")
+		result, err := testServer.handleSessionRun(context.Background(), req)
+		if err != nil {
+			t.Errorf("expected auto-workspace creation to succeed, got error: %v", err)
+		}
+
+		// Check that session was created
+		if result == nil {
+			t.Fatal("expected result, got nil")
 		}
 	})
 

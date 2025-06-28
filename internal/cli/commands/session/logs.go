@@ -14,7 +14,6 @@ import (
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/tail"
-	"github.com/aki/amux/internal/core/workspace"
 )
 
 func logsCmd() *cobra.Command {
@@ -39,21 +38,12 @@ Use -f/--follow to continuously stream new output.`,
 func viewSessionLogs(cmd *cobra.Command, args []string) error {
 	sessionID := args[0]
 
-	// Find project root
+	// Get session manager
 	projectRoot, err := config.FindProjectRoot()
 	if err != nil {
 		return err
 	}
-
-	// Create managers
-	configManager := config.NewManager(projectRoot)
-	wsManager, err := workspace.NewManager(configManager)
-	if err != nil {
-		return fmt.Errorf("failed to create workspace manager: %w", err)
-	}
-
-	// Create session manager
-	sessionManager, err := createSessionManager(configManager, wsManager)
+	sessionManager, err := session.SetupManager(projectRoot)
 	if err != nil {
 		return err
 	}

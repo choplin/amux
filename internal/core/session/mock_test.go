@@ -29,13 +29,13 @@ func TestTmuxSession_WithMock(t *testing.T) {
 	}
 
 	// Create ID mapper
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewSessionIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		t.Fatalf("Failed to create ID mapper: %v", err)
 	}
 
 	// Create manager
-	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, nil, idMapper)
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, configManager, idMapper)
 	if err != nil {
 		t.Fatalf("Failed to create manager: %v", err)
 	}
@@ -139,13 +139,13 @@ func TestManager_WithMockAdapter(t *testing.T) {
 	}
 
 	// Create ID mapper
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewSessionIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		t.Fatalf("Failed to create ID mapper: %v", err)
 	}
 
 	// Create manager
-	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, nil, idMapper)
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, configManager, idMapper)
 	if err != nil {
 		t.Fatalf("Failed to create manager: %v", err)
 	}
@@ -199,13 +199,13 @@ func TestManager_WithUnavailableTmux(t *testing.T) {
 	}
 
 	// Create ID mapper
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewSessionIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		t.Fatalf("Failed to create ID mapper: %v", err)
 	}
 
 	// Create manager
-	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, nil, idMapper)
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, configManager, idMapper)
 	if err != nil {
 		t.Fatalf("Failed to create manager: %v", err)
 	}
@@ -245,13 +245,13 @@ func TestSessionStatus_MockAdapter(t *testing.T) {
 	}
 
 	// Create ID mapper
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewSessionIDMapper(configManager.GetAmuxDir())
 	if err != nil {
 		t.Fatalf("Failed to create ID mapper: %v", err)
 	}
 
 	// Create manager
-	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, nil, idMapper)
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, configManager, idMapper)
 	if err != nil {
 		t.Fatalf("Failed to create manager: %v", err)
 	}

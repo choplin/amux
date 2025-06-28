@@ -73,7 +73,7 @@ func TestManager_CreateWithExistingBranch(t *testing.T) {
 	}
 
 	// Clean up
-	err = manager.Remove(context.Background(), workspace.Identifier(ws.ID))
+	err = manager.Remove(context.Background(), workspace.Identifier(ws.ID), workspace.RemoveOptions{})
 	if err != nil {
 		t.Fatalf("Failed to remove workspace: %v", err)
 	}
@@ -122,7 +122,7 @@ func TestManager_CreateWithNewBranch(t *testing.T) {
 	}
 
 	// Clean up
-	err = manager.Remove(context.Background(), workspace.Identifier(ws.ID))
+	err = manager.Remove(context.Background(), workspace.Identifier(ws.ID), workspace.RemoveOptions{})
 	if err != nil {
 		t.Fatalf("Failed to remove workspace: %v", err)
 	}
@@ -176,7 +176,7 @@ func TestManager_RemoveWithManuallyDeletedWorktree(t *testing.T) {
 
 	// Now try to remove the workspace through amux
 	// This should succeed and clean up metadata even though worktree is gone
-	err = manager.Remove(context.Background(), workspace.Identifier(ws.ID))
+	err = manager.Remove(context.Background(), workspace.Identifier(ws.ID), workspace.RemoveOptions{})
 	if err != nil {
 		t.Fatalf("Failed to remove workspace with manually deleted worktree: %v", err)
 	}
@@ -225,7 +225,7 @@ func TestManager_ConsistencyChecking(t *testing.T) {
 			t.Fatalf("Failed to create workspace: %v", err)
 		}
 		t.Cleanup(func() {
-			if err := manager.Remove(context.Background(), workspace.Identifier(ws.ID)); err != nil {
+			if err := manager.Remove(context.Background(), workspace.Identifier(ws.ID), workspace.RemoveOptions{}); err != nil {
 				t.Logf("Failed to remove workspace %s: %v", ws.ID, err)
 			}
 		})
@@ -264,7 +264,7 @@ func TestManager_ConsistencyChecking(t *testing.T) {
 			t.Fatalf("Failed to create workspace: %v", err)
 		}
 		t.Cleanup(func() {
-			if err := manager.Remove(context.Background(), workspace.Identifier(ws.ID)); err != nil {
+			if err := manager.Remove(context.Background(), workspace.Identifier(ws.ID), workspace.RemoveOptions{}); err != nil {
 				t.Logf("Failed to remove workspace %s: %v", ws.ID, err)
 			}
 		})
@@ -328,7 +328,7 @@ func TestManager_ConsistencyChecking(t *testing.T) {
 		}
 
 		// Remove the temp workspace properly
-		manager.Remove(context.Background(), workspace.Identifier(tempWs.ID))
+		manager.Remove(context.Background(), workspace.Identifier(tempWs.ID), workspace.RemoveOptions{})
 
 		// Now create the test scenario:
 		// 1. Create workspace directory structure manually
@@ -449,7 +449,7 @@ func TestManager_CreateSetsContextPath(t *testing.T) {
 	}
 
 	// Clean up
-	err = manager.Remove(context.Background(), workspace.Identifier(ws.ID))
+	err = manager.Remove(context.Background(), workspace.Identifier(ws.ID), workspace.RemoveOptions{})
 	if err != nil {
 		t.Fatalf("Failed to remove workspace: %v", err)
 	}
@@ -493,7 +493,7 @@ func TestManager_CreateWithNewBranchFlag(t *testing.T) {
 		}
 
 		// Clean up
-		err = manager.Remove(context.Background(), workspace.Identifier(ws.ID))
+		err = manager.Remove(context.Background(), workspace.Identifier(ws.ID), workspace.RemoveOptions{})
 		if err != nil {
 			t.Fatalf("Failed to remove workspace: %v", err)
 		}
@@ -573,7 +573,7 @@ func TestManager_CreateWithCheckoutFlag(t *testing.T) {
 		}
 
 		// Clean up
-		err = manager.Remove(context.Background(), workspace.Identifier(ws.ID))
+		err = manager.Remove(context.Background(), workspace.Identifier(ws.ID), workspace.RemoveOptions{})
 		if err != nil {
 			t.Fatalf("Failed to remove workspace: %v", err)
 		}

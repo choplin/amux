@@ -94,6 +94,11 @@ type Workspace struct {
 	Status         ConsistencyStatus `yaml:"-" json:"status"`
 }
 
+// GetStoragePath returns the storage path for the workspace
+func (w *Workspace) GetStoragePath() string {
+	return w.StoragePath
+}
+
 // BranchMode specifies how to handle branch creation/checkout
 type BranchMode int
 
@@ -112,11 +117,19 @@ type CreateOptions struct {
 	BranchMode  BranchMode // How to handle the branch (default: BranchModeCreate)
 	Description string
 	AutoCreated bool // Internal: whether workspace was auto-created by session
+	NoHooks     bool // Skip hook execution
 }
 
 // ListOptions represents options for listing workspaces
 type ListOptions struct {
 	// Reserved for future filtering options
+}
+
+// RemoveOptions represents options for removing a workspace
+type RemoveOptions struct {
+	NoHooks         bool   // Skip hook execution
+	CurrentDir      string // Current working directory (for safety check)
+	SkipSafetyCheck bool   // Skip current directory safety check
 }
 
 // CleanupOptions represents options for cleaning up old workspaces

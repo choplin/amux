@@ -2,11 +2,11 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 
+	"github.com/aki/amux/internal/core/config"
+	"github.com/aki/amux/internal/core/storage"
 	"github.com/aki/amux/internal/core/workspace"
 	"github.com/spf13/cobra"
 )
@@ -23,7 +23,11 @@ func runRead(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 
 	// Get workspace manager
-	manager, err := getWorkspaceManager()
+	projectRoot, err := config.FindProjectRoot()
+	if err != nil {
+		return err
+	}
+	manager, err := workspace.SetupManager(projectRoot)
 	if err != nil {
 		return err
 	}
@@ -31,34 +35,21 @@ func runRead(cmd *cobra.Command, args []string) error {
 	// Resolve workspace
 	ws, err := manager.ResolveWorkspace(ctx, workspace.Identifier(args[0]))
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			return fmt.Errorf("workspace not found: %s", args[0])
-		}
 		return fmt.Errorf("failed to resolve workspace: %w", err)
 	}
 
-	if ws.StoragePath == "" {
-		return fmt.Errorf("storage path not found for workspace")
-	}
-
-	// Construct full path
-	path := args[1]
-	fullPath := filepath.Join(ws.StoragePath, path)
-
-	// Ensure the path is within the storage directory
-	cleanPath := filepath.Clean(fullPath)
-	cleanStoragePath := filepath.Clean(ws.StoragePath)
-	if !strings.HasPrefix(cleanPath, cleanStoragePath) {
-		return fmt.Errorf("path traversal attempt detected")
-	}
+	// Create storage manager
+	storageManager := storage.NewManager(ws)
 
 	// Read the file
-	content, err := os.ReadFile(fullPath)
+	path := args[1]
+	content, err := storageManager.ReadFile(ctx, path)
 	if err != nil {
-		if os.IsNotExist(err) {
+		var notFound storage.ErrNotFound
+		if errors.As(err, &notFound) {
 			return fmt.Errorf("file not found: %s", path)
 		}
-		return fmt.Errorf("failed to read file: %w", err)
+		return err
 	}
 
 	// Display the content

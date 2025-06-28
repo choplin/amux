@@ -35,6 +35,20 @@ func TestTailer_Follow(t *testing.T) {
 	// Initialize Amux
 	configManager := config.NewManager(repoDir)
 	cfg := config.DefaultConfig()
+	cfg.Agents["test-agent"] = config.Agent{
+		Name: "Test Agent",
+		Type: config.AgentTypeTmux,
+		Params: &config.TmuxParams{
+			Command: config.Command{Single: "echo test"},
+		},
+	}
+	cfg.Agents["test-agent-2"] = config.Agent{
+		Name: "Test Agent 2",
+		Type: config.AgentTypeTmux,
+		Params: &config.TmuxParams{
+			Command: config.Command{Single: "echo test"},
+		},
+	}
 	err := configManager.Save(cfg)
 	require.NoError(t, err)
 
@@ -49,10 +63,10 @@ func TestTailer_Follow(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create dependencies
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewSessionIDMapper(configManager.GetAmuxDir())
 	require.NoError(t, err)
 	// Create session manager with mock adapter
-	sessionManager, err := session.NewManager(configManager.GetAmuxDir(), wsManager, nil, idMapper)
+	sessionManager, err := session.NewManager(configManager.GetAmuxDir(), wsManager, configManager, idMapper)
 	require.NoError(t, err)
 
 	// Replace tmux adapter with mock
@@ -192,6 +206,20 @@ func TestFollowFunc(t *testing.T) {
 	// Initialize Amux
 	configManager := config.NewManager(repoDir)
 	cfg := config.DefaultConfig()
+	cfg.Agents["test-agent"] = config.Agent{
+		Name: "Test Agent",
+		Type: config.AgentTypeTmux,
+		Params: &config.TmuxParams{
+			Command: config.Command{Single: "echo test"},
+		},
+	}
+	cfg.Agents["test-agent-2"] = config.Agent{
+		Name: "Test Agent 2",
+		Type: config.AgentTypeTmux,
+		Params: &config.TmuxParams{
+			Command: config.Command{Single: "echo test"},
+		},
+	}
 	err := configManager.Save(cfg)
 	require.NoError(t, err)
 
@@ -206,10 +234,10 @@ func TestFollowFunc(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create dependencies
-	idMapper, err := idmap.NewIDMapper(configManager.GetAmuxDir())
+	idMapper, err := idmap.NewSessionIDMapper(configManager.GetAmuxDir())
 	require.NoError(t, err)
 	// Create session manager with mock adapter
-	sessionManager, err := session.NewManager(configManager.GetAmuxDir(), wsManager, nil, idMapper)
+	sessionManager, err := session.NewManager(configManager.GetAmuxDir(), wsManager, configManager, idMapper)
 	require.NoError(t, err)
 
 	// Replace tmux adapter with mock

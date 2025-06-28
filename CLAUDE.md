@@ -50,6 +50,49 @@ amux/
 
 ## Development Standards
 
+### Interface Parity Principle
+
+**IMPORTANT**: All features must work identically through both CLI and MCP interfaces.
+
+#### Implementation Guidelines
+
+1. **Business Logic Placement**
+   - All business logic must be implemented in the appropriate manager layer
+   - CLI commands and MCP tools should be thin wrappers
+   - Both interfaces must call the same manager methods to ensure consistency
+
+2. **Anti-patterns to Avoid**
+   - ❌ Business logic implementation in CLI commands
+   - ❌ MCP-only or CLI-only features (unless absolutely necessary, e.g., `amux mcp` command to start MCP server)
+   - ❌ Duplicated logic between CLI and MCP
+
+3. **Properly Implemented Features** ✅
+   - Hook execution: Works in both CLI and MCP through manager layers
+   - Storage operations: Shared implementation, no duplication
+   - Auto-workspace creation: Supported in both CLI and MCP
+
+4. **Correct Implementation Pattern**
+
+   ```go
+   // ✅ Good: Implement in manager
+   func (m *SessionManager) CreateSession(opts Options) {
+       // Hook execution here too
+       if err := m.executeHooks(hooks.EventSessionStart); err != nil {
+           // ...
+       }
+   }
+
+   // CLI: Thin wrapper
+   func runSession(cmd *cobra.Command, args []string) error {
+       return sessionManager.CreateSession(opts)
+   }
+
+   // MCP: Also thin wrapper
+   func (s *Server) handleSessionRun(req Request) (*Result, error) {
+       return s.sessionManager.CreateSession(opts)
+   }
+   ```
+
 ### Code Style Rules
 
 1. **Go Code Formatting**: Use `goimports` and `gofumpt` via golangci-lint for consistent formatting

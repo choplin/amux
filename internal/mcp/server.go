@@ -10,55 +10,53 @@ import (
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
-
 	"github.com/mark3labs/mcp-go/server"
 
 	"github.com/aki/amux/internal/core/config"
-
+	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/workspace"
 )
 
 // ServerV2 implements the MCP server using mcp-go
 type ServerV2 struct {
-	mcpServer *server.MCPServer
-
-	configManager *config.Manager
-
-	workspaceManager *workspace.Manager
-
-	transport string
-
+	mcpServer  *server.MCPServer
+	transport  string
 	httpConfig *config.HTTPConfig
+
+	// Manager references
+	configManager    *config.Manager
+	workspaceManager *workspace.Manager
+	sessionManager   *session.Manager
 }
 
 // NewServerV2 creates a new MCP server using mcp-go
 func NewServerV2(configManager *config.Manager, transport string, httpConfig *config.HTTPConfig) (*ServerV2, error) {
-	workspaceManager, err := workspace.NewManager(configManager)
+	// Create workspace manager
+	workspaceManager, err := workspace.SetupManager(configManager.GetProjectRoot())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create workspace manager: %w", err)
 	}
 
+	// Create session manager independently
+	sessionManager, err := session.SetupManager(configManager.GetProjectRoot())
+	if err != nil {
+		return nil, fmt.Errorf("failed to create session manager: %w", err)
+	}
+
 	// Create MCP server
-
 	mcpServer := server.NewMCPServer(
-
 		"amux",
-
 		"1.0.0",
-
 		server.WithLogging(),
 	)
 
 	s := &ServerV2{
-		mcpServer: mcpServer,
-
-		configManager: configManager,
-
+		mcpServer:        mcpServer,
+		transport:        transport,
+		httpConfig:       httpConfig,
+		configManager:    configManager,
 		workspaceManager: workspaceManager,
-
-		transport: transport,
-
-		httpConfig: httpConfig,
+		sessionManager:   sessionManager,
 	}
 
 	// Register all tools
@@ -186,7 +184,16 @@ func (s *ServerV2) handleWorkspaceRemove(ctx context.Context, request mcp.CallTo
 		return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 	}
 
-	if err := s.workspaceManager.Remove(ctx, workspace.Identifier(ws.ID)); err != nil {
+	// Get current working directory for safety check
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current directory: %w", err)
+	}
+
+	if err := s.workspaceManager.Remove(ctx, workspace.Identifier(ws.ID), workspace.RemoveOptions{
+		NoHooks:    false,
+		CurrentDir: cwd,
+	}); err != nil {
 		return nil, fmt.Errorf("failed to remove workspace: %w", err)
 	}
 

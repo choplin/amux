@@ -73,6 +73,10 @@ func (s *orphanedSessionImpl) Info() *Info {
 	return &info
 }
 
+func (s *orphanedSessionImpl) GetStoragePath() string {
+	return s.info.StateDir
+}
+
 func (s *orphanedSessionImpl) Start(ctx context.Context) error {
 	return fmt.Errorf("cannot start orphaned session: %s", s.info.Error)
 }

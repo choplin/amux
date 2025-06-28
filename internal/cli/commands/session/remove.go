@@ -43,21 +43,16 @@ Use --force to automatically stop a running session before removal.`,
 func removeSession(cmd *cobra.Command, args []string, keepWorkspace bool, force bool) error {
 	sessionID := args[0]
 
-	// Find project root
+	// Get managers
 	projectRoot, err := config.FindProjectRoot()
 	if err != nil {
 		return err
 	}
-
-	// Create managers
-	configManager := config.NewManager(projectRoot)
-	wsManager, err := workspace.NewManager(configManager)
+	wsManager, err := workspace.SetupManager(projectRoot)
 	if err != nil {
-		return fmt.Errorf("failed to create workspace manager: %w", err)
+		return err
 	}
-
-	// Create session manager
-	sessionManager, err := createSessionManager(configManager, wsManager)
+	sessionManager, err := session.SetupManager(projectRoot)
 	if err != nil {
 		return err
 	}
@@ -121,7 +116,7 @@ func removeSession(cmd *cobra.Command, args []string, keepWorkspace bool, force 
 
 			if !workspaceInUse {
 				// Remove the workspace
-				if err := wsManager.Remove(cmd.Context(), workspace.Identifier(workspaceID)); err != nil {
+				if err := wsManager.Remove(cmd.Context(), workspace.Identifier(workspaceID), workspace.RemoveOptions{NoHooks: false}); err != nil {
 					ui.Warning("Failed to remove auto-created workspace %s: %v", ws.Name, err)
 				} else {
 					ui.OutputLine("Removed auto-created workspace: '%s'", ws.Name)
