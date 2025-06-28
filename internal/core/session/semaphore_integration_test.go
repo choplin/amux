@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/aki/amux/internal/adapters/tmux"
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/idmap"
 	"github.com/aki/amux/internal/core/session"
@@ -15,6 +16,12 @@ import (
 )
 
 func TestSessionSemaphoreIntegration(t *testing.T) {
+	// Check if tmux is available for session tests
+	adapter, err := tmux.NewAdapter()
+	if err != nil || adapter == nil || !adapter.IsAvailable() {
+		t.Skip("Skipping test: tmux not available")
+	}
+
 	// Create test repository
 	repoDir := helpers.CreateTestRepo(t)
 
@@ -34,7 +41,7 @@ func TestSessionSemaphoreIntegration(t *testing.T) {
 		},
 	}
 
-	err := configManager.Save(cfg)
+	err = configManager.Save(cfg)
 	require.NoError(t, err)
 
 	// Create workspace manager

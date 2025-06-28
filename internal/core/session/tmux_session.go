@@ -74,7 +74,7 @@ func CreateTmuxSession(ctx context.Context, info *Info, manager *Manager, tmuxAd
 
 	// Add semaphore handler if workspace manager is available
 	if manager != nil && manager.workspaceManager != nil {
-		s.Manager.AddChangeHandler(createSemaphoreHandler(manager.workspaceManager))
+		s.AddChangeHandler(createSemaphoreHandler(manager.workspaceManager))
 	}
 
 	return s, nil
