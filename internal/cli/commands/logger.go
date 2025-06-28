@@ -17,7 +17,7 @@ var (
 
 // RegisterLoggerFlags registers global logging flags
 func RegisterLoggerFlags(cmd *cobra.Command) {
-	cmd.PersistentFlags().StringVar(&flagLogLevel, "log-level", "info", "Log level (debug, info, warn, error)")
+	cmd.PersistentFlags().StringVar(&flagLogLevel, "log-level", "warn", "Log level (debug, info, warn, error)")
 	cmd.PersistentFlags().StringVar(&flagLogFormat, "log-format", "text", "Log format (text, json)")
 	cmd.PersistentFlags().BoolVar(&flagDebug, "debug", false, "Enable debug logging (shortcut for --log-level debug)")
 }
