@@ -9,10 +9,12 @@ type Provider interface {
 
 // FileInfo represents information about a file or directory
 type FileInfo struct {
-	Name    string
-	Size    int64
-	IsDir   bool
-	ModTime time.Time
+	Name       string
+	Size       int64
+	IsDir      bool
+	IsSymlink  bool
+	LinkTarget string // Only set if IsSymlink is true
+	ModTime    time.Time
 }
 
 // ListResult represents the result of a list operation
