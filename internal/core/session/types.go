@@ -77,16 +77,19 @@ type ActivityTracking struct {
 
 // Options contains options for creating a new session
 type Options struct {
-	ID            ID                // Optional: pre-generated session ID
-	Type          Type              // Optional: session type (defaults to tmux)
-	WorkspaceID   string            // Optional: workspace to run in (auto-created if empty)
-	AgentID       string            // Required: agent to run
-	Command       string            // Optional: override agent command
-	Environment   map[string]string // Optional: additional env vars
-	InitialPrompt string            // Optional: initial prompt to send after starting
-	Name          string            // Optional: human-readable name for the session
-	Description   string            // Optional: description of session purpose
-	NoHooks       bool              // Skip hook execution
+	ID                   ID                // Optional: pre-generated session ID
+	Type                 Type              // Optional: session type (defaults to tmux)
+	WorkspaceID          string            // Optional: workspace to run in
+	AutoCreateWorkspace  bool              // Create a new workspace if WorkspaceID is not provided
+	AgentID              string            // Required: agent to run
+	Command              string            // Optional: override agent command
+	Environment          map[string]string // Optional: additional env vars
+	InitialPrompt        string            // Optional: initial prompt to send after starting
+	Name                 string            // Optional: human-readable name for the session
+	Description          string            // Optional: description of session purpose
+	NoHooks              bool              // Skip hook execution
+	WorkspaceName        string            // Optional: name for auto-created workspace
+	WorkspaceDescription string            // Optional: description for auto-created workspace
 }
 
 // Info contains metadata about a session

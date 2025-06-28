@@ -85,8 +85,10 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 	// Set workspace ID if specified
 	if workspaceID, ok := args["workspace_identifier"].(string); ok && workspaceID != "" {
 		opts.WorkspaceID = workspaceID
+	} else {
+		// No workspace specified, enable auto-creation
+		opts.AutoCreateWorkspace = true
 	}
-	// If WorkspaceID is empty, session manager will auto-create a workspace
 
 	// Optional name
 	if name, ok := args["name"].(string); ok && name != "" {
@@ -172,6 +174,7 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 	if ws, err := s.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(sess.WorkspaceID())); err == nil {
 		if ws.AutoCreated {
 			response["workspace_auto_created"] = true
+			response["workspace_name"] = ws.Name
 		}
 	}
 

@@ -100,20 +100,31 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 		opts.AgentID = "default"
 	}
 
-	// Auto-create workspace if not specified
+	// Handle workspace creation or validation
 	var ws *workspace.Workspace
 	var err error
-	if opts.WorkspaceID == "" {
-		// Generate workspace name based on session name or ID
-		workspaceName := opts.Name
+	if opts.AutoCreateWorkspace && opts.WorkspaceID == "" {
+		// Use provided workspace name or generate based on session
+		workspaceName := opts.WorkspaceName
 		if workspaceName == "" {
-			workspaceName = fmt.Sprintf("session-%s", sessionID.Short())
+			// Fallback to session name
+			workspaceName = opts.Name
+			if workspaceName == "" {
+				// Final fallback to session ID
+				workspaceName = fmt.Sprintf("session-%s", sessionID.Short())
+			}
 		}
 
-		// Generate workspace description
-		workspaceDesc := fmt.Sprintf("Auto-created for session %s", sessionID.Short())
-		if opts.Description != "" {
-			workspaceDesc = opts.Description
+		// Use provided workspace description or generate
+		workspaceDesc := opts.WorkspaceDescription
+		if workspaceDesc == "" {
+			// Use session description if available
+			if opts.Description != "" {
+				workspaceDesc = opts.Description
+			} else {
+				// Default description
+				workspaceDesc = fmt.Sprintf("Auto-created for session %s", sessionID.Short())
+			}
 		}
 
 		ws, err = m.workspaceManager.Create(ctx, workspace.CreateOptions{
@@ -126,12 +137,15 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 		}
 
 		opts.WorkspaceID = ws.ID
-	} else {
+	} else if opts.WorkspaceID != "" {
 		// Validate workspace exists
 		ws, err = m.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(opts.WorkspaceID))
 		if err != nil {
 			return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 		}
+	} else {
+		// No workspace ID and auto-create not requested
+		return nil, fmt.Errorf("workspace is required: specify --workspace or use auto-creation")
 	}
 
 	// Get agent configuration

@@ -76,12 +76,16 @@ func runSession(cmd *cobra.Command, args []string) error {
 
 	// Get workspace ID if specified
 	var workspaceID string
+	autoCreateWorkspace := false
 	if runWorkspace != "" {
 		ws, err := wsManager.ResolveWorkspace(cmd.Context(), workspace.Identifier(runWorkspace))
 		if err != nil {
 			return fmt.Errorf("failed to resolve workspace: %w", err)
 		}
 		workspaceID = ws.ID
+	} else {
+		// No workspace specified, auto-create one
+		autoCreateWorkspace = true
 	}
 
 	// Parse environment variables from CLI
@@ -96,14 +100,18 @@ func runSession(cmd *cobra.Command, args []string) error {
 
 	// Create session
 	opts := session.Options{
-		WorkspaceID:   workspaceID, // Empty if not specified - will auto-create
-		AgentID:       agentID,
-		Command:       runCommand, // Optional override from CLI
-		Environment:   env,        // Environment variables from CLI
-		InitialPrompt: runInitialPrompt,
-		Name:          runSessionName,
-		Description:   runSessionDescription,
-		NoHooks:       runNoHooks,
+		WorkspaceID:         workspaceID,
+		AutoCreateWorkspace: autoCreateWorkspace,
+		AgentID:             agentID,
+		Command:             runCommand, // Optional override from CLI
+		Environment:         env,        // Environment variables from CLI
+		InitialPrompt:       runInitialPrompt,
+		Name:                runSessionName,
+		Description:         runSessionDescription,
+		NoHooks:             runNoHooks,
+		// Pass workspace name/description for auto-creation
+		WorkspaceName:        runName,
+		WorkspaceDescription: runDescription,
 	}
 
 	sess, err := sessionManager.CreateSession(cmd.Context(), opts)
@@ -112,10 +120,10 @@ func runSession(cmd *cobra.Command, args []string) error {
 	}
 
 	// Show workspace creation message if auto-created
-	if runWorkspace == "" {
+	if autoCreateWorkspace {
 		// Get the workspace that was created
 		ws, err := wsManager.ResolveWorkspace(cmd.Context(), workspace.Identifier(sess.WorkspaceID()))
-		if err == nil {
+		if err == nil && ws.AutoCreated {
 			ui.Success("Workspace created successfully: %s", ws.Name)
 		}
 	}
