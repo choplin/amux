@@ -12,8 +12,6 @@ var (
 	runCommand            string
 	runEnv                []string
 	runInitialPrompt      string
-	runName               string
-	runDescription        string
 	runSessionName        string
 	runSessionDescription string
 	runNoHooks            bool

@@ -27,8 +27,6 @@ with a name based on the session ID (e.g., session-f47ac10b).
 Examples:
   # Run Claude with auto-created workspace
   amux session run claude
-  # Run Claude with custom workspace name and description
-  amux session run claude --name feature-auth --description "Implementing authentication"
   # Run Claude in a specific workspace
   amux session run claude --workspace feature-auth
   # Run with custom command
@@ -48,8 +46,6 @@ Examples:
 	cmd.Flags().StringVarP(&runInitialPrompt, "initial-prompt", "p", "", "Initial prompt to send to the agent after starting")
 	cmd.Flags().StringVarP(&runSessionName, "session-name", "", "", "Human-readable name for the session")
 	cmd.Flags().StringVarP(&runSessionDescription, "session-description", "", "", "Description of the session purpose")
-	cmd.Flags().StringVarP(&runName, "name", "n", "", "Name for the auto-created workspace (only used when --workspace is not specified)")
-	cmd.Flags().StringVarP(&runDescription, "description", "d", "", "Description for the auto-created workspace (only used when --workspace is not specified)")
 	cmd.Flags().BoolVar(&runNoHooks, "no-hooks", false, "Skip hook execution")
 
 	return cmd
@@ -109,9 +105,6 @@ func runSession(cmd *cobra.Command, args []string) error {
 		Name:                runSessionName,
 		Description:         runSessionDescription,
 		NoHooks:             runNoHooks,
-		// Pass workspace name/description for auto-creation
-		WorkspaceName:        runName,
-		WorkspaceDescription: runDescription,
 	}
 
 	sess, err := sessionManager.CreateSession(cmd.Context(), opts)

@@ -104,27 +104,16 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 	var ws *workspace.Workspace
 	var err error
 	if opts.AutoCreateWorkspace && opts.WorkspaceID == "" {
-		// Use provided workspace name or generate based on session
-		workspaceName := opts.WorkspaceName
+		// Generate workspace name based on session name or ID
+		workspaceName := opts.Name
 		if workspaceName == "" {
-			// Fallback to session name
-			workspaceName = opts.Name
-			if workspaceName == "" {
-				// Final fallback to session ID
-				workspaceName = fmt.Sprintf("session-%s", sessionID.Short())
-			}
+			workspaceName = fmt.Sprintf("session-%s", sessionID.Short())
 		}
 
-		// Use provided workspace description or generate
-		workspaceDesc := opts.WorkspaceDescription
-		if workspaceDesc == "" {
-			// Use session description if available
-			if opts.Description != "" {
-				workspaceDesc = opts.Description
-			} else {
-				// Default description
-				workspaceDesc = fmt.Sprintf("Auto-created for session %s", sessionID.Short())
-			}
+		// Generate workspace description
+		workspaceDesc := fmt.Sprintf("Auto-created for session %s", sessionID.Short())
+		if opts.Description != "" {
+			workspaceDesc = opts.Description
 		}
 
 		ws, err = m.workspaceManager.Create(ctx, workspace.CreateOptions{
