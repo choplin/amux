@@ -1,0 +1,329 @@
+package local
+
+import (
+	"bytes"
+	"context"
+	"fmt"
+	"io"
+	"os"
+	"os/exec"
+	"sync"
+	"syscall"
+	"time"
+
+	"github.com/google/uuid"
+
+	"github.com/aki/amux/internal/runtime"
+)
+
+// Runtime implements the local process runtime using os/exec
+type Runtime struct {
+	processes sync.Map // map[string]*Process
+}
+
+// New creates a new local runtime
+func New() *Runtime {
+	return &Runtime{}
+}
+
+// Type returns the runtime type identifier
+func (r *Runtime) Type() string {
+	return "local"
+}
+
+// Execute starts a new process in the local runtime
+func (r *Runtime) Execute(ctx context.Context, spec runtime.ExecutionSpec) (runtime.Process, error) {
+	// Validate command
+	if len(spec.Command) == 0 {
+		return nil, runtime.ErrInvalidCommand
+	}
+
+	// Get options with defaults
+	opts, _ := spec.Options.(LocalOptions)
+	if opts.Shell == "" {
+		opts.Shell = os.Getenv("SHELL")
+		if opts.Shell == "" {
+			opts.Shell = "/bin/sh"
+		}
+	}
+
+	// Create command
+	var cmd *exec.Cmd
+	if len(spec.Command) == 1 {
+		// Single command, run through shell
+		cmd = exec.CommandContext(ctx, opts.Shell, "-c", spec.Command[0])
+	} else {
+		// Multiple arguments, run directly
+		cmd = exec.CommandContext(ctx, spec.Command[0], spec.Command[1:]...)
+	}
+
+	// Set working directory
+	if spec.WorkingDir != "" {
+		if _, err := os.Stat(spec.WorkingDir); err != nil {
+			return nil, fmt.Errorf("working directory does not exist: %w", err)
+		}
+		cmd.Dir = spec.WorkingDir
+	}
+
+	// Set environment
+	if opts.InheritEnv {
+		cmd.Env = os.Environ()
+	}
+	for k, v := range spec.Environment {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", k, v))
+	}
+
+	// Create process
+	proc := &Process{
+		id:        uuid.New().String(),
+		cmd:       cmd,
+		spec:      spec,
+		state:     runtime.StateStarting,
+		startTime: time.Now(),
+		opts:      opts,
+		done:      make(chan struct{}),
+	}
+
+	// Set up output capture if requested
+	if opts.CaptureOutput {
+		proc.stdoutBuf = &limitedBuffer{limit: opts.OutputSizeLimit}
+		proc.stderrBuf = &limitedBuffer{limit: opts.OutputSizeLimit}
+		cmd.Stdout = proc.stdoutBuf
+		cmd.Stderr = proc.stderrBuf
+	} else {
+		// Discard output if not capturing
+		cmd.Stdout = nil
+		cmd.Stderr = nil
+	}
+
+	// Start the process
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("failed to start process: %w", err)
+	}
+
+	proc.setState(runtime.StateRunning)
+
+	// Store process
+	r.processes.Store(proc.id, proc)
+
+	// Monitor process completion
+	go proc.monitor()
+
+	// Handle context cancellation
+	go func() {
+		select {
+		case <-ctx.Done():
+			_ = proc.Stop(context.Background())
+		case <-proc.done:
+		}
+	}()
+
+	return proc, nil
+}
+
+// Find locates an existing process by ID
+func (r *Runtime) Find(ctx context.Context, id string) (runtime.Process, error) {
+	if proc, ok := r.processes.Load(id); ok {
+		return proc.(*Process), nil
+	}
+	return nil, runtime.ErrProcessNotFound
+}
+
+// List returns all processes managed by this runtime
+func (r *Runtime) List(ctx context.Context) ([]runtime.Process, error) {
+	var processes []runtime.Process
+	r.processes.Range(func(key, value interface{}) bool {
+		processes = append(processes, value.(*Process))
+		return true
+	})
+	return processes, nil
+}
+
+// Validate checks if this runtime is properly configured and available
+func (r *Runtime) Validate() error {
+	// Local runtime is always available
+	return nil
+}
+
+// Process represents a local process
+type Process struct {
+	id        string
+	cmd       *exec.Cmd
+	spec      runtime.ExecutionSpec
+	state     runtime.ProcessState
+	startTime time.Time
+	opts      LocalOptions
+	mu        sync.RWMutex
+	done      chan struct{}
+	doneOnce  sync.Once
+
+	// Output capture
+	stdoutBuf *limitedBuffer
+	stderrBuf *limitedBuffer
+}
+
+// ID returns the unique identifier for this process
+func (p *Process) ID() string {
+	return p.id
+}
+
+// State returns the current state of the process
+func (p *Process) State() runtime.ProcessState {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.state
+}
+
+// Wait blocks until the process completes
+func (p *Process) Wait(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-p.done:
+		// Process already completed, check exit status
+		if p.cmd.ProcessState != nil {
+			if p.cmd.ProcessState.Success() {
+				return nil
+			}
+			// Return the exit error
+			return &exec.ExitError{ProcessState: p.cmd.ProcessState}
+		}
+		return nil
+	}
+}
+
+// Stop gracefully stops the process (SIGTERM)
+func (p *Process) Stop(ctx context.Context) error {
+	p.mu.Lock()
+	if p.state != runtime.StateRunning {
+		p.mu.Unlock()
+		return runtime.ErrProcessAlreadyDone
+	}
+	p.mu.Unlock()
+
+	if err := p.cmd.Process.Signal(syscall.SIGTERM); err != nil {
+		return fmt.Errorf("failed to send SIGTERM: %w", err)
+	}
+
+	// Give process time to stop gracefully
+	timer := time.NewTimer(5 * time.Second)
+	defer timer.Stop()
+
+	select {
+	case <-timer.C:
+		// Force kill if still running
+		return p.Kill(ctx)
+	case <-p.done:
+		return nil
+	}
+}
+
+// Kill forcefully terminates the process (SIGKILL)
+func (p *Process) Kill(ctx context.Context) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.state != runtime.StateRunning {
+		return runtime.ErrProcessAlreadyDone
+	}
+
+	if err := p.cmd.Process.Kill(); err != nil {
+		return fmt.Errorf("failed to kill process: %w", err)
+	}
+
+	return nil
+}
+
+// Output returns readers for stdout and stderr
+func (p *Process) Output() (stdout, stderr io.Reader) {
+	if p.stdoutBuf != nil {
+		stdout = bytes.NewReader(p.stdoutBuf.Bytes())
+	}
+	if p.stderrBuf != nil {
+		stderr = bytes.NewReader(p.stderrBuf.Bytes())
+	}
+	return stdout, stderr
+}
+
+// ExitCode returns the exit code (valid after process completes)
+func (p *Process) ExitCode() (int, error) {
+	select {
+	case <-p.done:
+		if p.cmd.ProcessState != nil {
+			return p.cmd.ProcessState.ExitCode(), nil
+		}
+		return -1, fmt.Errorf("process state not available")
+	default:
+		return -1, fmt.Errorf("process still running")
+	}
+}
+
+// StartTime returns when the process was started
+func (p *Process) StartTime() time.Time {
+	return p.startTime
+}
+
+// setState updates the process state
+func (p *Process) setState(state runtime.ProcessState) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.state = state
+}
+
+// monitor waits for the process to complete and updates its state
+func (p *Process) monitor() {
+	err := p.cmd.Wait()
+
+	p.mu.Lock()
+	if err != nil {
+		p.state = runtime.StateFailed
+	} else {
+		p.state = runtime.StateStopped
+	}
+	p.mu.Unlock()
+
+	// Signal completion
+	p.doneOnce.Do(func() {
+		close(p.done)
+	})
+}
+
+// LocalOptions implements runtime.RuntimeOptions for local processes
+type LocalOptions struct {
+	Shell           string // Shell to use (default: $SHELL or /bin/sh)
+	InheritEnv      bool   // Inherit parent process environment
+	CaptureOutput   bool   // Capture stdout/stderr
+	OutputSizeLimit int64  // Max bytes to capture (0 = unlimited)
+}
+
+// IsRuntimeOptions implements the RuntimeOptions interface
+func (LocalOptions) IsRuntimeOptions() {}
+
+// limitedBuffer is a buffer with a size limit
+type limitedBuffer struct {
+	buf   bytes.Buffer
+	limit int64
+	mu    sync.Mutex
+}
+
+func (b *limitedBuffer) Write(p []byte) (n int, err error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if b.limit > 0 && int64(b.buf.Len()+len(p)) > b.limit {
+		// Calculate how much we can write
+		available := b.limit - int64(b.buf.Len())
+		if available <= 0 {
+			return 0, nil // Buffer full, discard
+		}
+		p = p[:available]
+	}
+
+	return b.buf.Write(p)
+}
+
+func (b *limitedBuffer) Bytes() []byte {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Bytes()
+}
