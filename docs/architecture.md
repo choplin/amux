@@ -86,7 +86,23 @@ agents:
 - `working-log.md` - Progress tracking
 - `results-summary.md` - Final outcomes
 
-### 5. MCP Server
+### 5. Storage Management
+
+**Purpose**: Provides unified file operations for workspace and session storage
+
+**Components**:
+
+- `storage.Manager` - Core file operations (read, write, list, remove)
+- Path validation to prevent directory traversal
+- Consistent error handling across CLI and MCP
+
+**Key Features**:
+
+- Single implementation used by both CLI commands and MCP tools
+- Type-safe results for different operations
+- Maintains complete functionality including operation-specific messaging
+
+### 6. MCP Server
 
 **Purpose**: Enables AI agents to interact with Amux
 
@@ -100,6 +116,8 @@ agents:
 
 - `workspace_create` - Create new workspace
 - `workspace_remove` - Remove workspace
+- `workspace_storage_read/write/list` - Storage operations
+- `session_storage_read/write/list` - Session storage operations
 
 **Bridge Tools** (for clients without resource support):
 
