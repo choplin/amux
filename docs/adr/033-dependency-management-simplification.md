@@ -73,5 +73,5 @@ func SetupManager(projectRoot string) (*Manager, error)
 
 ### Neutral
 
-- **Migration from Container**: Requires updating all code that used Container (completed)
+- **Migration effort**: Required updating all code that used the previous helper functions
 - **Documentation**: New pattern documented in `docs/dependency-management.md`
