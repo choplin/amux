@@ -184,7 +184,16 @@ func (s *ServerV2) handleWorkspaceRemove(ctx context.Context, request mcp.CallTo
 		return nil, fmt.Errorf("failed to resolve workspace: %w", err)
 	}
 
-	if err := s.workspaceManager.Remove(ctx, workspace.Identifier(ws.ID), workspace.RemoveOptions{NoHooks: false}); err != nil {
+	// Get current working directory for safety check
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current directory: %w", err)
+	}
+
+	if err := s.workspaceManager.Remove(ctx, workspace.Identifier(ws.ID), workspace.RemoveOptions{
+		NoHooks:    false,
+		CurrentDir: cwd,
+	}); err != nil {
 		return nil, fmt.Errorf("failed to remove workspace: %w", err)
 	}
 

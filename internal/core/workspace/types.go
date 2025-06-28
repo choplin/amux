@@ -122,7 +122,9 @@ type ListOptions struct {
 
 // RemoveOptions represents options for removing a workspace
 type RemoveOptions struct {
-	NoHooks bool // Skip hook execution
+	NoHooks         bool   // Skip hook execution
+	CurrentDir      string // Current working directory (for safety check)
+	SkipSafetyCheck bool   // Skip current directory safety check
 }
 
 // CleanupOptions represents options for cleaning up old workspaces

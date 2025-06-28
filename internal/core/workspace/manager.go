@@ -367,6 +367,13 @@ func (m *Manager) Remove(ctx context.Context, identifier Identifier, opts Remove
 		return err
 	}
 
+	// Safety check: prevent removing workspace while working inside it
+	if !opts.SkipSafetyCheck && opts.CurrentDir != "" {
+		if err := m.checkCurrentDirectorySafety(workspace.Path, opts.CurrentDir); err != nil {
+			return err
+		}
+	}
+
 	// Execute hooks before removal unless disabled
 	if !opts.NoHooks {
 		if err := m.executeHooks(ctx, workspace, hooks.EventWorkspaceRemove); err != nil {
@@ -575,6 +582,23 @@ func (m *Manager) executeHooks(ctx context.Context, ws *Workspace, event hooks.E
 	// Execute hooks in workspace directory
 	executor := hooks.NewExecutor(configDir, env).WithWorkingDir(ws.Path)
 	return executor.ExecuteHooks(ctx, event, eventHooks)
+}
+
+// checkCurrentDirectorySafety checks if the current directory is inside the workspace
+func (m *Manager) checkCurrentDirectorySafety(workspacePath, currentDir string) error {
+	// Resolve current directory to handle OS-level symlinks (e.g., macOS /var -> /private/var)
+	resolvedCwd, err := filepath.EvalSymlinks(currentDir)
+	if err != nil {
+		// If we can't resolve, use original path
+		resolvedCwd = currentDir
+	}
+
+	// Check both original and resolved paths
+	if strings.HasPrefix(currentDir, workspacePath) || strings.HasPrefix(resolvedCwd, workspacePath) {
+		return fmt.Errorf("cannot remove workspace while working inside it")
+	}
+
+	return nil
 }
 
 // generateID generates a unique workspace ID
