@@ -6,6 +6,7 @@ import (
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/idmap"
 	"github.com/aki/amux/internal/core/workspace"
+	runtimeinit "github.com/aki/amux/internal/runtime/init"
 )
 
 // Factory provides methods for creating session managers with dependencies
@@ -18,6 +19,11 @@ func NewFactory() *Factory {
 
 // CreateManager creates a new session manager with all dependencies
 func (f *Factory) CreateManager(configManager *config.Manager, workspaceManager *workspace.Manager) (*Manager, error) {
+	// Initialize runtime registry
+	if err := runtimeinit.RegisterDefaults(); err != nil {
+		return nil, fmt.Errorf("failed to initialize runtimes: %w", err)
+	}
+
 	// Create session ID mapper
 	idMapper, err := idmap.NewSessionIDMapper(configManager.GetAmuxDir())
 	if err != nil {

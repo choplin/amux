@@ -12,10 +12,16 @@ import (
 	"github.com/aki/amux/internal/core/idmap"
 	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/workspace"
+	runtimeinit "github.com/aki/amux/internal/runtime/init"
 	"github.com/aki/amux/internal/tests/helpers"
 )
 
 func TestSessionSemaphoreIntegration(t *testing.T) {
+	// Initialize runtime registry for tests
+	if err := runtimeinit.RegisterDefaults(); err != nil {
+		t.Fatalf("Failed to initialize runtimes: %v", err)
+	}
+
 	// Check if tmux is available for session tests
 	adapter, err := tmux.NewAdapter()
 	if err != nil || adapter == nil || !adapter.IsAvailable() {
@@ -33,11 +39,9 @@ func TestSessionSemaphoreIntegration(t *testing.T) {
 	cfg.Agents = map[string]config.Agent{
 		"default": {
 			Name:        "Default Agent",
-			Type:        config.AgentTypeTmux,
+			Runtime:     "tmux",
 			Description: "Default test agent",
-			Params: &config.TmuxParams{
-				Command: config.Command{Single: "echo 'test'"},
-			},
+			Command:     []string{"echo", "test"},
 		},
 	}
 

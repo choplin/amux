@@ -4,12 +4,18 @@ import (
 	"testing"
 
 	"github.com/aki/amux/internal/core/config"
+	runtimeinit "github.com/aki/amux/internal/runtime/init"
 	"github.com/aki/amux/internal/tests/helpers"
 )
 
 // setupTestServer creates a test MCP server with a temporary git repository
 func setupTestServer(t *testing.T) *ServerV2 {
 	t.Helper()
+
+	// Initialize runtime registry for tests
+	if err := runtimeinit.RegisterDefaults(); err != nil {
+		t.Fatalf("Failed to initialize runtimes: %v", err)
+	}
 
 	// Create test repo
 	testRepoPath := helpers.CreateTestRepo(t)
@@ -22,14 +28,12 @@ func setupTestServer(t *testing.T) *ServerV2 {
 
 	// Add test agent for testing
 	cfg.Agents["test-agent"] = config.Agent{
-		Name: "Test Agent",
-		Type: config.AgentTypeTmux,
+		Name:    "Test Agent",
+		Runtime: "tmux",
 		Environment: map[string]string{
 			"TEST_ENV": "test",
 		},
-		Params: &config.TmuxParams{
-			Command: config.Command{Single: "echo 'test agent'"},
-		},
+		Command: []string{"echo", "test agent"},
 	}
 
 	err := configManager.Save(cfg)

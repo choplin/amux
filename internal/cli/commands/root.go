@@ -9,6 +9,7 @@ import (
 	"github.com/aki/amux/internal/cli/commands/session"
 	"github.com/aki/amux/internal/cli/commands/workspace"
 	"github.com/aki/amux/internal/cli/ui"
+	runtimeinit "github.com/aki/amux/internal/runtime/init"
 )
 
 var formatFlag string
@@ -37,6 +38,11 @@ across different workspaces.`,
 }
 
 func init() {
+	// Initialize runtime registry
+	_ = runtimeinit.RegisterDefaults()
+	// Ignore error - runtime can be initialized later
+	// This is important for tests and some commands that don't need runtime
+
 	// Add global flags
 	rootCmd.PersistentFlags().StringVar(&formatFlag, "format", "pretty", "Output format (pretty, json)")
 

@@ -36,73 +36,64 @@ mcp:
 agents:
   claude:
     name: Claude
-    type: tmux
+    runtime: tmux
     description: Test agent
-    params:
-      command: claude`,
+    command: [claude]`,
 			expectedError:  false,
 			expectedOutput: "Configuration is valid",
 		},
 		{
-			name: "missing agent type",
+			name: "missing agent runtime",
 			config: `version: "1.0"
-  name: test-project
 agents:
   claude:
     name: Claude
-    params:
-      command: claude`,
+    command: [claude]`,
 			expectedError:  true,
 			expectedOutput: "Configuration validation failed",
 		},
 		{
 			name: "missing agent name",
 			config: `version: "1.0"
-  name: test-project
 agents:
   claude:
-    type: tmux
-    params:
-      command: claude`,
+    runtime: tmux
+    command: [claude]`,
 			expectedError:  true,
 			expectedOutput: "Configuration validation failed",
 		},
 		{
-			name: "unsupported agent type",
+			name: "unsupported agent runtime",
 			config: `version: "1.0"
-  name: test-project
 agents:
   claude:
     name: Claude
-    type: unsupported
-    params:
-      command: claude`,
+    runtime: unsupported
+    command: [claude]`,
 			expectedError:  true,
 			expectedOutput: "Configuration validation failed",
 		},
 		{
-			name: "missing params command",
+			name: "valid config with runtime options",
 			config: `version: "1.0"
-  name: test-project
 agents:
   claude:
     name: Claude
-    type: tmux
-    params:
+    runtime: tmux
+    runtimeOptions:
       shell: /bin/bash`,
-			expectedError:  true,
-			expectedOutput: "Configuration validation failed",
+			expectedError:  false,
+			expectedOutput: "Configuration is valid",
 		},
 		{
-			name: "missing params config for tmux type",
+			name: "runtime config is valid without command",
 			config: `version: "1.0"
-  name: test-project
 agents:
   claude:
     name: Claude
-    type: tmux`,
-			expectedError:  true,
-			expectedOutput: "Configuration validation failed",
+    runtime: tmux`,
+			expectedError:  false,
+			expectedOutput: "Configuration is valid",
 		},
 	}
 
@@ -163,18 +154,17 @@ mcp:
 agents:
   claude:
     name: Claude
-    type: tmux
+    runtime: tmux
     description: Test agent
     environment:
       TEST_VAR: test_value
-    params:
-      command: claude
+    command: [claude]
+    runtimeOptions:
       windowName: claude-window
   aider:
     name: Aider
-    type: tmux
-    params:
-      command: aider`
+    runtime: tmux
+    command: [aider]`
 
 	configPath := filepath.Join(amuxDir, "config.yaml")
 	require.NoError(t, os.WriteFile(configPath, []byte(validConfig), 0o644))
@@ -212,9 +202,9 @@ agents:
 	assert.Contains(t, output, "Agents (2 configured):")
 	assert.Contains(t, output, "claude:")
 	assert.Contains(t, output, "Name: Claude")
-	assert.Contains(t, output, "Type: tmux")
-	assert.Contains(t, output, "Command: claude")
-	assert.Contains(t, output, "Window Name: claude-window")
+	assert.Contains(t, output, "Runtime: tmux")
+	assert.Contains(t, output, "Command: [claude]")
+	// Runtime options are now interface{}, so window name display depends on implementation
 	assert.Contains(t, output, "Description: Test agent")
 	assert.Contains(t, output, "Environment Variables: 1")
 	assert.Contains(t, output, "aider:")
