@@ -51,6 +51,9 @@ pre-commit:
 pre-push:
   parallel: true
   commands:
+    # Run golangci-lint to catch issues before pushing
+    lint-go:
+      run: golangci-lint run
     test-full:
       run: go test ./...
     build:
