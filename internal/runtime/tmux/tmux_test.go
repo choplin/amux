@@ -45,7 +45,7 @@ func TestTmuxRuntime_Execute(t *testing.T) {
 			name: "simple echo command",
 			spec: runtime.ExecutionSpec{
 				Command: []string{"echo", "hello"},
-				Options: TmuxOptions{
+				Options: Options{
 					CaptureOutput: true,
 					SessionName:   "test-echo",
 					RemainOnExit:  false,
@@ -87,7 +87,7 @@ func TestTmuxRuntime_Execute(t *testing.T) {
 				Environment: map[string]string{
 					"TEST_VAR": "test-value",
 				},
-				Options: TmuxOptions{
+				Options: Options{
 					CaptureOutput: true,
 					SessionName:   "test-env",
 					RemainOnExit:  false,
@@ -109,7 +109,7 @@ func TestTmuxRuntime_Execute(t *testing.T) {
 			spec: runtime.ExecutionSpec{
 				Command:    []string{"pwd"},
 				WorkingDir: "/tmp",
-				Options: TmuxOptions{
+				Options: Options{
 					CaptureOutput: true,
 					SessionName:   "test-pwd",
 					RemainOnExit:  false,
@@ -139,7 +139,7 @@ func TestTmuxRuntime_Execute(t *testing.T) {
 			spec: runtime.ExecutionSpec{
 				Command:    []string{"echo", "test"},
 				WorkingDir: "/non/existent/directory",
-				Options: TmuxOptions{
+				Options: Options{
 					SessionName: "test-nodir",
 				},
 			},
@@ -150,7 +150,7 @@ func TestTmuxRuntime_Execute(t *testing.T) {
 		// 	name: "long running process",
 		// 	spec: runtime.ExecutionSpec{
 		// 		Command: []string{"sleep", "0.5"},
-		// 		Options: TmuxOptions{
+		// 		Options: Options{
 		// 			SessionName: "test-sleep",
 		// 		},
 		// 	},
@@ -219,7 +219,7 @@ func TestTmuxRuntime_Find(t *testing.T) {
 	// Create a process
 	p1, err := r.Execute(ctx, runtime.ExecutionSpec{
 		Command: []string{"sleep", "2"},
-		Options: TmuxOptions{
+		Options: Options{
 			SessionName: "test-find",
 		},
 	})
@@ -256,7 +256,7 @@ func TestTmuxRuntime_List(t *testing.T) {
 	// Create multiple processes
 	p1, err := r.Execute(ctx, runtime.ExecutionSpec{
 		Command: []string{"sleep", "2"},
-		Options: TmuxOptions{
+		Options: Options{
 			SessionName: "test-list-1",
 		},
 	})
@@ -265,7 +265,7 @@ func TestTmuxRuntime_List(t *testing.T) {
 
 	p2, err := r.Execute(ctx, runtime.ExecutionSpec{
 		Command: []string{"sleep", "2"},
-		Options: TmuxOptions{
+		Options: Options{
 			SessionName: "test-list-2",
 		},
 	})
@@ -301,7 +301,7 @@ func TestTmuxRuntime_Stop(t *testing.T) {
 	// Create a long-running process that handles SIGTERM
 	p, err := r.Execute(ctx, runtime.ExecutionSpec{
 		Command: []string{"sh", "-c", "trap 'exit 0' INT TERM; sleep 10"},
-		Options: TmuxOptions{
+		Options: Options{
 			SessionName: "test-stop",
 		},
 	})
@@ -339,7 +339,7 @@ func TestTmuxRuntime_Kill(t *testing.T) {
 	// Create a process that ignores SIGTERM
 	p, err := r.Execute(ctx, runtime.ExecutionSpec{
 		Command: []string{"sh", "-c", "trap '' TERM; sleep 10"},
-		Options: TmuxOptions{
+		Options: Options{
 			SessionName: "test-kill",
 		},
 	})
@@ -379,7 +379,7 @@ func TestTmuxRuntime_Attach(t *testing.T) {
 	// Create a long-running process
 	p, err := r.Execute(ctx, runtime.ExecutionSpec{
 		Command: []string{"sh", "-c", "echo 'Ready'; sleep 10"},
-		Options: TmuxOptions{
+		Options: Options{
 			SessionName: "test-attach",
 		},
 	})
@@ -416,7 +416,7 @@ func TestTmuxRuntime_OutputCapture(t *testing.T) {
 	t.Run("with capture", func(t *testing.T) {
 		p, err := r.Execute(ctx, runtime.ExecutionSpec{
 			Command: []string{"echo", "captured output"},
-			Options: TmuxOptions{
+			Options: Options{
 				SessionName:   "test-capture",
 				CaptureOutput: true,
 			},
@@ -425,7 +425,9 @@ func TestTmuxRuntime_OutputCapture(t *testing.T) {
 		defer func() { _ = p.Kill(ctx) }()
 
 		// Wait for completion
-		err = p.Wait(context.Background())
+		waitCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		err = p.Wait(waitCtx)
 		require.NoError(t, err)
 
 		// Should have output
@@ -442,7 +444,7 @@ func TestTmuxRuntime_OutputCapture(t *testing.T) {
 	t.Run("without capture", func(t *testing.T) {
 		p, err := r.Execute(ctx, runtime.ExecutionSpec{
 			Command: []string{"echo", "not captured"},
-			Options: TmuxOptions{
+			Options: Options{
 				SessionName:   "test-no-capture",
 				CaptureOutput: false,
 			},
@@ -475,7 +477,7 @@ func TestTmuxRuntime_RemainOnExit(t *testing.T) {
 	// Create process with RemainOnExit
 	p, err := r.Execute(ctx, runtime.ExecutionSpec{
 		Command: []string{"echo", "done"},
-		Options: TmuxOptions{
+		Options: Options{
 			SessionName:  "test-remain",
 			RemainOnExit: true,
 		},
@@ -514,7 +516,7 @@ func TestTmuxRuntime_CustomSocketPath(t *testing.T) {
 	// Create process with custom socket
 	p, err := r.Execute(ctx, runtime.ExecutionSpec{
 		Command: []string{"echo", "test"},
-		Options: TmuxOptions{
+		Options: Options{
 			SessionName: "test-socket",
 			SocketPath:  socketPath,
 		},
@@ -527,9 +529,9 @@ func TestTmuxRuntime_CustomSocketPath(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestTmuxOptions_RuntimeInterface(t *testing.T) {
-	// Ensure TmuxOptions implements RuntimeOptions
-	var _ runtime.RuntimeOptions = TmuxOptions{}
+func TestOptions_RuntimeInterface(t *testing.T) {
+	// Ensure Options implements RuntimeOptions
+	var _ runtime.RuntimeOptions = Options{}
 }
 
 func TestTmuxRuntime_NotAvailable(t *testing.T) {
@@ -561,7 +563,7 @@ func TestProcess_ExitCode(t *testing.T) {
 	t.Run("while running", func(t *testing.T) {
 		p, err := r.Execute(ctx, runtime.ExecutionSpec{
 			Command: []string{"sleep", "2"},
-			Options: TmuxOptions{
+			Options: Options{
 				SessionName: "test-exit-running",
 			},
 		})
@@ -577,14 +579,16 @@ func TestProcess_ExitCode(t *testing.T) {
 	t.Run("after completion", func(t *testing.T) {
 		p, err := r.Execute(ctx, runtime.ExecutionSpec{
 			Command: []string{"true"},
-			Options: TmuxOptions{
+			Options: Options{
 				SessionName: "test-exit-complete",
 			},
 		})
 		require.NoError(t, err)
 
 		// Wait for completion
-		err = p.Wait(context.Background())
+		waitCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		err = p.Wait(waitCtx)
 		require.NoError(t, err)
 
 		// Should return exit code
@@ -609,7 +613,7 @@ func TestProcess_WaitTimeout(t *testing.T) {
 	// Create a long-running process
 	p, err := r.Execute(ctx, runtime.ExecutionSpec{
 		Command: []string{"sleep", "10"},
-		Options: TmuxOptions{
+		Options: Options{
 			SessionName: "test-wait-timeout",
 		},
 	})
@@ -642,7 +646,7 @@ func TestProcess_OutputHistory(t *testing.T) {
 	// Create process with limited history
 	p, err := r.Execute(ctx, runtime.ExecutionSpec{
 		Command: []string{"sh", "-c", "for i in $(seq 1 20); do echo line$i; done"},
-		Options: TmuxOptions{
+		Options: Options{
 			SessionName:   "test-history",
 			CaptureOutput: true,
 			OutputHistory: 5, // Only keep last 5 lines
@@ -688,7 +692,7 @@ func TestProcess_MonitorCleanup(t *testing.T) {
 	// Create a long-running process
 	p, err := r.Execute(ctx, runtime.ExecutionSpec{
 		Command: []string{"sleep", "10"},
-		Options: TmuxOptions{
+		Options: Options{
 			SessionName: "test-monitor-cleanup",
 		},
 	})
@@ -727,7 +731,7 @@ func TestTmuxRuntime_ConcurrentExecute(t *testing.T) {
 		go func() {
 			p, err := r.Execute(ctx, runtime.ExecutionSpec{
 				Command: []string{"echo", fmt.Sprintf("process-%d", i)},
-				Options: TmuxOptions{
+				Options: Options{
 					SessionName: fmt.Sprintf("test-concurrent-%d", i),
 				},
 			})

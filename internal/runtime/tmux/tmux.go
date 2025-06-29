@@ -1,3 +1,4 @@
+// Package tmux provides a runtime implementation that uses tmux for terminal multiplexing.
 package tmux
 
 import (
@@ -59,7 +60,7 @@ func (r *Runtime) Execute(ctx context.Context, spec runtime.ExecutionSpec) (runt
 	}
 
 	// Get options with defaults
-	opts, _ := spec.Options.(TmuxOptions)
+	opts, _ := spec.Options.(Options)
 	if opts.SessionName == "" {
 		opts.SessionName = fmt.Sprintf("amux-%s", uuid.New().String()[:8])
 	}
@@ -206,7 +207,7 @@ type Process struct {
 	spec        runtime.ExecutionSpec
 	state       runtime.ProcessState
 	startTime   time.Time
-	opts        TmuxOptions
+	opts        Options
 	runtime     *Runtime
 	mu          sync.RWMutex
 	done        chan struct{}
@@ -444,8 +445,8 @@ func (p *Process) monitor(ctx context.Context) {
 	}
 }
 
-// TmuxOptions implements runtime.RuntimeOptions for tmux processes
-type TmuxOptions struct {
+// Options implements runtime.RuntimeOptions for tmux processes
+type Options struct {
 	SessionName   string // Tmux session name (generated if empty)
 	WindowName    string // Window name (default: "amux")
 	SocketPath    string // Custom socket path (generated if empty)
@@ -455,4 +456,4 @@ type TmuxOptions struct {
 }
 
 // IsRuntimeOptions implements the RuntimeOptions interface
-func (TmuxOptions) IsRuntimeOptions() {}
+func (Options) IsRuntimeOptions() {}

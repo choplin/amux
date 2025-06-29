@@ -1,3 +1,4 @@
+// Package config provides runtime configuration loading functionality.
 package config
 
 // RuntimeConfig represents configuration for custom runtimes

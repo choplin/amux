@@ -178,7 +178,9 @@ func (s *runtimeSessionImpl) Start(ctx context.Context) error {
 	}
 
 	// Monitor process completion in background
-	go s.monitorProcess(context.Background())
+	// Use a detached context as this goroutine outlives the current request
+	monitorCtx := context.WithoutCancel(ctx)
+	go s.monitorProcess(monitorCtx)
 
 	return nil
 }

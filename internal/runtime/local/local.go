@@ -1,3 +1,4 @@
+// Package local provides a runtime implementation that executes processes directly using os/exec.
 package local
 
 import (
@@ -39,7 +40,7 @@ func (r *Runtime) Execute(ctx context.Context, spec runtime.ExecutionSpec) (runt
 	}
 
 	// Get options with defaults
-	opts, _ := spec.Options.(LocalOptions)
+	opts, _ := spec.Options.(Options)
 	if opts.Shell == "" {
 		opts.Shell = os.Getenv("SHELL")
 		if opts.Shell == "" {
@@ -113,7 +114,10 @@ func (r *Runtime) Execute(ctx context.Context, spec runtime.ExecutionSpec) (runt
 	go func() {
 		select {
 		case <-ctx.Done():
-			_ = proc.Stop(context.Background())
+			// Create a new context with timeout for cleanup
+			stopCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+			defer cancel()
+			_ = proc.Stop(stopCtx)
 		case <-proc.done:
 		}
 	}()
@@ -152,7 +156,7 @@ type Process struct {
 	spec      runtime.ExecutionSpec
 	state     runtime.ProcessState
 	startTime time.Time
-	opts      LocalOptions
+	opts      Options
 	mu        sync.RWMutex
 	done      chan struct{}
 	doneOnce  sync.Once
@@ -288,8 +292,8 @@ func (p *Process) monitor() {
 	})
 }
 
-// LocalOptions implements runtime.RuntimeOptions for local processes
-type LocalOptions struct {
+// Options implements runtime.RuntimeOptions for local processes
+type Options struct {
 	Shell           string // Shell to use (default: $SHELL or /bin/sh)
 	InheritEnv      bool   // Inherit parent process environment
 	CaptureOutput   bool   // Capture stdout/stderr
@@ -297,7 +301,7 @@ type LocalOptions struct {
 }
 
 // IsRuntimeOptions implements the RuntimeOptions interface
-func (LocalOptions) IsRuntimeOptions() {}
+func (Options) IsRuntimeOptions() {}
 
 // limitedBuffer is a buffer with a size limit
 type limitedBuffer struct {

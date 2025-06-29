@@ -39,10 +39,9 @@ across different workspaces.`,
 
 func init() {
 	// Initialize runtime registry
-	if err := runtimeinit.RegisterDefaults(); err != nil {
-		// Log error but don't fail - runtime can be initialized later
-		// This is important for tests and some commands that don't need runtime
-	}
+	_ = runtimeinit.RegisterDefaults()
+	// Ignore error - runtime can be initialized later
+	// This is important for tests and some commands that don't need runtime
 
 	// Add global flags
 	rootCmd.PersistentFlags().StringVar(&formatFlag, "format", "pretty", "Output format (pretty, json)")

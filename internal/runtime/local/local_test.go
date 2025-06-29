@@ -28,7 +28,7 @@ func TestLocalRuntime_Execute(t *testing.T) {
 			name: "simple echo command",
 			spec: runtime.ExecutionSpec{
 				Command: []string{"echo", "hello"},
-				Options: LocalOptions{
+				Options: Options{
 					CaptureOutput: true,
 				},
 			},
@@ -60,7 +60,7 @@ func TestLocalRuntime_Execute(t *testing.T) {
 				Environment: map[string]string{
 					"TEST_VAR": "test-value",
 				},
-				Options: LocalOptions{
+				Options: Options{
 					CaptureOutput: true,
 				},
 			},
@@ -81,7 +81,7 @@ func TestLocalRuntime_Execute(t *testing.T) {
 			spec: runtime.ExecutionSpec{
 				Command:    []string{"pwd"},
 				WorkingDir: "/tmp",
-				Options: LocalOptions{
+				Options: Options{
 					CaptureOutput: true,
 				},
 			},
@@ -117,7 +117,7 @@ func TestLocalRuntime_Execute(t *testing.T) {
 			name: "command with stderr output",
 			spec: runtime.ExecutionSpec{
 				Command: []string{"sh", "-c", "echo error >&2"},
-				Options: LocalOptions{
+				Options: Options{
 					CaptureOutput: true,
 				},
 			},
@@ -314,7 +314,7 @@ func TestLocalRuntime_OutputCapture(t *testing.T) {
 	t.Run("limited output", func(t *testing.T) {
 		p, err := r.Execute(ctx, runtime.ExecutionSpec{
 			Command: []string{"sh", "-c", "echo '1234567890' && echo '1234567890' && echo '1234567890' && echo '1234567890' && echo '1234567890' && echo '1234567890' && echo '1234567890' && echo '1234567890' && echo '1234567890' && echo '1234567890' && echo '1234567890'"},
-			Options: LocalOptions{
+			Options: Options{
 				CaptureOutput:   true,
 				OutputSizeLimit: 50, // Very small limit
 			},
@@ -322,7 +322,9 @@ func TestLocalRuntime_OutputCapture(t *testing.T) {
 		require.NoError(t, err)
 
 		// Wait for completion
-		err = p.Wait(context.Background())
+		waitCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		_ = p.Wait(waitCtx)
 		// The process may exit with broken pipe, which is expected
 		// when output is limited
 
@@ -336,14 +338,16 @@ func TestLocalRuntime_OutputCapture(t *testing.T) {
 	t.Run("no capture", func(t *testing.T) {
 		p, err := r.Execute(ctx, runtime.ExecutionSpec{
 			Command: []string{"echo", "test"},
-			Options: LocalOptions{
+			Options: Options{
 				CaptureOutput: false,
 			},
 		})
 		require.NoError(t, err)
 
 		// Wait for completion
-		err = p.Wait(context.Background())
+		waitCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		err = p.Wait(waitCtx)
 		require.NoError(t, err)
 
 		// No output should be captured
@@ -389,7 +393,7 @@ func TestLocalRuntime_SingleCommandShell(t *testing.T) {
 	// Test that single commands are run through shell
 	p, err := r.Execute(ctx, runtime.ExecutionSpec{
 		Command: []string{"echo hello && echo world"},
-		Options: LocalOptions{
+		Options: Options{
 			CaptureOutput: true,
 		},
 	})
@@ -418,7 +422,7 @@ func TestLocalRuntime_InheritEnv(t *testing.T) {
 	// Execute with InheritEnv
 	p, err := r.Execute(ctx, runtime.ExecutionSpec{
 		Command: []string{"sh", "-c", "echo $TEST_INHERIT_VAR"},
-		Options: LocalOptions{
+		Options: Options{
 			InheritEnv:    true,
 			CaptureOutput: true,
 		},
@@ -476,9 +480,9 @@ func TestProcess_ExitCodeWhileRunning(t *testing.T) {
 	_ = p.Kill(ctx)
 }
 
-func TestLocalOptions_RuntimeInterface(t *testing.T) {
-	// Ensure LocalOptions implements RuntimeOptions
-	var _ runtime.RuntimeOptions = LocalOptions{}
+func TestOptions_RuntimeInterface(t *testing.T) {
+	// Ensure Options implements RuntimeOptions
+	var _ runtime.RuntimeOptions = Options{}
 }
 
 func TestLimitedBuffer(t *testing.T) {
@@ -529,7 +533,7 @@ func TestProcess_Concurrent(t *testing.T) {
 			defer wg.Done()
 			p, err := r.Execute(ctx, runtime.ExecutionSpec{
 				Command: []string{"echo", fmt.Sprintf("process-%d", idx)},
-				Options: LocalOptions{
+				Options: Options{
 					CaptureOutput: true,
 				},
 			})

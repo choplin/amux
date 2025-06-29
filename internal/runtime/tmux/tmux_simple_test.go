@@ -26,7 +26,7 @@ func TestTmuxRuntime_BasicExecution(t *testing.T) {
 	// Create a simple process
 	p, err := r.Execute(ctx, runtime.ExecutionSpec{
 		Command: []string{"true"},
-		Options: TmuxOptions{
+		Options: Options{
 			SessionName: "test-basic",
 		},
 	})
@@ -81,7 +81,7 @@ func TestTmuxRuntime_ManualSessionCheck(t *testing.T) {
 	// Create a long-running process
 	p, err := r.Execute(ctx, runtime.ExecutionSpec{
 		Command: []string{"sh", "-c", "echo started; sleep 5; echo done"},
-		Options: TmuxOptions{
+		Options: Options{
 			SessionName:   "test-manual",
 			CaptureOutput: true,
 		},
@@ -122,7 +122,7 @@ func TestTmuxRuntime_ImmediateExit(t *testing.T) {
 	// Use sh -c exit command that completes immediately
 	p, err := r.Execute(ctx, runtime.ExecutionSpec{
 		Command: []string{"sh", "-c", "exit 0"},
-		Options: TmuxOptions{
+		Options: Options{
 			SessionName:  "test-immediate",
 			RemainOnExit: false,
 		},

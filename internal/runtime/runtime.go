@@ -1,3 +1,4 @@
+// Package runtime provides the core runtime abstraction layer for process execution.
 package runtime
 
 import (
@@ -62,6 +63,8 @@ type ExecutionSpec struct {
 }
 
 // RuntimeOptions is implemented by runtime-specific option types
+//
+//nolint:revive // RuntimeOptions is a clearer name than Options in this context
 type RuntimeOptions interface {
 	// IsRuntimeOptions is a marker method to ensure type safety
 	IsRuntimeOptions()
@@ -70,10 +73,11 @@ type RuntimeOptions interface {
 // ProcessState represents the current state of a process
 type ProcessState string
 
+// Process state constants
 const (
-	StateStarting ProcessState = "starting"
-	StateRunning  ProcessState = "running"
-	StateStopped  ProcessState = "stopped"
-	StateFailed   ProcessState = "failed"
-	StateUnknown  ProcessState = "unknown"
+	StateStarting ProcessState = "starting" // Process is being initialized
+	StateRunning  ProcessState = "running"  // Process is actively running
+	StateStopped  ProcessState = "stopped"  // Process stopped normally
+	StateFailed   ProcessState = "failed"   // Process failed or crashed
+	StateUnknown  ProcessState = "unknown"  // Process state cannot be determined
 )

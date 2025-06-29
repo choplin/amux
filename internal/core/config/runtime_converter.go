@@ -30,7 +30,7 @@ func (a *Agent) convertRuntimeOptions() runtime.RuntimeOptions {
 	// Return default options based on runtime type
 	switch a.GetRuntimeType() {
 	case "tmux":
-		return tmux.TmuxOptions{}
+		return tmux.Options{}
 	default:
 		return nil
 	}

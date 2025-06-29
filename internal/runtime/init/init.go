@@ -21,7 +21,7 @@ func RegisterDefaults() error {
 
 	// Register local runtime
 	localRT := local.New()
-	if err := runtime.Register("local", localRT, local.LocalOptions{
+	if err := runtime.Register("local", localRT, local.Options{
 		InheritEnv:    true,
 		CaptureOutput: false,
 	}); err != nil {
@@ -31,7 +31,7 @@ func RegisterDefaults() error {
 	// Register tmux runtime if available
 	tmuxRT, err := tmux.New("")
 	if err == nil && tmuxRT.Validate() == nil {
-		if err := runtime.Register("tmux", tmuxRT, tmux.TmuxOptions{
+		if err := runtime.Register("tmux", tmuxRT, tmux.Options{
 			WindowName:    "amux",
 			CaptureOutput: true,
 			OutputHistory: 10000,
