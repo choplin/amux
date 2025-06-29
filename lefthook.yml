@@ -41,7 +41,7 @@ pre-commit:
       glob: "*.go"
     # Tidy go modules
     mod-tidy:
-      run: go mod tidy
+      run: just mod-tidy
       glob: "go.mod"
       stage_fixed: true
     # Lint markdown files
@@ -53,11 +53,11 @@ pre-push:
   commands:
     # Run golangci-lint to catch issues before pushing
     lint-go:
-      run: go tool golangci-lint run
+      run: just lint-go
     test-full:
-      run: go test ./...
+      run: just test
     build:
-      run: go build -o bin/amux cmd/amux/main.go
+      run: just build
 commit-msg:
   commands:
     commitlint:

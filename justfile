@@ -71,6 +71,10 @@ clean:
     rm -rf bin/
     rm -f coverage.out coverage.html
 
+# Tidy go modules
+mod-tidy:
+    go mod tidy
+
 # === Testing ===
 
 # Run tests
