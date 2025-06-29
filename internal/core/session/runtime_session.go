@@ -40,7 +40,7 @@ func CreateRuntimeSession(ctx context.Context, info *Info, manager *Manager, rt 
 	}
 
 	// Initialize state manager
-	s.Manager = state.InitManager(info.ID, info.WorkspaceID, info.StateDir, nil)
+	s.Manager = state.InitManager(info.ID, info.WorkspaceID, info.StateDir)
 
 	// Add semaphore handler if workspace manager is available
 	if manager != nil && manager.workspaceManager != nil {
