@@ -158,9 +158,9 @@ fmt: fmt-whitespace fmt-go fmt-yaml fmt-md
 lint-go *files:
     #!/usr/bin/env bash
     if [ -z "{{files}}" ]; then
-        go run -mod=readonly github.com/golangci/golangci-lint/v2/cmd/golangci-lint run
+        go tool golangci-lint run
     else
-        go run -mod=readonly github.com/golangci/golangci-lint/v2/cmd/golangci-lint run {{files}}
+        go tool golangci-lint run {{files}}
     fi
 
 # Lint markdown files (accepts file list or defaults to all)
