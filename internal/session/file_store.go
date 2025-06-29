@@ -174,7 +174,9 @@ func (s *FileStore) SaveLogs(ctx context.Context, id string, reader io.Reader) e
 	if err != nil {
 		return fmt.Errorf("failed to create log file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	if _, err := io.Copy(file, reader); err != nil {
 		return fmt.Errorf("failed to write logs: %w", err)

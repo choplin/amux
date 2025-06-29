@@ -236,7 +236,9 @@ func (s *ServerV2) handleSessionLogs(ctx context.Context, request mcp.CallToolRe
 	if err != nil {
 		return nil, fmt.Errorf("failed to get logs: %w", err)
 	}
-	defer reader.Close()
+	defer func() {
+		_ = reader.Close()
+	}()
 
 	// Read logs (limited for MCP response)
 	buf := make([]byte, 64*1024) // 64KB limit

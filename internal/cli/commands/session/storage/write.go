@@ -56,7 +56,9 @@ func writeStorage(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	// Copy from stdin
 	n, err := io.Copy(file, os.Stdin)

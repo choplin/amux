@@ -156,14 +156,16 @@ func RunSession(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("failed to get logs: %w", err)
 		}
-		defer reader.Close()
+		defer func() {
+			_ = reader.Close()
+		}()
 
 		// Copy logs to stdout
 		buf := make([]byte, 4096)
 		for {
 			n, err := reader.Read(buf)
 			if n > 0 {
-				os.Stdout.Write(buf[:n])
+				_, _ = os.Stdout.Write(buf[:n])
 			}
 			if err != nil {
 				break

@@ -214,18 +214,16 @@ func (m *manager) Create(ctx context.Context, opts CreateOptions) (*Session, err
 	}
 
 	// Start monitoring goroutine
-	go m.monitorSession(session)
+	go m.monitorSession(ctx, session)
 
 	// Start log capture if process supports it
-	go m.captureSessionLogs(session)
+	go m.captureSessionLogs(ctx, session)
 
 	return session, nil
 }
 
 // monitorSession monitors a session for state changes
-func (m *manager) monitorSession(session *Session) {
-	ctx := context.Background()
-
+func (m *manager) monitorSession(ctx context.Context, session *Session) {
 	// Wait for process to complete
 	_ = session.process.Wait(ctx)
 
@@ -233,10 +231,16 @@ func (m *manager) monitorSession(session *Session) {
 	state := session.process.State()
 	var status Status
 	switch state {
+	case runtime.StateStarting:
+		status = StatusStarting
+	case runtime.StateRunning:
+		status = StatusRunning
 	case runtime.StateStopped:
 		status = StatusStopped
 	case runtime.StateFailed:
 		status = StatusFailed
+	case runtime.StateUnknown:
+		status = StatusUnknown
 	default:
 		status = StatusUnknown
 	}
@@ -283,7 +287,7 @@ func (m *manager) Get(ctx context.Context, id string) (*Session, error) {
 				m.mu.Lock()
 				m.sessions[session.ID] = session
 				m.mu.Unlock()
-				go m.monitorSession(session)
+				go m.monitorSession(ctx, session)
 			}
 		}
 	}
@@ -452,7 +456,7 @@ func (m *manager) UpdateStatus(ctx context.Context, id string, status Status) er
 }
 
 // captureSessionLogs captures session logs to storage
-func (m *manager) captureSessionLogs(session *Session) {
+func (m *manager) captureSessionLogs(ctx context.Context, session *Session) {
 	if session.process == nil {
 		return
 	}
@@ -465,20 +469,22 @@ func (m *manager) captureSessionLogs(session *Session) {
 
 	// Copy both streams to the pipe
 	go func() {
-		defer pw.Close()
+		defer func() {
+			_ = pw.Close()
+		}()
 
 		// Use io.MultiWriter to write to both pipe and capture
 		if stdout != nil {
-			io.Copy(pw, stdout)
+			_, _ = io.Copy(pw, stdout)
 		}
 		if stderr != nil {
-			io.Copy(pw, stderr)
+			_, _ = io.Copy(pw, stderr)
 		}
 	}()
 
 	// Save logs to store
 	if fileStore, ok := m.store.(*FileStore); ok {
-		fileStore.SaveLogs(context.Background(), session.ID, pr)
+		_ = fileStore.SaveLogs(ctx, session.ID, pr)
 	}
 }
 

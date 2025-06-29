@@ -1,3 +1,4 @@
+// Package storage provides storage management commands for sessions
 package storage
 
 import (

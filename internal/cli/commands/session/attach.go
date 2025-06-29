@@ -1,3 +1,4 @@
+// Package session provides session management commands for amux
 package session
 
 import (

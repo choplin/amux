@@ -45,7 +45,9 @@ func readStorage(cmd *cobra.Command, args []string) error {
 		}
 		return fmt.Errorf("failed to open file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	// Copy to stdout
 	if _, err := io.Copy(os.Stdout, file); err != nil {
