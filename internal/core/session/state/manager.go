@@ -20,7 +20,6 @@ type Manager struct {
 	workspaceID   string
 	stateFilePath string
 	handlers      []ChangeHandler
-	logger        *slog.Logger
 	mu            sync.Mutex
 }
 
@@ -31,16 +30,12 @@ type Data struct {
 }
 
 // InitManager initializes a new state manager
-func InitManager(sessionID, workspaceID, stateDir string, logger *slog.Logger) Manager {
-	if logger == nil {
-		logger = slog.Default()
-	}
+func InitManager(sessionID, workspaceID, stateDir string) Manager {
 	return Manager{
 		sessionID:     sessionID,
 		workspaceID:   workspaceID,
 		stateFilePath: filepath.Join(stateDir, "state.json"),
 		handlers:      make([]ChangeHandler, 0),
-		logger:        logger,
 	}
 }
 
@@ -108,7 +103,7 @@ func (m *Manager) TransitionTo(ctx context.Context, newStatus Status) error {
 	}
 
 	// Log transition
-	m.logger.Debug("state transition",
+	slog.Debug("state transition",
 		"session", m.sessionID,
 		"from", currentStatus,
 		"to", newStatus)
@@ -116,7 +111,7 @@ func (m *Manager) TransitionTo(ctx context.Context, newStatus Status) error {
 	// Call handlers before transition
 	for _, handler := range m.handlers {
 		if err := handler(ctx, currentStatus, newStatus, m.sessionID, m.workspaceID); err != nil {
-			m.logger.Error("state change handler failed",
+			slog.Error("state change handler failed",
 				"session", m.sessionID,
 				"from", currentStatus,
 				"to", newStatus,
@@ -135,7 +130,7 @@ func (m *Manager) TransitionTo(ctx context.Context, newStatus Status) error {
 		return fmt.Errorf("failed to save state: %w", err)
 	}
 
-	m.logger.Info("state transition completed",
+	slog.Info("state transition completed",
 		"session", m.sessionID,
 		"from", currentStatus,
 		"to", newStatus)

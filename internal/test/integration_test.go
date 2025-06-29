@@ -1,3 +1,4 @@
+// Package test provides integration tests for amux functionality.
 package test
 
 import (
@@ -12,6 +13,11 @@ import (
 	"github.com/aki/amux/internal/core/workspace"
 	"github.com/aki/amux/internal/tests/helpers"
 )
+
+func TestMain(m *testing.M) {
+	InitTestLogger()
+	os.Exit(m.Run())
+}
 
 func TestIntegration_FullWorkflow(t *testing.T) {
 	if testing.Short() {

@@ -27,7 +27,7 @@ func CreateOrphanedSession(ctx context.Context, info *Info, manager *Manager, re
 		return nil, fmt.Errorf("CreateOrphanedSession: StateDir is required")
 	}
 
-	s.Manager = state.InitManager(info.ID, info.WorkspaceID, info.StateDir, nil)
+	s.Manager = state.InitManager(info.ID, info.WorkspaceID, info.StateDir)
 
 	// Set to orphaned state
 	if err := s.TransitionTo(ctx, state.StatusOrphaned); err != nil {
