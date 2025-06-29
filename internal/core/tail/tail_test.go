@@ -3,7 +3,6 @@ package tail_test
 import (
 	"bytes"
 	"context"
-	"os"
 	"sync"
 	"testing"
 	"time"
@@ -17,14 +16,8 @@ import (
 	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/tail"
 	"github.com/aki/amux/internal/core/workspace"
-	"github.com/aki/amux/internal/test"
 	"github.com/aki/amux/internal/tests/helpers"
 )
-
-func TestMain(m *testing.M) {
-	test.InitTestLogger()
-	os.Exit(m.Run())
-}
 
 // writerFunc is an adapter to allow the use of ordinary functions as io.Writer
 type writerFunc struct {

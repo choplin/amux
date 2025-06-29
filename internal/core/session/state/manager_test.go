@@ -2,17 +2,9 @@ package state
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
-
-	"github.com/aki/amux/internal/test"
 )
-
-func TestMain(m *testing.M) {
-	test.InitTestLogger()
-	os.Exit(m.Run())
-}
 
 func TestManager_CurrentState(t *testing.T) {
 	tmpDir := t.TempDir()

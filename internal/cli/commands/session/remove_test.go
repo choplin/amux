@@ -14,14 +14,8 @@ import (
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/workspace"
-	"github.com/aki/amux/internal/test"
 	"github.com/aki/amux/internal/tests/helpers"
 )
-
-func TestMain(m *testing.M) {
-	test.InitTestLogger()
-	os.Exit(m.Run())
-}
 
 func TestRemoveSession(t *testing.T) {
 	// Skip if tmux is not available

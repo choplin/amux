@@ -14,7 +14,6 @@ import (
 	"github.com/aki/amux/internal/core/idmap"
 	"github.com/aki/amux/internal/core/session/state"
 	"github.com/aki/amux/internal/core/workspace"
-	"github.com/aki/amux/internal/test"
 )
 
 // MockProcessChecker implements process.Checker for testing
@@ -37,11 +36,6 @@ func (m *MockProcessChecker) HasChildren(pid int) (bool, error) {
 
 func (m *MockProcessChecker) SetHasChildren(pid int, hasChildren bool) {
 	m.hasChildren[pid] = hasChildren
-}
-
-func TestMain(m *testing.M) {
-	test.InitTestLogger()
-	os.Exit(m.Run())
 }
 
 func TestSessionFailureDetection(t *testing.T) {

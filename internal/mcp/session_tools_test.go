@@ -3,7 +3,6 @@ package mcp
 import (
 	"context"
 	"encoding/json"
-	"os"
 	"strings"
 	"testing"
 
@@ -12,13 +11,7 @@ import (
 	"github.com/aki/amux/internal/adapters/tmux"
 	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/workspace"
-	"github.com/aki/amux/internal/test"
 )
-
-func TestMain(m *testing.M) {
-	test.InitTestLogger()
-	os.Exit(m.Run())
-}
 
 func TestSessionRun(t *testing.T) {
 	// Skip if tmux not available
