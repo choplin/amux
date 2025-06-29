@@ -49,6 +49,13 @@ func getShellCommand(cmd string) []string {
 	return []string{"sh", "-c", cmd}
 }
 
+func getPwdCommand() []string {
+	if runtime.GOOS == "windows" {
+		return []string{"cmd", "/c", "cd"}
+	}
+	return []string{"pwd"}
+}
+
 func TestLocalRuntime_Execute(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -112,7 +119,7 @@ func TestLocalRuntime_Execute(t *testing.T) {
 		{
 			name: "command with working directory",
 			spec: amuxruntime.ExecutionSpec{
-				Command:    []string{"pwd"},
+				Command:    getPwdCommand(),
 				WorkingDir: os.TempDir(),
 				Options: Options{
 					CaptureOutput: true,
@@ -487,7 +494,7 @@ func TestLocalRuntime_InheritEnv(t *testing.T) {
 	stdout, _ := p.Output()
 	output, err := io.ReadAll(stdout)
 	require.NoError(t, err)
-	assert.Equal(t, "inherited-value\n", string(output))
+	assert.Contains(t, string(output), "inherited-value")
 }
 
 func TestProcess_WaitTimeout(t *testing.T) {

@@ -8,13 +8,14 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"runtime"
 	"sync"
 	"syscall"
 	"time"
 
 	"github.com/google/uuid"
 
-	"github.com/aki/amux/internal/runtime"
+	amuxruntime "github.com/aki/amux/internal/runtime"
 )
 
 // Runtime implements the local process runtime using os/exec
@@ -33,10 +34,10 @@ func (r *Runtime) Type() string {
 }
 
 // Execute starts a new process in the local runtime
-func (r *Runtime) Execute(ctx context.Context, spec runtime.ExecutionSpec) (runtime.Process, error) {
+func (r *Runtime) Execute(ctx context.Context, spec amuxruntime.ExecutionSpec) (amuxruntime.Process, error) {
 	// Validate command
 	if len(spec.Command) == 0 {
-		return nil, runtime.ErrInvalidCommand
+		return nil, amuxruntime.ErrInvalidCommand
 	}
 
 	// Get options with defaults
@@ -44,7 +45,11 @@ func (r *Runtime) Execute(ctx context.Context, spec runtime.ExecutionSpec) (runt
 	if opts.Shell == "" {
 		opts.Shell = os.Getenv("SHELL")
 		if opts.Shell == "" {
-			opts.Shell = "/bin/sh"
+			if runtime.GOOS == "windows" {
+				opts.Shell = "cmd"
+			} else {
+				opts.Shell = "/bin/sh"
+			}
 		}
 	}
 
@@ -52,7 +57,11 @@ func (r *Runtime) Execute(ctx context.Context, spec runtime.ExecutionSpec) (runt
 	var cmd *exec.Cmd
 	if len(spec.Command) == 1 {
 		// Single command, run through shell
-		cmd = exec.CommandContext(ctx, opts.Shell, "-c", spec.Command[0])
+		if runtime.GOOS == "windows" {
+			cmd = exec.CommandContext(ctx, opts.Shell, "/c", spec.Command[0])
+		} else {
+			cmd = exec.CommandContext(ctx, opts.Shell, "-c", spec.Command[0])
+		}
 	} else {
 		// Multiple arguments, run directly
 		cmd = exec.CommandContext(ctx, spec.Command[0], spec.Command[1:]...)
@@ -79,7 +88,7 @@ func (r *Runtime) Execute(ctx context.Context, spec runtime.ExecutionSpec) (runt
 		id:        uuid.New().String(),
 		cmd:       cmd,
 		spec:      spec,
-		state:     runtime.StateStarting,
+		state:     amuxruntime.StateStarting,
 		startTime: time.Now(),
 		opts:      opts,
 		done:      make(chan struct{}),
@@ -102,7 +111,7 @@ func (r *Runtime) Execute(ctx context.Context, spec runtime.ExecutionSpec) (runt
 		return nil, fmt.Errorf("failed to start process: %w", err)
 	}
 
-	proc.setState(runtime.StateRunning)
+	proc.setState(amuxruntime.StateRunning)
 
 	// Store process
 	r.processes.Store(proc.id, proc)
@@ -126,16 +135,16 @@ func (r *Runtime) Execute(ctx context.Context, spec runtime.ExecutionSpec) (runt
 }
 
 // Find locates an existing process by ID
-func (r *Runtime) Find(ctx context.Context, id string) (runtime.Process, error) {
+func (r *Runtime) Find(ctx context.Context, id string) (amuxruntime.Process, error) {
 	if proc, ok := r.processes.Load(id); ok {
 		return proc.(*Process), nil
 	}
-	return nil, runtime.ErrProcessNotFound
+	return nil, amuxruntime.ErrProcessNotFound
 }
 
 // List returns all processes managed by this runtime
-func (r *Runtime) List(ctx context.Context) ([]runtime.Process, error) {
-	var processes []runtime.Process
+func (r *Runtime) List(ctx context.Context) ([]amuxruntime.Process, error) {
+	var processes []amuxruntime.Process
 	r.processes.Range(func(key, value interface{}) bool {
 		processes = append(processes, value.(*Process))
 		return true
@@ -153,8 +162,8 @@ func (r *Runtime) Validate() error {
 type Process struct {
 	id        string
 	cmd       *exec.Cmd
-	spec      runtime.ExecutionSpec
-	state     runtime.ProcessState
+	spec      amuxruntime.ExecutionSpec
+	state     amuxruntime.ProcessState
 	startTime time.Time
 	opts      Options
 	mu        sync.RWMutex
@@ -172,7 +181,7 @@ func (p *Process) ID() string {
 }
 
 // State returns the current state of the process
-func (p *Process) State() runtime.ProcessState {
+func (p *Process) State() amuxruntime.ProcessState {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	return p.state
@@ -199,9 +208,9 @@ func (p *Process) Wait(ctx context.Context) error {
 // Stop gracefully stops the process (SIGTERM)
 func (p *Process) Stop(ctx context.Context) error {
 	p.mu.Lock()
-	if p.state != runtime.StateRunning {
+	if p.state != amuxruntime.StateRunning {
 		p.mu.Unlock()
-		return runtime.ErrProcessAlreadyDone
+		return amuxruntime.ErrProcessAlreadyDone
 	}
 	p.mu.Unlock()
 
@@ -227,8 +236,8 @@ func (p *Process) Kill(ctx context.Context) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	if p.state != runtime.StateRunning {
-		return runtime.ErrProcessAlreadyDone
+	if p.state != amuxruntime.StateRunning {
+		return amuxruntime.ErrProcessAlreadyDone
 	}
 
 	if err := p.cmd.Process.Kill(); err != nil {
@@ -268,7 +277,7 @@ func (p *Process) StartTime() time.Time {
 }
 
 // setState updates the process state
-func (p *Process) setState(state runtime.ProcessState) {
+func (p *Process) setState(state amuxruntime.ProcessState) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.state = state
@@ -280,9 +289,9 @@ func (p *Process) monitor() {
 
 	p.mu.Lock()
 	if err != nil {
-		p.state = runtime.StateFailed
+		p.state = amuxruntime.StateFailed
 	} else {
-		p.state = runtime.StateStopped
+		p.state = amuxruntime.StateStopped
 	}
 	p.mu.Unlock()
 
@@ -292,7 +301,7 @@ func (p *Process) monitor() {
 	})
 }
 
-// Options implements runtime.RuntimeOptions for local processes
+// Options implements amuxruntime.RuntimeOptions for local processes
 type Options struct {
 	Shell           string // Shell to use (default: $SHELL or /bin/sh)
 	InheritEnv      bool   // Inherit parent process environment
