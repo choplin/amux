@@ -3,7 +3,7 @@ package mcp
 import (
 	"testing"
 
-	"github.com/aki/amux/internal/core/config"
+	"github.com/aki/amux/internal/config"
 	runtimeinit "github.com/aki/amux/internal/runtime/init"
 	"github.com/aki/amux/internal/tests/helpers"
 )

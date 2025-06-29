@@ -4,8 +4,8 @@ package workspace
 import (
 	"fmt"
 
-	"github.com/aki/amux/internal/core/config"
-	"github.com/aki/amux/internal/core/idmap"
+	"github.com/aki/amux/internal/config"
+	"github.com/aki/amux/internal/idmap"
 )
 
 // SetupManager creates a fully configured workspace manager with all dependencies initialized.

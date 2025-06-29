@@ -7,8 +7,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/aki/amux/internal/cli/ui"
-	"github.com/aki/amux/internal/core/config"
-	"github.com/aki/amux/internal/core/workspace"
+	"github.com/aki/amux/internal/config"
+	"github.com/aki/amux/internal/workspace"
 )
 
 var removeWorkspaceCmd = &cobra.Command{

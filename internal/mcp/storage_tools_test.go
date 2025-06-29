@@ -6,9 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aki/amux/internal/adapters/tmux"
-	"github.com/aki/amux/internal/core/session"
-	"github.com/aki/amux/internal/core/workspace"
+	"github.com/aki/amux/internal/workspace"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -114,103 +112,5 @@ func TestSeparatedStorageTools(t *testing.T) {
 				assert.Contains(t, textContent.Text, "file2.txt")
 			}
 		})
-	})
-
-	t.Run("session storage tools", func(t *testing.T) {
-		// Skip if tmux not available
-		tmuxAdapter, err := tmux.NewAdapter()
-		if err != nil || !tmuxAdapter.IsAvailable() {
-			t.Skip("tmux not available, skipping session storage tools test")
-		}
-
-		// Create test session
-		sessionManager, err := server.createSessionManager()
-		require.NoError(t, err)
-
-		opts := session.Options{
-			AgentID:     "test-agent",
-			WorkspaceID: ws.ID,
-			Name:        "test-session",
-		}
-
-		sess, err := sessionManager.CreateSession(ctx, opts)
-		require.NoError(t, err)
-
-		// Start the session
-		err = sess.Start(ctx)
-		require.NoError(t, err)
-
-		// Create session storage directory
-		storagePath := sess.GetStoragePath()
-		err = os.MkdirAll(storagePath, 0o755)
-		require.NoError(t, err)
-
-		t.Run("session_storage_write creates file", func(t *testing.T) {
-			request := mcp.CallToolRequest{
-				Params: mcp.CallToolParams{
-					Name: "session_storage_write",
-					Arguments: map[string]interface{}{
-						"session_identifier": sess.ID(),
-						"path":               "session-test.txt",
-						"content":            "Session data",
-					},
-				},
-			}
-
-			result, err := server.handleSessionStorageWrite(ctx, request)
-			require.NoError(t, err)
-			assert.NotNil(t, result)
-
-			// Verify file was created
-			content, err := os.ReadFile(filepath.Join(storagePath, "session-test.txt"))
-			require.NoError(t, err)
-			assert.Equal(t, "Session data", string(content))
-		})
-
-		t.Run("session_storage_read reads file", func(t *testing.T) {
-			// Create a test file first
-			testFile := filepath.Join(storagePath, "read-test.txt")
-			err := os.WriteFile(testFile, []byte("Session content"), 0o644)
-			require.NoError(t, err)
-
-			request := mcp.CallToolRequest{
-				Params: mcp.CallToolParams{
-					Name: "session_storage_read",
-					Arguments: map[string]interface{}{
-						"session_identifier": sess.ID(),
-						"path":               "read-test.txt",
-					},
-				},
-			}
-
-			result, err := server.handleSessionStorageRead(ctx, request)
-			require.NoError(t, err)
-			assert.NotNil(t, result)
-
-			// Check result content
-			require.Len(t, result.Content, 1)
-			if textContent, ok := result.Content[0].(mcp.TextContent); ok {
-				assert.Contains(t, textContent.Text, "Session content")
-			}
-		})
-
-		t.Run("session_storage_list lists files", func(t *testing.T) {
-			request := mcp.CallToolRequest{
-				Params: mcp.CallToolParams{
-					Name: "session_storage_list",
-					Arguments: map[string]interface{}{
-						"session_identifier": sess.ID(),
-					},
-				},
-			}
-
-			result, err := server.handleSessionStorageList(ctx, request)
-			require.NoError(t, err)
-			assert.NotNil(t, result)
-		})
-
-		// Cleanup session
-		err = sess.Stop(context.Background()) //nolint:contextcheck // test cleanup context
-		require.NoError(t, err)
 	})
 }

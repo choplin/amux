@@ -8,7 +8,7 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 
-	"github.com/aki/amux/internal/core/workspace"
+	"github.com/aki/amux/internal/workspace"
 )
 
 func TestWorkspaceBridgeTools(t *testing.T) {

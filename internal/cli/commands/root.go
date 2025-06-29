@@ -2,11 +2,9 @@ package commands
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 
 	"github.com/aki/amux/internal/cli/commands/config"
 	"github.com/aki/amux/internal/cli/commands/hooks"
-	"github.com/aki/amux/internal/cli/commands/session"
 	"github.com/aki/amux/internal/cli/commands/workspace"
 	"github.com/aki/amux/internal/cli/ui"
 	runtimeinit "github.com/aki/amux/internal/runtime/init"
@@ -55,76 +53,9 @@ func init() {
 
 	rootCmd.AddCommand(workspace.Command())
 
-	rootCmd.AddCommand(session.Command())
-
 	rootCmd.AddCommand(mcpCmd)
 
 	rootCmd.AddCommand(config.Command())
-
-	// Add global aliases for common session operations
-	// These are shortcuts to session subcommands
-
-	// Get the session commands to create aliases
-	sessionCmd := session.Command()
-
-	// Find the subcommands to create aliases
-	var runSubCmd, listSubCmd, attachSubCmd *cobra.Command
-	for _, cmd := range sessionCmd.Commands() {
-		switch cmd.Use {
-		case "run <agent>":
-			runSubCmd = cmd
-		case "list":
-			listSubCmd = cmd
-		case "attach <session>":
-			attachSubCmd = cmd
-		}
-	}
-
-	// Create alias commands
-	if runSubCmd != nil {
-		runCmd := &cobra.Command{
-			Use:   "run <agent>",
-			Short: "Alias for 'session run'",
-			Long:  runSubCmd.Long,
-			Args:  runSubCmd.Args,
-			RunE:  runSubCmd.RunE,
-		}
-		// Copy flags
-		runSubCmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
-			runCmd.Flags().AddFlag(f)
-		})
-		rootCmd.AddCommand(runCmd)
-	}
-
-	if listSubCmd != nil {
-		psCmd := &cobra.Command{
-			Use:   "ps",
-			Short: "Alias for 'session list'",
-			RunE:  listSubCmd.RunE,
-		}
-		rootCmd.AddCommand(psCmd)
-
-		// Add status alias too (same as ps/list)
-		statusCmd := &cobra.Command{
-			Use:   "status",
-			Short: "Show status of agent sessions (alias for 'session list')",
-			RunE:  listSubCmd.RunE,
-		}
-		rootCmd.AddCommand(statusCmd)
-	}
-
-	if attachSubCmd != nil {
-		attachCmd := &cobra.Command{
-			Use:   "attach <session>",
-			Short: "Alias for 'session attach'",
-			Args:  attachSubCmd.Args,
-			RunE:  attachSubCmd.RunE,
-		}
-		rootCmd.AddCommand(attachCmd)
-	}
-
-	// Add tail command alias
-	rootCmd.AddCommand(session.TailCommand())
 
 	// Add hooks command
 	rootCmd.AddCommand(hooks.Cmd)

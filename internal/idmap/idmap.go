@@ -4,7 +4,7 @@ package idmap
 import (
 	"fmt"
 
-	"github.com/aki/amux/internal/core/index"
+	"github.com/aki/amux/internal/index"
 )
 
 // IDMapper manages ID mappings using IndexManager

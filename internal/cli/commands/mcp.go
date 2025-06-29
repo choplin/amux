@@ -12,9 +12,9 @@ import (
 
 	"github.com/aki/amux/internal/cli/ui"
 
-	"github.com/aki/amux/internal/core/config"
+	"github.com/aki/amux/internal/config"
 
-	"github.com/aki/amux/internal/core/git"
+	"github.com/aki/amux/internal/git"
 
 	"github.com/aki/amux/internal/mcp"
 )

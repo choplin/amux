@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aki/amux/internal/core/workspace"
+	"github.com/aki/amux/internal/workspace"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 

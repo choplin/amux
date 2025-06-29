@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aki/amux/internal/core/config"
-	"github.com/aki/amux/internal/core/workspace"
+	"github.com/aki/amux/internal/config"
+	"github.com/aki/amux/internal/workspace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

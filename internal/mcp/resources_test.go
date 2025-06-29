@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/aki/amux/internal/core/workspace"
+	"github.com/aki/amux/internal/workspace"
 )
 
 func TestHandleWorkspaceListResource(t *testing.T) {

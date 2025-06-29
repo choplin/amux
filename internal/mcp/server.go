@@ -12,9 +12,8 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
-	"github.com/aki/amux/internal/core/config"
-	"github.com/aki/amux/internal/core/session"
-	"github.com/aki/amux/internal/core/workspace"
+	"github.com/aki/amux/internal/config"
+	"github.com/aki/amux/internal/workspace"
 )
 
 // ServerV2 implements the MCP server using mcp-go
@@ -26,7 +25,6 @@ type ServerV2 struct {
 	// Manager references
 	configManager    *config.Manager
 	workspaceManager *workspace.Manager
-	sessionManager   *session.Manager
 }
 
 // NewServerV2 creates a new MCP server using mcp-go
@@ -35,12 +33,6 @@ func NewServerV2(configManager *config.Manager, transport string, httpConfig *co
 	workspaceManager, err := workspace.SetupManager(configManager.GetProjectRoot())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create workspace manager: %w", err)
-	}
-
-	// Create session manager independently
-	sessionManager, err := session.SetupManager(configManager.GetProjectRoot())
-	if err != nil {
-		return nil, fmt.Errorf("failed to create session manager: %w", err)
 	}
 
 	// Create MCP server
@@ -56,7 +48,6 @@ func NewServerV2(configManager *config.Manager, transport string, httpConfig *co
 		httpConfig:       httpConfig,
 		configManager:    configManager,
 		workspaceManager: workspaceManager,
-		sessionManager:   sessionManager,
 	}
 
 	// Register all tools
@@ -78,11 +69,6 @@ func NewServerV2(configManager *config.Manager, transport string, httpConfig *co
 	// Register resource templates
 	if err := s.registerResourceTemplates(); err != nil {
 		return nil, fmt.Errorf("failed to register resource templates: %w", err)
-	}
-
-	// Register session resources
-	if err := s.registerSessionResources(); err != nil {
-		return nil, fmt.Errorf("failed to register session resources: %w", err)
 	}
 
 	// Register all prompts
@@ -113,11 +99,6 @@ func (s *ServerV2) registerTools() error {
 	}
 
 	s.mcpServer.AddTool(mcp.NewTool("workspace_remove", removeOpts...), s.handleWorkspaceRemove)
-
-	// Register session tools
-	if err := s.registerSessionTools(); err != nil {
-		return fmt.Errorf("failed to register session tools: %w", err)
-	}
 
 	// Register storage tools
 	if err := s.registerStorageTools(); err != nil {
