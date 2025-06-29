@@ -82,6 +82,13 @@
         }
       },
       "additionalProperties": false
+    },
+    "tasks": {
+      "type": "array",
+      "description": "Task definitions - reusable command templates",
+      "items": {
+        "$ref": "#/$defs/task"
+      }
     }
   },
   "$defs": {
@@ -134,6 +141,59 @@
           "items": {
             "type": "string"
           }
+        }
+      }
+    },
+    "task": {
+      "type": "object",
+      "description": "Task definition - a reusable command template",
+      "required": ["name", "command"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Unique name for the task",
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]*$"
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of what the task does"
+        },
+        "command": {
+          "type": "string",
+          "description": "Command template to execute",
+          "minLength": 1
+        },
+        "lifecycle": {
+          "type": "string",
+          "description": "Task lifecycle type",
+          "enum": ["oneshot", "daemon"],
+          "default": "oneshot"
+        },
+        "working_dir": {
+          "type": "string",
+          "description": "Working directory for the task"
+        },
+        "env": {
+          "type": "object",
+          "description": "Environment variables for the task",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "depends_on": {
+          "type": "array",
+          "description": "List of task names that must be running before this task",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "timeout": {
+          "type": "string",
+          "description": "Maximum duration for the task (only for oneshot)",
+          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
         }
       }
     }

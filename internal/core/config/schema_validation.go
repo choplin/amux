@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/aki/amux/internal/task"
 	"github.com/santhosh-tekuri/jsonschema/v5"
 	"gopkg.in/yaml.v3"
 )
@@ -82,6 +83,14 @@ func LoadWithValidation(path string) (*Config, error) {
 	var cfg Config
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+	}
+
+	// Validate tasks if present
+	if len(cfg.Tasks) > 0 {
+		validator := task.NewValidator()
+		if err := validator.ValidateTaskList(cfg.Tasks); err != nil {
+			return nil, fmt.Errorf("task validation failed: %w", err)
+		}
 	}
 
 	return &cfg, nil

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/aki/amux/internal/task"
 	"gopkg.in/yaml.v3"
 )
 
@@ -171,6 +172,21 @@ func (m *Manager) RemoveAgent(id string) error {
 	}
 
 	return nil
+}
+
+// GetTaskManager returns a task manager initialized with tasks from the config
+func (m *Manager) GetTaskManager() (*task.Manager, error) {
+	cfg, err := m.Load()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load config: %w", err)
+	}
+
+	taskManager := task.NewManager()
+	if err := taskManager.LoadTasks(cfg.Tasks); err != nil {
+		return nil, fmt.Errorf("failed to load tasks: %w", err)
+	}
+
+	return taskManager, nil
 }
 
 // LoadProjectConfig loads the project configuration from the .amux directory

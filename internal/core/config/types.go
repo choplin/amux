@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+
+	"github.com/aki/amux/internal/task"
 )
 
 // Config represents the main Amux configuration
@@ -9,6 +11,7 @@ type Config struct {
 	Version string           `yaml:"version"`
 	MCP     MCPConfig        `yaml:"mcp"`
 	Agents  map[string]Agent `yaml:"agents"`
+	Tasks   []*task.Task     `yaml:"tasks,omitempty"`
 }
 
 // MCPConfig represents MCP server configuration
