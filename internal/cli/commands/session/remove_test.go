@@ -43,6 +43,12 @@ func TestRemoveSession(t *testing.T) {
 	// Initialize Amux
 	configManager := config.NewManager(repoDir)
 	cfg := config.DefaultConfig()
+	// Add test agent
+	cfg.Agents["test-agent"] = config.Agent{
+		Name:    "Test Agent",
+		Runtime: "tmux",
+		Command: []string{"sh", "-c", "sleep 5"},
+	}
 	err = configManager.Save(cfg)
 	require.NoError(t, err)
 
@@ -64,7 +70,7 @@ func TestRemoveSession(t *testing.T) {
 		// Create a test session
 		sess, err := sessionManager.CreateSession(context.Background(), session.Options{
 			WorkspaceID: ws.ID,
-			AgentID:     "claude",
+			AgentID:     "test-agent",
 		})
 		require.NoError(t, err)
 
@@ -89,7 +95,7 @@ func TestRemoveSession(t *testing.T) {
 		// Create a test session
 		sess, err := sessionManager.CreateSession(context.Background(), session.Options{
 			WorkspaceID: ws.ID,
-			AgentID:     "claude",
+			AgentID:     "test-agent",
 		})
 		require.NoError(t, err)
 
@@ -120,7 +126,7 @@ func TestRemoveSession(t *testing.T) {
 		// Create a new test session
 		sess, err := sessionManager.CreateSession(context.Background(), session.Options{
 			WorkspaceID: ws.ID,
-			AgentID:     "claude",
+			AgentID:     "test-agent",
 		})
 		require.NoError(t, err)
 
@@ -166,7 +172,7 @@ func TestRemoveSession(t *testing.T) {
 		// Create a session in the auto-created workspace
 		sess, err := sessionManager.CreateSession(context.Background(), session.Options{
 			WorkspaceID: wsAuto.ID,
-			AgentID:     "claude",
+			AgentID:     "test-agent",
 		})
 		require.NoError(t, err)
 
@@ -204,7 +210,7 @@ func TestRemoveSession(t *testing.T) {
 		// Create a session in the auto-created workspace
 		sess, err := sessionManager.CreateSession(context.Background(), session.Options{
 			WorkspaceID: ws2.ID,
-			AgentID:     "claude",
+			AgentID:     "test-agent",
 		})
 		require.NoError(t, err)
 
@@ -246,14 +252,14 @@ func TestRemoveSession(t *testing.T) {
 		// Create first session in the auto-created workspace
 		sess1, err := sessionManager.CreateSession(context.Background(), session.Options{
 			WorkspaceID: ws3.ID,
-			AgentID:     "claude",
+			AgentID:     "test-agent",
 		})
 		require.NoError(t, err)
 
 		// Create second session in the same workspace
 		sess2, err := sessionManager.CreateSession(context.Background(), session.Options{
 			WorkspaceID: ws3.ID,
-			AgentID:     "claude",
+			AgentID:     "test-agent",
 		})
 		require.NoError(t, err)
 
@@ -330,7 +336,7 @@ func TestRemoveSession(t *testing.T) {
 		// Create a session in the manually created workspace
 		sess, err := sessionManager.CreateSession(context.Background(), session.Options{
 			WorkspaceID: ws4.ID,
-			AgentID:     "claude",
+			AgentID:     "test-agent",
 		})
 		require.NoError(t, err)
 

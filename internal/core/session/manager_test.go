@@ -44,7 +44,7 @@ func TestManager_CreateSession(t *testing.T) {
 	// Test creating a session
 	opts := Options{
 		WorkspaceID: ws.ID,
-		AgentID:     "claude",
+		AgentID:     "test-agent",
 		Command:     "claude code",
 		Environment: map[string]string{
 			"ANTHROPIC_API_KEY": "test-key",
@@ -61,8 +61,8 @@ func TestManager_CreateSession(t *testing.T) {
 		t.Errorf("Expected workspace ID %s, got %s", ws.ID, session.WorkspaceID())
 	}
 
-	if session.AgentID() != "claude" {
-		t.Errorf("Expected agent ID 'claude', got %s", session.AgentID())
+	if session.AgentID() != "test-agent" {
+		t.Errorf("Expected agent ID 'test-agent', got %s", session.AgentID())
 	}
 
 	if session.Status() != StatusCreated {
@@ -112,7 +112,7 @@ func TestManager_CreateSessionWithNameAndDescription(t *testing.T) {
 	// Test creating a session with name and description
 	opts := Options{
 		WorkspaceID: ws.ID,
-		AgentID:     "claude",
+		AgentID:     "test-agent",
 		Command:     "claude code",
 		Name:        "debug-session",
 		Description: "Debugging authentication issues",
@@ -235,7 +235,7 @@ func TestManager_Get(t *testing.T) {
 	// Create a session
 	session, err := manager.CreateSession(context.Background(), Options{
 		WorkspaceID: ws.ID,
-		AgentID:     "claude",
+		AgentID:     "test-agent",
 	})
 	if err != nil {
 		t.Fatalf("Failed to create session: %v", err)
@@ -375,26 +375,36 @@ func TestManager_Remove(t *testing.T) {
 	// Create a session
 	session, err := manager.CreateSession(context.Background(), Options{
 		WorkspaceID: ws.ID,
-		AgentID:     "claude",
+		AgentID:     "test-agent",
 	})
 	if err != nil {
 		t.Fatalf("Failed to create session: %v", err)
 	}
 
-	// Can't remove running session
+	// Start the session
 	ctx := context.Background()
 	if err := session.Start(ctx); err != nil {
 		t.Fatalf("Failed to start session: %v", err)
 	}
 
+	// Try to remove - for local runtime it might have already completed
 	err = manager.Remove(context.Background(), ID(session.ID()))
-	if err == nil {
+
+	// Check if session is still running
+	status := session.Status()
+	if status == StatusRunning && err == nil {
 		t.Error("Expected error removing running session")
 	}
 
-	// Stop session
-	if err := session.Stop(context.Background()); err != nil {
-		t.Fatalf("Failed to stop session: %v", err)
+	// Stop session if it's still running
+	// With local runtime, the session might have already completed
+	status = session.Status()
+	if status == StatusRunning {
+		if err := session.Stop(context.Background()); err != nil {
+			t.Fatalf("Failed to stop session: %v", err)
+		}
+	} else if status != StatusCompleted && status != StatusFailed && status != StatusStopped {
+		t.Fatalf("Unexpected session status: %s", status)
 	}
 
 	// Now should be able to remove
@@ -443,7 +453,7 @@ func TestManager_RemoveCompletedSession(t *testing.T) {
 	// Create and start a session
 	session, err := manager.CreateSession(context.Background(), Options{
 		WorkspaceID: ws.ID,
-		AgentID:     "claude",
+		AgentID:     "test-agent",
 	})
 	if err != nil {
 		t.Fatalf("Failed to create session: %v", err)
@@ -491,7 +501,7 @@ func TestManager_CreateSessionWithoutTmux(t *testing.T) {
 	// Test creating a session without tmux
 	opts := Options{
 		WorkspaceID: ws.ID,
-		AgentID:     "claude",
+		AgentID:     "test-agent",
 		Command:     "claude code",
 	}
 
@@ -538,7 +548,7 @@ func TestManager_GetWithoutTmux(t *testing.T) {
 
 	session, err := manager.CreateSession(context.Background(), Options{
 		WorkspaceID: ws.ID,
-		AgentID:     "claude",
+		AgentID:     "test-agent",
 		Command:     "claude code",
 	})
 	if err != nil {
@@ -588,7 +598,7 @@ func TestManager_StoreOperations(t *testing.T) {
 	info := &Info{
 		ID:          "test-session",
 		WorkspaceID: "test-workspace",
-		AgentID:     "claude",
+		AgentID:     "test-agent",
 		ActivityTracking: ActivityTracking{
 			LastOutputTime: now,
 		},

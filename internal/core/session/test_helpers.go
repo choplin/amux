@@ -6,6 +6,7 @@ import (
 
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/workspace"
+	"github.com/aki/amux/internal/runtime"
 	runtimeinit "github.com/aki/amux/internal/runtime/init"
 	"github.com/aki/amux/internal/tests/helpers"
 )
@@ -15,6 +16,11 @@ func setupTestEnvironment(t *testing.T) (string, *workspace.Manager, *config.Man
 	// Initialize runtime registry for tests
 	if err := runtimeinit.RegisterDefaults(); err != nil {
 		t.Fatalf("Failed to initialize runtimes: %v", err)
+	}
+
+	// Check if tmux runtime is available
+	if _, err := runtime.Get("tmux"); err != nil {
+		t.Skip("Skipping test: tmux runtime not available")
 	}
 
 	// Create test repository
@@ -28,14 +34,14 @@ func setupTestEnvironment(t *testing.T) (string, *workspace.Manager, *config.Man
 	cfg.Agents["test-agent"] = config.Agent{
 		Name:    "Test Agent",
 		Runtime: "tmux",
-		Command: []string{"echo", "test"},
+		Command: []string{"sh", "-c", "sleep 5"},
 	}
 	// Add numbered agents for tests that use them
 	for i := 0; i < 5; i++ {
 		cfg.Agents[fmt.Sprintf("agent-%d", i)] = config.Agent{
 			Name:    fmt.Sprintf("Agent %d", i),
 			Runtime: "tmux",
-			Command: []string{"echo", "test"},
+			Command: []string{"sh", "-c", "sleep 5"},
 		}
 	}
 	if err := configManager.Save(cfg); err != nil {

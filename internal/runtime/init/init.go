@@ -4,6 +4,7 @@ package init
 import (
 	"fmt"
 	"os"
+	goruntime "runtime"
 
 	"github.com/aki/amux/internal/runtime"
 	"github.com/aki/amux/internal/runtime/config"
@@ -28,15 +29,17 @@ func RegisterDefaults() error {
 		return fmt.Errorf("failed to register local runtime: %w", err)
 	}
 
-	// Register tmux runtime if available
-	tmuxRT, err := tmux.New("")
-	if err == nil && tmuxRT.Validate() == nil {
-		if err := runtime.Register("tmux", tmuxRT, tmux.Options{
-			WindowName:    "amux",
-			CaptureOutput: true,
-			OutputHistory: 10000,
-		}); err != nil {
-			return fmt.Errorf("failed to register tmux runtime: %w", err)
+	// Register tmux runtime if available (not on Windows)
+	if goruntime.GOOS != "windows" {
+		tmuxRT, err := tmux.New("")
+		if err == nil && tmuxRT.Validate() == nil {
+			if err := runtime.Register("tmux", tmuxRT, tmux.Options{
+				WindowName:    "amux",
+				CaptureOutput: true,
+				OutputHistory: 10000,
+			}); err != nil {
+				return fmt.Errorf("failed to register tmux runtime: %w", err)
+			}
 		}
 	}
 

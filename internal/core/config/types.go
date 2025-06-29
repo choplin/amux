@@ -76,6 +76,8 @@ func (c *Config) GetAgent(id string) (*Agent, error) {
 
 // DefaultConfig returns the default Amux configuration
 func DefaultConfig() *Config {
+	// Use local runtime as default since it's always available
+	// Users can change to tmux if they prefer
 	return &Config{
 		Version: "1.0",
 		MCP: MCPConfig{
@@ -86,7 +88,7 @@ func DefaultConfig() *Config {
 		Agents: map[string]Agent{
 			"claude": {
 				Name:        "Claude",
-				Runtime:     "tmux",
+				Runtime:     "local",
 				Description: "Claude AI assistant for terminal-based development",
 				Command:     []string{"claude"},
 			},
