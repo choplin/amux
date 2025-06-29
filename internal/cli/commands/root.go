@@ -5,6 +5,7 @@ import (
 
 	"github.com/aki/amux/internal/cli/commands/config"
 	"github.com/aki/amux/internal/cli/commands/hooks"
+	"github.com/aki/amux/internal/cli/commands/session"
 	"github.com/aki/amux/internal/cli/commands/workspace"
 	"github.com/aki/amux/internal/cli/ui"
 	runtimeinit "github.com/aki/amux/internal/runtime/init"
@@ -48,17 +49,19 @@ func init() {
 	RegisterLoggerFlags(rootCmd)
 
 	// Add subcommands
-
 	rootCmd.AddCommand(initCmd)
-
 	rootCmd.AddCommand(workspace.Command())
-
+	rootCmd.AddCommand(session.Command())
 	rootCmd.AddCommand(mcpCmd)
-
 	rootCmd.AddCommand(config.Command())
-
-	// Add hooks command
 	rootCmd.AddCommand(hooks.Cmd)
+
+	// Add shortcut commands
+	rootCmd.AddCommand(NewRunCommand())
+	rootCmd.AddCommand(NewPsCommand())
+	rootCmd.AddCommand(NewAttachCommand())
+	rootCmd.AddCommand(NewTailCommand())
+	rootCmd.AddCommand(NewStatusCommand())
 }
 
 // Execute runs the root command
