@@ -88,6 +88,7 @@ type Options struct {
 	Name                string            // Optional: human-readable name for the session
 	Description         string            // Optional: description of session purpose
 	NoHooks             bool              // Skip hook execution
+	RuntimeType         string            // Optional: override runtime type ("local", "tmux", etc.)
 }
 
 // Info contains metadata about a session
@@ -111,7 +112,8 @@ type Info struct {
 	StateDir         string            `yaml:"state_dir,omitempty"`
 	Name             string            `yaml:"name,omitempty"`
 	Description      string            `yaml:"description,omitempty"`
-	ShouldAutoAttach bool              `yaml:"-"` // Derived from agent config, not persisted
+	ShouldAutoAttach bool              `yaml:"-"`                      // Derived from agent config, not persisted
+	RuntimeType      string            `yaml:"runtime_type,omitempty"` // Runtime type (local, tmux, etc.)
 }
 
 // Session represents an active or inactive agent session

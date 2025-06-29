@@ -173,6 +173,12 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 		return nil, fmt.Errorf("failed to create state directory: %w", err)
 	}
 
+	// Get the runtime type that will be used
+	runtimeTypeToUse := agentConfig.GetRuntimeType()
+	if opts.RuntimeType != "" {
+		runtimeTypeToUse = opts.RuntimeType
+	}
+
 	// Create session info
 	info := &Info{
 		ID:          sessionID.String(),
@@ -191,6 +197,7 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 		Name:             opts.Name,
 		Description:      opts.Description,
 		ShouldAutoAttach: shouldAutoAttach,
+		RuntimeType:      runtimeTypeToUse,
 	}
 
 	// Save session info to file
@@ -214,10 +221,11 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 		return nil, fmt.Errorf("agent configuration is required")
 	}
 
-	// Get runtime
-	rt, err := runtime.Get(agentConfig.GetRuntimeType())
+	// Get runtime - runtimeTypeToUse is already set above
+
+	rt, err := runtime.Get(runtimeTypeToUse)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get runtime %q: %w", agentConfig.GetRuntimeType(), err)
+		return nil, fmt.Errorf("failed to get runtime %q: %w", runtimeTypeToUse, err)
 	}
 
 	// Create runtime-based session

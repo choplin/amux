@@ -15,6 +15,7 @@ var (
 	runSessionName        string
 	runSessionDescription string
 	runNoHooks            bool
+	runRuntimeType        string
 
 	// Flags for session logs
 	followLogs     bool

@@ -146,6 +146,64 @@ func TestManager_CreateSessionWithNameAndDescription(t *testing.T) {
 	}
 }
 
+func TestManager_CreateSessionWithRuntimeOverride(t *testing.T) {
+	// Setup test environment
+	_, wsManager, configManager := setupTestEnvironment(t)
+
+	// Create a test workspace
+	ws, err := wsManager.Create(context.Background(), workspace.CreateOptions{
+		Name:       "test-workspace-runtime",
+		BaseBranch: "main",
+	})
+	if err != nil {
+		t.Fatalf("Failed to create test workspace: %v", err)
+	}
+
+	// Create ID mapper
+	idMapper, err := idmap.NewSessionIDMapper(configManager.GetAmuxDir())
+	if err != nil {
+		t.Fatalf("Failed to create ID mapper: %v", err)
+	}
+
+	// Create session manager
+	manager, err := NewManager(configManager.GetAmuxDir(), wsManager, configManager, idMapper)
+	if err != nil {
+		t.Fatalf("Failed to create session manager: %v", err)
+	}
+
+	// Use mock adapter for consistent testing across platforms
+	mockAdapter := tmux.NewMockAdapter()
+	manager.SetTmuxAdapter(mockAdapter)
+
+	// Test creating a session with runtime override
+	opts := Options{
+		WorkspaceID: ws.ID,
+		AgentID:     "claude", // Default agent has "local" runtime
+		RuntimeType: "tmux",   // Override to tmux
+	}
+
+	session, err := manager.CreateSession(context.Background(), opts)
+	if err != nil {
+		t.Fatalf("Failed to create session: %v", err)
+	}
+
+	// Verify runtime type was overridden
+	info := session.Info()
+	if info.RuntimeType != "tmux" {
+		t.Errorf("Expected runtime type 'tmux', got %s", info.RuntimeType)
+	}
+
+	// Verify session was saved with overridden runtime type
+	loaded, err := manager.Load(context.Background(), session.ID())
+	if err != nil {
+		t.Fatalf("Failed to load session from manager: %v", err)
+	}
+
+	if loaded.RuntimeType != "tmux" {
+		t.Errorf("Loaded session runtime type mismatch: expected 'tmux', got %s", loaded.RuntimeType)
+	}
+}
+
 func TestManager_CreateSessionWithInitialPrompt(t *testing.T) {
 	// Setup test environment
 	_, wsManager, configManager := setupTestEnvironment(t)

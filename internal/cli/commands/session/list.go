@@ -19,7 +19,7 @@ func listCmd() *cobra.Command {
 		Short:   "List active sessions",
 		Long: `List all agent sessions.
 
-Shows session ID, agent, workspace, status, and runtime.`,
+Shows session ID, name, description, agent, workspace, runtime type, status, time in status, and total runtime.`,
 		RunE: listSessions,
 	}
 }
@@ -54,7 +54,7 @@ func listSessions(cmd *cobra.Command, args []string) error {
 	sessionManager.UpdateAllStatuses(cmd.Context(), sessions)
 
 	// Create table
-	tbl := ui.NewTable("SESSION", "NAME", "DESCRIPTION", "AGENT", "WORKSPACE", "STATUS", "IN STATUS", "TOTAL TIME")
+	tbl := ui.NewTable("SESSION", "NAME", "DESCRIPTION", "AGENT", "WORKSPACE", "RUNTIME", "STATUS", "IN STATUS", "TOTAL TIME")
 
 	// Add rows
 	for _, sess := range sessions {
@@ -126,7 +126,13 @@ func listSessions(cmd *cobra.Command, args []string) error {
 			description = description[:27] + "..."
 		}
 
-		tbl.AddRow(displayID, sessionName, description, info.AgentID, wsName, statusStr, inStatusStr, totalTime)
+		// Get runtime type (fall back to "unknown" if not set for legacy sessions)
+		runtimeType := info.RuntimeType
+		if runtimeType == "" {
+			runtimeType = "unknown"
+		}
+
+		tbl.AddRow(displayID, sessionName, description, info.AgentID, wsName, runtimeType, statusStr, inStatusStr, totalTime)
 	}
 
 	// Print with header
