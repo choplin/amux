@@ -69,8 +69,8 @@ func CreateTmuxSession(ctx context.Context, info *Info, manager *Manager, tmuxAd
 		return nil, fmt.Errorf("CreateTmuxSession: StateDir is required")
 	}
 
-	// Initialize state manager with default slog logger
-	s.Manager = state.InitManager(info.ID, info.WorkspaceID, info.StateDir, nil)
+	// Initialize state manager
+	s.Manager = state.InitManager(info.ID, info.WorkspaceID, info.StateDir)
 
 	// Add semaphore handler if workspace manager is available
 	if manager != nil && manager.workspaceManager != nil {
