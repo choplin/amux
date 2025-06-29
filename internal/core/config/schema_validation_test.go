@@ -25,10 +25,9 @@ mcp:
 agents:
   claude:
     name: Claude
-    type: tmux
+    runtime: tmux
     description: Test agent
-    params:
-      command: claude`,
+    command: [claude]`,
 			wantErr: false,
 		},
 		{
@@ -36,9 +35,8 @@ agents:
 			yaml: `agents:
   claude:
     name: Claude
-    type: tmux
-    params:
-      command: claude`,
+    runtime: tmux
+    command: [claude]`,
 			wantErr: true,
 			errMsg:  "missing properties: 'version'",
 		},
@@ -54,9 +52,8 @@ agents:
 agents:
   claude:
     name: Claude
-    type: tmux
-    params:
-      command: claude`,
+    runtime: tmux
+    command: [claude]`,
 			wantErr: true,
 			errMsg:  "value must be \"1.0\"",
 		},
@@ -65,56 +62,52 @@ agents:
 			yaml: `version: "1.0"
 agents:
   claude:
-    type: tmux
-    params:
-      command: claude`,
+    runtime: tmux
+    command: [claude]`,
 			wantErr: true,
 			errMsg:  "missing properties: 'name'",
 		},
 		{
-			name: "missing agent type",
+			name: "missing agent runtime",
 			yaml: `version: "1.0"
 agents:
   claude:
     name: Claude
-    params:
-      command: claude`,
+    command: [claude]`,
 			wantErr: true,
-			errMsg:  "missing properties: 'type'",
+			errMsg:  "missing properties: 'runtime'",
 		},
 		{
-			name: "invalid agent type",
+			name: "invalid agent runtime",
 			yaml: `version: "1.0"
 agents:
   claude:
     name: Claude
-    type: docker
-    params:
-      command: claude`,
+    runtime: docker
+    command: [claude]`,
 			wantErr: true,
-			errMsg:  "value must be \"tmux\"",
+			errMsg:  "value must be one of \"local\", \"tmux\"",
 		},
 		{
-			name: "tmux agent missing params config",
+			name: "tmux agent with valid command",
 			yaml: `version: "1.0"
 agents:
   claude:
     name: Claude
-    type: tmux`,
-			wantErr: true,
-			errMsg:  "missing properties: 'params'",
+    runtime: tmux
+    command: [claude]`,
+			wantErr: false,
 		},
 		{
-			name: "tmux config missing command",
+			name: "runtime options example",
 			yaml: `version: "1.0"
 agents:
   claude:
     name: Claude
-    type: tmux
-    params:
+    runtime: tmux
+    runtimeOptions:
       shell: /bin/bash`,
-			wantErr: true,
-			errMsg:  "missing properties: 'command'",
+			wantErr: false,
 		},
 		{
 			name: "additional properties not allowed",
@@ -122,10 +115,9 @@ agents:
 agents:
   claude:
     name: Claude
-    type: tmux
+    runtime: tmux
     unknown: value
-    params:
-      command: claude`,
+    command: [claude]`,
 			wantErr: true,
 			errMsg:  "additionalProperties",
 		},
@@ -135,9 +127,8 @@ agents:
 agents:
   "invalid-@-id":
     name: Claude
-    type: tmux
-    params:
-      command: claude`,
+    runtime: tmux
+    command: [claude]`,
 			wantErr: true,
 			errMsg:  "additionalProperties 'invalid-@-id' not allowed",
 		},
@@ -150,9 +141,8 @@ mcp:
 agents:
   claude:
     name: Claude
-    type: tmux
-    params:
-      command: claude`,
+    runtime: tmux
+    command: [claude]`,
 			wantErr: true,
 			errMsg:  "value must be one of \"stdio\", \"http\"",
 		},
@@ -170,7 +160,7 @@ mcp:
 agents:
   claude:
     name: Claude
-    type: tmux
+    runtime: tmux
     description: Claude AI assistant
     environment:
       API_KEY: ${CLAUDE_API_KEY}
@@ -178,21 +168,21 @@ agents:
     tags:
       - ai
       - assistant
-    params:
-      command: claude
+    command: [claude]
+    runtimeOptions:
       windowName: claude-window
       detached: true`,
 			wantErr: false,
 		},
 		{
-			name: "valid tmux config with autoAttach",
+			name: "valid tmux config with runtimeOptions",
 			yaml: `version: "1.0"
 agents:
   claude-interactive:
     name: Claude Interactive
-    type: tmux
-    params:
-      command: claude
+    runtime: tmux
+    command: [claude]
+    runtimeOptions:
       autoAttach: true`,
 			wantErr: false,
 		},
@@ -223,9 +213,8 @@ func TestLoadWithValidation(t *testing.T) {
 agents:
   claude:
     name: Claude
-    type: tmux
-    params:
-      command: claude`
+    runtime: tmux
+    command: [claude]`
 
 		require.NoError(t, os.WriteFile(configPath, []byte(validConfig), 0o644))
 
@@ -233,14 +222,11 @@ agents:
 		require.NoError(t, err)
 		assert.Equal(t, "1.0", cfg.Version)
 		assert.Equal(t, "Claude", cfg.Agents["claude"].Name)
-		assert.Equal(t, AgentTypeTmux, cfg.Agents["claude"].Type)
+		assert.Equal(t, "tmux", cfg.Agents["claude"].Runtime)
 
-		// Verify params were properly unmarshaled
+		// Verify command was properly unmarshaled
 		agent := cfg.Agents["claude"]
-		params, err := agent.GetTmuxParams()
-		require.NoError(t, err)
-		assert.Equal(t, "claude", params.Command.Single)
-		assert.False(t, params.Command.IsArray())
+		assert.Equal(t, []string{"claude"}, agent.Command)
 	})
 
 	t.Run("invalid configuration", func(t *testing.T) {
@@ -249,7 +235,7 @@ agents:
 agents:
   claude:
     name: Claude
-    # missing type field`
+    # missing runtime field`
 
 		require.NoError(t, os.WriteFile(configPath, []byte(invalidConfig), 0o644))
 
@@ -290,9 +276,8 @@ func TestValidateFile(t *testing.T) {
 agents:
   claude:
     name: Claude
-    type: tmux
-    params:
-      command: claude`
+    runtime: tmux
+    command: [claude]`
 
 		require.NoError(t, os.WriteFile(configPath, []byte(validConfig), 0o644))
 
@@ -325,15 +310,14 @@ func TestSchemaValidation_TypeSpecificFields(t *testing.T) {
 		wantErr string
 	}{
 		{
-			name: "invalid type not in enum",
+			name: "invalid runtime not in enum",
 			yaml: `version: "1.0"
 agents:
   future-agent:
     name: Future Agent
-    type: claude-code
-    params:
-      command: some-command`,
-			wantErr: "value must be \"tmux\"",
+    runtime: claude-code
+    command: [some-command]`,
+			wantErr: "value must be one of \"local\", \"tmux\"",
 		},
 		{
 			name: "tmux agent with unexpected field",
@@ -341,9 +325,8 @@ agents:
 agents:
   tmux-agent:
     name: Tmux Agent
-    type: tmux
-    params:
-      command: bash
+    runtime: tmux
+    command: [bash]
     claudeCode:
       cliPath: /usr/local/bin/claude`,
 			wantErr: "additionalProperties",

@@ -170,10 +170,9 @@ func (s *tmuxSessionImpl) Start(ctx context.Context) error {
 
 	// Get window name from agent configuration
 	var windowName string
-	if s.agentConfig != nil && s.agentConfig.Type == config.AgentTypeTmux {
-		if tmuxParams, err := s.agentConfig.GetTmuxParams(); err == nil {
-			windowName = tmuxParams.WindowName
-		}
+	if s.agentConfig != nil && s.agentConfig.Runtime == "tmux" {
+		// TODO: Get window name from runtime options if needed
+		windowName = "amux"
 	}
 
 	// Merge environment variables:

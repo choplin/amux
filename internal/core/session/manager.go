@@ -15,6 +15,7 @@ import (
 	"github.com/aki/amux/internal/core/idmap"
 	"github.com/aki/amux/internal/core/workspace"
 	"github.com/aki/amux/internal/filemanager"
+	"github.com/aki/amux/internal/runtime"
 )
 
 // Manager implements Manager interface
@@ -147,42 +148,15 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 		}
 		agentConfig = agent
 
-		// Determine session type from agent type
-		switch agent.Type {
-		case config.AgentTypeTmux:
-			sessionType = TypeTmux
-
-			// Get tmux-specific configuration
-			cfg, err := m.configManager.Load()
-			if err != nil {
-				return nil, fmt.Errorf("failed to load config: %w", err)
-			}
-
-			if tmuxAgent, err := cfg.GetTmuxAgent(opts.AgentID); err == nil {
-				shouldAutoAttach = tmuxAgent.ShouldAutoAttach()
-
-				// If no command specified, use agent's default
-				if opts.Command == "" {
-					opts.Command = tmuxAgent.GetCommand()
-				}
-
-				// Merge agent environment with session environment
-				// Session environment (from CLI) takes precedence
-				if opts.Environment == nil {
-					opts.Environment = make(map[string]string)
-				}
-				for k, v := range tmuxAgent.GetEnvironment() {
-					if _, exists := opts.Environment[k]; !exists {
-						opts.Environment[k] = v
-					}
-				}
-			}
-		case config.AgentTypeClaudeCode, config.AgentTypeAPI:
-			// These agent types are not yet implemented
-			return nil, fmt.Errorf("agent type %q is not yet implemented", agent.Type)
-		default:
-			return nil, fmt.Errorf("unknown agent type %q", agent.Type)
+		// Get runtime type from agent
+		runtimeType := agent.GetRuntimeType()
+		if runtimeType == "" {
+			return nil, fmt.Errorf("agent %q has no runtime specified", opts.AgentID)
 		}
+
+		// TODO: Configure shouldAutoAttach based on runtime options
+		// For now, default to false
+		shouldAutoAttach = false
 	}
 
 	now := time.Now()
@@ -235,11 +209,23 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 		}
 	}
 
-	// Create and cache session
-	sess, err := CreateTmuxSession(ctx, info, m, m.tmuxAdapter, ws, agentConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create tmux session: %w", err)
+	// Create session based on runtime type
+	if agentConfig == nil {
+		return nil, fmt.Errorf("agent configuration is required")
 	}
+
+	// Get runtime
+	rt, err := runtime.Get(agentConfig.GetRuntimeType())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get runtime %q: %w", agentConfig.GetRuntimeType(), err)
+	}
+
+	// Create runtime-based session
+	sess, err := CreateRuntimeSession(ctx, info, m, rt, ws, agentConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create runtime session: %w", err)
+	}
+
 	m.mu.Lock()
 	m.sessions[sessionID.String()] = sess
 	m.mu.Unlock()
@@ -409,53 +395,38 @@ func (m *Manager) createSessionFromInfo(ctx context.Context, info *Info) (Sessio
 		return nil, fmt.Errorf("session type is required")
 	}
 
-	// Create session based on type
-	switch info.Type {
-	case TypeTmux:
-		// Check if tmux is available
-		if m.tmuxAdapter == nil || !m.tmuxAdapter.IsAvailable() {
-			return nil, ErrTmuxNotAvailable{}
-		}
-
-		// Try to get workspace for tmux session
-		var ws *workspace.Workspace
-		if m.workspaceManager != nil {
-			var err error
-			ws, err = m.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(info.WorkspaceID))
-			if err != nil {
-				// Workspace not found - create orphaned session
-				reason := fmt.Sprintf("workspace not found: %s", info.WorkspaceID)
-				info.Error = reason
-				// Update the stored session info
-				if updateErr := m.saveSessionInfo(ctx, info); updateErr != nil {
-					slog.Warn("failed to update orphaned session info", "error", updateErr)
-				}
-				// Return orphaned terminal session
-				sess, err := CreateOrphanedTerminalSession(ctx, info, m, reason)
-				if err != nil {
-					return nil, fmt.Errorf("failed to create orphaned session: %w", err)
-				}
-				return sess, nil
-			}
-		}
-
-		// Get agent configuration if available
-		var agentConfig *config.Agent
-		if m.configManager != nil {
-			if agent, err := m.configManager.GetAgent(info.AgentID); err == nil {
-				agentConfig = agent
-			}
-		}
-
-		sess, err := CreateTmuxSession(ctx, info, m, m.tmuxAdapter, ws, agentConfig)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create tmux session: %w", err)
-		}
-		return sess, nil
-
-	default:
-		return nil, fmt.Errorf("unsupported session type: %s", info.Type)
+	// Get workspace
+	if m.workspaceManager == nil {
+		return nil, fmt.Errorf("workspace manager not available")
 	}
+
+	ws, err := m.workspaceManager.ResolveWorkspace(ctx, workspace.Identifier(info.WorkspaceID))
+	if err != nil {
+		return nil, fmt.Errorf("workspace not found: %w", err)
+	}
+
+	// Get agent configuration
+	if m.configManager == nil {
+		return nil, fmt.Errorf("config manager not available")
+	}
+
+	agent, err := m.configManager.GetAgent(info.AgentID)
+	if err != nil {
+		return nil, fmt.Errorf("agent %q not found: %w", info.AgentID, err)
+	}
+
+	// Get runtime
+	rt, err := runtime.Get(agent.GetRuntimeType())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get runtime %q: %w", agent.GetRuntimeType(), err)
+	}
+
+	// Create runtime-based session
+	sess, err := CreateRuntimeSession(ctx, info, m, rt, ws, agent)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create runtime session: %w", err)
+	}
+	return sess, nil
 }
 
 // ResolveSession resolves a session identifier (ID, index, or name) to a Session

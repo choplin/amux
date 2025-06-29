@@ -88,7 +88,7 @@
     "agent": {
       "type": "object",
       "description": "AI agent configuration",
-      "required": ["name", "type"],
+      "required": ["name", "runtime"],
       "additionalProperties": false,
       "properties": {
         "name": {
@@ -96,10 +96,10 @@
           "description": "Display name for the agent",
           "minLength": 1
         },
-        "type": {
+        "runtime": {
           "type": "string",
-          "description": "Session type for the agent",
-          "enum": ["tmux"]
+          "description": "Runtime type to use (e.g., local, tmux)",
+          "enum": ["local", "tmux"]
         },
         "description": {
           "type": "string",
@@ -124,61 +124,18 @@
           },
           "uniqueItems": true
         },
-        "params": {
+        "runtimeOptions": {
           "type": "object",
-          "description": "Type-specific agent parameters"
-        }
-      },
-      "allOf": [
-        {
-          "if": {
-            "properties": {
-              "type": { "const": "tmux" }
-            }
-          },
-          "then": {
-            "required": ["params"],
-            "properties": {
-              "params": {
-                "type": "object",
-                "required": ["command"],
-                "additionalProperties": false,
-                "properties": {
-                  "command": {
-                    "oneOf": [
-                      {
-                        "type": "string",
-                        "description": "Command to execute in the tmux session (executed via shell)",
-                        "minLength": 1
-                      },
-                      {
-                        "type": "array",
-                        "description": "Command and arguments to execute directly without shell",
-                        "items": {
-                          "type": "string"
-                        },
-                        "minItems": 1
-                      }
-                    ]
-                  },
-                  "windowName": {
-                    "type": "string",
-                    "description": "Name for the tmux window"
-                  },
-                  "detached": {
-                    "type": "boolean",
-                    "description": "Whether to detach from the session after creation"
-                  },
-                  "autoAttach": {
-                    "type": "boolean",
-                    "description": "Whether to automatically attach to the session after creation (CLI only)"
-                  }
-                }
-              }
-            }
+          "description": "Runtime-specific options"
+        },
+        "command": {
+          "type": "array",
+          "description": "Command to execute",
+          "items": {
+            "type": "string"
           }
         }
-      ]
+      }
     }
   }
 }

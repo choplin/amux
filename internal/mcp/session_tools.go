@@ -162,12 +162,7 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 		response["attach_command"] = fmt.Sprintf("tmux attach-session -t %s", info.TmuxSession)
 		response["attach_amux"] = fmt.Sprintf("amux session attach %s", attachID)
 
-		// Check if agent has autoAttach but we're in MCP context
-		if agentConfig, _ := s.configManager.GetAgent(agentID); agentConfig != nil {
-			if tmuxParams, err := agentConfig.GetTmuxParams(); err == nil && tmuxParams != nil && tmuxParams.AutoAttach {
-				response["auto_attach_skipped"] = "Auto-attach is not available in MCP context (no TTY)"
-			}
-		}
+		// Note: autoAttach is no longer supported in the new runtime model
 	}
 
 	// Get workspace info to check if auto-created

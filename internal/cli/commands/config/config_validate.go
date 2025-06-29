@@ -76,22 +76,9 @@ func validateConfig(cmd *cobra.Command, args []string) error {
 			for id, agent := range cfg.Agents {
 				ui.OutputLine("  %s:", id)
 				ui.OutputLine("    Name: %s", agent.Name)
-				ui.OutputLine("    Type: %s", agent.Type)
-
-				switch agent.Type {
-				case config.AgentTypeTmux:
-					if params, err := agent.GetTmuxParams(); err == nil {
-						if params.Command.IsArray() {
-							ui.OutputLine("    Command: %v", params.Command.Array)
-						} else if params.Command.Single != "" {
-							ui.OutputLine("    Command: %s", params.Command.Single)
-						}
-						if params.WindowName != "" {
-							ui.OutputLine("    Window Name: %s", params.WindowName)
-						}
-					}
-				case config.AgentTypeClaudeCode, config.AgentTypeAPI:
-					// Future implementations
+				ui.OutputLine("    Runtime: %s", agent.Runtime)
+				if len(agent.Command) > 0 {
+					ui.OutputLine("    Command: %v", agent.Command)
 				}
 
 				if agent.Description != "" {

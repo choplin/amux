@@ -68,15 +68,9 @@ func showConfigPretty(cfg *config.Config) error {
 			if agent.Name != "" {
 				ui.OutputLine("    Name: %s", agent.Name)
 			}
-			ui.OutputLine("    Type: %s", agent.Type)
-			if agent.Type == config.AgentTypeTmux {
-				if params, err := agent.GetTmuxParams(); err == nil {
-					if params.Command.IsArray() {
-						ui.OutputLine("    Command: %v", params.Command.Array)
-					} else if params.Command.Single != "" {
-						ui.OutputLine("    Command: %s", params.Command.Single)
-					}
-				}
+			ui.OutputLine("    Runtime: %s", agent.Runtime)
+			if len(agent.Command) > 0 {
+				ui.OutputLine("    Command: %v", agent.Command)
 			}
 			if agent.WorkingDir != "" {
 				ui.OutputLine("    Working Directory: %s", agent.WorkingDir)

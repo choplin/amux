@@ -3,8 +3,10 @@ package init
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/aki/amux/internal/runtime"
+	"github.com/aki/amux/internal/runtime/config"
 	"github.com/aki/amux/internal/runtime/local"
 	"github.com/aki/amux/internal/runtime/tmux"
 )
@@ -84,4 +86,37 @@ func CreateFromType(runtimeType string) (runtime.Runtime, error) {
 
 	// Otherwise create new instance
 	return CreateRuntime(Config{Type: runtimeType})
+}
+
+// RegisterCustomRuntimes loads and registers custom runtimes from configuration files
+func RegisterCustomRuntimes(projectDir string) error {
+	homeDir, _ := os.UserHomeDir()
+	loader := config.NewLoader(homeDir, projectDir)
+
+	cfg, err := loader.Load()
+	if err != nil {
+		return err
+	}
+
+	if err := cfg.Validate(); err != nil {
+		return err
+	}
+
+	// Register each custom runtime
+	for name, def := range cfg.Runtimes {
+		// Get the base runtime
+		baseRuntime, err := runtime.Get(def.Type)
+		if err != nil {
+			continue // Skip if base runtime not found
+		}
+
+		// For now, custom runtimes are just aliases with default options
+		// In the future, we could create wrapper runtimes with custom behavior
+		if err := runtime.Register(name, baseRuntime, nil); err != nil {
+			// Ignore registration errors (e.g., already registered)
+			continue
+		}
+	}
+
+	return nil
 }
