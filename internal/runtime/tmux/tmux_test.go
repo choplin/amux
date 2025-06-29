@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -725,10 +726,13 @@ func TestTmuxRuntime_ConcurrentExecute(t *testing.T) {
 	const numProcesses = 5
 	processes := make([]runtime.Process, numProcesses)
 	errors := make([]error, numProcesses)
+	var wg sync.WaitGroup
 
 	for i := 0; i < numProcesses; i++ {
 		i := i
+		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			p, err := r.Execute(ctx, runtime.ExecutionSpec{
 				Command: []string{"echo", fmt.Sprintf("process-%d", i)},
 				Options: Options{
@@ -740,8 +744,8 @@ func TestTmuxRuntime_ConcurrentExecute(t *testing.T) {
 		}()
 	}
 
-	// Wait a bit for all to start
-	time.Sleep(500 * time.Millisecond)
+	// Wait for all goroutines to complete
+	wg.Wait()
 
 	// All should succeed
 	for i, err := range errors {
