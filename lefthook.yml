@@ -53,7 +53,7 @@ pre-push:
   commands:
     # Run golangci-lint to catch issues before pushing
     lint-go:
-      run: golangci-lint run
+      run: go run -mod=readonly github.com/golangci/golangci-lint/v2/cmd/golangci-lint run
     test-full:
       run: go test ./...
     build:

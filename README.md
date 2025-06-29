@@ -14,6 +14,7 @@
 [![CI](https://github.com/choplin/amux/actions/workflows/ci.yml/badge.svg)](https://github.com/choplin/amux/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/choplin/amux)](https://goreportcard.com/report/github.com/choplin/amux)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/choplin/amux)](https://go.dev/)
 
 > **Isolated workspaces in seconds. Run multiple AI agents without conflicts.**
 
