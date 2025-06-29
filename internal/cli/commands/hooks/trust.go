@@ -8,8 +8,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/aki/amux/internal/cli/ui"
-	"github.com/aki/amux/internal/core/config"
-	"github.com/aki/amux/internal/core/hooks"
+	"github.com/aki/amux/internal/config"
+	"github.com/aki/amux/internal/hooks"
 )
 
 var hooksTrustCmd = &cobra.Command{

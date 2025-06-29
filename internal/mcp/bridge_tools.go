@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/aki/amux/internal/core/workspace"
+	"github.com/aki/amux/internal/workspace"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
@@ -28,11 +28,6 @@ func (s *ServerV2) registerBridgeTools() error {
 	// Register prompt bridge tools
 	if err := s.registerPromptBridgeTools(); err != nil {
 		return fmt.Errorf("failed to register prompt bridge tools: %w", err)
-	}
-
-	// Register session bridge tools
-	if err := s.registerSessionBridgeTools(); err != nil {
-		return fmt.Errorf("failed to register session bridge tools: %w", err)
 	}
 
 	return nil

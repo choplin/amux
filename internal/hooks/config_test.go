@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/aki/amux/internal/core/hooks"
+	"github.com/aki/amux/internal/hooks"
 )
 
 func TestLoadConfig(t *testing.T) {

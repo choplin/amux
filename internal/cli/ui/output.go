@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aki/amux/internal/core/workspace"
+	"github.com/aki/amux/internal/workspace"
 )
 
 // Error prints an error message with formatting

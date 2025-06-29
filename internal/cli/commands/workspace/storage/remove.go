@@ -5,9 +5,9 @@ import (
 	"fmt"
 
 	"github.com/aki/amux/internal/cli/ui"
-	"github.com/aki/amux/internal/core/config"
-	"github.com/aki/amux/internal/core/storage"
-	"github.com/aki/amux/internal/core/workspace"
+	"github.com/aki/amux/internal/config"
+	"github.com/aki/amux/internal/storage"
+	"github.com/aki/amux/internal/workspace"
 	"github.com/spf13/cobra"
 )
 

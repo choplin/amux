@@ -7,9 +7,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/aki/amux/internal/core/config"
-	"github.com/aki/amux/internal/core/workspace"
+	"github.com/aki/amux/internal/config"
 	"github.com/aki/amux/internal/tests/helpers"
+	"github.com/aki/amux/internal/workspace"
 )
 
 func TestWorkspaceSessionProtection(t *testing.T) {

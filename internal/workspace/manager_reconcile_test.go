@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aki/amux/internal/core/config"
-	"github.com/aki/amux/internal/core/idmap"
-	"github.com/aki/amux/internal/core/workspace"
+	"github.com/aki/amux/internal/config"
+	"github.com/aki/amux/internal/idmap"
 	"github.com/aki/amux/internal/tests/helpers"
+	"github.com/aki/amux/internal/workspace"
 )
 
 func TestManager_ListReconciliation(t *testing.T) {

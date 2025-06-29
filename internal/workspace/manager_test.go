@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aki/amux/internal/core/config"
-	"github.com/aki/amux/internal/core/git"
-	"github.com/aki/amux/internal/core/workspace"
+	"github.com/aki/amux/internal/config"
+	"github.com/aki/amux/internal/git"
 	"github.com/aki/amux/internal/tests/helpers"
+	"github.com/aki/amux/internal/workspace"
 	"gopkg.in/yaml.v3"
 )
 

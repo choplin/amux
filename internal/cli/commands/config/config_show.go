@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/aki/amux/internal/cli/ui"
-	"github.com/aki/amux/internal/core/config"
+	"github.com/aki/amux/internal/config"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )

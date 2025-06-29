@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aki/amux/internal/core/config"
+	"github.com/aki/amux/internal/config"
 	"github.com/stretchr/testify/require"
 )
 

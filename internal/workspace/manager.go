@@ -13,11 +13,11 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/aki/amux/internal/core/config"
-	"github.com/aki/amux/internal/core/git"
-	"github.com/aki/amux/internal/core/hooks"
-	"github.com/aki/amux/internal/core/idmap"
+	"github.com/aki/amux/internal/config"
 	"github.com/aki/amux/internal/filemanager"
+	"github.com/aki/amux/internal/git"
+	"github.com/aki/amux/internal/hooks"
+	"github.com/aki/amux/internal/idmap"
 )
 
 // Manager manages Amux workspaces

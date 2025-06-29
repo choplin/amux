@@ -1,3 +1,4 @@
+// Package test provides common test utilities for the amux project.
 package test
 
 import (
