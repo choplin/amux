@@ -34,7 +34,10 @@ Examples:
   # Run with environment variables
   amux session run claude --env ANTHROPIC_API_KEY=sk-...
   # Run with initial prompt
-  amux session run claude --initial-prompt "Please analyze the codebase"`,
+  amux session run claude --initial-prompt "Please analyze the codebase"
+  # Run with specific runtime (override agent's default)
+  amux session run claude --runtime local
+  amux session run claude --runtime tmux`,
 		Args: cobra.ExactArgs(1),
 		RunE: runSession,
 	}
@@ -47,6 +50,7 @@ Examples:
 	cmd.Flags().StringVarP(&runSessionName, "session-name", "", "", "Human-readable name for the session")
 	cmd.Flags().StringVarP(&runSessionDescription, "session-description", "", "", "Description of the session purpose")
 	cmd.Flags().BoolVar(&runNoHooks, "no-hooks", false, "Skip hook execution")
+	cmd.Flags().StringVarP(&runRuntimeType, "runtime", "r", "", "Override runtime type (local, tmux)")
 
 	return cmd
 }
@@ -105,6 +109,7 @@ func runSession(cmd *cobra.Command, args []string) error {
 		Name:                runSessionName,
 		Description:         runSessionDescription,
 		NoHooks:             runNoHooks,
+		RuntimeType:         runRuntimeType, // Optional runtime override from CLI
 	}
 
 	sess, err := sessionManager.CreateSession(cmd.Context(), opts)
