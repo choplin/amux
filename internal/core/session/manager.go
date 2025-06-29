@@ -154,11 +154,6 @@ func (m *Manager) CreateSession(ctx context.Context, opts Options) (Session, err
 			return nil, fmt.Errorf("agent %q has no runtime specified", opts.AgentID)
 		}
 
-		// Allow runtime type override from options
-		if opts.RuntimeType != "" {
-			runtimeType = opts.RuntimeType
-		}
-
 		// TODO: Configure shouldAutoAttach based on runtime options
 		// For now, default to false
 		shouldAutoAttach = false
