@@ -14,10 +14,16 @@ import (
 	"github.com/aki/amux/internal/core/config"
 	"github.com/aki/amux/internal/core/session"
 	"github.com/aki/amux/internal/core/workspace"
+	runtimeinit "github.com/aki/amux/internal/runtime/init"
 	"github.com/aki/amux/internal/tests/helpers"
 )
 
 func TestRemoveSession(t *testing.T) {
+	// Initialize runtime registry for tests
+	if err := runtimeinit.RegisterDefaults(); err != nil {
+		t.Fatalf("Failed to initialize runtimes: %v", err)
+	}
+
 	// Skip if tmux is not available
 	tmuxAdapter, err := tmux.NewAdapter()
 	if err != nil || !tmuxAdapter.IsAvailable() {
