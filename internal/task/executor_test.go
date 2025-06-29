@@ -14,6 +14,9 @@ func TestExecutor_ExecuteTask(t *testing.T) {
 	manager := NewManager()
 	executor := NewExecutor(manager)
 
+	// Use OS-appropriate temp directory
+	tempDir := t.TempDir()
+
 	// Load test tasks
 	tasks := []*Task{
 		{
@@ -52,19 +55,19 @@ func TestExecutor_ExecuteTask(t *testing.T) {
 		{
 			name:       "execute simple echo task",
 			taskName:   "echo",
-			workingDir: "/tmp",
+			workingDir: tempDir,
 			wantErr:    false,
 		},
 		{
 			name:       "execute pwd task",
 			taskName:   "pwd",
-			workingDir: "/tmp",
+			workingDir: tempDir,
 			wantErr:    false,
 		},
 		{
 			name:       "task with timeout",
 			taskName:   "timeout-test",
-			workingDir: "/tmp",
+			workingDir: tempDir,
 			wantErr:    true,
 			errMsg:     "task timed out after",
 			timeout:    200 * time.Millisecond,
@@ -72,14 +75,14 @@ func TestExecutor_ExecuteTask(t *testing.T) {
 		{
 			name:       "non-existent task",
 			taskName:   "non-existent",
-			workingDir: "/tmp",
+			workingDir: tempDir,
 			wantErr:    true,
 			errMsg:     "task not found",
 		},
 		{
 			name:       "task with environment variable",
 			taskName:   "env-test",
-			workingDir: "/tmp",
+			workingDir: tempDir,
 			wantErr:    false,
 		},
 	}
@@ -183,6 +186,9 @@ func TestExecutor_DaemonTask(t *testing.T) {
 	manager := NewManager()
 	executor := NewExecutor(manager)
 
+	// Use OS-appropriate temp directory
+	tempDir := t.TempDir()
+
 	tasks := []*Task{
 		{
 			Name:      "daemon-test",
@@ -193,7 +199,7 @@ func TestExecutor_DaemonTask(t *testing.T) {
 	require.NoError(t, manager.LoadTasks(tasks))
 
 	ctx := context.Background()
-	err := executor.ExecuteTask(ctx, "daemon-test", "/tmp")
+	err := executor.ExecuteTask(ctx, "daemon-test", tempDir)
 	require.NoError(t, err)
 	// The daemon task should start successfully
 	// In Phase 3, we'll add proper daemon management

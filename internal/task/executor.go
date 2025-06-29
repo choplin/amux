@@ -1,3 +1,4 @@
+// Package task provides task management and execution functionality for amux.
 package task
 
 import (
