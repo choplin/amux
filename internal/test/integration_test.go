@@ -1,3 +1,4 @@
+// Package test provides integration tests for amux functionality.
 package test
 
 import (
