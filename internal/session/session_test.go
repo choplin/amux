@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 
 // mockRuntime implements runtime.Runtime for testing
 type mockRuntime struct {
+	mu        sync.RWMutex
 	name      string
 	processes map[string]*mockProcess
 }
@@ -36,6 +38,9 @@ func (r *mockRuntime) Execute(ctx context.Context, spec runtime.ExecutionSpec) (
 		return nil, fmt.Errorf("empty command")
 	}
 
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	processID := fmt.Sprintf("mock-process-%d", len(r.processes)+1)
 	process := &mockProcess{
 		id:        processID,
@@ -50,6 +55,9 @@ func (r *mockRuntime) Execute(ctx context.Context, spec runtime.ExecutionSpec) (
 }
 
 func (r *mockRuntime) Find(ctx context.Context, id string) (runtime.Process, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
 	process, ok := r.processes[id]
 	if !ok {
 		return nil, fmt.Errorf("process not found: %s", id)
@@ -58,6 +66,9 @@ func (r *mockRuntime) Find(ctx context.Context, id string) (runtime.Process, err
 }
 
 func (r *mockRuntime) List(ctx context.Context) ([]runtime.Process, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
 	var processes []runtime.Process
 	for _, p := range r.processes {
 		processes = append(processes, p)
@@ -71,6 +82,7 @@ func (r *mockRuntime) Validate() error {
 
 // mockProcess implements runtime.Process for testing
 type mockProcess struct {
+	mu        sync.RWMutex
 	id        string
 	spec      runtime.ExecutionSpec
 	state     runtime.ProcessState
@@ -88,10 +100,14 @@ func (p *mockProcess) StartTime() time.Time {
 }
 
 func (p *mockProcess) State() runtime.ProcessState {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
 	return p.state
 }
 
 func (p *mockProcess) ExitCode() (int, error) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
 	if p.state == runtime.StateRunning {
 		return -1, fmt.Errorf("process still running")
 	}
@@ -108,6 +124,8 @@ func (p *mockProcess) Wait(ctx context.Context) error {
 }
 
 func (p *mockProcess) Stop(ctx context.Context) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	if p.state != runtime.StateRunning {
 		return fmt.Errorf("process not running")
 	}
@@ -118,6 +136,8 @@ func (p *mockProcess) Stop(ctx context.Context) error {
 }
 
 func (p *mockProcess) Kill(ctx context.Context) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	if p.state != runtime.StateRunning {
 		return fmt.Errorf("process not running")
 	}
@@ -133,6 +153,7 @@ func (p *mockProcess) Output() (stdout, stderr io.Reader) {
 
 // mockStore implements Store for testing
 type mockStore struct {
+	mu       sync.RWMutex
 	sessions map[string]*Session
 }
 
@@ -143,11 +164,15 @@ func newMockStore() *mockStore {
 }
 
 func (s *mockStore) Save(ctx context.Context, session *Session) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.sessions[session.ID] = session
 	return nil
 }
 
 func (s *mockStore) Load(ctx context.Context, id string) (*Session, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	session, ok := s.sessions[id]
 	if !ok {
 		return nil, fmt.Errorf("session not found: %s", id)
@@ -156,6 +181,8 @@ func (s *mockStore) Load(ctx context.Context, id string) (*Session, error) {
 }
 
 func (s *mockStore) List(ctx context.Context, workspaceID string) ([]*Session, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	var sessions []*Session
 	for _, session := range s.sessions {
 		if workspaceID == "" || session.WorkspaceID == workspaceID {
@@ -166,6 +193,8 @@ func (s *mockStore) List(ctx context.Context, workspaceID string) ([]*Session, e
 }
 
 func (s *mockStore) Remove(ctx context.Context, id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	delete(s.sessions, id)
 	return nil
 }
