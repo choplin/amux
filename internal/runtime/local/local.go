@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"runtime"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/google/uuid"
@@ -135,7 +134,7 @@ func (r *Runtime) Execute(ctx context.Context, spec amuxruntime.ExecutionSpec) (
 	}
 
 	// Try to get PGID (might not work on all platforms)
-	if cmd.SysProcAttr != nil && cmd.SysProcAttr.Setpgid {
+	if isProcessGroup(cmd) {
 		proc.metadata.PGID = cmd.Process.Pid
 	}
 
@@ -247,16 +246,9 @@ func (p *Process) Stop(ctx context.Context) error {
 	}
 	p.mu.Unlock()
 
-	// For process groups, send signal to the entire group
-	if p.cmd.SysProcAttr != nil && p.cmd.SysProcAttr.Setpgid {
-		// Send signal to process group (negative PID)
-		if err := syscall.Kill(-p.cmd.Process.Pid, syscall.SIGTERM); err != nil {
-			return fmt.Errorf("failed to send SIGTERM to process group: %w", err)
-		}
-	} else {
-		if err := p.cmd.Process.Signal(syscall.SIGTERM); err != nil {
-			return fmt.Errorf("failed to send SIGTERM: %w", err)
-		}
+	// Send stop signal to process or process group
+	if err := signalStop(p.cmd); err != nil {
+		return err
 	}
 
 	// Give process time to stop gracefully
@@ -281,16 +273,9 @@ func (p *Process) Kill(ctx context.Context) error {
 		return amuxruntime.ErrProcessAlreadyDone
 	}
 
-	// For process groups, kill the entire group
-	if p.cmd.SysProcAttr != nil && p.cmd.SysProcAttr.Setpgid {
-		// Kill process group (negative PID)
-		if err := syscall.Kill(-p.cmd.Process.Pid, syscall.SIGKILL); err != nil {
-			return fmt.Errorf("failed to kill process group: %w", err)
-		}
-	} else {
-		if err := p.cmd.Process.Kill(); err != nil {
-			return fmt.Errorf("failed to kill process: %w", err)
-		}
+	// Kill process or process group
+	if err := signalKill(p.cmd); err != nil {
+		return err
 	}
 
 	return nil
