@@ -15,28 +15,33 @@ import (
 )
 
 var runCmd = &cobra.Command{
-	Use:   "run [task-name] [-- command args...]",
+	Use:   "run [-- command args...]",
 	Short: "Run a task or command in a session",
 	Long: `Run a task or command in a session.
 
-You can either run a predefined task by name, or specify a custom command after --.
+You can either run a predefined task using --task flag, or specify a custom command after --.
 
 Examples:
   # Run a predefined task
-  amux session run dev
+  amux session run --task dev
+  amux session run -t dev
 
   # Run a custom command
   amux session run -- npm start
 
+  # Run a task with arguments
+  amux session run --task build -- --watch
+
   # Run in a specific workspace
-  amux session run dev --workspace myworkspace
+  amux session run --task dev --workspace myworkspace
 
   # Run with tmux runtime
-  amux session run dev --runtime tmux`,
+  amux session run --task dev --runtime tmux`,
 	RunE: RunSession,
 }
 
 var runOpts struct {
+	task        string
 	workspace   string
 	runtime     string
 	environment []string
@@ -46,6 +51,7 @@ var runOpts struct {
 }
 
 func init() {
+	runCmd.Flags().StringVarP(&runOpts.task, "task", "t", "", "Task name to run")
 	runCmd.Flags().StringVarP(&runOpts.workspace, "workspace", "w", "", "Workspace to run in")
 	runCmd.Flags().StringVarP(&runOpts.runtime, "runtime", "r", "local", "Runtime to use (local, tmux)")
 	runCmd.Flags().StringArrayVarP(&runOpts.environment, "env", "e", nil, "Environment variables (KEY=VALUE)")
@@ -56,6 +62,7 @@ func init() {
 
 // BindRunFlags binds command flags to runOpts
 func BindRunFlags(cmd *cobra.Command) {
+	runOpts.task, _ = cmd.Flags().GetString("task")
 	runOpts.workspace, _ = cmd.Flags().GetString("workspace")
 	runOpts.runtime, _ = cmd.Flags().GetString("runtime")
 	runOpts.environment, _ = cmd.Flags().GetStringArray("env")
@@ -69,31 +76,18 @@ func RunSession(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
 	// Parse arguments
-	var taskName string
+	taskName := runOpts.task
 	var command []string
 
-	// Cobra processes -- specially and removes it from args
-	// If we have args and they don't look like a task name, assume they are a command
-	if len(args) > 0 {
-		// Check if this might be a direct command (not a task)
-		// In Cobra, after --, all args are passed through
-		if cmd.ArgsLenAtDash() != -1 {
-			// -- was present
-			dashPos := cmd.ArgsLenAtDash()
-			if dashPos > 0 {
-				// Task name before --
-				taskName = args[0]
-				command = args[dashPos:]
-			} else {
-				// No task name, just command after --
-				command = args
-			}
-		} else {
-			// No -- present, first arg is task name
-			taskName = args[0]
-		}
-	} else {
-		return fmt.Errorf("either task name or command must be specified")
+	// Validate that either task or command is specified, but not both
+	if taskName != "" && len(args) > 0 {
+		// If task is specified, args are passed to the task (after --)
+		command = args
+	} else if taskName == "" && len(args) > 0 {
+		// Direct command execution
+		command = args
+	} else if taskName == "" && len(args) == 0 {
+		return fmt.Errorf("either --task or command must be specified")
 	}
 
 	// Get working directory

@@ -39,6 +39,9 @@ func TestSessionCommand(t *testing.T) {
 // Test run command flags
 func TestRunCommandFlags(t *testing.T) {
 	// Check that flags are properly defined
+	if runCmd.Flag("task") == nil {
+		t.Error("Expected --task flag")
+	}
 	if runCmd.Flag("workspace") == nil {
 		t.Error("Expected --workspace flag")
 	}
@@ -56,6 +59,12 @@ func TestRunCommandFlags(t *testing.T) {
 	}
 	if runCmd.Flag("detach") == nil {
 		t.Error("Expected --detach flag")
+	}
+
+	// Check that task flag has short version
+	taskFlag := runCmd.Flag("task")
+	if taskFlag != nil && taskFlag.Shorthand != "t" {
+		t.Error("Expected --task flag to have -t shorthand")
 	}
 
 	// Check that detach flag has correct description
