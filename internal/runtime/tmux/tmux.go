@@ -325,6 +325,15 @@ func (p *Process) StartTime() time.Time {
 	return p.startTime
 }
 
+// Metadata returns runtime-specific metadata
+func (p *Process) Metadata() runtime.Metadata {
+	return &Metadata{
+		SessionName: p.sessionName,
+		WindowName:  p.opts.WindowName,
+		// PaneID could be retrieved dynamically if needed, but for now leave empty
+	}
+}
+
 // Attach creates a new client attached to the tmux session
 func (p *Process) Attach(ctx context.Context) error {
 	p.mu.RLock()

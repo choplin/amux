@@ -50,6 +50,9 @@ type Process interface {
 
 	// StartTime returns when the process was started
 	StartTime() time.Time
+
+	// Metadata returns runtime-specific metadata
+	Metadata() Metadata
 }
 
 // ExecutionSpec defines what to execute

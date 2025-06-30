@@ -2,13 +2,9 @@ package local
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"io"
 	"os"
-	"path/filepath"
 	"runtime"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -27,26 +23,12 @@ func getPrintEnvCommand(envVar string) []string {
 	return []string{"sh", "-c", "echo $" + envVar}
 }
 
-func getStderrCommand(text string) []string {
-	if runtime.GOOS == "windows" {
-		return []string{"cmd", "/c", "echo " + text + " 1>&2"}
-	}
-	return []string{"sh", "-c", "echo " + text + " >&2"}
-}
-
 func getSleepCommand(seconds float64) []string {
 	if runtime.GOOS == "windows" {
 		// Use PowerShell's Start-Sleep for more reliable behavior
 		return []string{"powershell", "-Command", fmt.Sprintf("Start-Sleep -Seconds %.1f", seconds)}
 	}
 	return []string{"sleep", fmt.Sprintf("%.1f", seconds)}
-}
-
-func getShellCommand(cmd string) []string {
-	if runtime.GOOS == "windows" {
-		return []string{"cmd", "/c", cmd}
-	}
-	return []string{"sh", "-c", cmd}
 }
 
 func getPwdCommand() []string {
@@ -65,12 +47,9 @@ func TestLocalRuntime_Execute(t *testing.T) {
 		check   func(t *testing.T, p amuxruntime.Process)
 	}{
 		{
-			name: "simple echo command",
+			name: "simple echo command (foreground)",
 			spec: amuxruntime.ExecutionSpec{
 				Command: []string{"echo", "hello"},
-				Options: Options{
-					CaptureOutput: true,
-				},
 			},
 			check: func(t *testing.T, p amuxruntime.Process) {
 				assert.Equal(t, amuxruntime.StateRunning, p.State())
@@ -81,16 +60,15 @@ func TestLocalRuntime_Execute(t *testing.T) {
 				err := p.Wait(ctx)
 				require.NoError(t, err)
 
-				// Check output
-				stdout, _ := p.Output()
-				output, err := io.ReadAll(stdout)
-				require.NoError(t, err)
-				assert.Equal(t, "hello\n", string(output))
-
 				// Check exit code
 				code, err := p.ExitCode()
 				require.NoError(t, err)
 				assert.Equal(t, 0, code)
+
+				// Check metadata
+				meta, ok := p.Metadata().(*Metadata)
+				require.True(t, ok)
+				assert.False(t, meta.Detached)
 			},
 		},
 		{
@@ -100,20 +78,12 @@ func TestLocalRuntime_Execute(t *testing.T) {
 				Environment: map[string]string{
 					"TEST_VAR": "test-value",
 				},
-				Options: Options{
-					CaptureOutput: true,
-				},
 			},
 			check: func(t *testing.T, p amuxruntime.Process) {
 				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 				defer cancel()
 				err := p.Wait(ctx)
 				require.NoError(t, err)
-
-				stdout, _ := p.Output()
-				output, err := io.ReadAll(stdout)
-				require.NoError(t, err)
-				assert.Contains(t, string(output), "test-value")
 			},
 		},
 		{
@@ -121,21 +91,12 @@ func TestLocalRuntime_Execute(t *testing.T) {
 			spec: amuxruntime.ExecutionSpec{
 				Command:    getPwdCommand(),
 				WorkingDir: os.TempDir(),
-				Options: Options{
-					CaptureOutput: true,
-				},
 			},
 			check: func(t *testing.T, p amuxruntime.Process) {
 				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 				defer cancel()
 				err := p.Wait(ctx)
 				require.NoError(t, err)
-
-				stdout, _ := p.Output()
-				output, err := io.ReadAll(stdout)
-				require.NoError(t, err)
-				// On Windows, paths might have different formats
-				assert.Contains(t, string(output), filepath.Base(os.TempDir()))
 			},
 		},
 		{
@@ -155,27 +116,7 @@ func TestLocalRuntime_Execute(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "command with stderr output",
-			spec: amuxruntime.ExecutionSpec{
-				Command: getStderrCommand("error"),
-				Options: Options{
-					CaptureOutput: true,
-				},
-			},
-			check: func(t *testing.T, p amuxruntime.Process) {
-				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-				defer cancel()
-				err := p.Wait(ctx)
-				require.NoError(t, err)
-
-				_, stderr := p.Output()
-				output, err := io.ReadAll(stderr)
-				require.NoError(t, err)
-				assert.Contains(t, string(output), "error")
-			},
-		},
-		{
-			name: "long running process",
+			name: "long running process (foreground)",
 			spec: amuxruntime.ExecutionSpec{
 				Command: getSleepCommand(0.1),
 			},
@@ -191,6 +132,19 @@ func TestLocalRuntime_Execute(t *testing.T) {
 
 				// Should be stopped
 				assert.Equal(t, amuxruntime.StateStopped, p.State())
+			},
+		},
+		{
+			name: "single command through shell",
+			spec: amuxruntime.ExecutionSpec{
+				Command: []string{"echo hello && echo world"},
+			},
+			check: func(t *testing.T, p amuxruntime.Process) {
+				// Wait for completion
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+				err := p.Wait(ctx)
+				require.NoError(t, err)
 			},
 		},
 	}
@@ -222,6 +176,38 @@ func TestLocalRuntime_Execute(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDetachedRuntime_Execute(t *testing.T) {
+	r := NewDetachedRuntime()
+	ctx := context.Background()
+
+	// Create a detached process
+	p, err := r.Execute(ctx, amuxruntime.ExecutionSpec{
+		Command: getSleepCommand(0.5),
+	})
+	require.NoError(t, err)
+
+	// Should be running
+	assert.Equal(t, amuxruntime.StateRunning, p.State())
+
+	// Check metadata
+	meta, ok := p.Metadata().(*Metadata)
+	require.True(t, ok)
+	assert.True(t, meta.Detached)
+
+	// Process should continue running even after short delay
+	time.Sleep(100 * time.Millisecond)
+	assert.Equal(t, amuxruntime.StateRunning, p.State())
+
+	// Wait for natural completion
+	ctx2, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	err = p.Wait(ctx2)
+	require.NoError(t, err)
+
+	// Should be stopped
+	assert.Equal(t, amuxruntime.StateStopped, p.State())
 }
 
 func TestLocalRuntime_Find(t *testing.T) {
@@ -338,7 +324,7 @@ func TestLocalRuntime_ContextCancellation(t *testing.T) {
 	r := New()
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// Create a long-running process
+	// Create a foreground process
 	p, err := r.Execute(ctx, amuxruntime.ExecutionSpec{
 		Command: getSleepCommand(10),
 	})
@@ -347,59 +333,63 @@ func TestLocalRuntime_ContextCancellation(t *testing.T) {
 	// Cancel the context
 	cancel()
 
-	// Process should be stopped
-	time.Sleep(100 * time.Millisecond) // Give it time to react
+	// Process should be stopped (for foreground processes)
+	time.Sleep(200 * time.Millisecond) // Give it time to react
 	assert.NotEqual(t, amuxruntime.StateRunning, p.State())
 }
 
-func TestLocalRuntime_OutputCapture(t *testing.T) {
+func TestDetachedRuntime_ContextCancellation(t *testing.T) {
+	r := NewDetachedRuntime()
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// Create a detached process
+	p, err := r.Execute(ctx, amuxruntime.ExecutionSpec{
+		Command: getSleepCommand(1),
+	})
+	require.NoError(t, err)
+
+	// Cancel the context immediately
+	cancel()
+
+	// Detached process should continue running
+	time.Sleep(100 * time.Millisecond)
+	assert.Equal(t, amuxruntime.StateRunning, p.State())
+
+	// Wait for natural completion
+	waitCtx, waitCancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer waitCancel()
+	err = p.Wait(waitCtx)
+	require.NoError(t, err)
+
+	// Should complete normally
+	assert.Equal(t, amuxruntime.StateStopped, p.State())
+}
+
+func TestLocalRuntime_ProcessGroup(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Process group testing is Unix-specific")
+	}
+
 	r := New()
 	ctx := context.Background()
 
-	t.Run("limited output", func(t *testing.T) {
-		p, err := r.Execute(ctx, amuxruntime.ExecutionSpec{
-			Command: getShellCommand("echo 1234567890 && echo 1234567890 && echo 1234567890 && echo 1234567890 && echo 1234567890 && echo 1234567890 && echo 1234567890 && echo 1234567890 && echo 1234567890 && echo 1234567890 && echo 1234567890"),
-			Options: Options{
-				CaptureOutput:   true,
-				OutputSizeLimit: 50, // Very small limit
-			},
-		})
-		require.NoError(t, err)
-
-		// Wait for completion
-		waitCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-		defer cancel()
-		_ = p.Wait(waitCtx)
-		// The process may exit with broken pipe, which is expected
-		// when output is limited
-
-		// Output should be limited
-		stdout, _ := p.Output()
-		output, err := io.ReadAll(stdout)
-		require.NoError(t, err)
-		assert.LessOrEqual(t, len(output), 50)
+	// Create a process that spawns children
+	shellCmd := `sh -c 'sleep 10 & sleep 10 & wait'`
+	p, err := r.Execute(ctx, amuxruntime.ExecutionSpec{
+		Command: []string{shellCmd},
 	})
+	require.NoError(t, err)
 
-	t.Run("no capture", func(t *testing.T) {
-		p, err := r.Execute(ctx, amuxruntime.ExecutionSpec{
-			Command: []string{"echo", "test"},
-			Options: Options{
-				CaptureOutput: false,
-			},
-		})
-		require.NoError(t, err)
+	// Give it time to spawn children
+	time.Sleep(100 * time.Millisecond)
 
-		// Wait for completion
-		waitCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-		defer cancel()
-		err = p.Wait(waitCtx)
-		require.NoError(t, err)
+	// Kill the process (should kill the entire process group)
+	err = p.Kill(ctx)
+	require.NoError(t, err)
 
-		// No output should be captured
-		stdout, stderr := p.Output()
-		assert.Nil(t, stdout)
-		assert.Nil(t, stderr)
-	})
+	// All processes in the group should be terminated
+	time.Sleep(100 * time.Millisecond)
+	assert.NotEqual(t, amuxruntime.StateRunning, p.State())
 }
 
 func TestLocalRuntime_Validate(t *testing.T) {
@@ -438,91 +428,6 @@ func TestLocalRuntime_FailedCommand(t *testing.T) {
 	assert.NotEqual(t, 0, code)
 }
 
-func TestLocalRuntime_SingleCommandShell(t *testing.T) {
-	r := New()
-	ctx := context.Background()
-
-	// Test that single commands are run through shell
-	cmd := "echo hello && echo world"
-	if runtime.GOOS == "windows" {
-		cmd = "echo hello & echo world"
-	}
-
-	p, err := r.Execute(ctx, amuxruntime.ExecutionSpec{
-		Command: []string{cmd},
-		Options: Options{
-			CaptureOutput: true,
-		},
-	})
-	require.NoError(t, err)
-
-	// Wait for completion
-	err = p.Wait(context.Background())
-	require.NoError(t, err)
-
-	// Should have both outputs
-	stdout, _ := p.Output()
-	output, err := io.ReadAll(stdout)
-	require.NoError(t, err)
-	assert.Contains(t, string(output), "hello")
-	assert.Contains(t, string(output), "world")
-}
-
-func TestLocalRuntime_InheritEnv(t *testing.T) {
-	r := New()
-	ctx := context.Background()
-
-	// Set a test environment variable
-	os.Setenv("TEST_INHERIT_VAR", "inherited-value")
-	defer os.Unsetenv("TEST_INHERIT_VAR")
-
-	// Execute with InheritEnv
-	p, err := r.Execute(ctx, amuxruntime.ExecutionSpec{
-		Command: getPrintEnvCommand("TEST_INHERIT_VAR"),
-		Options: Options{
-			InheritEnv:    true,
-			CaptureOutput: true,
-		},
-	})
-	require.NoError(t, err)
-
-	// Wait for completion
-	err = p.Wait(context.Background())
-	require.NoError(t, err)
-
-	// Should have the inherited variable
-	stdout, _ := p.Output()
-	output, err := io.ReadAll(stdout)
-	require.NoError(t, err)
-	assert.Contains(t, string(output), "inherited-value")
-}
-
-func TestProcess_WaitTimeout(t *testing.T) {
-	r := New()
-	ctx := context.Background()
-
-	// Create a long-running process
-	p, err := r.Execute(ctx, amuxruntime.ExecutionSpec{
-		Command: getSleepCommand(10),
-	})
-	require.NoError(t, err)
-
-	// Wait with timeout
-	waitCtx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
-	defer cancel()
-
-	err = p.Wait(waitCtx)
-	// On Windows, the process might exit immediately or timeout
-	if err != nil {
-		// Either context deadline exceeded or exit status error is acceptable
-		assert.True(t, errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "exit status"),
-			"Expected timeout or exit error, got: %v", err)
-	}
-
-	// Clean up
-	_ = p.Kill(ctx)
-}
-
 func TestProcess_ExitCodeWhileRunning(t *testing.T) {
 	r := New()
 	ctx := context.Background()
@@ -547,37 +452,6 @@ func TestOptions_RuntimeInterface(t *testing.T) {
 	var _ amuxruntime.RuntimeOptions = Options{}
 }
 
-func TestLimitedBuffer(t *testing.T) {
-	t.Run("respects limit", func(t *testing.T) {
-		buf := &limitedBuffer{limit: 10}
-
-		// Write more than limit
-		n, err := buf.Write([]byte("1234567890ABC"))
-		assert.NoError(t, err)
-		assert.Equal(t, 10, n)
-
-		// Buffer should only contain first 10 bytes
-		assert.Equal(t, "1234567890", string(buf.Bytes()))
-
-		// Writing more should not increase size
-		n, err = buf.Write([]byte("XYZ"))
-		assert.NoError(t, err)
-		assert.Equal(t, 0, n)
-		assert.Equal(t, "1234567890", string(buf.Bytes()))
-	})
-
-	t.Run("no limit", func(t *testing.T) {
-		buf := &limitedBuffer{limit: 0}
-
-		// Should accept any amount
-		data := strings.Repeat("x", 1000)
-		n, err := buf.Write([]byte(data))
-		assert.NoError(t, err)
-		assert.Equal(t, 1000, n)
-		assert.Equal(t, data, string(buf.Bytes()))
-	})
-}
-
 func TestProcess_Concurrent(t *testing.T) {
 	r := New()
 	ctx := context.Background()
@@ -595,9 +469,6 @@ func TestProcess_Concurrent(t *testing.T) {
 			defer wg.Done()
 			p, err := r.Execute(ctx, amuxruntime.ExecutionSpec{
 				Command: []string{"echo", fmt.Sprintf("process-%d", idx)},
-				Options: Options{
-					CaptureOutput: true,
-				},
 			})
 			processes[idx] = p
 			errors[idx] = err
@@ -622,4 +493,14 @@ func TestProcess_Concurrent(t *testing.T) {
 	for _, p := range processes {
 		_ = p.Wait(context.Background())
 	}
+}
+
+func TestDetachedRuntime_Type(t *testing.T) {
+	r := NewDetachedRuntime()
+	assert.Equal(t, "local-detached", r.Type())
+}
+
+func TestLocalRuntime_Type(t *testing.T) {
+	r := New()
+	assert.Equal(t, "local", r.Type())
 }

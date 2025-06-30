@@ -3,37 +3,44 @@ package session
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/aki/amux/internal/cli/ui"
 	"github.com/aki/amux/internal/config"
+	"github.com/aki/amux/internal/runtime"
 	"github.com/aki/amux/internal/session"
 	"github.com/aki/amux/internal/workspace"
 	"github.com/spf13/cobra"
 )
 
 var runCmd = &cobra.Command{
-	Use:   "run [task-name] [-- command args...]",
+	Use:   "run [-- command args...]",
 	Short: "Run a task or command in a session",
 	Long: `Run a task or command in a session.
 
-You can either run a predefined task by name, or specify a custom command after --.
+You can either run a predefined task using --task flag, or specify a custom command after --.
 
 Examples:
   # Run a predefined task
-  amux session run dev
+  amux session run --task dev
+  amux session run -t dev
 
   # Run a custom command
   amux session run -- npm start
 
+  # Run a task with arguments
+  amux session run --task build -- --watch
+
   # Run in a specific workspace
-  amux session run dev --workspace myworkspace
+  amux session run --task dev --workspace myworkspace
 
   # Run with tmux runtime
-  amux session run dev --runtime tmux`,
+  amux session run --task dev --runtime tmux`,
 	RunE: RunSession,
 }
 
 var runOpts struct {
+	task        string
 	workspace   string
 	runtime     string
 	environment []string
@@ -42,8 +49,9 @@ var runOpts struct {
 }
 
 func init() {
+	runCmd.Flags().StringVarP(&runOpts.task, "task", "t", "", "Task name to run")
 	runCmd.Flags().StringVarP(&runOpts.workspace, "workspace", "w", "", "Workspace to run in")
-	runCmd.Flags().StringVarP(&runOpts.runtime, "runtime", "r", "local", "Runtime to use (local, tmux)")
+	runCmd.Flags().StringVarP(&runOpts.runtime, "runtime", "r", "local", "Runtime to use (local, local-detached, tmux)")
 	runCmd.Flags().StringArrayVarP(&runOpts.environment, "env", "e", nil, "Environment variables (KEY=VALUE)")
 	runCmd.Flags().StringVarP(&runOpts.workingDir, "dir", "d", "", "Working directory")
 	runCmd.Flags().BoolVarP(&runOpts.follow, "follow", "f", false, "Follow logs")
@@ -51,6 +59,7 @@ func init() {
 
 // BindRunFlags binds command flags to runOpts
 func BindRunFlags(cmd *cobra.Command) {
+	runOpts.task, _ = cmd.Flags().GetString("task")
 	runOpts.workspace, _ = cmd.Flags().GetString("workspace")
 	runOpts.runtime, _ = cmd.Flags().GetString("runtime")
 	runOpts.environment, _ = cmd.Flags().GetStringArray("env")
@@ -63,28 +72,18 @@ func RunSession(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
 	// Parse arguments
-	var taskName string
+	taskName := runOpts.task
 	var command []string
 
-	dashIndex := -1
-	for i, arg := range args {
-		if arg == "--" {
-			dashIndex = i
-			break
-		}
-	}
-
-	if dashIndex >= 0 {
-		// Command specified after --
-		if dashIndex > 0 {
-			taskName = args[0]
-		}
-		command = args[dashIndex+1:]
-	} else if len(args) > 0 {
-		// Task name specified
-		taskName = args[0]
-	} else {
-		return fmt.Errorf("either task name or command must be specified")
+	// Validate that either task or command is specified, but not both
+	if taskName != "" && len(args) > 0 {
+		// If task is specified, args are passed to the task (after --)
+		command = args
+	} else if taskName == "" && len(args) > 0 {
+		// Direct command execution
+		command = args
+	} else if taskName == "" && len(args) == 0 {
+		return fmt.Errorf("either --task or command must be specified")
 	}
 
 	// Get working directory
@@ -130,45 +129,61 @@ func RunSession(cmd *cobra.Command, args []string) error {
 	// Get session manager
 	sessionMgr := getSessionManager(configMgr)
 
+	// Create runtime options based on runtime type
+	var runtimeOptions runtime.RuntimeOptions
+	// Currently, no runtime-specific options are needed
+
 	// Create session
 	sess, err := sessionMgr.Create(ctx, session.CreateOptions{
-		WorkspaceID: workspaceID,
-		TaskName:    taskName,
-		Command:     command,
-		Runtime:     runOpts.runtime,
-		Environment: env,
-		WorkingDir:  runOpts.workingDir,
+		WorkspaceID:    workspaceID,
+		TaskName:       taskName,
+		Command:        command,
+		Runtime:        runOpts.runtime,
+		Environment:    env,
+		WorkingDir:     runOpts.workingDir,
+		RuntimeOptions: runtimeOptions,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create session: %w", err)
 	}
 
 	ui.Success("Session started: %s", sess.ID)
-	ui.Info("Runtime: %s", sess.Runtime)
+	ui.OutputLine("Runtime: %s", sess.Runtime)
 	if sess.WorkspaceID != "" {
-		ui.Info("Workspace: %s", sess.WorkspaceID)
+		ui.OutputLine("Workspace: %s", sess.WorkspaceID)
 	}
 
-	// Follow logs if requested
-	if runOpts.follow {
-		ui.Info("Following logs...")
-		reader, err := sessionMgr.Logs(ctx, sess.ID, true)
+	// Provide appropriate feedback based on runtime
+	if runOpts.runtime == "local-detached" {
+		ui.OutputLine("")
+		ui.OutputLine("Running in detached mode")
+		ui.OutputLine("Use 'amux session ps' to view status")
+		ui.OutputLine("Use 'amux session attach %s' to attach", sess.ID)
+	} else if runOpts.runtime == "local" {
+		// For foreground mode, wait for the session to complete
+		// Get the session to access the process
+		updatedSess, err := sessionMgr.Get(ctx, sess.ID)
 		if err != nil {
-			return fmt.Errorf("failed to get logs: %w", err)
+			return fmt.Errorf("failed to get session: %w", err)
 		}
-		defer func() {
-			_ = reader.Close()
-		}()
 
-		// Copy logs to stdout
-		buf := make([]byte, 4096)
-		for {
-			n, err := reader.Read(buf)
-			if n > 0 {
-				_, _ = os.Stdout.Write(buf[:n])
-			}
-			if err != nil {
-				break
+		// Wait for the process to complete
+		if updatedSess.Status == session.StatusRunning {
+			// Note: We need a way to wait for the process
+			// For now, we'll use a simple polling approach
+			for {
+				time.Sleep(100 * time.Millisecond)
+				s, err := sessionMgr.Get(ctx, sess.ID)
+				if err != nil {
+					return fmt.Errorf("failed to get session status: %w", err)
+				}
+				if s.Status != session.StatusRunning {
+					// Process completed
+					if s.ExitCode != nil && *s.ExitCode != 0 {
+						return fmt.Errorf("process exited with code %d", *s.ExitCode)
+					}
+					break
+				}
 			}
 		}
 	}

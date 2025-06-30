@@ -47,6 +47,7 @@ func (m *mockProcess) Kill(ctx context.Context) error { return nil }
 func (m *mockProcess) Output() (io.Reader, io.Reader) { return nil, nil }
 func (m *mockProcess) ExitCode() (int, error)         { return 0, nil }
 func (m *mockProcess) StartTime() time.Time           { return time.Now() }
+func (m *mockProcess) Metadata() Metadata             { return nil }
 
 // mockOptions is a mock implementation of RuntimeOptions
 type mockOptions struct {
