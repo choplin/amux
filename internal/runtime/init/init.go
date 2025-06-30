@@ -20,12 +20,16 @@ func RegisterDefaults() error {
 		return nil
 	}
 
-	// Register local runtime
+	// Register local runtime (foreground)
 	localRT := local.New()
-	if err := runtime.Register("local", localRT, local.Options{
-		Detach: false, // Default to foreground mode
-	}); err != nil {
+	if err := runtime.Register("local", localRT, local.Options{}); err != nil {
 		return fmt.Errorf("failed to register local runtime: %w", err)
+	}
+
+	// Register local-detached runtime (background)
+	detachedRT := local.NewDetachedRuntime()
+	if err := runtime.Register("local-detached", detachedRT, local.Options{}); err != nil {
+		return fmt.Errorf("failed to register local-detached runtime: %w", err)
 	}
 
 	// Register tmux runtime if available (not on Windows)
@@ -56,6 +60,8 @@ func CreateRuntime(cfg Config) (runtime.Runtime, error) {
 	switch cfg.Type {
 	case "local":
 		return createLocal(cfg.Options)
+	case "local-detached":
+		return createLocalDetached(cfg.Options)
 	case "tmux":
 		return createTmux(cfg.Options)
 	default:
@@ -67,6 +73,12 @@ func CreateRuntime(cfg Config) (runtime.Runtime, error) {
 func createLocal(options map[string]interface{}) (runtime.Runtime, error) {
 	// Local runtime doesn't need configuration
 	return local.New(), nil
+}
+
+// createLocalDetached creates a local-detached runtime from options
+func createLocalDetached(options map[string]interface{}) (runtime.Runtime, error) {
+	// Local-detached runtime doesn't need configuration
+	return local.NewDetachedRuntime(), nil
 }
 
 // createTmux creates a tmux runtime from options

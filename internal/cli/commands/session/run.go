@@ -8,7 +8,6 @@ import (
 	"github.com/aki/amux/internal/cli/ui"
 	"github.com/aki/amux/internal/config"
 	"github.com/aki/amux/internal/runtime"
-	"github.com/aki/amux/internal/runtime/local"
 	"github.com/aki/amux/internal/session"
 	"github.com/aki/amux/internal/workspace"
 	"github.com/spf13/cobra"
@@ -47,17 +46,15 @@ var runOpts struct {
 	environment []string
 	workingDir  string
 	follow      bool
-	detach      bool
 }
 
 func init() {
 	runCmd.Flags().StringVarP(&runOpts.task, "task", "t", "", "Task name to run")
 	runCmd.Flags().StringVarP(&runOpts.workspace, "workspace", "w", "", "Workspace to run in")
-	runCmd.Flags().StringVarP(&runOpts.runtime, "runtime", "r", "local", "Runtime to use (local, tmux)")
+	runCmd.Flags().StringVarP(&runOpts.runtime, "runtime", "r", "local", "Runtime to use (local, local-detached, tmux)")
 	runCmd.Flags().StringArrayVarP(&runOpts.environment, "env", "e", nil, "Environment variables (KEY=VALUE)")
 	runCmd.Flags().StringVarP(&runOpts.workingDir, "dir", "d", "", "Working directory")
 	runCmd.Flags().BoolVarP(&runOpts.follow, "follow", "f", false, "Follow logs")
-	runCmd.Flags().BoolVar(&runOpts.detach, "detach", false, "Run in background (detached mode, local runtime only)")
 }
 
 // BindRunFlags binds command flags to runOpts
@@ -68,7 +65,6 @@ func BindRunFlags(cmd *cobra.Command) {
 	runOpts.environment, _ = cmd.Flags().GetStringArray("env")
 	runOpts.workingDir, _ = cmd.Flags().GetString("dir")
 	runOpts.follow, _ = cmd.Flags().GetBool("follow")
-	runOpts.detach, _ = cmd.Flags().GetBool("detach")
 }
 
 // RunSession implements the session run command
@@ -133,18 +129,9 @@ func RunSession(cmd *cobra.Command, args []string) error {
 	// Get session manager
 	sessionMgr := getSessionManager(configMgr)
 
-	// Validate detach flag is only used with local runtime
-	if runOpts.detach && runOpts.runtime != "local" {
-		return fmt.Errorf("--detach flag is only supported for local runtime")
-	}
-
 	// Create runtime options based on runtime type
 	var runtimeOptions runtime.RuntimeOptions
-	if runOpts.runtime == "local" {
-		runtimeOptions = local.Options{
-			Detach: runOpts.detach,
-		}
-	}
+	// Currently, no runtime-specific options are needed
 
 	// Create session
 	sess, err := sessionMgr.Create(ctx, session.CreateOptions{
@@ -166,13 +153,13 @@ func RunSession(cmd *cobra.Command, args []string) error {
 		ui.OutputLine("Workspace: %s", sess.WorkspaceID)
 	}
 
-	// Provide appropriate feedback based on mode
-	if runOpts.detach {
+	// Provide appropriate feedback based on runtime
+	if runOpts.runtime == "local-detached" {
 		ui.OutputLine("")
 		ui.OutputLine("Running in detached mode")
 		ui.OutputLine("Use 'amux session ps' to view status")
 		ui.OutputLine("Use 'amux session attach %s' to attach", sess.ID)
-	} else {
+	} else if runOpts.runtime == "local" {
 		// For foreground mode, wait for the session to complete
 		// Get the session to access the process
 		updatedSess, err := sessionMgr.Get(ctx, sess.ID)

@@ -41,11 +41,10 @@ Examples:
 	// Add flags that will be bound to session.runOpts
 	cmd.Flags().StringP("task", "t", "", "Task name to run")
 	cmd.Flags().StringP("workspace", "w", "", "Workspace to run in")
-	cmd.Flags().StringP("runtime", "r", "local", "Runtime to use (local, tmux)")
+	cmd.Flags().StringP("runtime", "r", "local", "Runtime to use (local, local-detached, tmux)")
 	cmd.Flags().StringArrayP("env", "e", nil, "Environment variables (KEY=VALUE)")
 	cmd.Flags().StringP("dir", "d", "", "Working directory")
 	cmd.Flags().BoolP("follow", "f", false, "Follow logs")
-	cmd.Flags().Bool("detach", false, "Run in background (detached mode, local runtime only)")
 
 	return cmd
 }

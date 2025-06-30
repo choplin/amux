@@ -50,9 +50,6 @@ func TestLocalRuntime_Execute(t *testing.T) {
 			name: "simple echo command (foreground)",
 			spec: amuxruntime.ExecutionSpec{
 				Command: []string{"echo", "hello"},
-				Options: Options{
-					Detach: false, // Foreground mode
-				},
 			},
 			check: func(t *testing.T, p amuxruntime.Process) {
 				assert.Equal(t, amuxruntime.StateRunning, p.State())
@@ -67,32 +64,11 @@ func TestLocalRuntime_Execute(t *testing.T) {
 				code, err := p.ExitCode()
 				require.NoError(t, err)
 				assert.Equal(t, 0, code)
-			},
-		},
-		{
-			name: "detached process",
-			spec: amuxruntime.ExecutionSpec{
-				Command: getSleepCommand(0.5),
-				Options: Options{
-					Detach: true, // Detached mode
-				},
-			},
-			check: func(t *testing.T, p amuxruntime.Process) {
-				// Should be running
-				assert.Equal(t, amuxruntime.StateRunning, p.State())
 
-				// Process should continue running even after short delay
-				time.Sleep(100 * time.Millisecond)
-				assert.Equal(t, amuxruntime.StateRunning, p.State())
-
-				// Wait for natural completion
-				ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-				defer cancel()
-				err := p.Wait(ctx)
-				require.NoError(t, err)
-
-				// Should be stopped
-				assert.Equal(t, amuxruntime.StateStopped, p.State())
+				// Check metadata
+				meta, ok := p.Metadata().(*Metadata)
+				require.True(t, ok)
+				assert.False(t, meta.Detached)
 			},
 		},
 		{
@@ -200,6 +176,38 @@ func TestLocalRuntime_Execute(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDetachedRuntime_Execute(t *testing.T) {
+	r := NewDetachedRuntime()
+	ctx := context.Background()
+
+	// Create a detached process
+	p, err := r.Execute(ctx, amuxruntime.ExecutionSpec{
+		Command: getSleepCommand(0.5),
+	})
+	require.NoError(t, err)
+
+	// Should be running
+	assert.Equal(t, amuxruntime.StateRunning, p.State())
+
+	// Check metadata
+	meta, ok := p.Metadata().(*Metadata)
+	require.True(t, ok)
+	assert.True(t, meta.Detached)
+
+	// Process should continue running even after short delay
+	time.Sleep(100 * time.Millisecond)
+	assert.Equal(t, amuxruntime.StateRunning, p.State())
+
+	// Wait for natural completion
+	ctx2, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	err = p.Wait(ctx2)
+	require.NoError(t, err)
+
+	// Should be stopped
+	assert.Equal(t, amuxruntime.StateStopped, p.State())
 }
 
 func TestLocalRuntime_Find(t *testing.T) {
@@ -316,12 +324,9 @@ func TestLocalRuntime_ContextCancellation(t *testing.T) {
 	r := New()
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// Create a foreground process (not detached)
+	// Create a foreground process
 	p, err := r.Execute(ctx, amuxruntime.ExecutionSpec{
 		Command: getSleepCommand(10),
-		Options: Options{
-			Detach: false,
-		},
 	})
 	require.NoError(t, err)
 
@@ -333,16 +338,13 @@ func TestLocalRuntime_ContextCancellation(t *testing.T) {
 	assert.NotEqual(t, amuxruntime.StateRunning, p.State())
 }
 
-func TestLocalRuntime_DetachedContextCancellation(t *testing.T) {
-	r := New()
+func TestDetachedRuntime_ContextCancellation(t *testing.T) {
+	r := NewDetachedRuntime()
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// Create a detached process
 	p, err := r.Execute(ctx, amuxruntime.ExecutionSpec{
 		Command: getSleepCommand(1),
-		Options: Options{
-			Detach: true,
-		},
 	})
 	require.NoError(t, err)
 
@@ -493,30 +495,12 @@ func TestProcess_Concurrent(t *testing.T) {
 	}
 }
 
-func TestLocalRuntime_DefaultShell(t *testing.T) {
+func TestDetachedRuntime_Type(t *testing.T) {
+	r := NewDetachedRuntime()
+	assert.Equal(t, "local-detached", r.Type())
+}
+
+func TestLocalRuntime_Type(t *testing.T) {
 	r := New()
-	ctx := context.Background()
-
-	// Test with custom shell
-	customShell := "/bin/bash"
-	if runtime.GOOS == "windows" {
-		customShell = "powershell"
-	}
-
-	p, err := r.Execute(ctx, amuxruntime.ExecutionSpec{
-		Command: []string{"echo test"},
-		Options: Options{
-			Shell: customShell,
-		},
-	})
-	require.NoError(t, err)
-
-	// Wait for completion
-	err = p.Wait(context.Background())
-	require.NoError(t, err)
-
-	// Should succeed
-	code, err := p.ExitCode()
-	require.NoError(t, err)
-	assert.Equal(t, 0, code)
+	assert.Equal(t, "local", r.Type())
 }
