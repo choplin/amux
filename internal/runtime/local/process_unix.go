@@ -3,6 +3,7 @@
 package local
 
 import (
+	"os"
 	"os/exec"
 	"runtime"
 	"syscall"
@@ -20,8 +21,9 @@ func configureProcessIsolation(cmd *exec.Cmd, detach bool) {
 		// Create new session (detach from controlling terminal)
 		// Note: Setsid is not supported on macOS when running under certain conditions
 		// (e.g., when the parent process is not a session leader)
-		// So we only set it on Linux
-		if runtime.GOOS == "linux" {
+		// Also, some CI environments (like GitHub Actions) may restrict Setsid
+		// So we only set it on Linux when not in CI
+		if runtime.GOOS == "linux" && os.Getenv("CI") == "" {
 			cmd.SysProcAttr.Setsid = true
 		}
 	} else {
