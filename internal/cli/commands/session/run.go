@@ -3,9 +3,12 @@ package session
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/aki/amux/internal/cli/ui"
 	"github.com/aki/amux/internal/config"
+	"github.com/aki/amux/internal/runtime"
+	"github.com/aki/amux/internal/runtime/local"
 	"github.com/aki/amux/internal/session"
 	"github.com/aki/amux/internal/workspace"
 	"github.com/spf13/cobra"
@@ -39,6 +42,7 @@ var runOpts struct {
 	environment []string
 	workingDir  string
 	follow      bool
+	detach      bool
 }
 
 func init() {
@@ -47,6 +51,7 @@ func init() {
 	runCmd.Flags().StringArrayVarP(&runOpts.environment, "env", "e", nil, "Environment variables (KEY=VALUE)")
 	runCmd.Flags().StringVarP(&runOpts.workingDir, "dir", "d", "", "Working directory")
 	runCmd.Flags().BoolVarP(&runOpts.follow, "follow", "f", false, "Follow logs")
+	runCmd.Flags().BoolVar(&runOpts.detach, "detach", false, "Run in background (detached mode)")
 }
 
 // BindRunFlags binds command flags to runOpts
@@ -56,6 +61,7 @@ func BindRunFlags(cmd *cobra.Command) {
 	runOpts.environment, _ = cmd.Flags().GetStringArray("env")
 	runOpts.workingDir, _ = cmd.Flags().GetString("dir")
 	runOpts.follow, _ = cmd.Flags().GetBool("follow")
+	runOpts.detach, _ = cmd.Flags().GetBool("detach")
 }
 
 // RunSession implements the session run command
@@ -66,23 +72,26 @@ func RunSession(cmd *cobra.Command, args []string) error {
 	var taskName string
 	var command []string
 
-	dashIndex := -1
-	for i, arg := range args {
-		if arg == "--" {
-			dashIndex = i
-			break
-		}
-	}
-
-	if dashIndex >= 0 {
-		// Command specified after --
-		if dashIndex > 0 {
+	// Cobra processes -- specially and removes it from args
+	// If we have args and they don't look like a task name, assume they are a command
+	if len(args) > 0 {
+		// Check if this might be a direct command (not a task)
+		// In Cobra, after --, all args are passed through
+		if cmd.ArgsLenAtDash() != -1 {
+			// -- was present
+			dashPos := cmd.ArgsLenAtDash()
+			if dashPos > 0 {
+				// Task name before --
+				taskName = args[0]
+				command = args[dashPos:]
+			} else {
+				// No task name, just command after --
+				command = args
+			}
+		} else {
+			// No -- present, first arg is task name
 			taskName = args[0]
 		}
-		command = args[dashIndex+1:]
-	} else if len(args) > 0 {
-		// Task name specified
-		taskName = args[0]
 	} else {
 		return fmt.Errorf("either task name or command must be specified")
 	}
@@ -130,45 +139,65 @@ func RunSession(cmd *cobra.Command, args []string) error {
 	// Get session manager
 	sessionMgr := getSessionManager(configMgr)
 
+	// Create runtime options based on runtime type
+	var runtimeOptions runtime.RuntimeOptions
+	if runOpts.runtime == "local" {
+		runtimeOptions = local.Options{
+			Detach: runOpts.detach,
+		}
+	}
+
 	// Create session
 	sess, err := sessionMgr.Create(ctx, session.CreateOptions{
-		WorkspaceID: workspaceID,
-		TaskName:    taskName,
-		Command:     command,
-		Runtime:     runOpts.runtime,
-		Environment: env,
-		WorkingDir:  runOpts.workingDir,
+		WorkspaceID:    workspaceID,
+		TaskName:       taskName,
+		Command:        command,
+		Runtime:        runOpts.runtime,
+		Environment:    env,
+		WorkingDir:     runOpts.workingDir,
+		RuntimeOptions: runtimeOptions,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create session: %w", err)
 	}
 
 	ui.Success("Session started: %s", sess.ID)
-	ui.Info("Runtime: %s", sess.Runtime)
+	ui.OutputLine("Runtime: %s", sess.Runtime)
 	if sess.WorkspaceID != "" {
-		ui.Info("Workspace: %s", sess.WorkspaceID)
+		ui.OutputLine("Workspace: %s", sess.WorkspaceID)
 	}
 
-	// Follow logs if requested
-	if runOpts.follow {
-		ui.Info("Following logs...")
-		reader, err := sessionMgr.Logs(ctx, sess.ID, true)
+	// Provide appropriate feedback based on mode
+	if runOpts.detach {
+		ui.OutputLine("")
+		ui.OutputLine("Running in detached mode")
+		ui.OutputLine("Use 'amux session ps' to view status")
+		ui.OutputLine("Use 'amux session attach %s' to attach", sess.ID)
+	} else {
+		// For foreground mode, wait for the session to complete
+		// Get the session to access the process
+		updatedSess, err := sessionMgr.Get(ctx, sess.ID)
 		if err != nil {
-			return fmt.Errorf("failed to get logs: %w", err)
+			return fmt.Errorf("failed to get session: %w", err)
 		}
-		defer func() {
-			_ = reader.Close()
-		}()
 
-		// Copy logs to stdout
-		buf := make([]byte, 4096)
-		for {
-			n, err := reader.Read(buf)
-			if n > 0 {
-				_, _ = os.Stdout.Write(buf[:n])
-			}
-			if err != nil {
-				break
+		// Wait for the process to complete
+		if updatedSess.Status == session.StatusRunning {
+			// Note: We need a way to wait for the process
+			// For now, we'll use a simple polling approach
+			for {
+				time.Sleep(100 * time.Millisecond)
+				s, err := sessionMgr.Get(ctx, sess.ID)
+				if err != nil {
+					return fmt.Errorf("failed to get session status: %w", err)
+				}
+				if s.Status != session.StatusRunning {
+					// Process completed
+					if s.ExitCode != nil && *s.ExitCode != 0 {
+						return fmt.Errorf("process exited with code %d", *s.ExitCode)
+					}
+					break
+				}
 			}
 		}
 	}

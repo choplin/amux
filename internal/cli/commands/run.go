@@ -40,6 +40,7 @@ Examples:
 	cmd.Flags().StringArrayP("env", "e", nil, "Environment variables (KEY=VALUE)")
 	cmd.Flags().StringP("dir", "d", "", "Working directory")
 	cmd.Flags().BoolP("follow", "f", false, "Follow logs")
+	cmd.Flags().Bool("detach", false, "Run in background (detached mode)")
 
 	return cmd
 }

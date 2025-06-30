@@ -23,8 +23,7 @@ func RegisterDefaults() error {
 	// Register local runtime
 	localRT := local.New()
 	if err := runtime.Register("local", localRT, local.Options{
-		InheritEnv:    true,
-		CaptureOutput: false,
+		Detach: false, // Default to foreground mode
 	}); err != nil {
 		return fmt.Errorf("failed to register local runtime: %w", err)
 	}

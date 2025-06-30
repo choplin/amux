@@ -151,6 +151,10 @@ func (p *mockProcess) Output() (stdout, stderr io.Reader) {
 	return bytes.NewReader([]byte("mock output")), nil
 }
 
+func (p *mockProcess) Metadata() runtime.Metadata {
+	return nil
+}
+
 // mockStore implements Store for testing
 type mockStore struct {
 	mu       sync.RWMutex

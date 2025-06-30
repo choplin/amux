@@ -82,13 +82,14 @@ type Manager interface {
 
 // CreateOptions defines options for creating a session
 type CreateOptions struct {
-	WorkspaceID string            // Workspace to run in
-	TaskName    string            // Task to execute (optional)
-	Command     []string          // Direct command (if no task)
-	Runtime     string            // Runtime to use (default: local)
-	Environment map[string]string // Additional environment variables
-	WorkingDir  string            // Working directory override
-	Metadata    map[string]interface{}
+	WorkspaceID    string                 // Workspace to run in
+	TaskName       string                 // Task to execute (optional)
+	Command        []string               // Direct command (if no task)
+	Runtime        string                 // Runtime to use (default: local)
+	Environment    map[string]string      // Additional environment variables
+	WorkingDir     string                 // Working directory override
+	Metadata       map[string]interface{} // Additional metadata
+	RuntimeOptions runtime.RuntimeOptions // Runtime-specific options
 }
 
 // LogReader provides access to session logs
@@ -135,6 +136,7 @@ func (m *manager) Create(ctx context.Context, opts CreateOptions) (*Session, err
 	spec := runtime.ExecutionSpec{
 		WorkingDir:  opts.WorkingDir,
 		Environment: opts.Environment,
+		Options:     opts.RuntimeOptions,
 	}
 
 	// If task is specified, load it
@@ -183,6 +185,20 @@ func (m *manager) Create(ctx context.Context, opts CreateOptions) (*Session, err
 	m.idCounter++
 	m.mu.Unlock()
 
+	// Get process metadata
+	var metadata map[string]interface{}
+	if processMetadata := process.Metadata(); processMetadata != nil {
+		metadata = processMetadata.ToMap()
+		// Merge with any user-provided metadata
+		if opts.Metadata != nil {
+			for k, v := range opts.Metadata {
+				metadata[k] = v
+			}
+		}
+	} else {
+		metadata = opts.Metadata
+	}
+
 	session := &Session{
 		ID:          sessionID,
 		WorkspaceID: opts.WorkspaceID,
@@ -194,7 +210,7 @@ func (m *manager) Create(ctx context.Context, opts CreateOptions) (*Session, err
 		Command:     spec.Command,
 		Environment: spec.Environment,
 		WorkingDir:  spec.WorkingDir,
-		Metadata:    opts.Metadata,
+		Metadata:    metadata,
 		process:     process,
 	}
 

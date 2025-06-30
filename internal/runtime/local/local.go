@@ -2,7 +2,6 @@
 package local
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -55,16 +54,32 @@ func (r *Runtime) Execute(ctx context.Context, spec amuxruntime.ExecutionSpec) (
 
 	// Create command
 	var cmd *exec.Cmd
-	if len(spec.Command) == 1 {
-		// Single command, run through shell
-		if runtime.GOOS == "windows" {
-			cmd = exec.CommandContext(ctx, opts.Shell, "/c", spec.Command[0])
+	if opts.Detach {
+		// For detached processes, don't use CommandContext to avoid automatic termination
+		if len(spec.Command) == 1 {
+			// Single command, run through shell
+			if runtime.GOOS == "windows" {
+				cmd = exec.Command(opts.Shell, "/c", spec.Command[0])
+			} else {
+				cmd = exec.Command(opts.Shell, "-c", spec.Command[0])
+			}
 		} else {
-			cmd = exec.CommandContext(ctx, opts.Shell, "-c", spec.Command[0])
+			// Multiple arguments, run directly
+			cmd = exec.Command(spec.Command[0], spec.Command[1:]...)
 		}
 	} else {
-		// Multiple arguments, run directly
-		cmd = exec.CommandContext(ctx, spec.Command[0], spec.Command[1:]...)
+		// For foreground processes, use CommandContext for proper cancellation
+		if len(spec.Command) == 1 {
+			// Single command, run through shell
+			if runtime.GOOS == "windows" {
+				cmd = exec.CommandContext(ctx, opts.Shell, "/c", spec.Command[0])
+			} else {
+				cmd = exec.CommandContext(ctx, opts.Shell, "-c", spec.Command[0])
+			}
+		} else {
+			// Multiple arguments, run directly
+			cmd = exec.CommandContext(ctx, spec.Command[0], spec.Command[1:]...)
+		}
 	}
 
 	// Set working directory
@@ -76,12 +91,13 @@ func (r *Runtime) Execute(ctx context.Context, spec amuxruntime.ExecutionSpec) (
 	}
 
 	// Set environment
-	if opts.InheritEnv {
-		cmd.Env = os.Environ()
-	}
+	cmd.Env = os.Environ()
 	for k, v := range spec.Environment {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", k, v))
 	}
+
+	// Configure process isolation
+	configureProcessIsolation(cmd, opts.Detach)
 
 	// Create process
 	proc := &Process{
@@ -94,14 +110,13 @@ func (r *Runtime) Execute(ctx context.Context, spec amuxruntime.ExecutionSpec) (
 		done:      make(chan struct{}),
 	}
 
-	// Set up output capture if requested
-	if opts.CaptureOutput {
-		proc.stdoutBuf = &limitedBuffer{limit: opts.OutputSizeLimit}
-		proc.stderrBuf = &limitedBuffer{limit: opts.OutputSizeLimit}
-		cmd.Stdout = proc.stdoutBuf
-		cmd.Stderr = proc.stderrBuf
+	// Set up output handling
+	if !opts.Detach {
+		// For foreground processes, inherit stdout/stderr for real-time output
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
 	} else {
-		// Discard output if not capturing
+		// For detached processes, discard output to prevent blocking
 		cmd.Stdout = nil
 		cmd.Stderr = nil
 	}
@@ -113,23 +128,44 @@ func (r *Runtime) Execute(ctx context.Context, spec amuxruntime.ExecutionSpec) (
 
 	proc.setState(amuxruntime.StateRunning)
 
+	// Create metadata after process starts
+	proc.metadata = &Metadata{
+		PID:      cmd.Process.Pid,
+		Detached: opts.Detach,
+	}
+
+	// Try to get PGID (might not work on all platforms)
+	if cmd.SysProcAttr != nil && cmd.SysProcAttr.Setpgid {
+		proc.metadata.PGID = cmd.Process.Pid
+	}
+
 	// Store process
 	r.processes.Store(proc.id, proc)
 
 	// Monitor process completion
 	go proc.monitor()
 
-	// Handle context cancellation
-	go func() {
-		select {
-		case <-ctx.Done():
-			// Create a new context with timeout for cleanup
-			stopCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
-			defer cancel()
-			_ = proc.Stop(stopCtx)
-		case <-proc.done:
-		}
-	}()
+	// Handle context cancellation only for foreground processes
+	if !opts.Detach {
+		go func() {
+			select {
+			case <-ctx.Done():
+				// Create a new context with timeout for cleanup
+				stopCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+				defer cancel()
+				_ = proc.Stop(stopCtx)
+			case <-proc.done:
+			}
+		}()
+	}
+
+	// For foreground processes, wait for completion
+	if !opts.Detach {
+		go func() {
+			// Wait for the process to complete
+			<-proc.done
+		}()
+	}
 
 	return proc, nil
 }
@@ -169,10 +205,7 @@ type Process struct {
 	mu        sync.RWMutex
 	done      chan struct{}
 	doneOnce  sync.Once
-
-	// Output capture
-	stdoutBuf *limitedBuffer
-	stderrBuf *limitedBuffer
+	metadata  *Metadata
 }
 
 // ID returns the unique identifier for this process
@@ -214,8 +247,16 @@ func (p *Process) Stop(ctx context.Context) error {
 	}
 	p.mu.Unlock()
 
-	if err := p.cmd.Process.Signal(syscall.SIGTERM); err != nil {
-		return fmt.Errorf("failed to send SIGTERM: %w", err)
+	// For process groups, send signal to the entire group
+	if p.cmd.SysProcAttr != nil && p.cmd.SysProcAttr.Setpgid {
+		// Send signal to process group (negative PID)
+		if err := syscall.Kill(-p.cmd.Process.Pid, syscall.SIGTERM); err != nil {
+			return fmt.Errorf("failed to send SIGTERM to process group: %w", err)
+		}
+	} else {
+		if err := p.cmd.Process.Signal(syscall.SIGTERM); err != nil {
+			return fmt.Errorf("failed to send SIGTERM: %w", err)
+		}
 	}
 
 	// Give process time to stop gracefully
@@ -240,8 +281,16 @@ func (p *Process) Kill(ctx context.Context) error {
 		return amuxruntime.ErrProcessAlreadyDone
 	}
 
-	if err := p.cmd.Process.Kill(); err != nil {
-		return fmt.Errorf("failed to kill process: %w", err)
+	// For process groups, kill the entire group
+	if p.cmd.SysProcAttr != nil && p.cmd.SysProcAttr.Setpgid {
+		// Kill process group (negative PID)
+		if err := syscall.Kill(-p.cmd.Process.Pid, syscall.SIGKILL); err != nil {
+			return fmt.Errorf("failed to kill process group: %w", err)
+		}
+	} else {
+		if err := p.cmd.Process.Kill(); err != nil {
+			return fmt.Errorf("failed to kill process: %w", err)
+		}
 	}
 
 	return nil
@@ -249,13 +298,10 @@ func (p *Process) Kill(ctx context.Context) error {
 
 // Output returns readers for stdout and stderr
 func (p *Process) Output() (stdout, stderr io.Reader) {
-	if p.stdoutBuf != nil {
-		stdout = bytes.NewReader(p.stdoutBuf.Bytes())
-	}
-	if p.stderrBuf != nil {
-		stderr = bytes.NewReader(p.stderrBuf.Bytes())
-	}
-	return stdout, stderr
+	// Output is not captured in the current implementation
+	// For foreground processes, output goes directly to terminal
+	// For detached processes, output is discarded
+	return nil, nil
 }
 
 // ExitCode returns the exit code (valid after process completes)
@@ -301,42 +347,19 @@ func (p *Process) monitor() {
 	})
 }
 
-// Options implements amuxruntime.RuntimeOptions for local processes
-type Options struct {
-	Shell           string // Shell to use (default: $SHELL or /bin/sh)
-	InheritEnv      bool   // Inherit parent process environment
-	CaptureOutput   bool   // Capture stdout/stderr
-	OutputSizeLimit int64  // Max bytes to capture (0 = unlimited)
-}
+// Metadata returns runtime-specific metadata
+func (p *Process) Metadata() amuxruntime.Metadata {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
 
-// IsRuntimeOptions implements the RuntimeOptions interface
-func (Options) IsRuntimeOptions() {}
-
-// limitedBuffer is a buffer with a size limit
-type limitedBuffer struct {
-	buf   bytes.Buffer
-	limit int64
-	mu    sync.Mutex
-}
-
-func (b *limitedBuffer) Write(p []byte) (n int, err error) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	if b.limit > 0 && int64(b.buf.Len()+len(p)) > b.limit {
-		// Calculate how much we can write
-		available := b.limit - int64(b.buf.Len())
-		if available <= 0 {
-			return 0, nil // Buffer full, discard
-		}
-		p = p[:available]
+	if p.metadata == nil {
+		return nil
 	}
 
-	return b.buf.Write(p)
-}
-
-func (b *limitedBuffer) Bytes() []byte {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	return b.buf.Bytes()
+	// Return a copy to prevent modification
+	return &Metadata{
+		PID:      p.metadata.PID,
+		PGID:     p.metadata.PGID,
+		Detached: p.metadata.Detached,
+	}
 }
