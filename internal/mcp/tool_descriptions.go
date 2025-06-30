@@ -155,6 +155,61 @@ var toolDescriptions = map[string]ToolDescription{
 		},
 	},
 
+	"session_list": {
+		Description: "List all sessions or sessions in a specific workspace",
+		WhenToUse: []string{
+			"To see all active sessions across workspaces",
+			"To check session status and health",
+			"Before creating new sessions to avoid duplicates",
+			"To find specific sessions by workspace",
+		},
+		Examples: []string{
+			`session_list() → [{session_id: "session-1", workspace_id: "1", status: "running", command: ["npm", "run", "dev"]}]`,
+			`session_list(workspace_id: "fix-auth") → [{session_id: "session-2", status: "stopped", exit_code: 0}]`,
+		},
+		NextTools: []string{
+			"session_logs - Check logs from specific sessions",
+			"session_stop - Stop unnecessary sessions",
+			"session_remove - Clean up stopped sessions",
+		},
+	},
+
+	"session_logs": {
+		Description: "Get logs from a session",
+		WhenToUse: []string{
+			"To check output from a running or completed session",
+			"To debug issues with a failed session",
+			"To monitor progress of long-running tasks",
+			"To retrieve test results or build output",
+		},
+		Examples: []string{
+			`session_logs(session_id: "session-123") → {logs: "[INFO] Starting build...\n[INFO] Build completed successfully"}`,
+			`session_logs(session_id: "session-123", follow: true) → {logs: "...", note: "Logs are truncated to 64KB. Use CLI for full logs"}`,
+		},
+		NextTools: []string{
+			"session_stop - Stop the session if needed",
+			"session_storage_read - Read full logs from storage",
+		},
+	},
+
+	"session_remove": {
+		Description: "Remove a stopped session and clean up its resources",
+		WhenToUse: []string{
+			"After a session has completed or been stopped",
+			"To clean up old session data",
+			"When session is no longer needed",
+			"To free up system resources",
+		},
+		Examples: []string{
+			`session_remove(session_id: "session-123") → {message: "Session session-123 removed"}`,
+			`session_remove(session_id: "2") → {message: "Session 2 removed"}`,
+		},
+		NextTools: []string{
+			"resource_session_list - Check remaining sessions",
+			"session_run - Start a new session if needed",
+		},
+	},
+
 	"resource_workspace_list": {
 		Description: "List all workspaces. Shows ID, name, branch, and other details",
 		WhenToUse: []string{
