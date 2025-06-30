@@ -54,6 +54,15 @@ func TestRunCommandFlags(t *testing.T) {
 	if runCmd.Flag("follow") == nil {
 		t.Error("Expected --follow flag")
 	}
+	if runCmd.Flag("detach") == nil {
+		t.Error("Expected --detach flag")
+	}
+
+	// Check that detach flag has correct description
+	detachFlag := runCmd.Flag("detach")
+	if detachFlag != nil && !contains(detachFlag.Usage, "local runtime only") {
+		t.Error("Expected --detach flag description to mention 'local runtime only'")
+	}
 }
 
 // Test ps command flags

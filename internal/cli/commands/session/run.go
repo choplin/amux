@@ -51,7 +51,7 @@ func init() {
 	runCmd.Flags().StringArrayVarP(&runOpts.environment, "env", "e", nil, "Environment variables (KEY=VALUE)")
 	runCmd.Flags().StringVarP(&runOpts.workingDir, "dir", "d", "", "Working directory")
 	runCmd.Flags().BoolVarP(&runOpts.follow, "follow", "f", false, "Follow logs")
-	runCmd.Flags().BoolVar(&runOpts.detach, "detach", false, "Run in background (detached mode)")
+	runCmd.Flags().BoolVar(&runOpts.detach, "detach", false, "Run in background (detached mode, local runtime only)")
 }
 
 // BindRunFlags binds command flags to runOpts
@@ -138,6 +138,11 @@ func RunSession(cmd *cobra.Command, args []string) error {
 
 	// Get session manager
 	sessionMgr := getSessionManager(configMgr)
+
+	// Validate detach flag is only used with local runtime
+	if runOpts.detach && runOpts.runtime != "local" {
+		return fmt.Errorf("--detach flag is only supported for local runtime")
+	}
 
 	// Create runtime options based on runtime type
 	var runtimeOptions runtime.RuntimeOptions
