@@ -337,7 +337,8 @@ func (p *Process) Metadata() runtime.Metadata {
 }
 
 // Attach creates a new client attached to the tmux session
-func (p *Process) Attach(ctx context.Context) error {
+// Attach implements runtime.AttachableProcess
+func (p *Process) Attach() error {
 	p.mu.RLock()
 	state := p.state
 	p.mu.RUnlock()
@@ -351,9 +352,19 @@ func (p *Process) Attach(ctx context.Context) error {
 		return fmt.Errorf("tmux session no longer exists")
 	}
 
+	// Get current terminal size
+	width, height, err := term.GetSize(os.Stdout.Fd())
+	if err == nil && width > 0 && height > 0 {
+		// Try to resize tmux window to match terminal
+		// This is best-effort, so we ignore errors
+		resizeCmd := p.runtime.tmuxCmd(p.opts.SocketPath, "resize-window", "-t", p.sessionName,
+			"-x", fmt.Sprintf("%d", width),
+			"-y", fmt.Sprintf("%d", height))
+		_ = resizeCmd.Run() // Ignore errors as resize is not critical
+	}
+
 	// Create attach command
 	cmd := p.runtime.tmuxCmd(p.opts.SocketPath, "attach-session", "-t", p.sessionName)
-	cmd = exec.CommandContext(ctx, cmd.Path, cmd.Args[1:]...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
