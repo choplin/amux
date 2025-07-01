@@ -582,3 +582,26 @@ type Options struct {
 
 // IsRuntimeOptions implements the RuntimeOptions interface
 func (Options) IsRuntimeOptions() {}
+
+// SendInput implements runtime.InputSender interface
+func (p *Process) SendInput(input string) error {
+	// Check if session still exists
+	if !p.sessionExists() {
+		return fmt.Errorf("tmux session not found: %s", p.sessionName)
+	}
+
+	// Use tmux send-keys to send input
+	// -l flag sends the input literally (without interpreting keys like Enter)
+	cmd := exec.Command("tmux", "send-keys", "-t", p.sessionName, "-l", input)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to send input: %w", err)
+	}
+
+	// Send Enter key to execute the command
+	cmd = exec.Command("tmux", "send-keys", "-t", p.sessionName, "Enter")
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to send Enter key: %w", err)
+	}
+
+	return nil
+}

@@ -85,6 +85,9 @@ type Manager interface {
 
 	// UpdateStatus updates the status of a session
 	UpdateStatus(ctx context.Context, id string, status Status) error
+
+	// SendInput sends input to a running session
+	SendInput(ctx context.Context, id string, input string) error
 }
 
 // CreateOptions defines options for creating a session
@@ -547,6 +550,29 @@ func (m *manager) UpdateStatus(ctx context.Context, id string, status Status) er
 	}
 
 	return nil
+}
+
+// SendInput sends input to a running session
+func (m *manager) SendInput(ctx context.Context, id string, input string) error {
+	session, err := m.Get(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if session.Status != StatusRunning {
+		return fmt.Errorf("session is not running (status: %s)", session.Status)
+	}
+
+	if session.process == nil {
+		return fmt.Errorf("session process not available")
+	}
+
+	// Check if process supports input sending
+	if sender, ok := session.process.(runtime.InputSender); ok {
+		return sender.SendInput(input)
+	}
+
+	return fmt.Errorf("runtime %s does not support input sending", session.Runtime)
 }
 
 // captureSessionLogs captures session logs to storage

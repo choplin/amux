@@ -34,3 +34,10 @@ type AttachableProcess interface {
 	// Attach attaches to the process terminal
 	Attach() error
 }
+
+// InputSender provides input sending capabilities
+type InputSender interface {
+	Process
+	// SendInput sends input to the process stdin
+	SendInput(input string) error
+}
