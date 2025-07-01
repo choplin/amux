@@ -119,6 +119,7 @@ type Process struct {
 	done      chan struct{}
 	doneOnce  sync.Once
 	metadata  *Metadata
+	logFile   string // Path to log file (for detached processes)
 }
 
 // ID returns the unique identifier for this process
