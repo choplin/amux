@@ -20,13 +20,13 @@ import (
 type mockRuntime struct {
 	mu        sync.RWMutex
 	name      string
-	processes map[string]*mockProcess
+	processes map[string]runtime.Process
 }
 
 func newMockRuntime(name string) *mockRuntime {
 	return &mockRuntime{
 		name:      name,
-		processes: make(map[string]*mockProcess),
+		processes: make(map[string]runtime.Process),
 	}
 }
 
@@ -153,6 +153,17 @@ func (p *mockProcess) Output() (stdout, stderr io.Reader) {
 }
 
 func (p *mockProcess) Metadata() runtime.Metadata {
+	return nil
+}
+
+// mockInputSenderProcess implements both runtime.Process and runtime.InputSender for testing
+type mockInputSenderProcess struct {
+	*mockProcess
+	lastInput string
+}
+
+func (p *mockInputSenderProcess) SendInput(input string) error {
+	p.lastInput = input
 	return nil
 }
 
@@ -477,7 +488,7 @@ func TestManager_StopKill(t *testing.T) {
 	}
 
 	// Get the mock process
-	process := mockRuntime.processes[session.ProcessID]
+	process := mockRuntime.processes[session.ProcessID].(*mockProcess)
 
 	// Test Stop
 	err = mgr.Stop(ctx, session.ID)
@@ -499,7 +510,7 @@ func TestManager_StopKill(t *testing.T) {
 		t.Fatalf("Failed to create session 2: %v", err)
 	}
 
-	process2 := mockRuntime.processes[session2.ProcessID]
+	process2 := mockRuntime.processes[session2.ProcessID].(*mockProcess)
 
 	// Test Kill
 	err = mgr.Kill(ctx, session2.ID)
@@ -527,7 +538,7 @@ func TestManager_Remove(t *testing.T) {
 	}
 
 	// Stop the session first
-	process := mockRuntime.processes[session.ProcessID]
+	process := mockRuntime.processes[session.ProcessID].(*mockProcess)
 	process.Stop(ctx)
 
 	// Wait a bit for monitor goroutine to update status
@@ -661,6 +672,74 @@ func TestManager_AutoCreateWorkspace(t *testing.T) {
 
 	if !ws.AutoCreated {
 		t.Errorf("Expected workspace to be marked as auto-created")
+	}
+}
+
+func TestManager_SendInput(t *testing.T) {
+	mgr, mockRuntime, store := setupTestManager(t)
+	ctx := context.Background()
+
+	// Create a session
+	session, err := mgr.Create(ctx, CreateOptions{
+		WorkspaceID: "test-workspace",
+		Command:     []string{"bash"},
+		Runtime:     "local",
+	})
+	if err != nil {
+		t.Fatalf("Failed to create session: %v", err)
+	}
+
+	// Get the mock process
+	process := mockRuntime.processes[session.ProcessID].(*mockProcess)
+
+	// Make the process implement InputSender
+	mockInputSender := &mockInputSenderProcess{mockProcess: process}
+	mockRuntime.processes[session.ProcessID] = mockInputSender
+
+	// Update the session's process reference to use the InputSender
+	mgr.sessions[session.ID].process = mockInputSender
+
+	// Send input to the session
+	testInput := "test command"
+	err = mgr.SendInput(ctx, session.ID, testInput)
+	if err != nil {
+		t.Fatalf("Failed to send input: %v", err)
+	}
+
+	// Verify the input was sent
+	if mockInputSender.lastInput != testInput {
+		t.Errorf("Expected input %q, got %q", testInput, mockInputSender.lastInput)
+	}
+
+	// Test sending input to non-existent session
+	err = mgr.SendInput(ctx, "non-existent", testInput)
+	if err == nil {
+		t.Error("Expected error for non-existent session")
+	}
+
+	// Test sending input to a stopped session
+	session.Status = StatusStopped
+	store.Save(ctx, session)
+	mgr.sessions[session.ID].Status = StatusStopped
+	err = mgr.SendInput(ctx, session.ID, testInput)
+	if err == nil {
+		t.Error("Expected error for stopped session")
+	}
+
+	// Test with runtime that doesn't support InputSender
+	session2, err := mgr.Create(ctx, CreateOptions{
+		WorkspaceID: "test-workspace",
+		Command:     []string{"echo", "test"},
+		Runtime:     "local",
+	})
+	if err != nil {
+		t.Fatalf("Failed to create session 2: %v", err)
+	}
+
+	// Don't make process2 implement InputSender
+	err = mgr.SendInput(ctx, session2.ID, testInput)
+	if err == nil || !contains(err.Error(), "does not support input sending") {
+		t.Error("Expected error for runtime that doesn't support InputSender")
 	}
 }
 
