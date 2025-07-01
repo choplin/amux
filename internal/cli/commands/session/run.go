@@ -93,6 +93,7 @@ func RunSession(cmd *cobra.Command, args []string) error {
 
 	// Get workspace ID
 	workspaceID := runOpts.workspace
+	autoCreateWorkspace := false
 	if workspaceID == "" {
 		// Try to get current workspace
 		wsMgr, err := workspace.SetupManager(configMgr.GetProjectRoot())
@@ -106,6 +107,10 @@ func RunSession(cmd *cobra.Command, args []string) error {
 					break
 				}
 			}
+		}
+		// If still no workspace, enable auto-creation
+		if workspaceID == "" {
+			autoCreateWorkspace = true
 		}
 	}
 
@@ -125,13 +130,14 @@ func RunSession(cmd *cobra.Command, args []string) error {
 
 	// Create session
 	sess, err := sessionMgr.Create(ctx, session.CreateOptions{
-		WorkspaceID:    workspaceID,
-		TaskName:       taskName,
-		Command:        command,
-		Runtime:        runOpts.runtime,
-		Environment:    env,
-		WorkingDir:     runOpts.workingDir,
-		RuntimeOptions: runtimeOptions,
+		WorkspaceID:         workspaceID,
+		AutoCreateWorkspace: autoCreateWorkspace,
+		TaskName:            taskName,
+		Command:             command,
+		Runtime:             runOpts.runtime,
+		Environment:         env,
+		WorkingDir:          runOpts.workingDir,
+		RuntimeOptions:      runtimeOptions,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create session: %w", err)
@@ -143,6 +149,17 @@ func RunSession(cmd *cobra.Command, args []string) error {
 		ui.Info("Task: %s", sess.TaskName)
 	}
 	if sess.WorkspaceID != "" {
+		// Check if workspace was auto-created
+		if autoCreateWorkspace {
+			// Get workspace manager to resolve the workspace name
+			wsMgr, err := workspace.SetupManager(configMgr.GetProjectRoot())
+			if err == nil {
+				ws, err := wsMgr.Get(ctx, workspace.ID(sess.WorkspaceID))
+				if err == nil && ws.AutoCreated {
+					ui.Success("Workspace created: %s", ws.Name)
+				}
+			}
+		}
 		ui.Info("Workspace: %s", sess.WorkspaceID)
 	}
 

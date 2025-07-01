@@ -13,12 +13,13 @@ import (
 
 // SessionRunParams defines parameters for session_run tool
 type SessionRunParams struct {
-	WorkspaceID string            `json:"workspace_id,omitempty" jsonschema:"description=Workspace ID to run the session in"`
-	TaskName    string            `json:"task_name,omitempty" jsonschema:"description=Name of a predefined task to run"`
-	Command     []string          `json:"command,omitempty" jsonschema:"description=Command and arguments to run (if no task specified)"`
-	Runtime     string            `json:"runtime,omitempty" jsonschema:"description=Runtime to use (local, tmux),default=local"`
-	Environment map[string]string `json:"environment,omitempty" jsonschema:"description=Additional environment variables"`
-	WorkingDir  string            `json:"working_dir,omitempty" jsonschema:"description=Working directory override"`
+	WorkspaceID         string            `json:"workspace_id,omitempty" jsonschema:"description=Workspace ID to run the session in"`
+	AutoCreateWorkspace bool              `json:"auto_create_workspace,omitempty" jsonschema:"description=Auto-create workspace if not specified,default=true"`
+	TaskName            string            `json:"task_name,omitempty" jsonschema:"description=Name of a predefined task to run"`
+	Command             []string          `json:"command,omitempty" jsonschema:"description=Command and arguments to run (if no task specified)"`
+	Runtime             string            `json:"runtime,omitempty" jsonschema:"description=Runtime to use (local, tmux),default=local"`
+	Environment         map[string]string `json:"environment,omitempty" jsonschema:"description=Additional environment variables"`
+	WorkingDir          string            `json:"working_dir,omitempty" jsonschema:"description=Working directory override"`
 }
 
 // SessionListParams defines parameters for session_list tool
@@ -40,7 +41,9 @@ type SessionLogsParams struct {
 
 // SessionRemoveParams defines parameters for session_remove tool
 type SessionRemoveParams struct {
-	SessionID string `json:"session_id" jsonschema:"description=Session ID to remove,required"`
+	SessionID     string `json:"session_id" jsonschema:"description=Session ID to remove,required"`
+	KeepWorkspace bool   `json:"keep_workspace,omitempty" jsonschema:"description=Keep auto-created workspace when removing session,default=false"`
+	Force         bool   `json:"force,omitempty" jsonschema:"description=Force removal by stopping running sessions first,default=false"`
 }
 
 // registerSessionTools registers session-related MCP tools
@@ -92,6 +95,15 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 
 	if workspaceID, ok := args["workspace_id"].(string); ok {
 		opts.WorkspaceID = workspaceID
+	}
+	// Enable auto-create by default in MCP unless explicitly disabled
+	autoCreate := true
+	if val, ok := args["auto_create_workspace"].(bool); ok {
+		autoCreate = val
+	}
+	// Only enable auto-create if no workspace ID is provided
+	if opts.WorkspaceID == "" {
+		opts.AutoCreateWorkspace = autoCreate
 	}
 	if taskName, ok := args["task_name"].(string); ok {
 		opts.TaskName = taskName
@@ -290,5 +302,5 @@ func (s *ServerV2) getSessionManager() session.Manager {
 	store := session.NewFileStore(s.configManager.GetAmuxDir())
 
 	// Create session manager
-	return session.NewManager(store, runtimes, taskMgr)
+	return session.NewManager(store, runtimes, taskMgr, s.workspaceManager)
 }

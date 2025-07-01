@@ -13,6 +13,7 @@ import (
 
 	"github.com/aki/amux/internal/runtime"
 	"github.com/aki/amux/internal/task"
+	"github.com/aki/amux/internal/workspace"
 )
 
 // mockRuntime implements runtime.Runtime for testing
@@ -207,6 +208,45 @@ func (s *mockStore) GetLogs(ctx context.Context, id string) (LogReader, error) {
 	return &simpleLogReader{reader: nil}, nil
 }
 
+// mockWorkspaceManager implements WorkspaceManager interface for testing
+type mockWorkspaceManager struct {
+	mu         sync.RWMutex
+	workspaces map[string]*workspace.Workspace
+	idCounter  int
+}
+
+func newMockWorkspaceManager() *mockWorkspaceManager {
+	return &mockWorkspaceManager{
+		workspaces: make(map[string]*workspace.Workspace),
+	}
+}
+
+func (m *mockWorkspaceManager) Create(ctx context.Context, opts workspace.CreateOptions) (*workspace.Workspace, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.idCounter++
+	ws := &workspace.Workspace{
+		ID:          fmt.Sprintf("ws-%d", m.idCounter),
+		Name:        opts.Name,
+		Description: opts.Description,
+		AutoCreated: opts.AutoCreated,
+		CreatedAt:   time.Now(),
+	}
+	m.workspaces[ws.ID] = ws
+	return ws, nil
+}
+
+func (m *mockWorkspaceManager) Get(ctx context.Context, id workspace.ID) (*workspace.Workspace, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	ws, ok := m.workspaces[string(id)]
+	if !ok {
+		return nil, fmt.Errorf("workspace not found")
+	}
+	return ws, nil
+}
+
 // Test setup helpers
 func setupTestManager(t *testing.T) (*manager, *mockRuntime, *mockStore) {
 	store := newMockStore()
@@ -219,8 +259,8 @@ func setupTestManager(t *testing.T) (*manager, *mockRuntime, *mockStore) {
 	}
 
 	taskMgr := task.NewManager() // No task file for tests
-
-	mgr := NewManager(store, runtimes, taskMgr).(*manager)
+	// For testing, we'll use nil workspace manager and check for nil in the code
+	mgr := NewManager(store, runtimes, taskMgr, nil).(*manager)
 
 	return mgr, mockLocal, store
 }
@@ -312,7 +352,8 @@ func TestManager_CreateWithTask(t *testing.T) {
 		t.Fatalf("Failed to load tasks: %v", err)
 	}
 
-	mgr := NewManager(store, runtimes, taskMgr).(*manager)
+	// For testing, we'll use nil workspace manager
+	mgr := NewManager(store, runtimes, taskMgr, nil).(*manager)
 	ctx := context.Background()
 
 	opts := CreateOptions{
@@ -573,6 +614,53 @@ func TestManager_IDGeneration(t *testing.T) {
 		if session.ID != expectedID {
 			t.Errorf("Expected session ID %s, got %s", expectedID, session.ID)
 		}
+	}
+}
+
+// TestManager_AutoCreateWorkspace tests the auto-workspace creation feature
+func TestManager_AutoCreateWorkspace(t *testing.T) {
+	store := newMockStore()
+	mockLocal := newMockRuntime("local")
+
+	runtimes := map[string]runtime.Runtime{
+		"local": mockLocal,
+	}
+
+	taskMgr := task.NewManager()
+	// Use a mock workspace manager for this test
+	wsMgr := newMockWorkspaceManager()
+	mgr := NewManager(store, runtimes, taskMgr, wsMgr).(*manager)
+	ctx := context.Background()
+
+	// Test auto-create workspace
+	opts := CreateOptions{
+		AutoCreateWorkspace: true,
+		Command:             []string{"echo", "test"},
+		Runtime:             "local",
+	}
+
+	sess, err := mgr.Create(ctx, opts)
+	if err != nil {
+		t.Fatalf("Failed to create session with auto-workspace: %v", err)
+	}
+
+	// Check that workspace ID was set
+	if sess.WorkspaceID == "" {
+		t.Errorf("Expected workspace ID to be set, but it was empty")
+	}
+
+	// Check that workspace was created with correct name
+	ws, err := wsMgr.Get(ctx, workspace.ID(sess.WorkspaceID))
+	if err != nil {
+		t.Fatalf("Failed to get auto-created workspace: %v", err)
+	}
+
+	if ws.Name != sess.ID {
+		t.Errorf("Expected workspace name %s, got %s", sess.ID, ws.Name)
+	}
+
+	if !ws.AutoCreated {
+		t.Errorf("Expected workspace to be marked as auto-created")
 	}
 }
 

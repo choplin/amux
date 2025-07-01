@@ -11,7 +11,13 @@ import (
 
 	"github.com/aki/amux/internal/runtime"
 	"github.com/aki/amux/internal/task"
+	"github.com/aki/amux/internal/workspace"
 )
+
+// WorkspaceManager defines the interface for workspace operations needed by session manager
+type WorkspaceManager interface {
+	Create(ctx context.Context, opts workspace.CreateOptions) (*workspace.Workspace, error)
+}
 
 // Status represents the current state of a session
 type Status string
@@ -81,14 +87,15 @@ type Manager interface {
 
 // CreateOptions defines options for creating a session
 type CreateOptions struct {
-	WorkspaceID    string                 // Workspace to run in
-	TaskName       string                 // Task to execute (optional)
-	Command        []string               // Direct command (if no task)
-	Runtime        string                 // Runtime to use (default: local)
-	Environment    map[string]string      // Additional environment variables
-	WorkingDir     string                 // Working directory override
-	Metadata       map[string]interface{} // Additional metadata
-	RuntimeOptions runtime.RuntimeOptions // Runtime-specific options
+	WorkspaceID         string                 // Workspace to run in
+	AutoCreateWorkspace bool                   // Auto-create workspace if not specified
+	TaskName            string                 // Task to execute (optional)
+	Command             []string               // Direct command (if no task)
+	Runtime             string                 // Runtime to use (default: local)
+	Environment         map[string]string      // Additional environment variables
+	WorkingDir          string                 // Working directory override
+	Metadata            map[string]interface{} // Additional metadata
+	RuntimeOptions      runtime.RuntimeOptions // Runtime-specific options
 }
 
 // LogReader provides access to session logs
@@ -101,27 +108,57 @@ type LogReader interface {
 
 // manager implements the Manager interface
 type manager struct {
-	mu        sync.RWMutex
-	sessions  map[string]*Session
-	store     Store
-	runtimes  map[string]runtime.Runtime
-	tasks     *task.Manager
-	idCounter int
+	mu               sync.RWMutex
+	sessions         map[string]*Session
+	store            Store
+	runtimes         map[string]runtime.Runtime
+	tasks            *task.Manager
+	workspaceManager WorkspaceManager
+	idCounter        int
 }
 
 // NewManager creates a new session manager
-func NewManager(store Store, runtimes map[string]runtime.Runtime, tasks *task.Manager) Manager {
+func NewManager(store Store, runtimes map[string]runtime.Runtime, tasks *task.Manager, workspaceManager WorkspaceManager) Manager {
 	return &manager{
-		sessions:  make(map[string]*Session),
-		store:     store,
-		runtimes:  runtimes,
-		tasks:     tasks,
-		idCounter: 0,
+		sessions:         make(map[string]*Session),
+		store:            store,
+		runtimes:         runtimes,
+		tasks:            tasks,
+		workspaceManager: workspaceManager,
+		idCounter:        0,
 	}
 }
 
 // Create starts a new session
 func (m *manager) Create(ctx context.Context, opts CreateOptions) (*Session, error) {
+	// Generate session ID first to use in workspace name
+	m.mu.Lock()
+	sessionID := fmt.Sprintf("session-%d", m.idCounter+1)
+	m.idCounter++
+	m.mu.Unlock()
+
+	// Handle auto workspace creation
+	if opts.AutoCreateWorkspace && opts.WorkspaceID == "" {
+		if m.workspaceManager == nil {
+			return nil, fmt.Errorf("workspace manager not available for auto-creation")
+		}
+		// Create workspace with name based on session ID
+		// Extract numeric part from sessionID (e.g., "session-1" -> "1")
+		workspaceName := sessionID // Use full session ID as workspace name
+		workspaceDesc := fmt.Sprintf("Auto-created for %s", sessionID)
+
+		ws, err := m.workspaceManager.Create(ctx, workspace.CreateOptions{
+			Name:        workspaceName,
+			Description: workspaceDesc,
+			AutoCreated: true,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create auto-workspace: %w", err)
+		}
+
+		opts.WorkspaceID = ws.ID
+	}
+
 	// Validate runtime
 	if opts.Runtime == "" {
 		opts.Runtime = "local"
@@ -177,12 +214,6 @@ func (m *manager) Create(ctx context.Context, opts CreateOptions) (*Session, err
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute: %w", err)
 	}
-
-	// Create session
-	m.mu.Lock()
-	sessionID := fmt.Sprintf("session-%d", m.idCounter+1)
-	m.idCounter++
-	m.mu.Unlock()
 
 	// Get process metadata
 	var metadata map[string]interface{}
