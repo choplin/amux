@@ -2,11 +2,10 @@
 package session
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
-	"os"
-	"os/exec"
 	"sync"
 	"time"
 
@@ -391,16 +390,14 @@ func (m *manager) Attach(ctx context.Context, id string) error {
 		return fmt.Errorf("session is not running")
 	}
 
-	// For tmux runtime, we need special handling
-	if session.Runtime == "tmux" {
-		// Use tmux attach-session command
-		cmd := exec.Command("tmux", "attach-session", "-t", session.ProcessID)
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
+	if session.process == nil {
+		return fmt.Errorf("session process not available")
+	}
 
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to attach to tmux session: %w", err)
+	// Check if process supports attach capability
+	if attachable, ok := session.process.(runtime.AttachableProcess); ok {
+		if err := attachable.Attach(); err != nil {
+			return fmt.Errorf("failed to attach to session: %w", err)
 		}
 		return nil
 	}
@@ -420,12 +417,56 @@ func (m *manager) Logs(ctx context.Context, id string, follow bool) (LogReader, 
 		return m.store.GetLogs(ctx, id)
 	}
 
-	// Get process output
-	stdout, _ := session.process.Output()
+	// Check if process supports output streaming
+	if streamer, ok := session.process.(runtime.OutputStreamer); ok {
+		if follow {
+			// Create a pipe reader for streaming
+			pr, pw := io.Pipe()
 
-	// TODO: Implement proper log reader that combines stdout/stderr
-	// For now, return stdout
-	return &simpleLogReader{reader: stdout}, nil
+			// Start streaming in background
+			go func() {
+				defer pw.Close()
+				opts := runtime.StreamOptions{
+					PollInterval: 100 * time.Millisecond,
+					ClearScreen:  false, // Don't clear screen for logs
+				}
+				if err := streamer.StreamOutput(ctx, pw, opts); err != nil && err != context.Canceled {
+					// Write error to pipe
+					fmt.Fprintf(pw, "\n[Error streaming logs: %v]\n", err)
+				}
+			}()
+
+			return &simpleLogReader{reader: pr}, nil
+		}
+
+		// Non-follow mode: capture output once
+		output, err := streamer.CaptureOutput(0) // 0 = capture all
+		if err != nil {
+			return nil, fmt.Errorf("failed to capture output: %w", err)
+		}
+
+		return &simpleLogReader{reader: io.NopCloser(io.MultiReader(
+			bytes.NewReader(output),
+		))}, nil
+	}
+
+	// Check if process supports basic output capture
+	if capture, ok := session.process.(runtime.OutputCapture); ok {
+		output, err := capture.CaptureOutput(0) // 0 = capture all
+		if err != nil {
+			return nil, fmt.Errorf("failed to capture output: %w", err)
+		}
+
+		return &simpleLogReader{reader: io.NopCloser(bytes.NewReader(output))}, nil
+	}
+
+	// Fallback to old method
+	stdout, _ := session.process.Output()
+	if stdout != nil {
+		return &simpleLogReader{reader: stdout}, nil
+	}
+
+	return nil, fmt.Errorf("logs not available for runtime: %s", session.Runtime)
 }
 
 // Remove deletes a stopped session

@@ -4,6 +4,7 @@ package session
 import (
 	"fmt"
 
+	"github.com/aki/amux/internal/cli/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -28,12 +29,17 @@ func AttachSession(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Get session details for output
+	session, err := sessionMgr.Get(ctx, sessionID)
+	if err != nil {
+		return fmt.Errorf("session '%s' not found. Run 'amux ps' to see active sessions", sessionID)
+	}
+
+	// Show attachment info
+	ui.OutputLine("Attaching to session '%s' (runtime: %s)", session.ID, session.Runtime)
+
 	// Attach to session
 	if err := sessionMgr.Attach(ctx, sessionID); err != nil {
-		// Check if session not found
-		if _, getErr := sessionMgr.Get(ctx, sessionID); getErr != nil {
-			return fmt.Errorf("session '%s' not found. Run 'amux ps' to see active sessions", sessionID)
-		}
 		return fmt.Errorf("failed to attach to session '%s': %w", sessionID, err)
 	}
 
