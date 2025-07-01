@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"hash/fnv"
 	"io"
 	"os"
 	"os/exec"
@@ -13,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/charmbracelet/x/term"
 	"github.com/google/uuid"
 
 	"github.com/aki/amux/internal/runtime"
@@ -383,6 +385,109 @@ func (p *Process) capturePane() (string, error) {
 	}
 
 	return string(output), nil
+}
+
+// CaptureOutput implements runtime.OutputCapture
+func (p *Process) CaptureOutput(lines int) ([]byte, error) {
+	// Check if process is still running
+	if !p.sessionExists() {
+		return nil, fmt.Errorf("session no longer exists")
+	}
+
+	// If lines is 0, capture based on terminal size
+	if lines == 0 {
+		// Get terminal size
+		_, height, err := term.GetSize(os.Stdout.Fd())
+		if err != nil || height < 10 {
+			lines = 30 // Default fallback
+		} else {
+			lines = height - 2 // Reserve 2 lines for status
+		}
+	}
+
+	// Capture the specified number of lines from the bottom
+	cmd := p.runtime.tmuxCmd(p.opts.SocketPath, "capture-pane", "-t", p.sessionName,
+		"-p",                            // print to stdout
+		"-e",                            // include escape sequences
+		"-S", fmt.Sprintf("-%d", lines), // start from N lines up
+	)
+
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to capture output: %w", err)
+	}
+
+	return output, nil
+}
+
+// StreamOutput implements runtime.OutputStreamer
+func (p *Process) StreamOutput(ctx context.Context, w io.Writer, opts runtime.StreamOptions) error {
+	// Set default poll interval if not specified
+	if opts.PollInterval == 0 {
+		opts.PollInterval = time.Second
+	}
+
+	ticker := time.NewTicker(opts.PollInterval)
+	defer ticker.Stop()
+
+	var lastHash uint32
+
+	// Initial output
+	output, err := p.CaptureOutput(0)
+	if err != nil {
+		return fmt.Errorf("failed to get initial output: %w", err)
+	}
+
+	// Display initial output
+	if len(output) > 0 {
+		if opts.ClearScreen {
+			// Clear screen and move cursor to top-left
+			w.Write([]byte("\033[2J\033[H"))
+		}
+		w.Write(output)
+
+		// Calculate initial hash
+		h := fnv.New32a()
+		h.Write(output)
+		lastHash = h.Sum32()
+	}
+
+	// Stream updates
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+			// Check if session still exists
+			if !p.sessionExists() {
+				return nil // Session ended
+			}
+
+			// Get current output
+			output, err := p.CaptureOutput(0)
+			if err != nil {
+				// Session might have ended
+				if !p.sessionExists() {
+					return nil
+				}
+				return fmt.Errorf("failed to capture output: %w", err)
+			}
+
+			// Check if content changed using hash
+			h := fnv.New32a()
+			h.Write(output)
+			currentHash := h.Sum32()
+
+			if currentHash != lastHash {
+				if opts.ClearScreen {
+					// Clear screen and redraw
+					w.Write([]byte("\033[2J\033[H"))
+				}
+				w.Write(output)
+				lastHash = currentHash
+			}
+		}
+	}
 }
 
 // isPaneDead checks if the pane is dead
