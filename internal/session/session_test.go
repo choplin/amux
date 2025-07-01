@@ -159,12 +159,43 @@ func (p *mockProcess) Metadata() runtime.Metadata {
 // mockInputSenderProcess implements both runtime.Process and runtime.InputSender for testing
 type mockInputSenderProcess struct {
 	*mockProcess
+	mu        sync.RWMutex
 	lastInput string
 }
 
 func (p *mockInputSenderProcess) SendInput(input string) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	p.lastInput = input
 	return nil
+}
+
+// mockRuntimeWithInputSender is a mock runtime that creates InputSender processes
+type mockRuntimeWithInputSender struct {
+	*mockRuntime
+}
+
+func (r *mockRuntimeWithInputSender) Execute(ctx context.Context, spec runtime.ExecutionSpec) (runtime.Process, error) {
+	if len(spec.Command) == 0 {
+		return nil, fmt.Errorf("empty command")
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	processID := fmt.Sprintf("mock-process-%d", len(r.processes)+1)
+	process := &mockInputSenderProcess{
+		mockProcess: &mockProcess{
+			id:        processID,
+			spec:      spec,
+			state:     runtime.StateRunning,
+			startTime: time.Now(),
+			exitCh:    make(chan struct{}),
+		},
+	}
+
+	r.processes[processID] = process
+	return process, nil
 }
 
 // mockStore implements Store for testing
@@ -676,28 +707,32 @@ func TestManager_AutoCreateWorkspace(t *testing.T) {
 }
 
 func TestManager_SendInput(t *testing.T) {
-	mgr, mockRuntime, store := setupTestManager(t)
+	// Create a custom runtime that supports InputSender from the start
+	store := newMockStore()
+	mockInputRuntime := &mockRuntimeWithInputSender{
+		mockRuntime: newMockRuntime("local-input"),
+	}
+	mockRuntime := newMockRuntime("local")
+
+	runtimes := map[string]runtime.Runtime{
+		"local-input": mockInputRuntime,
+		"local":       mockRuntime,
+		"tmux":        newMockRuntime("tmux"),
+	}
+
+	taskMgr := task.NewManager()
+	mgr := NewManager(store, runtimes, taskMgr, nil).(*manager)
 	ctx := context.Background()
 
-	// Create a session
+	// Create a session with input-supporting runtime
 	session, err := mgr.Create(ctx, CreateOptions{
 		WorkspaceID: "test-workspace",
 		Command:     []string{"bash"},
-		Runtime:     "local",
+		Runtime:     "local-input",
 	})
 	if err != nil {
 		t.Fatalf("Failed to create session: %v", err)
 	}
-
-	// Get the mock process
-	process := mockRuntime.processes[session.ProcessID].(*mockProcess)
-
-	// Make the process implement InputSender
-	mockInputSender := &mockInputSenderProcess{mockProcess: process}
-	mockRuntime.processes[session.ProcessID] = mockInputSender
-
-	// Update the session's process reference to use the InputSender
-	mgr.sessions[session.ID].process = mockInputSender
 
 	// Send input to the session
 	testInput := "test command"
@@ -706,9 +741,18 @@ func TestManager_SendInput(t *testing.T) {
 		t.Fatalf("Failed to send input: %v", err)
 	}
 
+	// Get the input sender process to verify
+	mockInputRuntime.mu.RLock()
+	inputSender := mockInputRuntime.processes[session.ProcessID].(*mockInputSenderProcess)
+	mockInputRuntime.mu.RUnlock()
+
 	// Verify the input was sent
-	if mockInputSender.lastInput != testInput {
-		t.Errorf("Expected input %q, got %q", testInput, mockInputSender.lastInput)
+	inputSender.mu.RLock()
+	actualInput := inputSender.lastInput
+	inputSender.mu.RUnlock()
+
+	if actualInput != testInput {
+		t.Errorf("Expected input %q, got %q", testInput, actualInput)
 	}
 
 	// Test sending input to non-existent session
@@ -718,9 +762,11 @@ func TestManager_SendInput(t *testing.T) {
 	}
 
 	// Test sending input to a stopped session
-	session.Status = StatusStopped
-	store.Save(ctx, session)
+	mgr.mu.Lock()
 	mgr.sessions[session.ID].Status = StatusStopped
+	mgr.mu.Unlock()
+	store.Save(ctx, mgr.sessions[session.ID])
+
 	err = mgr.SendInput(ctx, session.ID, testInput)
 	if err == nil {
 		t.Error("Expected error for stopped session")
