@@ -75,7 +75,7 @@ func (r *DetachedRuntime) Execute(ctx context.Context, spec amuxruntime.Executio
 
 	// Start the process
 	if err := cmd.Start(); err != nil {
-		outFile.Close()
+		_ = outFile.Close()
 		return nil, fmt.Errorf("failed to start process: %w", err)
 	}
 
@@ -99,7 +99,7 @@ func (r *DetachedRuntime) Execute(ctx context.Context, spec amuxruntime.Executio
 	go func() {
 		proc.monitor()
 		// Close the log file when process completes
-		outFile.Close()
+		_ = outFile.Close()
 	}()
 
 	// Detached processes don't handle context cancellation
@@ -127,7 +127,7 @@ func (p *Process) CaptureOutput(lines int) ([]byte, error) {
 		}
 		return nil, fmt.Errorf("failed to open log file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	// If lines is 0, read the entire file
 	if lines == 0 {
@@ -179,7 +179,7 @@ func (p *Process) StreamOutput(ctx context.Context, w io.Writer, opts amuxruntim
 		}
 		return fmt.Errorf("failed to open log file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	// StreamOutput always follows the file, reading from beginning
 
@@ -201,7 +201,7 @@ func (p *Process) StreamOutput(ctx context.Context, w io.Writer, opts amuxruntim
 						// Process completed, read any remaining data
 						remaining, _ := io.ReadAll(reader)
 						if len(remaining) > 0 {
-							w.Write(remaining)
+							_, _ = w.Write(remaining)
 						}
 						return nil
 					case <-time.After(100 * time.Millisecond):

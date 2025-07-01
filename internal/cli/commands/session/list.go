@@ -285,18 +285,6 @@ func formatDuration(d time.Duration) string {
 	return fmt.Sprintf("%dd", int(d.Hours()/24))
 }
 
-// formatDurationAgo formats a duration with "ago" suffix for better readability
-func formatDurationAgo(d time.Duration) string {
-	if d < time.Minute {
-		return fmt.Sprintf("%ds ago", int(d.Seconds()))
-	} else if d < time.Hour {
-		return fmt.Sprintf("%dm ago", int(d.Minutes()))
-	} else if d < 24*time.Hour {
-		return fmt.Sprintf("%dh ago", int(d.Hours()))
-	}
-	return fmt.Sprintf("%dd ago", int(d.Hours()/24))
-}
-
 // formatStatus formats the session status with color coding
 func formatStatus(status session.Status, exitCode *int) string {
 	statusStr := string(status)
@@ -316,6 +304,8 @@ func formatStatus(status session.Status, exitCode *int) string {
 		return ui.DimStyle.Render(statusStr)
 	case session.StatusFailed:
 		return ui.ErrorStyle.Render(statusStr)
+	case session.StatusUnknown:
+		return ui.DimStyle.Render(statusStr)
 	default:
 		return statusStr
 	}

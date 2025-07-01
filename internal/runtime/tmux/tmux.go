@@ -453,9 +453,9 @@ func (p *Process) StreamOutput(ctx context.Context, w io.Writer, opts runtime.St
 	if len(output) > 0 {
 		if opts.ClearScreen {
 			// Clear screen and move cursor to top-left
-			w.Write([]byte("\033[2J\033[H"))
+			_, _ = w.Write([]byte("\033[2J\033[H"))
 		}
-		w.Write(output)
+		_, _ = w.Write(output)
 
 		// Calculate initial hash
 		h := fnv.New32a()
@@ -492,9 +492,9 @@ func (p *Process) StreamOutput(ctx context.Context, w io.Writer, opts runtime.St
 			if currentHash != lastHash {
 				if opts.ClearScreen {
 					// Clear screen and redraw
-					w.Write([]byte("\033[2J\033[H"))
+					_, _ = w.Write([]byte("\033[2J\033[H"))
 				}
-				w.Write(output)
+				_, _ = w.Write(output)
 				lastHash = currentHash
 			}
 		}

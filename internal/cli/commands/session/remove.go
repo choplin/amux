@@ -81,15 +81,15 @@ func RemoveSession(cmd *cobra.Command, args []string) error {
 		// Create workspace manager
 		wsMgr, err := workspace.SetupManager(configMgr.GetProjectRoot())
 		if err != nil {
-			// If we can't create workspace manager, skip workspace removal
-			return nil
+			// If we can't create workspace manager, skip workspace removal silently
+			return nil //nolint:nilerr // Intentionally returning nil to continue gracefully
 		}
 
 		// Get workspace to check if it was auto-created
 		ws, err := wsMgr.Get(ctx, workspace.ID(workspaceID))
 		if err != nil {
-			// Workspace might already be removed or not found, skip auto-removal
-			return nil
+			// Workspace might already be removed or not found, skip auto-removal silently
+			return nil //nolint:nilerr // Intentionally returning nil to continue gracefully
 		}
 
 		// If workspace was auto-created, try to remove it

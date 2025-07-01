@@ -465,14 +465,14 @@ func (m *manager) Logs(ctx context.Context, id string, follow bool) (LogReader, 
 
 			// Start streaming in background
 			go func() {
-				defer pw.Close()
+				defer func() { _ = pw.Close() }()
 				opts := runtime.StreamOptions{
 					PollInterval: 100 * time.Millisecond,
 					ClearScreen:  false, // Don't clear screen for logs
 				}
 				if err := streamer.StreamOutput(ctx, pw, opts); err != nil && err != context.Canceled {
 					// Write error to pipe
-					fmt.Fprintf(pw, "\n[Error streaming logs: %v]\n", err)
+					_, _ = fmt.Fprintf(pw, "\n[Error streaming logs: %v]\n", err)
 				}
 			}()
 
