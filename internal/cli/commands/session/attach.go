@@ -3,9 +3,7 @@ package session
 
 import (
 	"fmt"
-	"os"
 
-	"github.com/aki/amux/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -24,24 +22,19 @@ func AttachSession(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	sessionID := args[0]
 
-	// Get working directory
-	wd, err := os.Getwd()
+	// Setup managers with project root detection
+	_, sessionMgr, err := setupManagers()
 	if err != nil {
-		return fmt.Errorf("failed to get working directory: %w", err)
+		return err
 	}
-
-	// Create config manager
-	configMgr := config.NewManager(wd)
-	if !configMgr.IsInitialized() {
-		return fmt.Errorf("amux not initialized. Run 'amux init' first")
-	}
-
-	// Get session manager
-	sessionMgr := getSessionManager(configMgr)
 
 	// Attach to session
 	if err := sessionMgr.Attach(ctx, sessionID); err != nil {
-		return fmt.Errorf("failed to attach to session: %w", err)
+		// Check if session not found
+		if _, getErr := sessionMgr.Get(ctx, sessionID); getErr != nil {
+			return fmt.Errorf("session '%s' not found. Run 'amux ps' to see active sessions", sessionID)
+		}
+		return fmt.Errorf("failed to attach to session '%s': %w", sessionID, err)
 	}
 
 	return nil

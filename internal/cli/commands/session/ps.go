@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/aki/amux/internal/cli/ui"
-	"github.com/aki/amux/internal/config"
 	"github.com/aki/amux/internal/session"
 	"github.com/aki/amux/internal/workspace"
 	"github.com/spf13/cobra"
@@ -57,16 +56,10 @@ func SetPsFormat(format string) {
 func ListSessions(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
-	// Get working directory
-	wd, err := os.Getwd()
+	// Setup managers with project root detection
+	configMgr, sessionMgr, err := setupManagers()
 	if err != nil {
-		return fmt.Errorf("failed to get working directory: %w", err)
-	}
-
-	// Create config manager
-	configMgr := config.NewManager(wd)
-	if !configMgr.IsInitialized() {
-		return fmt.Errorf("amux not initialized. Run 'amux init' first")
+		return err
 	}
 
 	// Determine workspace filter
@@ -76,7 +69,7 @@ func ListSessions(cmd *cobra.Command, args []string) error {
 			workspaceID = psOpts.workspace
 		} else {
 			// Try to get current workspace
-			wsMgr, err := workspace.SetupManager(wd)
+			wsMgr, err := workspace.SetupManager(configMgr.GetProjectRoot())
 			if err == nil {
 				// Check if we're in a workspace directory
 				currentPath, _ := os.Getwd()
@@ -91,9 +84,6 @@ func ListSessions(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Get session manager
-	sessionMgr := getSessionManager(configMgr)
-
 	// List sessions
 	sessions, err := sessionMgr.List(ctx, workspaceID)
 	if err != nil {
@@ -101,7 +91,11 @@ func ListSessions(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(sessions) == 0 {
-		ui.Info("No sessions found")
+		if workspaceID != "" {
+			ui.Info("No active sessions in workspace %s", workspaceID)
+		} else {
+			ui.Info("No active sessions")
+		}
 		return nil
 	}
 
@@ -124,69 +118,146 @@ func ListSessions(cmd *cobra.Command, args []string) error {
 
 // displaySessions shows sessions in a table format
 func displaySessions(sessions []*session.Session) {
-	// Header
-	fmt.Printf("%-8s %-12s %-10s %-8s %-10s %s\n",
-		"ID", "WORKSPACE", "RUNTIME", "STATUS", "STARTED", "COMMAND")
-	fmt.Println(strings.Repeat("-", 70))
+	// Prepare table data
+	headers := []string{"ID", "NAME", "STATUS", "RUNTIME", "WORKSPACE", "TASK", "CREATED"}
 
-	// Rows
+	var rows [][]string
 	for _, s := range sessions {
+		// Format status with exit code if available
+		status := string(s.Status)
+		if s.ExitCode != nil && *s.ExitCode != 0 {
+			status = fmt.Sprintf("%s(%d)", status, *s.ExitCode)
+		}
+
+		// Runtime information
+		runtime := s.Runtime
+		if runtime == "" {
+			runtime = "unknown"
+		}
+
+		// Task information (new)
+		task := s.TaskName
+		if task == "" {
+			task = "-"
+		}
+
+		// Workspace
 		workspace := s.WorkspaceID
 		if workspace == "" {
 			workspace = "-"
-		} else if len(workspace) > 10 {
-			workspace = workspace[:10]
 		}
 
-		started := time.Since(s.StartedAt).Round(time.Second)
-		command := strings.Join(s.Command, " ")
-		if len(command) > 30 {
-			command = command[:27] + "..."
-		}
+		// Human-readable time
+		created := formatDurationAgo(time.Since(s.StartedAt))
 
-		fmt.Printf("%-8s %-12s %-10s %-8s %-10s %s\n",
-			s.ID, workspace, s.Runtime, s.Status, formatDuration(started), command)
+		// Session name (use ID for now as Name field doesn't exist)
+		name := s.ID
+
+		rows = append(rows, []string{
+			s.ID,
+			name,
+			status,
+			runtime,
+			workspace,
+			task,
+			created,
+		})
 	}
+
+	// Create and print table
+	headerInterfaces := make([]interface{}, len(headers))
+	for i, h := range headers {
+		headerInterfaces[i] = h
+	}
+	tbl := ui.NewTable(headerInterfaces...)
+	for _, row := range rows {
+		tbl.AddRow(row[0], row[1], row[2], row[3], row[4], row[5], row[6])
+	}
+	tbl.Print()
 }
 
 // displaySessionsWide shows sessions with more details
 func displaySessionsWide(sessions []*session.Session) {
-	// Header
-	fmt.Printf("%-8s %-12s %-10s %-8s %-8s %-10s %-10s %s\n",
-		"ID", "WORKSPACE", "RUNTIME", "STATUS", "PID", "STARTED", "DURATION", "COMMAND")
-	fmt.Println(strings.Repeat("-", 90))
+	// Prepare table data
+	headers := []string{"ID", "NAME", "STATUS", "RUNTIME", "WORKSPACE", "TASK", "PID", "STARTED", "DURATION", "COMMAND"}
 
-	// Rows
+	var rows [][]string
 	for _, s := range sessions {
+		// Format status with exit code if available
+		status := string(s.Status)
+		if s.ExitCode != nil && *s.ExitCode != 0 {
+			status = fmt.Sprintf("%s(%d)", status, *s.ExitCode)
+		}
+
+		// Runtime information
+		runtime := s.Runtime
+		if runtime == "" {
+			runtime = "unknown"
+		}
+
+		// Task information
+		task := s.TaskName
+		if task == "" {
+			task = "-"
+		}
+
+		// Workspace
 		workspace := s.WorkspaceID
 		if workspace == "" {
 			workspace = "-"
-		} else if len(workspace) > 10 {
-			workspace = workspace[:10]
 		}
 
+		// Process ID
 		pid := s.ProcessID
 		if pid == "" {
 			pid = "-"
 		}
 
+		// Started time
 		started := s.StartedAt.Format("15:04:05")
 
+		// Duration
 		var duration string
 		if s.StoppedAt != nil {
-			duration = s.StoppedAt.Sub(s.StartedAt).Round(time.Second).String()
+			duration = formatDuration(s.StoppedAt.Sub(s.StartedAt))
 		} else {
-			duration = time.Since(s.StartedAt).Round(time.Second).String()
+			duration = formatDuration(time.Since(s.StartedAt))
 		}
 
+		// Command
 		command := strings.Join(s.Command, " ")
-		if len(command) > 40 {
-			command = command[:37] + "..."
+		if command == "" {
+			command = "-"
 		}
 
-		fmt.Printf("%-8s %-12s %-10s %-8s %-8s %-10s %-10s %s\n",
-			s.ID, workspace, s.Runtime, s.Status, pid, started, duration, command)
+		// Session name (use ID for now as Name field doesn't exist)
+		name := s.ID
+
+		rows = append(rows, []string{
+			s.ID,
+			name,
+			status,
+			runtime,
+			workspace,
+			task,
+			pid,
+			started,
+			duration,
+			command,
+		})
 	}
+
+	// Create and print table
+	headerInterfaces := make([]interface{}, len(headers))
+	for i, h := range headers {
+		headerInterfaces[i] = h
+	}
+	tbl := ui.NewTable(headerInterfaces...)
+	for _, row := range rows {
+		// Add all columns for wide format (10 columns total)
+		tbl.AddRow(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9])
+	}
+	tbl.Print()
 }
 
 // formatDuration formats a duration for display
@@ -201,4 +272,16 @@ func formatDuration(d time.Duration) string {
 		return fmt.Sprintf("%dh", int(d.Hours()))
 	}
 	return fmt.Sprintf("%dd", int(d.Hours()/24))
+}
+
+// formatDurationAgo formats a duration with "ago" suffix for better readability
+func formatDurationAgo(d time.Duration) string {
+	if d < time.Minute {
+		return fmt.Sprintf("%ds ago", int(d.Seconds()))
+	} else if d < time.Hour {
+		return fmt.Sprintf("%dm ago", int(d.Minutes()))
+	} else if d < 24*time.Hour {
+		return fmt.Sprintf("%dh ago", int(d.Hours()))
+	}
+	return fmt.Sprintf("%dd ago", int(d.Hours()/24))
 }

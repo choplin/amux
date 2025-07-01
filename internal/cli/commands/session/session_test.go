@@ -120,8 +120,8 @@ func TestCommandsNotInAmuxProject(t *testing.T) {
 			if err == nil {
 				t.Error("Expected error when not in amux project")
 			}
-			if !contains(err.Error(), "not initialized") {
-				t.Errorf("Expected 'not initialized' error, got: %v", err)
+			if !contains(err.Error(), "not in an amux project") {
+				t.Errorf("Expected 'not in an amux project' error, got: %v", err)
 			}
 		})
 	}

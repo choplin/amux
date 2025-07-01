@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/aki/amux/internal/cli/ui"
-	"github.com/aki/amux/internal/config"
 	"github.com/aki/amux/internal/runtime"
 	"github.com/aki/amux/internal/session"
 	"github.com/aki/amux/internal/workspace"
@@ -86,23 +85,17 @@ func RunSession(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("either --task or command must be specified")
 	}
 
-	// Get working directory
-	wd, err := os.Getwd()
+	// Setup managers with project root detection
+	configMgr, sessionMgr, err := setupManagers()
 	if err != nil {
-		return fmt.Errorf("failed to get working directory: %w", err)
-	}
-
-	// Create config manager
-	configMgr := config.NewManager(wd)
-	if !configMgr.IsInitialized() {
-		return fmt.Errorf("amux not initialized. Run 'amux init' first")
+		return err
 	}
 
 	// Get workspace ID
 	workspaceID := runOpts.workspace
 	if workspaceID == "" {
 		// Try to get current workspace
-		wsMgr, err := workspace.SetupManager(wd)
+		wsMgr, err := workspace.SetupManager(configMgr.GetProjectRoot())
 		if err == nil {
 			// Check if we're in a workspace directory
 			currentPath, _ := os.Getwd()
@@ -126,9 +119,6 @@ func RunSession(cmd *cobra.Command, args []string) error {
 		env[parts[0]] = parts[1]
 	}
 
-	// Get session manager
-	sessionMgr := getSessionManager(configMgr)
-
 	// Create runtime options based on runtime type
 	var runtimeOptions runtime.RuntimeOptions
 	// Currently, no runtime-specific options are needed
@@ -148,9 +138,12 @@ func RunSession(cmd *cobra.Command, args []string) error {
 	}
 
 	ui.Success("Session started: %s", sess.ID)
-	ui.OutputLine("Runtime: %s", sess.Runtime)
+	ui.Info("Runtime: %s", sess.Runtime)
+	if sess.TaskName != "" {
+		ui.Info("Task: %s", sess.TaskName)
+	}
 	if sess.WorkspaceID != "" {
-		ui.OutputLine("Workspace: %s", sess.WorkspaceID)
+		ui.Info("Workspace: %s", sess.WorkspaceID)
 	}
 
 	// Provide appropriate feedback based on runtime
