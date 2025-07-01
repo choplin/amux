@@ -13,19 +13,20 @@ import (
 
 	"github.com/aki/amux/internal/runtime"
 	"github.com/aki/amux/internal/task"
+	"github.com/aki/amux/internal/workspace"
 )
 
 // mockRuntime implements runtime.Runtime for testing
 type mockRuntime struct {
 	mu        sync.RWMutex
 	name      string
-	processes map[string]*mockProcess
+	processes map[string]runtime.Process
 }
 
 func newMockRuntime(name string) *mockRuntime {
 	return &mockRuntime{
 		name:      name,
-		processes: make(map[string]*mockProcess),
+		processes: make(map[string]runtime.Process),
 	}
 }
 
@@ -155,6 +156,48 @@ func (p *mockProcess) Metadata() runtime.Metadata {
 	return nil
 }
 
+// mockInputSenderProcess implements both runtime.Process and runtime.InputSender for testing
+type mockInputSenderProcess struct {
+	*mockProcess
+	mu        sync.RWMutex
+	lastInput string
+}
+
+func (p *mockInputSenderProcess) SendInput(input string) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.lastInput = input
+	return nil
+}
+
+// mockRuntimeWithInputSender is a mock runtime that creates InputSender processes
+type mockRuntimeWithInputSender struct {
+	*mockRuntime
+}
+
+func (r *mockRuntimeWithInputSender) Execute(ctx context.Context, spec runtime.ExecutionSpec) (runtime.Process, error) {
+	if len(spec.Command) == 0 {
+		return nil, fmt.Errorf("empty command")
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	processID := fmt.Sprintf("mock-process-%d", len(r.processes)+1)
+	process := &mockInputSenderProcess{
+		mockProcess: &mockProcess{
+			id:        processID,
+			spec:      spec,
+			state:     runtime.StateRunning,
+			startTime: time.Now(),
+			exitCh:    make(chan struct{}),
+		},
+	}
+
+	r.processes[processID] = process
+	return process, nil
+}
+
 // mockStore implements Store for testing
 type mockStore struct {
 	mu       sync.RWMutex
@@ -207,6 +250,45 @@ func (s *mockStore) GetLogs(ctx context.Context, id string) (LogReader, error) {
 	return &simpleLogReader{reader: nil}, nil
 }
 
+// mockWorkspaceManager implements WorkspaceManager interface for testing
+type mockWorkspaceManager struct {
+	mu         sync.RWMutex
+	workspaces map[string]*workspace.Workspace
+	idCounter  int
+}
+
+func newMockWorkspaceManager() *mockWorkspaceManager {
+	return &mockWorkspaceManager{
+		workspaces: make(map[string]*workspace.Workspace),
+	}
+}
+
+func (m *mockWorkspaceManager) Create(ctx context.Context, opts workspace.CreateOptions) (*workspace.Workspace, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.idCounter++
+	ws := &workspace.Workspace{
+		ID:          fmt.Sprintf("ws-%d", m.idCounter),
+		Name:        opts.Name,
+		Description: opts.Description,
+		AutoCreated: opts.AutoCreated,
+		CreatedAt:   time.Now(),
+	}
+	m.workspaces[ws.ID] = ws
+	return ws, nil
+}
+
+func (m *mockWorkspaceManager) Get(ctx context.Context, id workspace.ID) (*workspace.Workspace, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	ws, ok := m.workspaces[string(id)]
+	if !ok {
+		return nil, fmt.Errorf("workspace not found")
+	}
+	return ws, nil
+}
+
 // Test setup helpers
 func setupTestManager(t *testing.T) (*manager, *mockRuntime, *mockStore) {
 	store := newMockStore()
@@ -219,8 +301,8 @@ func setupTestManager(t *testing.T) (*manager, *mockRuntime, *mockStore) {
 	}
 
 	taskMgr := task.NewManager() // No task file for tests
-
-	mgr := NewManager(store, runtimes, taskMgr).(*manager)
+	// For testing, we'll use nil workspace manager and check for nil in the code
+	mgr := NewManager(store, runtimes, taskMgr, nil).(*manager)
 
 	return mgr, mockLocal, store
 }
@@ -312,7 +394,8 @@ func TestManager_CreateWithTask(t *testing.T) {
 		t.Fatalf("Failed to load tasks: %v", err)
 	}
 
-	mgr := NewManager(store, runtimes, taskMgr).(*manager)
+	// For testing, we'll use nil workspace manager
+	mgr := NewManager(store, runtimes, taskMgr, nil).(*manager)
 	ctx := context.Background()
 
 	opts := CreateOptions{
@@ -436,7 +519,7 @@ func TestManager_StopKill(t *testing.T) {
 	}
 
 	// Get the mock process
-	process := mockRuntime.processes[session.ProcessID]
+	process := mockRuntime.processes[session.ProcessID].(*mockProcess)
 
 	// Test Stop
 	err = mgr.Stop(ctx, session.ID)
@@ -458,7 +541,7 @@ func TestManager_StopKill(t *testing.T) {
 		t.Fatalf("Failed to create session 2: %v", err)
 	}
 
-	process2 := mockRuntime.processes[session2.ProcessID]
+	process2 := mockRuntime.processes[session2.ProcessID].(*mockProcess)
 
 	// Test Kill
 	err = mgr.Kill(ctx, session2.ID)
@@ -486,7 +569,7 @@ func TestManager_Remove(t *testing.T) {
 	}
 
 	// Stop the session first
-	process := mockRuntime.processes[session.ProcessID]
+	process := mockRuntime.processes[session.ProcessID].(*mockProcess)
 	process.Stop(ctx)
 
 	// Wait a bit for monitor goroutine to update status
@@ -573,6 +656,136 @@ func TestManager_IDGeneration(t *testing.T) {
 		if session.ID != expectedID {
 			t.Errorf("Expected session ID %s, got %s", expectedID, session.ID)
 		}
+	}
+}
+
+// TestManager_AutoCreateWorkspace tests the auto-workspace creation feature
+func TestManager_AutoCreateWorkspace(t *testing.T) {
+	store := newMockStore()
+	mockLocal := newMockRuntime("local")
+
+	runtimes := map[string]runtime.Runtime{
+		"local": mockLocal,
+	}
+
+	taskMgr := task.NewManager()
+	// Use a mock workspace manager for this test
+	wsMgr := newMockWorkspaceManager()
+	mgr := NewManager(store, runtimes, taskMgr, wsMgr).(*manager)
+	ctx := context.Background()
+
+	// Test auto-create workspace
+	opts := CreateOptions{
+		AutoCreateWorkspace: true,
+		Command:             []string{"echo", "test"},
+		Runtime:             "local",
+	}
+
+	sess, err := mgr.Create(ctx, opts)
+	if err != nil {
+		t.Fatalf("Failed to create session with auto-workspace: %v", err)
+	}
+
+	// Check that workspace ID was set
+	if sess.WorkspaceID == "" {
+		t.Errorf("Expected workspace ID to be set, but it was empty")
+	}
+
+	// Check that workspace was created with correct name
+	ws, err := wsMgr.Get(ctx, workspace.ID(sess.WorkspaceID))
+	if err != nil {
+		t.Fatalf("Failed to get auto-created workspace: %v", err)
+	}
+
+	if ws.Name != sess.ID {
+		t.Errorf("Expected workspace name %s, got %s", sess.ID, ws.Name)
+	}
+
+	if !ws.AutoCreated {
+		t.Errorf("Expected workspace to be marked as auto-created")
+	}
+}
+
+func TestManager_SendInput(t *testing.T) {
+	// Create a custom runtime that supports InputSender from the start
+	store := newMockStore()
+	mockInputRuntime := &mockRuntimeWithInputSender{
+		mockRuntime: newMockRuntime("local-input"),
+	}
+	mockRuntime := newMockRuntime("local")
+
+	runtimes := map[string]runtime.Runtime{
+		"local-input": mockInputRuntime,
+		"local":       mockRuntime,
+		"tmux":        newMockRuntime("tmux"),
+	}
+
+	taskMgr := task.NewManager()
+	mgr := NewManager(store, runtimes, taskMgr, nil).(*manager)
+	ctx := context.Background()
+
+	// Create a session with input-supporting runtime
+	session, err := mgr.Create(ctx, CreateOptions{
+		WorkspaceID: "test-workspace",
+		Command:     []string{"bash"},
+		Runtime:     "local-input",
+	})
+	if err != nil {
+		t.Fatalf("Failed to create session: %v", err)
+	}
+
+	// Send input to the session
+	testInput := "test command"
+	err = mgr.SendInput(ctx, session.ID, testInput)
+	if err != nil {
+		t.Fatalf("Failed to send input: %v", err)
+	}
+
+	// Get the input sender process to verify
+	mockInputRuntime.mu.RLock()
+	inputSender := mockInputRuntime.processes[session.ProcessID].(*mockInputSenderProcess)
+	mockInputRuntime.mu.RUnlock()
+
+	// Verify the input was sent
+	inputSender.mu.RLock()
+	actualInput := inputSender.lastInput
+	inputSender.mu.RUnlock()
+
+	if actualInput != testInput {
+		t.Errorf("Expected input %q, got %q", testInput, actualInput)
+	}
+
+	// Test sending input to non-existent session
+	err = mgr.SendInput(ctx, "non-existent", testInput)
+	if err == nil {
+		t.Error("Expected error for non-existent session")
+	}
+
+	// Test sending input to a stopped session
+	mgr.mu.Lock()
+	mgr.sessions[session.ID].Status = StatusStopped
+	mgr.mu.Unlock()
+	store.Save(ctx, mgr.sessions[session.ID])
+
+	err = mgr.SendInput(ctx, session.ID, testInput)
+	if err == nil {
+		t.Error("Expected error for stopped session")
+	}
+
+	// Test with runtime that doesn't support InputSender
+	session2, err := mgr.Create(ctx, CreateOptions{
+		WorkspaceID: "test-workspace",
+		Command:     []string{"echo", "test"},
+		Runtime:     "local",
+	})
+	if err != nil {
+		t.Fatalf("Failed to create session 2: %v", err)
+	}
+
+	// Don't make process2 implement InputSender
+	err = mgr.SendInput(ctx, session2.ID, testInput)
+	if err == nil || !contains(err.Error(), "does not support input sending") {
+		t.Error("Expected error for runtime that doesn't support InputSender")
 	}
 }
 

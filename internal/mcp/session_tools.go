@@ -13,12 +13,15 @@ import (
 
 // SessionRunParams defines parameters for session_run tool
 type SessionRunParams struct {
-	WorkspaceID string            `json:"workspace_id,omitempty" jsonschema:"description=Workspace ID to run the session in"`
-	TaskName    string            `json:"task_name,omitempty" jsonschema:"description=Name of a predefined task to run"`
-	Command     []string          `json:"command,omitempty" jsonschema:"description=Command and arguments to run (if no task specified)"`
-	Runtime     string            `json:"runtime,omitempty" jsonschema:"description=Runtime to use (local, tmux),default=local"`
-	Environment map[string]string `json:"environment,omitempty" jsonschema:"description=Additional environment variables"`
-	WorkingDir  string            `json:"working_dir,omitempty" jsonschema:"description=Working directory override"`
+	WorkspaceID         string            `json:"workspace_id,omitempty" jsonschema:"description=Workspace ID to run the session in"`
+	AutoCreateWorkspace bool              `json:"auto_create_workspace,omitempty" jsonschema:"description=Auto-create workspace if not specified,default=true"`
+	Name                string            `json:"name,omitempty" jsonschema:"description=Human-readable name for the session"`
+	Description         string            `json:"description,omitempty" jsonschema:"description=Description of session purpose"`
+	TaskName            string            `json:"task_name,omitempty" jsonschema:"description=Name of a predefined task to run"`
+	Command             []string          `json:"command,omitempty" jsonschema:"description=Command and arguments to run (if no task specified)"`
+	Runtime             string            `json:"runtime,omitempty" jsonschema:"description=Runtime to use (local, tmux),default=local"`
+	Environment         map[string]string `json:"environment,omitempty" jsonschema:"description=Additional environment variables"`
+	WorkingDir          string            `json:"working_dir,omitempty" jsonschema:"description=Working directory override"`
 }
 
 // SessionListParams defines parameters for session_list tool
@@ -40,7 +43,15 @@ type SessionLogsParams struct {
 
 // SessionRemoveParams defines parameters for session_remove tool
 type SessionRemoveParams struct {
-	SessionID string `json:"session_id" jsonschema:"description=Session ID to remove,required"`
+	SessionID     string `json:"session_id" jsonschema:"description=Session ID to remove,required"`
+	KeepWorkspace bool   `json:"keep_workspace,omitempty" jsonschema:"description=Keep auto-created workspace when removing session,default=false"`
+	Force         bool   `json:"force,omitempty" jsonschema:"description=Force removal by stopping running sessions first,default=false"`
+}
+
+// SessionSendKeysParams defines parameters for session_send_keys tool
+type SessionSendKeysParams struct {
+	SessionID string `json:"session_id" jsonschema:"description=Session ID to send input to,required"`
+	Input     string `json:"input" jsonschema:"description=Input text to send,required"`
 }
 
 // registerSessionTools registers session-related MCP tools
@@ -80,6 +91,13 @@ func (s *ServerV2) registerSessionTools() error {
 	}
 	s.mcpServer.AddTool(mcp.NewTool("session_remove", removeOpts...), s.handleSessionRemove)
 
+	// session_send_keys tool
+	sendKeysOpts, err := WithStructOptions("Send input to a running session", SessionSendKeysParams{})
+	if err != nil {
+		return fmt.Errorf("failed to create session_send_keys options: %w", err)
+	}
+	s.mcpServer.AddTool(mcp.NewTool("session_send_keys", sendKeysOpts...), s.handleSessionSendKeys)
+
 	return nil
 }
 
@@ -92,6 +110,21 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 
 	if workspaceID, ok := args["workspace_id"].(string); ok {
 		opts.WorkspaceID = workspaceID
+	}
+	// Enable auto-create by default in MCP unless explicitly disabled
+	autoCreate := true
+	if val, ok := args["auto_create_workspace"].(bool); ok {
+		autoCreate = val
+	}
+	// Only enable auto-create if no workspace ID is provided
+	if opts.WorkspaceID == "" {
+		opts.AutoCreateWorkspace = autoCreate
+	}
+	if name, ok := args["name"].(string); ok {
+		opts.Name = name
+	}
+	if description, ok := args["description"].(string); ok {
+		opts.Description = description
 	}
 	if taskName, ok := args["task_name"].(string); ok {
 		opts.TaskName = taskName
@@ -139,6 +172,12 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 		"started_at":   sess.StartedAt,
 		"message":      fmt.Sprintf("Session %s started successfully", sess.ID),
 	}
+	if sess.Name != "" {
+		result["name"] = sess.Name
+	}
+	if sess.Description != "" {
+		result["description"] = sess.Description
+	}
 
 	return createEnhancedResult("session_run", result, nil)
 }
@@ -172,6 +211,12 @@ func (s *ServerV2) handleSessionList(ctx context.Context, request mcp.CallToolRe
 			"status":       sess.Status,
 			"command":      sess.Command,
 			"started_at":   sess.StartedAt,
+		}
+		if sess.Name != "" {
+			result[i]["name"] = sess.Name
+		}
+		if sess.Description != "" {
+			result[i]["description"] = sess.Description
 		}
 		if sess.StoppedAt != nil {
 			result[i]["stopped_at"] = sess.StoppedAt
@@ -272,6 +317,33 @@ func (s *ServerV2) handleSessionRemove(ctx context.Context, request mcp.CallTool
 	}, nil)
 }
 
+// handleSessionSendKeys handles the session_send_keys tool
+func (s *ServerV2) handleSessionSendKeys(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	args := request.GetArguments()
+
+	sessionID, ok := args["session_id"].(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid or missing session_id argument")
+	}
+
+	input, ok := args["input"].(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid or missing input argument")
+	}
+
+	// Create session manager
+	sessionMgr := s.getSessionManager()
+
+	// Send input to session
+	if err := sessionMgr.SendInput(ctx, sessionID, input); err != nil {
+		return nil, fmt.Errorf("failed to send input: %w", err)
+	}
+
+	return createEnhancedResult("session_send_keys", map[string]interface{}{
+		"message": fmt.Sprintf("Input sent to session %s", sessionID),
+	}, nil)
+}
+
 // getSessionManager creates a session manager for the server
 func (s *ServerV2) getSessionManager() session.Manager {
 	// Get runtimes
@@ -290,5 +362,5 @@ func (s *ServerV2) getSessionManager() session.Manager {
 	store := session.NewFileStore(s.configManager.GetAmuxDir())
 
 	// Create session manager
-	return session.NewManager(store, runtimes, taskMgr)
+	return session.NewManager(store, runtimes, taskMgr, s.workspaceManager)
 }

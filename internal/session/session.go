@@ -2,17 +2,22 @@
 package session
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
-	"os"
-	"os/exec"
 	"sync"
 	"time"
 
 	"github.com/aki/amux/internal/runtime"
 	"github.com/aki/amux/internal/task"
+	"github.com/aki/amux/internal/workspace"
 )
+
+// WorkspaceManager defines the interface for workspace operations needed by session manager
+type WorkspaceManager interface {
+	Create(ctx context.Context, opts workspace.CreateOptions) (*workspace.Workspace, error)
+}
 
 // Status represents the current state of a session
 type Status string
@@ -33,6 +38,8 @@ const (
 // Session represents an active runtime session
 type Session struct {
 	ID          string                 `json:"id" yaml:"id"`
+	Name        string                 `json:"name,omitempty" yaml:"name,omitempty"`
+	Description string                 `json:"description,omitempty" yaml:"description,omitempty"`
 	WorkspaceID string                 `json:"workspace_id" yaml:"workspace_id"`
 	TaskName    string                 `json:"task_name" yaml:"task_name"`
 	Runtime     string                 `json:"runtime" yaml:"runtime"`
@@ -78,18 +85,24 @@ type Manager interface {
 
 	// UpdateStatus updates the status of a session
 	UpdateStatus(ctx context.Context, id string, status Status) error
+
+	// SendInput sends input to a running session
+	SendInput(ctx context.Context, id string, input string) error
 }
 
 // CreateOptions defines options for creating a session
 type CreateOptions struct {
-	WorkspaceID    string                 // Workspace to run in
-	TaskName       string                 // Task to execute (optional)
-	Command        []string               // Direct command (if no task)
-	Runtime        string                 // Runtime to use (default: local)
-	Environment    map[string]string      // Additional environment variables
-	WorkingDir     string                 // Working directory override
-	Metadata       map[string]interface{} // Additional metadata
-	RuntimeOptions runtime.RuntimeOptions // Runtime-specific options
+	WorkspaceID         string                 // Workspace to run in
+	AutoCreateWorkspace bool                   // Auto-create workspace if not specified
+	Name                string                 // Human-readable name for the session
+	Description         string                 // Description of session purpose
+	TaskName            string                 // Task to execute (optional)
+	Command             []string               // Direct command (if no task)
+	Runtime             string                 // Runtime to use (default: local)
+	Environment         map[string]string      // Additional environment variables
+	WorkingDir          string                 // Working directory override
+	Metadata            map[string]interface{} // Additional metadata
+	RuntimeOptions      runtime.RuntimeOptions // Runtime-specific options
 }
 
 // LogReader provides access to session logs
@@ -102,27 +115,57 @@ type LogReader interface {
 
 // manager implements the Manager interface
 type manager struct {
-	mu        sync.RWMutex
-	sessions  map[string]*Session
-	store     Store
-	runtimes  map[string]runtime.Runtime
-	tasks     *task.Manager
-	idCounter int
+	mu               sync.RWMutex
+	sessions         map[string]*Session
+	store            Store
+	runtimes         map[string]runtime.Runtime
+	tasks            *task.Manager
+	workspaceManager WorkspaceManager
+	idCounter        int
 }
 
 // NewManager creates a new session manager
-func NewManager(store Store, runtimes map[string]runtime.Runtime, tasks *task.Manager) Manager {
+func NewManager(store Store, runtimes map[string]runtime.Runtime, tasks *task.Manager, workspaceManager WorkspaceManager) Manager {
 	return &manager{
-		sessions:  make(map[string]*Session),
-		store:     store,
-		runtimes:  runtimes,
-		tasks:     tasks,
-		idCounter: 0,
+		sessions:         make(map[string]*Session),
+		store:            store,
+		runtimes:         runtimes,
+		tasks:            tasks,
+		workspaceManager: workspaceManager,
+		idCounter:        0,
 	}
 }
 
 // Create starts a new session
 func (m *manager) Create(ctx context.Context, opts CreateOptions) (*Session, error) {
+	// Generate session ID first to use in workspace name
+	m.mu.Lock()
+	sessionID := fmt.Sprintf("session-%d", m.idCounter+1)
+	m.idCounter++
+	m.mu.Unlock()
+
+	// Handle auto workspace creation
+	if opts.AutoCreateWorkspace && opts.WorkspaceID == "" {
+		if m.workspaceManager == nil {
+			return nil, fmt.Errorf("workspace manager not available for auto-creation")
+		}
+		// Create workspace with name based on session ID
+		// Extract numeric part from sessionID (e.g., "session-1" -> "1")
+		workspaceName := sessionID // Use full session ID as workspace name
+		workspaceDesc := fmt.Sprintf("Auto-created for %s", sessionID)
+
+		ws, err := m.workspaceManager.Create(ctx, workspace.CreateOptions{
+			Name:        workspaceName,
+			Description: workspaceDesc,
+			AutoCreated: true,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create auto-workspace: %w", err)
+		}
+
+		opts.WorkspaceID = ws.ID
+	}
+
 	// Validate runtime
 	if opts.Runtime == "" {
 		opts.Runtime = "local"
@@ -179,12 +222,6 @@ func (m *manager) Create(ctx context.Context, opts CreateOptions) (*Session, err
 		return nil, fmt.Errorf("failed to execute: %w", err)
 	}
 
-	// Create session
-	m.mu.Lock()
-	sessionID := fmt.Sprintf("session-%d", m.idCounter+1)
-	m.idCounter++
-	m.mu.Unlock()
-
 	// Get process metadata
 	var metadata map[string]interface{}
 	if processMetadata := process.Metadata(); processMetadata != nil {
@@ -201,6 +238,8 @@ func (m *manager) Create(ctx context.Context, opts CreateOptions) (*Session, err
 
 	session := &Session{
 		ID:          sessionID,
+		Name:        opts.Name,
+		Description: opts.Description,
 		WorkspaceID: opts.WorkspaceID,
 		TaskName:    opts.TaskName,
 		Runtime:     opts.Runtime,
@@ -391,16 +430,14 @@ func (m *manager) Attach(ctx context.Context, id string) error {
 		return fmt.Errorf("session is not running")
 	}
 
-	// For tmux runtime, we need special handling
-	if session.Runtime == "tmux" {
-		// Use tmux attach-session command
-		cmd := exec.Command("tmux", "attach-session", "-t", session.ProcessID)
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
+	if session.process == nil {
+		return fmt.Errorf("session process not available")
+	}
 
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to attach to tmux session: %w", err)
+	// Check if process supports attach capability
+	if attachable, ok := session.process.(runtime.AttachableProcess); ok {
+		if err := attachable.Attach(); err != nil {
+			return fmt.Errorf("failed to attach to session: %w", err)
 		}
 		return nil
 	}
@@ -420,12 +457,56 @@ func (m *manager) Logs(ctx context.Context, id string, follow bool) (LogReader, 
 		return m.store.GetLogs(ctx, id)
 	}
 
-	// Get process output
-	stdout, _ := session.process.Output()
+	// Check if process supports output streaming
+	if streamer, ok := session.process.(runtime.OutputStreamer); ok {
+		if follow {
+			// Create a pipe reader for streaming
+			pr, pw := io.Pipe()
 
-	// TODO: Implement proper log reader that combines stdout/stderr
-	// For now, return stdout
-	return &simpleLogReader{reader: stdout}, nil
+			// Start streaming in background
+			go func() {
+				defer func() { _ = pw.Close() }()
+				opts := runtime.StreamOptions{
+					PollInterval: 100 * time.Millisecond,
+					ClearScreen:  false, // Don't clear screen for logs
+				}
+				if err := streamer.StreamOutput(ctx, pw, opts); err != nil && err != context.Canceled {
+					// Write error to pipe
+					_, _ = fmt.Fprintf(pw, "\n[Error streaming logs: %v]\n", err)
+				}
+			}()
+
+			return &simpleLogReader{reader: pr}, nil
+		}
+
+		// Non-follow mode: capture output once
+		output, err := streamer.CaptureOutput(0) // 0 = capture all
+		if err != nil {
+			return nil, fmt.Errorf("failed to capture output: %w", err)
+		}
+
+		return &simpleLogReader{reader: io.NopCloser(io.MultiReader(
+			bytes.NewReader(output),
+		))}, nil
+	}
+
+	// Check if process supports basic output capture
+	if capture, ok := session.process.(runtime.OutputCapture); ok {
+		output, err := capture.CaptureOutput(0) // 0 = capture all
+		if err != nil {
+			return nil, fmt.Errorf("failed to capture output: %w", err)
+		}
+
+		return &simpleLogReader{reader: io.NopCloser(bytes.NewReader(output))}, nil
+	}
+
+	// Fallback to old method
+	stdout, _ := session.process.Output()
+	if stdout != nil {
+		return &simpleLogReader{reader: stdout}, nil
+	}
+
+	return nil, fmt.Errorf("logs not available for runtime: %s", session.Runtime)
 }
 
 // Remove deletes a stopped session
@@ -469,6 +550,29 @@ func (m *manager) UpdateStatus(ctx context.Context, id string, status Status) er
 	}
 
 	return nil
+}
+
+// SendInput sends input to a running session
+func (m *manager) SendInput(ctx context.Context, id string, input string) error {
+	session, err := m.Get(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if session.Status != StatusRunning {
+		return fmt.Errorf("session is not running (status: %s)", session.Status)
+	}
+
+	if session.process == nil {
+		return fmt.Errorf("session process not available")
+	}
+
+	// Check if process supports input sending
+	if sender, ok := session.process.(runtime.InputSender); ok {
+		return sender.SendInput(input)
+	}
+
+	return fmt.Errorf("runtime %s does not support input sending", session.Runtime)
 }
 
 // captureSessionLogs captures session logs to storage

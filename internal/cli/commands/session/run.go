@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/aki/amux/internal/cli/ui"
-	"github.com/aki/amux/internal/config"
 	"github.com/aki/amux/internal/runtime"
 	"github.com/aki/amux/internal/session"
 	"github.com/aki/amux/internal/workspace"
@@ -46,6 +45,8 @@ var runOpts struct {
 	environment []string
 	workingDir  string
 	follow      bool
+	name        string
+	description string
 }
 
 func init() {
@@ -55,6 +56,8 @@ func init() {
 	runCmd.Flags().StringArrayVarP(&runOpts.environment, "env", "e", nil, "Environment variables (KEY=VALUE)")
 	runCmd.Flags().StringVarP(&runOpts.workingDir, "dir", "d", "", "Working directory")
 	runCmd.Flags().BoolVarP(&runOpts.follow, "follow", "f", false, "Follow logs")
+	runCmd.Flags().StringVarP(&runOpts.name, "name", "n", "", "Human-readable name for the session")
+	runCmd.Flags().StringVar(&runOpts.description, "description", "", "Description of session purpose")
 }
 
 // BindRunFlags binds command flags to runOpts
@@ -65,6 +68,8 @@ func BindRunFlags(cmd *cobra.Command) {
 	runOpts.environment, _ = cmd.Flags().GetStringArray("env")
 	runOpts.workingDir, _ = cmd.Flags().GetString("dir")
 	runOpts.follow, _ = cmd.Flags().GetBool("follow")
+	runOpts.name, _ = cmd.Flags().GetString("name")
+	runOpts.description, _ = cmd.Flags().GetString("description")
 }
 
 // RunSession implements the session run command
@@ -86,23 +91,18 @@ func RunSession(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("either --task or command must be specified")
 	}
 
-	// Get working directory
-	wd, err := os.Getwd()
+	// Setup managers with project root detection
+	configMgr, sessionMgr, err := setupManagers()
 	if err != nil {
-		return fmt.Errorf("failed to get working directory: %w", err)
-	}
-
-	// Create config manager
-	configMgr := config.NewManager(wd)
-	if !configMgr.IsInitialized() {
-		return fmt.Errorf("amux not initialized. Run 'amux init' first")
+		return err
 	}
 
 	// Get workspace ID
 	workspaceID := runOpts.workspace
+	autoCreateWorkspace := false
 	if workspaceID == "" {
 		// Try to get current workspace
-		wsMgr, err := workspace.SetupManager(wd)
+		wsMgr, err := workspace.SetupManager(configMgr.GetProjectRoot())
 		if err == nil {
 			// Check if we're in a workspace directory
 			currentPath, _ := os.Getwd()
@@ -113,6 +113,10 @@ func RunSession(cmd *cobra.Command, args []string) error {
 					break
 				}
 			}
+		}
+		// If still no workspace, enable auto-creation
+		if workspaceID == "" {
+			autoCreateWorkspace = true
 		}
 	}
 
@@ -126,31 +130,51 @@ func RunSession(cmd *cobra.Command, args []string) error {
 		env[parts[0]] = parts[1]
 	}
 
-	// Get session manager
-	sessionMgr := getSessionManager(configMgr)
-
 	// Create runtime options based on runtime type
 	var runtimeOptions runtime.RuntimeOptions
 	// Currently, no runtime-specific options are needed
 
 	// Create session
 	sess, err := sessionMgr.Create(ctx, session.CreateOptions{
-		WorkspaceID:    workspaceID,
-		TaskName:       taskName,
-		Command:        command,
-		Runtime:        runOpts.runtime,
-		Environment:    env,
-		WorkingDir:     runOpts.workingDir,
-		RuntimeOptions: runtimeOptions,
+		WorkspaceID:         workspaceID,
+		AutoCreateWorkspace: autoCreateWorkspace,
+		Name:                runOpts.name,
+		Description:         runOpts.description,
+		TaskName:            taskName,
+		Command:             command,
+		Runtime:             runOpts.runtime,
+		Environment:         env,
+		WorkingDir:          runOpts.workingDir,
+		RuntimeOptions:      runtimeOptions,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create session: %w", err)
 	}
 
 	ui.Success("Session started: %s", sess.ID)
-	ui.OutputLine("Runtime: %s", sess.Runtime)
+	if sess.Name != "" {
+		ui.Info("Name: %s", sess.Name)
+	}
+	if sess.Description != "" {
+		ui.Info("Description: %s", sess.Description)
+	}
+	ui.Info("Runtime: %s", sess.Runtime)
+	if sess.TaskName != "" {
+		ui.Info("Task: %s", sess.TaskName)
+	}
 	if sess.WorkspaceID != "" {
-		ui.OutputLine("Workspace: %s", sess.WorkspaceID)
+		// Check if workspace was auto-created
+		if autoCreateWorkspace {
+			// Get workspace manager to resolve the workspace name
+			wsMgr, err := workspace.SetupManager(configMgr.GetProjectRoot())
+			if err == nil {
+				ws, err := wsMgr.Get(ctx, workspace.ID(sess.WorkspaceID))
+				if err == nil && ws.AutoCreated {
+					ui.Success("Workspace created: %s", ws.Name)
+				}
+			}
+		}
+		ui.Info("Workspace: %s", sess.WorkspaceID)
 	}
 
 	// Provide appropriate feedback based on runtime
