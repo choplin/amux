@@ -15,6 +15,8 @@ import (
 type SessionRunParams struct {
 	WorkspaceID         string            `json:"workspace_id,omitempty" jsonschema:"description=Workspace ID to run the session in"`
 	AutoCreateWorkspace bool              `json:"auto_create_workspace,omitempty" jsonschema:"description=Auto-create workspace if not specified,default=true"`
+	Name                string            `json:"name,omitempty" jsonschema:"description=Human-readable name for the session"`
+	Description         string            `json:"description,omitempty" jsonschema:"description=Description of session purpose"`
 	TaskName            string            `json:"task_name,omitempty" jsonschema:"description=Name of a predefined task to run"`
 	Command             []string          `json:"command,omitempty" jsonschema:"description=Command and arguments to run (if no task specified)"`
 	Runtime             string            `json:"runtime,omitempty" jsonschema:"description=Runtime to use (local, tmux),default=local"`
@@ -105,6 +107,12 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 	if opts.WorkspaceID == "" {
 		opts.AutoCreateWorkspace = autoCreate
 	}
+	if name, ok := args["name"].(string); ok {
+		opts.Name = name
+	}
+	if description, ok := args["description"].(string); ok {
+		opts.Description = description
+	}
 	if taskName, ok := args["task_name"].(string); ok {
 		opts.TaskName = taskName
 	}
@@ -151,6 +159,12 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 		"started_at":   sess.StartedAt,
 		"message":      fmt.Sprintf("Session %s started successfully", sess.ID),
 	}
+	if sess.Name != "" {
+		result["name"] = sess.Name
+	}
+	if sess.Description != "" {
+		result["description"] = sess.Description
+	}
 
 	return createEnhancedResult("session_run", result, nil)
 }
@@ -184,6 +198,12 @@ func (s *ServerV2) handleSessionList(ctx context.Context, request mcp.CallToolRe
 			"status":       sess.Status,
 			"command":      sess.Command,
 			"started_at":   sess.StartedAt,
+		}
+		if sess.Name != "" {
+			result[i]["name"] = sess.Name
+		}
+		if sess.Description != "" {
+			result[i]["description"] = sess.Description
 		}
 		if sess.StoppedAt != nil {
 			result[i]["stopped_at"] = sess.StoppedAt

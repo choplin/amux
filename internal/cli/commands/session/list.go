@@ -13,9 +13,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var psCmd = &cobra.Command{
-	Use:   "ps",
-	Short: "List running sessions",
+var listCmd = &cobra.Command{
+	Use:     "list",
+	Short:   "List running sessions",
+	Aliases: []string{"ls", "ps"},
 	Long: `List running sessions.
 
 By default, shows only sessions in the current workspace.
@@ -23,33 +24,33 @@ Use --all to show sessions from all workspaces.`,
 	RunE: ListSessions,
 }
 
-var psOpts struct {
+var listOpts struct {
 	workspace string
 	all       bool
 	format    string
 }
 
 func init() {
-	psCmd.Flags().StringVarP(&psOpts.workspace, "workspace", "w", "", "Filter by workspace")
-	psCmd.Flags().BoolVarP(&psOpts.all, "all", "a", false, "Show sessions from all workspaces")
-	psCmd.Flags().StringVarP(&psOpts.format, "format", "f", "", "Output format (json, wide)")
+	listCmd.Flags().StringVarP(&listOpts.workspace, "workspace", "w", "", "Filter by workspace")
+	listCmd.Flags().BoolVarP(&listOpts.all, "all", "a", false, "Show sessions from all workspaces")
+	listCmd.Flags().StringVarP(&listOpts.format, "format", "f", "", "Output format (json, wide)")
 }
 
-// BindPsFlags binds command flags to psOpts
-func BindPsFlags(cmd *cobra.Command) {
-	psOpts.workspace, _ = cmd.Flags().GetString("workspace")
-	psOpts.all, _ = cmd.Flags().GetBool("all")
-	psOpts.format, _ = cmd.Flags().GetString("format")
+// BindListFlags binds command flags to listOpts
+func BindListFlags(cmd *cobra.Command) {
+	listOpts.workspace, _ = cmd.Flags().GetString("workspace")
+	listOpts.all, _ = cmd.Flags().GetBool("all")
+	listOpts.format, _ = cmd.Flags().GetString("format")
 }
 
-// SetPsAll sets the all flag
-func SetPsAll(all bool) {
-	psOpts.all = all
+// SetListAll sets the all flag
+func SetListAll(all bool) {
+	listOpts.all = all
 }
 
-// SetPsFormat sets the format flag
-func SetPsFormat(format string) {
-	psOpts.format = format
+// SetListFormat sets the format flag
+func SetListFormat(format string) {
+	listOpts.format = format
 }
 
 // ListSessions implements the session ps command
@@ -64,9 +65,9 @@ func ListSessions(cmd *cobra.Command, args []string) error {
 
 	// Determine workspace filter
 	workspaceID := ""
-	if !psOpts.all {
-		if psOpts.workspace != "" {
-			workspaceID = psOpts.workspace
+	if !listOpts.all {
+		if listOpts.workspace != "" {
+			workspaceID = listOpts.workspace
 		} else {
 			// Try to get current workspace
 			wsMgr, err := workspace.SetupManager(configMgr.GetProjectRoot())
@@ -100,7 +101,7 @@ func ListSessions(cmd *cobra.Command, args []string) error {
 	}
 
 	// Display sessions
-	switch psOpts.format {
+	switch listOpts.format {
 	case "json":
 		// JSON output
 		for _, s := range sessions {
@@ -149,8 +150,11 @@ func displaySessions(sessions []*session.Session) {
 			duration = formatDuration(time.Since(s.StartedAt))
 		}
 
-		// Session name - extract meaningful part from ID if possible
-		name := formatSessionName(s.ID)
+		// Session name - use Name field if available, otherwise use ID
+		name := s.Name
+		if name == "" {
+			name = s.ID
+		}
 
 		rows = append(rows, []string{
 			s.ID,
@@ -178,7 +182,7 @@ func displaySessions(sessions []*session.Session) {
 // displaySessionsWide shows sessions with more details
 func displaySessionsWide(sessions []*session.Session) {
 	// Prepare table data
-	headers := []string{"SESSION", "NAME", "STATUS", "RUNTIME", "WORKSPACE", "TASK", "PID", "STARTED", "DURATION", "COMMAND"}
+	headers := []string{"SESSION", "NAME", "DESCRIPTION", "STATUS", "RUNTIME", "WORKSPACE", "TASK", "PID", "STARTED", "DURATION", "COMMAND"}
 
 	var rows [][]string
 	for _, s := range sessions {
@@ -225,12 +229,24 @@ func displaySessionsWide(sessions []*session.Session) {
 			command = command[:47] + "..."
 		}
 
-		// Session name
-		name := formatSessionName(s.ID)
+		// Session name - use Name field if available, otherwise use ID
+		name := s.Name
+		if name == "" {
+			name = s.ID
+		}
+
+		// Description - truncate if too long
+		description := s.Description
+		if description == "" {
+			description = "-"
+		} else if len(description) > 40 {
+			description = description[:37] + "..."
+		}
 
 		rows = append(rows, []string{
 			s.ID,
 			name,
+			description,
 			status,
 			runtime,
 			workspace,
@@ -249,8 +265,8 @@ func displaySessionsWide(sessions []*session.Session) {
 	}
 	tbl := ui.NewTable(headerInterfaces...)
 	for _, row := range rows {
-		// Add all columns for wide format (10 columns total)
-		tbl.AddRow(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9])
+		// Add all columns for wide format (11 columns total)
+		tbl.AddRow(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9], row[10])
 	}
 	tbl.Print()
 }
@@ -321,11 +337,4 @@ func formatWorkspaceName(workspaceID string) string {
 	}
 
 	return workspaceID
-}
-
-// formatSessionName extracts a meaningful name from session ID
-func formatSessionName(sessionID string) string {
-	// For now, just use the ID as-is
-	// In the future, we might extract more meaningful parts
-	return sessionID
 }

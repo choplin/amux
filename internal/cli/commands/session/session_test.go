@@ -21,7 +21,7 @@ func TestSessionCommand(t *testing.T) {
 	}
 
 	// Check subcommands
-	subcommands := []string{"run", "ps", "attach", "stop", "logs", "remove", "storage"}
+	subcommands := []string{"run", "list", "attach", "stop", "logs", "remove", "storage"}
 	for _, subcmd := range subcommands {
 		found := false
 		for _, c := range cmd.Commands() {
@@ -32,6 +32,23 @@ func TestSessionCommand(t *testing.T) {
 		}
 		if !found {
 			t.Errorf("Expected subcommand '%s' not found", subcmd)
+		}
+	}
+
+	// Check that list command has ps alias
+	for _, c := range cmd.Commands() {
+		if c.Name() == "list" {
+			hasPs := false
+			for _, alias := range c.Aliases {
+				if alias == "ps" {
+					hasPs = true
+					break
+				}
+			}
+			if !hasPs {
+				t.Error("Expected 'list' command to have 'ps' alias")
+			}
+			break
 		}
 	}
 }
@@ -65,15 +82,15 @@ func TestRunCommandFlags(t *testing.T) {
 	}
 }
 
-// Test ps command flags
-func TestPsCommandFlags(t *testing.T) {
-	if psCmd.Flag("workspace") == nil {
+// Test list command flags
+func TestListCommandFlags(t *testing.T) {
+	if listCmd.Flag("workspace") == nil {
 		t.Error("Expected --workspace flag")
 	}
-	if psCmd.Flag("all") == nil {
+	if listCmd.Flag("all") == nil {
 		t.Error("Expected --all flag")
 	}
-	if psCmd.Flag("format") == nil {
+	if listCmd.Flag("format") == nil {
 		t.Error("Expected --format flag")
 	}
 }
@@ -101,7 +118,7 @@ func TestCommandsNotInAmuxProject(t *testing.T) {
 		args []string
 	}{
 		{"run", []string{"run", "--", "echo", "test"}},
-		{"ps", []string{"ps"}},
+		{"list", []string{"list"}},
 		{"attach", []string{"attach", "session-1"}},
 		{"logs", []string{"logs", "session-1"}},
 		{"stop", []string{"stop", "session-1"}},
@@ -134,7 +151,7 @@ func TestShortcutCommandsExist(t *testing.T) {
 	// Just verify that the session subcommands exist
 
 	cmd := Command()
-	expectedSubcommands := []string{"run", "ps", "attach", "logs", "stop", "remove", "storage"}
+	expectedSubcommands := []string{"run", "list", "attach", "logs", "stop", "remove", "storage"}
 
 	for _, expected := range expectedSubcommands {
 		found := false

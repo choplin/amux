@@ -16,7 +16,7 @@ func Command() *cobra.Command {
 
 	// Add subcommands
 	cmd.AddCommand(runCmd)
-	cmd.AddCommand(psCmd)
+	cmd.AddCommand(listCmd)
 	cmd.AddCommand(attachCmd)
 	cmd.AddCommand(stopCmd)
 	cmd.AddCommand(logsCmd)

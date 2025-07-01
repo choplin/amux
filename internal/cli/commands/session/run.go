@@ -45,6 +45,8 @@ var runOpts struct {
 	environment []string
 	workingDir  string
 	follow      bool
+	name        string
+	description string
 }
 
 func init() {
@@ -54,6 +56,8 @@ func init() {
 	runCmd.Flags().StringArrayVarP(&runOpts.environment, "env", "e", nil, "Environment variables (KEY=VALUE)")
 	runCmd.Flags().StringVarP(&runOpts.workingDir, "dir", "d", "", "Working directory")
 	runCmd.Flags().BoolVarP(&runOpts.follow, "follow", "f", false, "Follow logs")
+	runCmd.Flags().StringVarP(&runOpts.name, "name", "n", "", "Human-readable name for the session")
+	runCmd.Flags().StringVar(&runOpts.description, "description", "", "Description of session purpose")
 }
 
 // BindRunFlags binds command flags to runOpts
@@ -64,6 +68,8 @@ func BindRunFlags(cmd *cobra.Command) {
 	runOpts.environment, _ = cmd.Flags().GetStringArray("env")
 	runOpts.workingDir, _ = cmd.Flags().GetString("dir")
 	runOpts.follow, _ = cmd.Flags().GetBool("follow")
+	runOpts.name, _ = cmd.Flags().GetString("name")
+	runOpts.description, _ = cmd.Flags().GetString("description")
 }
 
 // RunSession implements the session run command
@@ -132,6 +138,8 @@ func RunSession(cmd *cobra.Command, args []string) error {
 	sess, err := sessionMgr.Create(ctx, session.CreateOptions{
 		WorkspaceID:         workspaceID,
 		AutoCreateWorkspace: autoCreateWorkspace,
+		Name:                runOpts.name,
+		Description:         runOpts.description,
 		TaskName:            taskName,
 		Command:             command,
 		Runtime:             runOpts.runtime,
@@ -144,6 +152,12 @@ func RunSession(cmd *cobra.Command, args []string) error {
 	}
 
 	ui.Success("Session started: %s", sess.ID)
+	if sess.Name != "" {
+		ui.Info("Name: %s", sess.Name)
+	}
+	if sess.Description != "" {
+		ui.Info("Description: %s", sess.Description)
+	}
 	ui.Info("Runtime: %s", sess.Runtime)
 	if sess.TaskName != "" {
 		ui.Info("Task: %s", sess.TaskName)

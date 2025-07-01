@@ -38,6 +38,8 @@ const (
 // Session represents an active runtime session
 type Session struct {
 	ID          string                 `json:"id" yaml:"id"`
+	Name        string                 `json:"name,omitempty" yaml:"name,omitempty"`
+	Description string                 `json:"description,omitempty" yaml:"description,omitempty"`
 	WorkspaceID string                 `json:"workspace_id" yaml:"workspace_id"`
 	TaskName    string                 `json:"task_name" yaml:"task_name"`
 	Runtime     string                 `json:"runtime" yaml:"runtime"`
@@ -89,6 +91,8 @@ type Manager interface {
 type CreateOptions struct {
 	WorkspaceID         string                 // Workspace to run in
 	AutoCreateWorkspace bool                   // Auto-create workspace if not specified
+	Name                string                 // Human-readable name for the session
+	Description         string                 // Description of session purpose
 	TaskName            string                 // Task to execute (optional)
 	Command             []string               // Direct command (if no task)
 	Runtime             string                 // Runtime to use (default: local)
@@ -231,6 +235,8 @@ func (m *manager) Create(ctx context.Context, opts CreateOptions) (*Session, err
 
 	session := &Session{
 		ID:          sessionID,
+		Name:        opts.Name,
+		Description: opts.Description,
 		WorkspaceID: opts.WorkspaceID,
 		TaskName:    opts.TaskName,
 		Runtime:     opts.Runtime,

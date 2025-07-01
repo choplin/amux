@@ -5,20 +5,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewPsCommand creates a shortcut for session ps
+// NewPsCommand creates a shortcut for session list
 func NewPsCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "ps",
-		Short: "List running sessions (shortcut for 'session ps')",
+		Short: "List running sessions (shortcut for 'session list')",
 		Long: `List running sessions.
 
-This is a shortcut for 'amux session ps'.
+This is a shortcut for 'amux session list'.
 
 By default, shows only sessions in the current workspace.
 Use --all to show sessions from all workspaces.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Bind flags to session.psOpts
-			session.BindPsFlags(cmd)
+			// Bind flags to session.listOpts
+			session.BindListFlags(cmd)
 			return session.ListSessions(cmd, args)
 		},
 	}
