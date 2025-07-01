@@ -119,39 +119,38 @@ func ListSessions(cmd *cobra.Command, args []string) error {
 // displaySessions shows sessions in a table format
 func displaySessions(sessions []*session.Session) {
 	// Prepare table data
-	headers := []string{"ID", "NAME", "STATUS", "RUNTIME", "WORKSPACE", "TASK", "CREATED"}
+	headers := []string{"SESSION", "NAME", "STATUS", "RUNTIME", "WORKSPACE", "TASK", "DURATION"}
 
 	var rows [][]string
 	for _, s := range sessions {
 		// Format status with exit code if available
-		status := string(s.Status)
-		if s.ExitCode != nil && *s.ExitCode != 0 {
-			status = fmt.Sprintf("%s(%d)", status, *s.ExitCode)
-		}
+		status := formatStatus(s.Status, s.ExitCode)
 
 		// Runtime information
 		runtime := s.Runtime
 		if runtime == "" {
-			runtime = "unknown"
+			runtime = "local"
 		}
 
-		// Task information (new)
+		// Task information
 		task := s.TaskName
 		if task == "" {
 			task = "-"
 		}
 
-		// Workspace
-		workspace := s.WorkspaceID
-		if workspace == "" {
-			workspace = "-"
+		// Workspace - show just the name part if it's a full ID
+		workspace := formatWorkspaceName(s.WorkspaceID)
+
+		// Calculate duration
+		var duration string
+		if s.StoppedAt != nil {
+			duration = formatDuration(s.StoppedAt.Sub(s.StartedAt))
+		} else {
+			duration = formatDuration(time.Since(s.StartedAt))
 		}
 
-		// Human-readable time
-		created := formatDurationAgo(time.Since(s.StartedAt))
-
-		// Session name (use ID for now as Name field doesn't exist)
-		name := s.ID
+		// Session name - extract meaningful part from ID if possible
+		name := formatSessionName(s.ID)
 
 		rows = append(rows, []string{
 			s.ID,
@@ -160,7 +159,7 @@ func displaySessions(sessions []*session.Session) {
 			runtime,
 			workspace,
 			task,
-			created,
+			duration,
 		})
 	}
 
@@ -179,20 +178,17 @@ func displaySessions(sessions []*session.Session) {
 // displaySessionsWide shows sessions with more details
 func displaySessionsWide(sessions []*session.Session) {
 	// Prepare table data
-	headers := []string{"ID", "NAME", "STATUS", "RUNTIME", "WORKSPACE", "TASK", "PID", "STARTED", "DURATION", "COMMAND"}
+	headers := []string{"SESSION", "NAME", "STATUS", "RUNTIME", "WORKSPACE", "TASK", "PID", "STARTED", "DURATION", "COMMAND"}
 
 	var rows [][]string
 	for _, s := range sessions {
-		// Format status with exit code if available
-		status := string(s.Status)
-		if s.ExitCode != nil && *s.ExitCode != 0 {
-			status = fmt.Sprintf("%s(%d)", status, *s.ExitCode)
-		}
+		// Format status with color coding
+		status := formatStatus(s.Status, s.ExitCode)
 
 		// Runtime information
 		runtime := s.Runtime
 		if runtime == "" {
-			runtime = "unknown"
+			runtime = "local"
 		}
 
 		// Task information
@@ -201,11 +197,8 @@ func displaySessionsWide(sessions []*session.Session) {
 			task = "-"
 		}
 
-		// Workspace
-		workspace := s.WorkspaceID
-		if workspace == "" {
-			workspace = "-"
-		}
+		// Workspace - show readable name
+		workspace := formatWorkspaceName(s.WorkspaceID)
 
 		// Process ID
 		pid := s.ProcessID
@@ -224,14 +217,16 @@ func displaySessionsWide(sessions []*session.Session) {
 			duration = formatDuration(time.Since(s.StartedAt))
 		}
 
-		// Command
+		// Command - truncate if too long
 		command := strings.Join(s.Command, " ")
 		if command == "" {
 			command = "-"
+		} else if len(command) > 50 {
+			command = command[:47] + "..."
 		}
 
-		// Session name (use ID for now as Name field doesn't exist)
-		name := s.ID
+		// Session name
+		name := formatSessionName(s.ID)
 
 		rows = append(rows, []string{
 			s.ID,
@@ -284,4 +279,53 @@ func formatDurationAgo(d time.Duration) string {
 		return fmt.Sprintf("%dh ago", int(d.Hours()))
 	}
 	return fmt.Sprintf("%dd ago", int(d.Hours()/24))
+}
+
+// formatStatus formats the session status with color coding
+func formatStatus(status session.Status, exitCode *int) string {
+	statusStr := string(status)
+
+	// Add exit code if non-zero
+	if exitCode != nil && *exitCode != 0 {
+		statusStr = fmt.Sprintf("%s(%d)", statusStr, *exitCode)
+	}
+
+	// Apply color based on status
+	switch status {
+	case session.StatusStarting:
+		return ui.InfoStyle.Render(statusStr)
+	case session.StatusRunning:
+		return ui.SuccessStyle.Render(statusStr)
+	case session.StatusStopped:
+		return ui.DimStyle.Render(statusStr)
+	case session.StatusFailed:
+		return ui.ErrorStyle.Render(statusStr)
+	default:
+		return statusStr
+	}
+}
+
+// formatWorkspaceName extracts a readable name from workspace ID
+func formatWorkspaceName(workspaceID string) string {
+	if workspaceID == "" {
+		return "-"
+	}
+
+	// If it's a full workspace ID like "workspace-fix-session-project--1751273433-e6f91ac7"
+	// Extract the meaningful part
+	if strings.HasPrefix(workspaceID, "workspace-") {
+		parts := strings.SplitN(workspaceID[10:], "--", 2)
+		if len(parts) > 0 {
+			return parts[0]
+		}
+	}
+
+	return workspaceID
+}
+
+// formatSessionName extracts a meaningful name from session ID
+func formatSessionName(sessionID string) string {
+	// For now, just use the ID as-is
+	// In the future, we might extract more meaningful parts
+	return sessionID
 }
