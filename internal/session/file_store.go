@@ -1,6 +1,7 @@
 package session
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -136,30 +137,119 @@ func (s *FileStore) Remove(ctx context.Context, id string) error {
 
 // GetLogs retrieves logs for a session
 func (s *FileStore) GetLogs(ctx context.Context, id string) (LogReader, error) {
-	logFile := s.logFile(id)
+	// fmt.Printf("DEBUG: FileStore.GetLogs called for session %s\n", id)
+	// First try the old log file format for backward compatibility
+	oldLogFile := s.logFile(id)
+	if _, err := os.Stat(oldLogFile); err == nil {
+		file, err := os.Open(oldLogFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to open log file: %w", err)
+		}
+		return &fileLogReader{file: file, data: nil}, nil
+	}
 
-	file, err := os.Open(logFile)
+	// New format: read all run directories
+	sessionDir := filepath.Join(s.sessionDir(), id)
+	entries, err := os.ReadDir(sessionDir)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, fmt.Errorf("logs not found for session: %s", id)
 		}
-		return nil, fmt.Errorf("failed to open log file: %w", err)
+		return nil, fmt.Errorf("failed to read session directory: %w", err)
 	}
 
-	return &fileLogReader{file: file}, nil
+	// Collect all console.log files from run directories
+	var logFiles []string
+	for _, entry := range entries {
+		if entry.IsDir() {
+			// Check if it's a run directory (numeric name)
+			var runID int
+			if _, err := fmt.Sscanf(entry.Name(), "%d", &runID); err == nil {
+				logPath := filepath.Join(sessionDir, entry.Name(), "console.log")
+				if _, err := os.Stat(logPath); err == nil {
+					logFiles = append(logFiles, logPath)
+				}
+			}
+		}
+	}
+
+	if len(logFiles) == 0 {
+		return nil, fmt.Errorf("no logs found for session: %s", id)
+	}
+
+	// Debug: print found files
+	// fmt.Printf("DEBUG: Found %d log files for session %s\n", len(logFiles), id)
+	// for _, f := range logFiles {
+	// 	fmt.Printf("  - %s\n", f)
+	// }
+
+	// Sort files by run ID
+	type fileInfo struct {
+		path  string
+		runID int
+	}
+	infos := make([]fileInfo, 0, len(logFiles))
+	for _, f := range logFiles {
+		dir := filepath.Dir(f)
+		runIDStr := filepath.Base(dir)
+		var runID int
+		_, _ = fmt.Sscanf(runIDStr, "%d", &runID)
+		infos = append(infos, fileInfo{path: f, runID: runID})
+	}
+	// Sort by run ID
+	for i := 0; i < len(infos); i++ {
+		for j := i + 1; j < len(infos); j++ {
+			if infos[i].runID > infos[j].runID {
+				infos[i], infos[j] = infos[j], infos[i]
+			}
+		}
+	}
+
+	// Read all files and concatenate
+	var allData []byte
+	for _, info := range infos {
+		data, err := os.ReadFile(info.path)
+		if err != nil {
+			continue // Skip files that can't be read
+		}
+		allData = append(allData, data...)
+	}
+
+	// Return a simple reader over all data
+	if len(allData) == 0 {
+		// Return empty reader but not an error - session might have no logs
+		return &fileLogReader{
+			file: nil,
+			data: bytes.NewReader([]byte{}),
+		}, nil
+	}
+	return &fileLogReader{
+		file: nil,
+		data: bytes.NewReader(allData),
+	}, nil
 }
 
 // fileLogReader implements LogReader for file-based logs
 type fileLogReader struct {
 	file *os.File
+	data io.Reader
 }
 
 func (r *fileLogReader) Read(p []byte) (n int, err error) {
-	return r.file.Read(p)
+	if r.file != nil {
+		return r.file.Read(p)
+	}
+	if r.data != nil {
+		return r.data.Read(p)
+	}
+	return 0, io.EOF
 }
 
 func (r *fileLogReader) Close() error {
-	return r.file.Close()
+	if r.file != nil {
+		return r.file.Close()
+	}
+	return nil
 }
 
 // SaveLogs saves logs for a session

@@ -2,13 +2,14 @@
 package session
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
+	"github.com/aki/amux/internal/config"
 	"github.com/aki/amux/internal/runtime"
 	"github.com/aki/amux/internal/task"
 	"github.com/aki/amux/internal/workspace"
@@ -44,7 +45,6 @@ type Session struct {
 	TaskName    string                 `json:"task_name" yaml:"task_name"`
 	Runtime     string                 `json:"runtime" yaml:"runtime"`
 	Status      Status                 `json:"status" yaml:"status"`
-	ProcessID   string                 `json:"process_id,omitempty" yaml:"process_id,omitempty"`
 	StartedAt   time.Time              `json:"started_at" yaml:"started_at"`
 	StoppedAt   *time.Time             `json:"stopped_at,omitempty" yaml:"stopped_at,omitempty"`
 	ExitCode    *int                   `json:"exit_code,omitempty" yaml:"exit_code,omitempty"`
@@ -53,8 +53,14 @@ type Session struct {
 	WorkingDir  string                 `json:"working_dir" yaml:"working_dir"`
 	Metadata    map[string]interface{} `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 
-	// Runtime process reference (not serialized)
-	process runtime.Process `json:"-" yaml:"-"`
+	// Activity tracking fields
+	LastActivityAt time.Time `json:"last_activity_at" yaml:"last_activity_at"`
+
+	// Logging configuration
+	EnableLog bool `json:"enable_log" yaml:"enable_log"`
+
+	// Socket path for output streaming
+	SocketPath string `json:"socket_path,omitempty" yaml:"socket_path,omitempty"`
 }
 
 // Manager manages sessions across workspaces
@@ -103,6 +109,7 @@ type CreateOptions struct {
 	WorkingDir          string                 // Working directory override
 	Metadata            map[string]interface{} // Additional metadata
 	RuntimeOptions      runtime.RuntimeOptions // Runtime-specific options
+	EnableLog           bool                   // Enable logging to file (default: false)
 }
 
 // LogReader provides access to session logs
@@ -121,17 +128,19 @@ type manager struct {
 	runtimes         map[string]runtime.Runtime
 	tasks            *task.Manager
 	workspaceManager WorkspaceManager
+	configManager    *config.Manager
 	idCounter        int
 }
 
 // NewManager creates a new session manager
-func NewManager(store Store, runtimes map[string]runtime.Runtime, tasks *task.Manager, workspaceManager WorkspaceManager) Manager {
+func NewManager(store Store, runtimes map[string]runtime.Runtime, tasks *task.Manager, workspaceManager WorkspaceManager, configManager *config.Manager) Manager {
 	return &manager{
 		sessions:         make(map[string]*Session),
 		store:            store,
 		runtimes:         runtimes,
 		tasks:            tasks,
 		workspaceManager: workspaceManager,
+		configManager:    configManager,
 		idCounter:        0,
 	}
 }
@@ -177,9 +186,11 @@ func (m *manager) Create(ctx context.Context, opts CreateOptions) (*Session, err
 
 	// Build execution spec
 	spec := runtime.ExecutionSpec{
+		SessionID:   sessionID,
 		WorkingDir:  opts.WorkingDir,
 		Environment: opts.Environment,
 		Options:     opts.RuntimeOptions,
+		EnableLog:   opts.EnableLog,
 	}
 
 	// If task is specified, load it
@@ -217,40 +228,36 @@ func (m *manager) Create(ctx context.Context, opts CreateOptions) (*Session, err
 	}
 
 	// Start the process
-	process, err := rt.Execute(ctx, spec)
-	if err != nil {
+	if _, err := rt.Execute(ctx, spec); err != nil {
 		return nil, fmt.Errorf("failed to execute: %w", err)
 	}
 
-	// Get process metadata
-	var metadata map[string]interface{}
-	if processMetadata := process.Metadata(); processMetadata != nil {
-		metadata = processMetadata.ToMap()
-		// Merge with any user-provided metadata
-		if opts.Metadata != nil {
-			for k, v := range opts.Metadata {
-				metadata[k] = v
-			}
-		}
-	} else {
-		metadata = opts.Metadata
+	// Use provided metadata
+	metadata := opts.Metadata
+
+	// Generate socket path for this session
+	tmpDir := os.Getenv("TMPDIR")
+	if tmpDir == "" {
+		tmpDir = "/tmp"
 	}
+	socketPath := filepath.Join(tmpDir, fmt.Sprintf("amux-%s.sock", sessionID))
 
 	session := &Session{
-		ID:          sessionID,
-		Name:        opts.Name,
-		Description: opts.Description,
-		WorkspaceID: opts.WorkspaceID,
-		TaskName:    opts.TaskName,
-		Runtime:     opts.Runtime,
-		Status:      StatusRunning,
-		ProcessID:   process.ID(),
-		StartedAt:   process.StartTime(),
-		Command:     spec.Command,
-		Environment: spec.Environment,
-		WorkingDir:  spec.WorkingDir,
-		Metadata:    metadata,
-		process:     process,
+		ID:             sessionID,
+		Name:           opts.Name,
+		Description:    opts.Description,
+		WorkspaceID:    opts.WorkspaceID,
+		TaskName:       opts.TaskName,
+		Runtime:        opts.Runtime,
+		Status:         StatusRunning,
+		StartedAt:      time.Now(),
+		Command:        spec.Command,
+		Environment:    spec.Environment,
+		WorkingDir:     spec.WorkingDir,
+		Metadata:       metadata,
+		LastActivityAt: time.Now(),
+		EnableLog:      opts.EnableLog,
+		SocketPath:     socketPath,
 	}
 
 	// Store session
@@ -261,60 +268,17 @@ func (m *manager) Create(ctx context.Context, opts CreateOptions) (*Session, err
 	// Save to persistent store
 	if err := m.store.Save(ctx, session); err != nil {
 		// Try to clean up
-		_ = process.Kill(ctx)
 		m.mu.Lock()
 		delete(m.sessions, session.ID)
 		m.mu.Unlock()
+		// Try to kill the process through runtime
+		if killer, ok := rt.(runtime.KillableRuntime); ok {
+			_ = killer.Kill(ctx, session.ID)
+		}
 		return nil, fmt.Errorf("failed to save session: %w", err)
 	}
 
-	// Start monitoring goroutine
-	go m.monitorSession(ctx, session)
-
-	// Start log capture if process supports it
-	go m.captureSessionLogs(ctx, session)
-
 	return session, nil
-}
-
-// monitorSession monitors a session for state changes
-func (m *manager) monitorSession(ctx context.Context, session *Session) {
-	// Wait for process to complete
-	_ = session.process.Wait(ctx)
-
-	// Update session state
-	state := session.process.State()
-	var status Status
-	switch state {
-	case runtime.StateStarting:
-		status = StatusStarting
-	case runtime.StateRunning:
-		status = StatusRunning
-	case runtime.StateStopped:
-		status = StatusStopped
-	case runtime.StateFailed:
-		status = StatusFailed
-	case runtime.StateUnknown:
-		status = StatusUnknown
-	default:
-		status = StatusUnknown
-	}
-
-	// Get exit code
-	exitCode, _ := session.process.ExitCode()
-	now := time.Now()
-
-	// Update session
-	m.mu.Lock()
-	session.Status = status
-	session.StoppedAt = &now
-	if exitCode >= 0 {
-		session.ExitCode = &exitCode
-	}
-	m.mu.Unlock()
-
-	// Save to store
-	_ = m.store.Save(ctx, session)
 }
 
 // Get retrieves a session by ID
@@ -333,19 +297,8 @@ func (m *manager) Get(ctx context.Context, id string) (*Session, error) {
 		return nil, fmt.Errorf("session not found: %s", id)
 	}
 
-	// Try to reconnect to process if still running
-	if session.Status == StatusRunning && session.ProcessID != "" {
-		rt, ok := m.runtimes[session.Runtime]
-		if ok {
-			if process, err := rt.Find(ctx, session.ProcessID); err == nil {
-				session.process = process
-				m.mu.Lock()
-				m.sessions[session.ID] = session
-				m.mu.Unlock()
-				go m.monitorSession(ctx, session)
-			}
-		}
-	}
+	// Note: We can't reconnect to process after restart since we don't store process IDs anymore
+	// This is a simplification - sessions will appear as stopped after restart
 
 	return session, nil
 }
@@ -390,15 +343,27 @@ func (m *manager) Stop(ctx context.Context, id string) error {
 		return err
 	}
 
-	if session.process == nil {
-		return fmt.Errorf("session process not available")
+	// Get runtime
+	rt, ok := m.runtimes[session.Runtime]
+	if !ok {
+		return fmt.Errorf("runtime not found: %s", session.Runtime)
 	}
 
-	if err := session.process.Stop(ctx); err != nil {
-		return fmt.Errorf("failed to stop session: %w", err)
+	// Check if runtime supports stop
+	if stopper, ok := rt.(runtime.StoppableRuntime); ok {
+		if err := stopper.Stop(ctx, session.ID); err != nil {
+			return fmt.Errorf("failed to stop session: %w", err)
+		}
+
+		// Update session status
+		if err := m.UpdateStatus(ctx, session.ID, StatusStopped); err != nil {
+			return fmt.Errorf("failed to update session status: %w", err)
+		}
+
+		return nil
 	}
 
-	return nil
+	return fmt.Errorf("stop not supported for runtime: %s", session.Runtime)
 }
 
 // Kill forcefully terminates a session
@@ -408,15 +373,27 @@ func (m *manager) Kill(ctx context.Context, id string) error {
 		return err
 	}
 
-	if session.process == nil {
-		return fmt.Errorf("session process not available")
+	// Get runtime
+	rt, ok := m.runtimes[session.Runtime]
+	if !ok {
+		return fmt.Errorf("runtime not found: %s", session.Runtime)
 	}
 
-	if err := session.process.Kill(ctx); err != nil {
-		return fmt.Errorf("failed to kill session: %w", err)
+	// Check if runtime supports kill
+	if killer, ok := rt.(runtime.KillableRuntime); ok {
+		if err := killer.Kill(ctx, session.ID); err != nil {
+			return fmt.Errorf("failed to kill session: %w", err)
+		}
+
+		// Update session status
+		if err := m.UpdateStatus(ctx, session.ID, StatusFailed); err != nil {
+			return fmt.Errorf("failed to update session status: %w", err)
+		}
+
+		return nil
 	}
 
-	return nil
+	return fmt.Errorf("kill not supported for runtime: %s", session.Runtime)
 }
 
 // Attach attaches to a running session
@@ -430,13 +407,15 @@ func (m *manager) Attach(ctx context.Context, id string) error {
 		return fmt.Errorf("session is not running")
 	}
 
-	if session.process == nil {
-		return fmt.Errorf("session process not available")
+	// Get runtime
+	rt, ok := m.runtimes[session.Runtime]
+	if !ok {
+		return fmt.Errorf("runtime not found: %s", session.Runtime)
 	}
 
-	// Check if process supports attach capability
-	if attachable, ok := session.process.(runtime.AttachableProcess); ok {
-		if err := attachable.Attach(); err != nil {
+	// Check if runtime supports attach
+	if attacher, ok := rt.(runtime.AttachableRuntime); ok {
+		if err := attacher.Attach(ctx, session.ID); err != nil {
 			return fmt.Errorf("failed to attach to session: %w", err)
 		}
 		return nil
@@ -447,66 +426,18 @@ func (m *manager) Attach(ctx context.Context, id string) error {
 
 // Logs returns the logs for a session
 func (m *manager) Logs(ctx context.Context, id string, follow bool) (LogReader, error) {
-	session, err := m.Get(ctx, id)
-	if err != nil {
+	if _, err := m.Get(ctx, id); err != nil {
 		return nil, err
 	}
 
-	if session.process == nil {
-		// Try to get logs from storage
-		return m.store.GetLogs(ctx, id)
+	if follow {
+		// Follow mode not supported in current implementation
+		// Could be implemented with socket connection in the future
+		return nil, fmt.Errorf("follow mode not yet implemented")
 	}
 
-	// Check if process supports output streaming
-	if streamer, ok := session.process.(runtime.OutputStreamer); ok {
-		if follow {
-			// Create a pipe reader for streaming
-			pr, pw := io.Pipe()
-
-			// Start streaming in background
-			go func() {
-				defer func() { _ = pw.Close() }()
-				opts := runtime.StreamOptions{
-					PollInterval: 100 * time.Millisecond,
-					ClearScreen:  false, // Don't clear screen for logs
-				}
-				if err := streamer.StreamOutput(ctx, pw, opts); err != nil && err != context.Canceled {
-					// Write error to pipe
-					_, _ = fmt.Fprintf(pw, "\n[Error streaming logs: %v]\n", err)
-				}
-			}()
-
-			return &simpleLogReader{reader: pr}, nil
-		}
-
-		// Non-follow mode: capture output once
-		output, err := streamer.CaptureOutput(0) // 0 = capture all
-		if err != nil {
-			return nil, fmt.Errorf("failed to capture output: %w", err)
-		}
-
-		return &simpleLogReader{reader: io.NopCloser(io.MultiReader(
-			bytes.NewReader(output),
-		))}, nil
-	}
-
-	// Check if process supports basic output capture
-	if capture, ok := session.process.(runtime.OutputCapture); ok {
-		output, err := capture.CaptureOutput(0) // 0 = capture all
-		if err != nil {
-			return nil, fmt.Errorf("failed to capture output: %w", err)
-		}
-
-		return &simpleLogReader{reader: io.NopCloser(bytes.NewReader(output))}, nil
-	}
-
-	// Fallback to old method
-	stdout, _ := session.process.Output()
-	if stdout != nil {
-		return &simpleLogReader{reader: stdout}, nil
-	}
-
-	return nil, fmt.Errorf("logs not available for runtime: %s", session.Runtime)
+	// Always use file store for logs
+	return m.store.GetLogs(ctx, id)
 }
 
 // Remove deletes a stopped session
@@ -563,49 +494,18 @@ func (m *manager) SendInput(ctx context.Context, id string, input string) error 
 		return fmt.Errorf("session is not running (status: %s)", session.Status)
 	}
 
-	if session.process == nil {
-		return fmt.Errorf("session process not available")
+	// Get runtime
+	rt, ok := m.runtimes[session.Runtime]
+	if !ok {
+		return fmt.Errorf("runtime not found: %s", session.Runtime)
 	}
 
-	// Check if process supports input sending
-	if sender, ok := session.process.(runtime.InputSender); ok {
-		return sender.SendInput(input)
+	// Check if runtime supports input sending
+	if sender, ok := rt.(runtime.InputSendingRuntime); ok {
+		return sender.SendInput(ctx, session.ID, input)
 	}
 
 	return fmt.Errorf("runtime %s does not support input sending", session.Runtime)
-}
-
-// captureSessionLogs captures session logs to storage
-func (m *manager) captureSessionLogs(ctx context.Context, session *Session) {
-	if session.process == nil {
-		return
-	}
-
-	// Get process output
-	stdout, stderr := session.process.Output()
-
-	// Create a multi-reader to capture both stdout and stderr
-	pr, pw := io.Pipe()
-
-	// Copy both streams to the pipe
-	go func() {
-		defer func() {
-			_ = pw.Close()
-		}()
-
-		// Use io.MultiWriter to write to both pipe and capture
-		if stdout != nil {
-			_, _ = io.Copy(pw, stdout)
-		}
-		if stderr != nil {
-			_, _ = io.Copy(pw, stderr)
-		}
-	}()
-
-	// Save logs to store
-	if fileStore, ok := m.store.(*FileStore); ok {
-		_ = fileStore.SaveLogs(ctx, session.ID, pr)
-	}
 }
 
 // simpleLogReader is a basic implementation of LogReader

@@ -23,7 +23,6 @@ func TestFileStore_SaveLoad(t *testing.T) {
 		TaskName:    "test-task",
 		Runtime:     "local",
 		Status:      StatusRunning,
-		ProcessID:   "process-123",
 		StartedAt:   time.Now(),
 		Command:     []string{"echo", "hello"},
 		Environment: map[string]string{
@@ -68,9 +67,6 @@ func TestFileStore_SaveLoad(t *testing.T) {
 	}
 	if loaded.Status != session.Status {
 		t.Errorf("Status mismatch: expected %s, got %s", session.Status, loaded.Status)
-	}
-	if loaded.ProcessID != session.ProcessID {
-		t.Errorf("ProcessID mismatch: expected %s, got %s", session.ProcessID, loaded.ProcessID)
 	}
 	if len(loaded.Command) != len(session.Command) {
 		t.Errorf("Command length mismatch: expected %d, got %d", len(session.Command), len(loaded.Command))

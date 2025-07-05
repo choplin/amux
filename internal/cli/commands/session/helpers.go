@@ -58,5 +58,5 @@ func getSessionManager(configMgr *config.Manager) session.Manager {
 	}
 
 	// Create session manager
-	return session.NewManager(store, runtimes, taskMgr, workspaceMgr)
+	return session.NewManager(store, runtimes, taskMgr, workspaceMgr, configMgr)
 }

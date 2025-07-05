@@ -57,12 +57,18 @@ func ShowLogs(cmd *cobra.Command, args []string) error {
 		}
 		return fmt.Errorf("failed to get logs for session '%s': %w", sessionID, err)
 	}
+
+	// Check if reader is nil
+	if reader == nil {
+		return fmt.Errorf("no logs available for session '%s'", sessionID)
+	}
 	defer func() {
 		_ = reader.Close()
 	}()
 
 	// Copy logs to stdout
-	if _, err := io.Copy(os.Stdout, reader); err != nil {
+	_, err = io.Copy(os.Stdout, reader)
+	if err != nil {
 		return fmt.Errorf("failed to read logs: %w", err)
 	}
 

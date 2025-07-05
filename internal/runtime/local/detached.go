@@ -1,16 +1,12 @@
 package local
 
 import (
-	"bufio"
 	"context"
 	"fmt"
-	"io"
-	"os"
-	"path/filepath"
-	"strings"
-	"time"
+	"os/exec"
 
 	amuxruntime "github.com/aki/amux/internal/runtime"
+	"github.com/aki/amux/internal/runtime/proxy"
 )
 
 // DetachedRuntime implements the local process runtime for background/detached execution
@@ -35,11 +31,33 @@ func (r *DetachedRuntime) Execute(ctx context.Context, spec amuxruntime.Executio
 		return nil, amuxruntime.ErrInvalidCommand
 	}
 
-	// Get shell
-	shell := getShell()
+	// Create process first to get ID
+	proc := createProcess(spec)
 
-	// Create command without context to avoid automatic termination
-	cmd := createCommand(ctx, spec, shell, false)
+	// Build proxy command arguments
+	sessionID := spec.SessionID
+	if sessionID == "" {
+		sessionID = proc.id
+	}
+
+	// Build command based on spec
+	var command []string
+	if len(spec.Command) == 1 {
+		// Single command, run through shell
+		shell := proxy.GetShell()
+		command = []string{shell, "-c", spec.Command[0]}
+	} else {
+		// Multiple arguments, execute directly
+		command = spec.Command
+	}
+
+	args, err := proxy.BuildProxyCommand(sessionID, command, spec.EnableLog)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build proxy command: %w", err)
+	}
+
+	// Create the command (no context for detached processes)
+	cmd := exec.Command(args[0], args[1:]...)
 
 	// Setup command properties
 	if err := setupCommand(cmd, spec); err != nil {
@@ -49,33 +67,11 @@ func (r *DetachedRuntime) Execute(ctx context.Context, spec amuxruntime.Executio
 	// Configure process isolation for detached mode
 	configureProcessIsolation(cmd, true)
 
-	// Create process
-	proc := createProcess(spec)
+	// Set command on process
 	proc.cmd = cmd
-
-	// Create log directory for detached process
-	logDir := filepath.Join(os.TempDir(), "amux-logs")
-	if err := os.MkdirAll(logDir, 0o755); err != nil {
-		return nil, fmt.Errorf("failed to create log directory: %w", err)
-	}
-
-	// Create log file for output
-	logFile := filepath.Join(logDir, fmt.Sprintf("session-%s.log", proc.id))
-	outFile, err := os.Create(logFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create log file: %w", err)
-	}
-
-	// Store log file path in process
-	proc.logFile = logFile
-
-	// Redirect output to log file
-	cmd.Stdout = outFile
-	cmd.Stderr = outFile
 
 	// Start the process
 	if err := cmd.Start(); err != nil {
-		_ = outFile.Close()
 		return nil, fmt.Errorf("failed to start process: %w", err)
 	}
 
@@ -95,127 +91,18 @@ func (r *DetachedRuntime) Execute(ctx context.Context, spec amuxruntime.Executio
 	// Store process
 	r.processes.Store(proc.id, proc)
 
-	// Monitor process completion (also closes the log file)
+	// Store session mapping if session ID is provided
+	if spec.SessionID != "" {
+		r.sessions.Store(spec.SessionID, proc.id)
+	}
+
+	// Monitor process completion
 	go func() {
 		proc.monitor()
-		// Close the log file when process completes
-		_ = outFile.Close()
 	}()
 
 	// Detached processes don't handle context cancellation
 	// They continue running even if the parent context is cancelled
 
 	return proc, nil
-}
-
-// CaptureOutput implements runtime.OutputCapture interface
-func (p *Process) CaptureOutput(lines int) ([]byte, error) {
-	p.mu.RLock()
-	logFile := p.logFile
-	p.mu.RUnlock()
-
-	if logFile == "" {
-		return nil, fmt.Errorf("no log file available for process")
-	}
-
-	// Open the log file
-	file, err := os.Open(logFile)
-	if err != nil {
-		if os.IsNotExist(err) {
-			// Log file doesn't exist yet, return empty
-			return nil, nil
-		}
-		return nil, fmt.Errorf("failed to open log file: %w", err)
-	}
-	defer func() { _ = file.Close() }()
-
-	// If lines is 0, read the entire file
-	if lines == 0 {
-		content, err := io.ReadAll(file)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read log file: %w", err)
-		}
-		return content, nil
-	}
-
-	// Read last N lines
-	var outputLines []string
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		outputLines = append(outputLines, scanner.Text())
-		if len(outputLines) > lines {
-			outputLines = outputLines[1:]
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("failed to scan log file: %w", err)
-	}
-
-	return []byte(strings.Join(outputLines, "\n")), nil
-}
-
-// StreamOutput implements runtime.OutputStreamer interface
-func (p *Process) StreamOutput(ctx context.Context, w io.Writer, opts amuxruntime.StreamOptions) error {
-	p.mu.RLock()
-	logFile := p.logFile
-	p.mu.RUnlock()
-
-	if logFile == "" {
-		return fmt.Errorf("no log file available for process")
-	}
-
-	// Open the log file
-	file, err := os.Open(logFile)
-	if err != nil {
-		if os.IsNotExist(err) {
-			// Log file doesn't exist yet, wait a bit
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-time.After(100 * time.Millisecond):
-				return p.StreamOutput(ctx, w, opts)
-			}
-		}
-		return fmt.Errorf("failed to open log file: %w", err)
-	}
-	defer func() { _ = file.Close() }()
-
-	// StreamOutput always follows the file, reading from beginning
-
-	reader := bufio.NewReader(file)
-
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			line, err := reader.ReadString('\n')
-			if err != nil {
-				if err == io.EOF {
-					// Wait for more data
-					select {
-					case <-ctx.Done():
-						return ctx.Err()
-					case <-p.done:
-						// Process completed, read any remaining data
-						remaining, _ := io.ReadAll(reader)
-						if len(remaining) > 0 {
-							_, _ = w.Write(remaining)
-						}
-						return nil
-					case <-time.After(100 * time.Millisecond):
-						// Continue loop to check for new data
-					}
-					continue
-				}
-				return fmt.Errorf("failed to read line: %w", err)
-			}
-
-			// Write the line
-			if _, err := w.Write([]byte(line)); err != nil {
-				return fmt.Errorf("failed to write output: %w", err)
-			}
-		}
-	}
 }

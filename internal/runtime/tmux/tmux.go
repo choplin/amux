@@ -18,6 +18,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/aki/amux/internal/runtime"
+	"github.com/aki/amux/internal/runtime/proxy"
 )
 
 // Runtime implements the tmux-based process runtime
@@ -43,10 +44,12 @@ func New(baseDir string) (*Runtime, error) {
 		return nil, fmt.Errorf("failed to create base directory: %w", err)
 	}
 
-	return &Runtime{
+	rt := &Runtime{
 		executable: tmuxPath,
 		baseDir:    baseDir,
-	}, nil
+	}
+
+	return rt, nil
 }
 
 // Type returns the runtime type identifier
@@ -85,6 +88,17 @@ func (r *Runtime) Execute(ctx context.Context, spec runtime.ExecutionSpec) (runt
 		done:        make(chan struct{}),
 	}
 
+	// Build proxy command arguments
+	sessionID := spec.SessionID
+	if sessionID == "" {
+		sessionID = "unknown"
+	}
+
+	proxyArgs, err := proxy.BuildProxyCommand(sessionID, spec.Command, spec.EnableLog)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build proxy command: %w", err)
+	}
+
 	// Build tmux command
 	args := []string{
 		"new-session",
@@ -116,23 +130,13 @@ func (r *Runtime) Execute(ctx context.Context, spec runtime.ExecutionSpec) (runt
 		args = append(args, "-x") // remain-on-exit
 	}
 
-	// Create session
+	// Add the proxy command
+	args = append(args, proxyArgs...)
+
+	// Create session with command
 	cmd := exec.CommandContext(ctx, r.executable, args...)
 	if err := cmd.Run(); err != nil {
 		return nil, fmt.Errorf("failed to create tmux session: %w", err)
-	}
-
-	// Send the actual command to execute
-	commandStr := strings.Join(spec.Command, " ")
-	sendArgs := []string{"send-keys", "-t", opts.SessionName, commandStr, "Enter"}
-	if opts.SocketPath != "" {
-		sendArgs = append([]string{"-S", opts.SocketPath}, sendArgs...)
-	}
-	sendCmd := exec.CommandContext(ctx, r.executable, sendArgs...)
-	if err := sendCmd.Run(); err != nil {
-		// Clean up session
-		_ = r.killSession(opts.SocketPath, opts.SessionName)
-		return nil, fmt.Errorf("failed to send command: %w", err)
 	}
 
 	proc.setState(runtime.StateRunning)
@@ -192,6 +196,16 @@ func (r *Runtime) killSession(socketPath, sessionName string) error {
 	}
 	cmd := exec.Command(r.executable, args...)
 	return cmd.Run()
+}
+
+// RunCommand executes a tmux command and returns output
+func (r *Runtime) RunCommand(args ...string) (string, error) {
+	cmd := exec.Command(r.executable, args...)
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return string(output), nil
 }
 
 // tmuxCmd builds tmux command with optional socket path
