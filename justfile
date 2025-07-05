@@ -90,15 +90,29 @@ test-coverage:
     go test -v -race -coverprofile=coverage.out ./...
     go tool cover -html=coverage.out -o coverage.html
 
+# Run integration tests (requires built binary)
+test-integration: build
+    AMUX_BIN="$(pwd)/bin/amux" go test -v -race -tags=integration ./tests/integration/...
+
+# Run all tests including integration tests
+test-all: build
+    go test -v -race ./...
+    AMUX_BIN="$(pwd)/bin/amux" go test -v -race -tags=integration ./tests/integration/...
+
 # Run Go vet (accepts file list or defaults to all)
 vet *files:
     #!/usr/bin/env bash
     if [ -z "{{files}}" ]; then
-        go vet ./...
+        # Vet all packages except integration tests
+        go vet $(go list ./... | grep -v /tests/integration)
     else
         # Extract directories from file list for vet
         dirs=$(echo {{files}} | xargs -n1 dirname | sort -u | sed 's|^\./||')
         for dir in $dirs; do
+            # Skip integration test directories
+            if [[ "$dir" =~ tests/integration ]]; then
+                continue
+            fi
             go vet ./$dir
         done
     fi

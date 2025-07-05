@@ -182,7 +182,7 @@ func displaySessions(sessions []*session.Session) {
 // displaySessionsWide shows sessions with more details
 func displaySessionsWide(sessions []*session.Session) {
 	// Prepare table data
-	headers := []string{"SESSION", "NAME", "DESCRIPTION", "STATUS", "RUNTIME", "WORKSPACE", "TASK", "PID", "STARTED", "DURATION", "COMMAND"}
+	headers := []string{"SESSION", "NAME", "DESCRIPTION", "STATUS", "RUNTIME", "WORKSPACE", "TASK", "STARTED", "DURATION", "COMMAND"}
 
 	var rows [][]string
 	for _, s := range sessions {
@@ -203,12 +203,6 @@ func displaySessionsWide(sessions []*session.Session) {
 
 		// Workspace - show readable name
 		workspace := formatWorkspaceName(s.WorkspaceID)
-
-		// Process ID
-		pid := s.ProcessID
-		if pid == "" {
-			pid = "-"
-		}
 
 		// Started time
 		started := s.StartedAt.Format("15:04:05")
@@ -251,7 +245,6 @@ func displaySessionsWide(sessions []*session.Session) {
 			runtime,
 			workspace,
 			task,
-			pid,
 			started,
 			duration,
 			command,
@@ -265,8 +258,8 @@ func displaySessionsWide(sessions []*session.Session) {
 	}
 	tbl := ui.NewTable(headerInterfaces...)
 	for _, row := range rows {
-		// Add all columns for wide format (11 columns total)
-		tbl.AddRow(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9], row[10])
+		// Add all columns for wide format (10 columns total)
+		tbl.AddRow(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9])
 	}
 	tbl.Print()
 }

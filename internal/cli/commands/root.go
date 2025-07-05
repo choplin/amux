@@ -60,8 +60,10 @@ func init() {
 	rootCmd.AddCommand(NewRunCommand())
 	rootCmd.AddCommand(NewPsCommand())
 	rootCmd.AddCommand(NewAttachCommand())
-	rootCmd.AddCommand(NewTailCommand())
 	rootCmd.AddCommand(NewStatusCommand())
+
+	// Add internal commands
+	rootCmd.AddCommand(NewProxyCommand())
 }
 
 // Execute runs the root command

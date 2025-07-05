@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"runtime"
 	"sync"
 	"time"
 
@@ -19,6 +18,7 @@ import (
 // baseRuntime provides common functionality for local runtime implementations
 type baseRuntime struct {
 	processes sync.Map // map[string]*Process
+	sessions  sync.Map // map[sessionID]processID
 }
 
 // Find locates an existing process by ID
@@ -45,35 +45,49 @@ func (r *baseRuntime) Validate() error {
 	return nil
 }
 
-// createCommand creates an exec.Cmd based on the execution spec
-func createCommand(ctx context.Context, spec amuxruntime.ExecutionSpec, shell string, useContext bool) *exec.Cmd {
-	var cmd *exec.Cmd
-
-	if len(spec.Command) == 1 {
-		// Single command, run through shell
-		if runtime.GOOS == "windows" {
-			if useContext {
-				cmd = exec.CommandContext(ctx, shell, "/c", spec.Command[0])
-			} else {
-				cmd = exec.Command(shell, "/c", spec.Command[0])
-			}
-		} else {
-			if useContext {
-				cmd = exec.CommandContext(ctx, shell, "-c", spec.Command[0])
-			} else {
-				cmd = exec.Command(shell, "-c", spec.Command[0])
-			}
-		}
-	} else {
-		// Multiple arguments, run directly
-		if useContext {
-			cmd = exec.CommandContext(ctx, spec.Command[0], spec.Command[1:]...)
-		} else {
-			cmd = exec.Command(spec.Command[0], spec.Command[1:]...)
-		}
+// Stop gracefully stops a session
+func (r *baseRuntime) Stop(ctx context.Context, sessionID string) error {
+	processID, ok := r.sessions.Load(sessionID)
+	if !ok {
+		return fmt.Errorf("session not found: %s", sessionID)
 	}
 
-	return cmd
+	proc, ok := r.processes.Load(processID)
+	if !ok {
+		return fmt.Errorf("process not found for session: %s", sessionID)
+	}
+
+	return proc.(*Process).Stop(ctx)
+}
+
+// Kill forcefully terminates a session
+func (r *baseRuntime) Kill(ctx context.Context, sessionID string) error {
+	processID, ok := r.sessions.Load(sessionID)
+	if !ok {
+		return fmt.Errorf("session not found: %s", sessionID)
+	}
+
+	proc, ok := r.processes.Load(processID)
+	if !ok {
+		return fmt.Errorf("process not found for session: %s", sessionID)
+	}
+
+	return proc.(*Process).Kill(ctx)
+}
+
+// SendInput sends input to a session
+func (r *baseRuntime) SendInput(ctx context.Context, sessionID string, input string) error {
+	processID, ok := r.sessions.Load(sessionID)
+	if !ok {
+		return fmt.Errorf("session not found: %s", sessionID)
+	}
+
+	proc, ok := r.processes.Load(processID)
+	if !ok {
+		return fmt.Errorf("process not found for session: %s", sessionID)
+	}
+
+	return proc.(*Process).SendInput(input)
 }
 
 // setupCommand configures common command properties
@@ -95,19 +109,6 @@ func setupCommand(cmd *exec.Cmd, spec amuxruntime.ExecutionSpec) error {
 	return nil
 }
 
-// getShell returns the appropriate shell for the current platform
-func getShell() string {
-	shell := os.Getenv("SHELL")
-	if shell == "" {
-		if runtime.GOOS == "windows" {
-			shell = "cmd"
-		} else {
-			shell = "/bin/sh"
-		}
-	}
-	return shell
-}
-
 // Process represents a local process
 type Process struct {
 	id        string
@@ -119,7 +120,6 @@ type Process struct {
 	done      chan struct{}
 	doneOnce  sync.Once
 	metadata  *Metadata
-	logFile   string // Path to log file (for detached processes)
 }
 
 // ID returns the unique identifier for this process
@@ -220,6 +220,13 @@ func (p *Process) ExitCode() (int, error) {
 // StartTime returns when the process was started
 func (p *Process) StartTime() time.Time {
 	return p.startTime
+}
+
+// SendInput sends input to the process
+func (p *Process) SendInput(input string) error {
+	// Local processes don't support input sending through this interface
+	// Input would be handled by the proxy process if needed
+	return fmt.Errorf("input sending not supported for local processes")
 }
 
 // setState updates the process state

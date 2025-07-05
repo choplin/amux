@@ -1,20 +1,25 @@
-package tmux
+//go:build integration
+// +build integration
+
+package runtime_test
 
 import (
 	"context"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/aki/amux/internal/runtime"
+	"github.com/aki/amux/internal/runtime/tmux"
 )
 
 func TestTmuxRuntime_BasicExecution(t *testing.T) {
 	skipIfTmuxNotAvailable(t)
 
 	tmpDir := t.TempDir()
-	r, err := New(tmpDir)
+	r, err := tmux.New(tmpDir)
 	require.NoError(t, err)
 
 	// Validate runtime
@@ -26,7 +31,7 @@ func TestTmuxRuntime_BasicExecution(t *testing.T) {
 	// Create a simple process
 	p, err := r.Execute(ctx, runtime.ExecutionSpec{
 		Command: []string{"true"},
-		Options: Options{
+		Options: tmux.Options{
 			SessionName: "test-basic",
 		},
 	})
@@ -36,10 +41,8 @@ func TestTmuxRuntime_BasicExecution(t *testing.T) {
 	t.Logf("Process ID: %s", p.ID())
 	t.Logf("Process State: %s", p.State())
 
-	// Check if session exists
-	tmuxProc := p.(*Process)
-	exists := tmuxProc.sessionExists()
-	t.Logf("Session exists: %v", exists)
+	// Verify process is running
+	assert.Equal(t, runtime.StateRunning, p.State())
 
 	// Wait a bit for process to start
 	time.Sleep(500 * time.Millisecond)
@@ -48,9 +51,8 @@ func TestTmuxRuntime_BasicExecution(t *testing.T) {
 	state := p.State()
 	t.Logf("State after 500ms: %s", state)
 
-	// Check if pane is dead
-	dead, err := tmuxProc.isPaneDead()
-	t.Logf("Pane dead: %v, error: %v", dead, err)
+	// Check state again after some time
+	t.Logf("State still running: %v", p.State() == runtime.StateRunning)
 
 	// Wait for completion with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -60,9 +62,8 @@ func TestTmuxRuntime_BasicExecution(t *testing.T) {
 	t.Logf("Wait error: %v", waitErr)
 	t.Logf("Final state: %s", p.State())
 
-	// Try to manually check session
-	exists = tmuxProc.sessionExists()
-	t.Logf("Session exists after wait: %v", exists)
+	// Log final state after wait
+	t.Logf("Process completed with state: %s", p.State())
 
 	// Clean up
 	killErr := p.Kill(context.Background())
@@ -73,7 +74,7 @@ func TestTmuxRuntime_ManualSessionCheck(t *testing.T) {
 	skipIfTmuxNotAvailable(t)
 
 	tmpDir := t.TempDir()
-	r, err := New(tmpDir)
+	r, err := tmux.New(tmpDir)
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -81,7 +82,7 @@ func TestTmuxRuntime_ManualSessionCheck(t *testing.T) {
 	// Create a long-running process
 	p, err := r.Execute(ctx, runtime.ExecutionSpec{
 		Command: []string{"sh", "-c", "echo started; sleep 5; echo done"},
-		Options: Options{
+		Options: tmux.Options{
 			SessionName:   "test-manual",
 			CaptureOutput: true,
 		},
@@ -89,15 +90,11 @@ func TestTmuxRuntime_ManualSessionCheck(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { _ = p.Kill(context.Background()) }()
 
-	tmuxProc := p.(*Process)
-
 	// Monitor for a few seconds
 	for i := 0; i < 10; i++ {
-		exists := tmuxProc.sessionExists()
-		dead, _ := tmuxProc.isPaneDead()
 		state := p.State()
 
-		t.Logf("Iteration %d: exists=%v, dead=%v, state=%s", i, exists, dead, state)
+		t.Logf("Iteration %d: state=%s", i, state)
 
 		if state != runtime.StateRunning {
 			break
@@ -114,7 +111,7 @@ func TestTmuxRuntime_ImmediateExit(t *testing.T) {
 	t.Skip("Tmux session completion detection needs improvement")
 
 	tmpDir := t.TempDir()
-	r, err := New(tmpDir)
+	r, err := tmux.New(tmpDir)
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -122,7 +119,7 @@ func TestTmuxRuntime_ImmediateExit(t *testing.T) {
 	// Use sh -c exit command that completes immediately
 	p, err := r.Execute(ctx, runtime.ExecutionSpec{
 		Command: []string{"sh", "-c", "exit 0"},
-		Options: Options{
+		Options: tmux.Options{
 			SessionName:  "test-immediate",
 			RemainOnExit: false,
 		},

@@ -22,6 +22,7 @@ type SessionRunParams struct {
 	Runtime             string            `json:"runtime,omitempty" jsonschema:"description=Runtime to use (local, tmux),default=local"`
 	Environment         map[string]string `json:"environment,omitempty" jsonschema:"description=Additional environment variables"`
 	WorkingDir          string            `json:"working_dir,omitempty" jsonschema:"description=Working directory override"`
+	EnableLog           bool              `json:"enable_log,omitempty" jsonschema:"description=Enable logging to file,default=false"`
 }
 
 // SessionListParams defines parameters for session_list tool
@@ -152,6 +153,9 @@ func (s *ServerV2) handleSessionRun(ctx context.Context, request mcp.CallToolReq
 	}
 	if workingDir, ok := args["working_dir"].(string); ok {
 		opts.WorkingDir = workingDir
+	}
+	if enableLog, ok := args["enable_log"].(bool); ok {
+		opts.EnableLog = enableLog
 	}
 
 	// Create session manager
@@ -362,5 +366,5 @@ func (s *ServerV2) getSessionManager() session.Manager {
 	store := session.NewFileStore(s.configManager.GetAmuxDir())
 
 	// Create session manager
-	return session.NewManager(store, runtimes, taskMgr, s.workspaceManager)
+	return session.NewManager(store, runtimes, taskMgr, s.workspaceManager, s.configManager)
 }

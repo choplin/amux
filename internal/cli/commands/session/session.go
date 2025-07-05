@@ -20,6 +20,7 @@ func Command() *cobra.Command {
 	cmd.AddCommand(attachCmd)
 	cmd.AddCommand(stopCmd)
 	cmd.AddCommand(logsCmd)
+	cmd.AddCommand(watchCmd)
 	cmd.AddCommand(removeCmd)
 	cmd.AddCommand(sendKeysCmd)
 	cmd.AddCommand(storage.Command())

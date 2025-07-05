@@ -47,6 +47,7 @@ var runOpts struct {
 	follow      bool
 	name        string
 	description string
+	enableLog   bool
 }
 
 func init() {
@@ -58,6 +59,7 @@ func init() {
 	runCmd.Flags().BoolVarP(&runOpts.follow, "follow", "f", false, "Follow logs")
 	runCmd.Flags().StringVarP(&runOpts.name, "name", "n", "", "Human-readable name for the session")
 	runCmd.Flags().StringVar(&runOpts.description, "description", "", "Description of session purpose")
+	runCmd.Flags().BoolVar(&runOpts.enableLog, "log", false, "Enable logging to file (default: false)")
 }
 
 // BindRunFlags binds command flags to runOpts
@@ -70,6 +72,7 @@ func BindRunFlags(cmd *cobra.Command) {
 	runOpts.follow, _ = cmd.Flags().GetBool("follow")
 	runOpts.name, _ = cmd.Flags().GetString("name")
 	runOpts.description, _ = cmd.Flags().GetString("description")
+	runOpts.enableLog, _ = cmd.Flags().GetBool("log")
 }
 
 // RunSession implements the session run command
@@ -146,6 +149,7 @@ func RunSession(cmd *cobra.Command, args []string) error {
 		Environment:         env,
 		WorkingDir:          runOpts.workingDir,
 		RuntimeOptions:      runtimeOptions,
+		EnableLog:           runOpts.enableLog,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create session: %w", err)

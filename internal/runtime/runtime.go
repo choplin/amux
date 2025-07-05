@@ -25,6 +25,30 @@ type Runtime interface {
 	Validate() error
 }
 
+// StoppableRuntime is a runtime that supports stopping sessions
+type StoppableRuntime interface {
+	Runtime
+	Stop(ctx context.Context, sessionID string) error
+}
+
+// KillableRuntime is a runtime that supports killing sessions
+type KillableRuntime interface {
+	Runtime
+	Kill(ctx context.Context, sessionID string) error
+}
+
+// AttachableRuntime is a runtime that supports attaching to sessions
+type AttachableRuntime interface {
+	Runtime
+	Attach(ctx context.Context, sessionID string) error
+}
+
+// InputSendingRuntime is a runtime that supports sending input to sessions
+type InputSendingRuntime interface {
+	Runtime
+	SendInput(ctx context.Context, sessionID string, input string) error
+}
+
 // Process represents a running or completed process
 type Process interface {
 	// ID returns the unique identifier for this process
@@ -60,6 +84,12 @@ type ExecutionSpec struct {
 	Command     []string          // Command and arguments
 	WorkingDir  string            // Working directory
 	Environment map[string]string // Environment variables
+
+	// Session information
+	SessionID string // Session ID for tracking
+
+	// Logging configuration
+	EnableLog bool // Enable logging to file
 
 	// Runtime-specific options
 	Options RuntimeOptions
