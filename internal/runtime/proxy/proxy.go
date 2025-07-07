@@ -23,12 +23,13 @@ import (
 
 // Status represents the status information that is periodically written
 type Status struct {
-	RunID     int       `yaml:"run_id"`
-	PID       int       `yaml:"pid"`
-	Status    string    `yaml:"status"`
-	ExitCode  int       `yaml:"exit_code,omitempty"`
-	StartedAt time.Time `yaml:"started_at"`
-	EndedAt   time.Time `yaml:"ended_at,omitempty"`
+	RunID          int       `yaml:"run_id"`
+	PID            int       `yaml:"pid"`
+	Status         string    `yaml:"status"`
+	ExitCode       int       `yaml:"exit_code,omitempty"`
+	StartedAt      time.Time `yaml:"started_at"`
+	EndedAt        time.Time `yaml:"ended_at,omitempty"`
+	LastActivityAt time.Time `yaml:"last_activity_at,omitempty"`
 }
 
 // Options configures the proxy behavior
@@ -130,6 +131,7 @@ func findAmuxBinary() (string, error) {
 type Proxy struct {
 	opts       Options
 	status     *Status
+	statusMu   sync.RWMutex
 	ringBuffer *ring.Ring
 	bufferMu   sync.RWMutex
 	clients    map[net.Conn]struct{}
@@ -260,12 +262,16 @@ func (p *Proxy) Run() error {
 	}
 
 	// Initialize status
+	now := time.Now()
+	p.statusMu.Lock()
 	p.status = &Status{
-		RunID:     nextRunID,
-		PID:       cmd.Process.Pid,
-		Status:    "running",
-		StartedAt: time.Now(),
+		RunID:          nextRunID,
+		PID:            cmd.Process.Pid,
+		Status:         "running",
+		StartedAt:      now,
+		LastActivityAt: now,
 	}
+	p.statusMu.Unlock()
 
 	// Write initial status
 	if err := p.writeStatus(); err != nil {
@@ -318,6 +324,7 @@ func (p *Proxy) Run() error {
 			wg.Wait() // Wait for I/O to finish
 
 			// Update final status
+			p.statusMu.Lock()
 			p.status.Status = "exited"
 			p.status.EndedAt = time.Now()
 			if exitErr, ok := err.(*exec.ExitError); ok {
@@ -327,6 +334,7 @@ func (p *Proxy) Run() error {
 			} else {
 				p.status.ExitCode = -1
 			}
+			p.statusMu.Unlock()
 			_ = p.writeStatus()
 
 			if err != nil {
@@ -348,6 +356,11 @@ func (p *Proxy) copyOutput(dst io.Writer, src io.Reader, logFile *os.File) {
 		n, err := src.Read(buf)
 		if n > 0 {
 			data := buf[:n]
+
+			// Update last activity time
+			p.statusMu.Lock()
+			p.status.LastActivityAt = time.Now()
+			p.statusMu.Unlock()
 
 			// Write to destination (stdout/stderr)
 			_, _ = dst.Write(data)
@@ -384,7 +397,12 @@ func (p *Proxy) updateStatus() {
 }
 
 func (p *Proxy) writeStatus() error {
-	data, err := yaml.Marshal(p.status)
+	p.statusMu.RLock()
+	// Create a copy to avoid race conditions during marshaling
+	statusCopy := *p.status
+	p.statusMu.RUnlock()
+
+	data, err := yaml.Marshal(&statusCopy)
 	if err != nil {
 		return fmt.Errorf("failed to marshal status: %w", err)
 	}

@@ -16,6 +16,7 @@ import (
 
 	"github.com/charmbracelet/x/term"
 	"github.com/google/uuid"
+	"gopkg.in/yaml.v3"
 
 	"github.com/aki/amux/internal/runtime"
 	"github.com/aki/amux/internal/runtime/proxy"
@@ -618,4 +619,41 @@ func (p *Process) SendInput(input string) error {
 	}
 
 	return nil
+}
+
+// GetLastActivityAt returns the last time activity was detected
+func (p *Process) GetLastActivityAt() (time.Time, error) {
+	// Get session ID from spec
+	sessionID := p.spec.SessionID
+	if sessionID == "" {
+		sessionID = p.id
+	}
+
+	// Determine paths based on session ID
+	amuxDir := os.Getenv("AMUX_DIR")
+	if amuxDir == "" {
+		// Try to get from current working directory
+		if cwd, err := os.Getwd(); err == nil {
+			amuxDir = filepath.Join(cwd, ".amux")
+		} else {
+			amuxDir = ".amux"
+		}
+	}
+
+	// Status file path
+	statusPath := filepath.Join(amuxDir, "sessions", sessionID, "status.yaml")
+
+	// Read status file
+	data, err := os.ReadFile(statusPath)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("failed to read status file: %w", err)
+	}
+
+	// Parse status
+	var status proxy.Status
+	if err := yaml.Unmarshal(data, &status); err != nil {
+		return time.Time{}, fmt.Errorf("failed to parse status: %w", err)
+	}
+
+	return status.LastActivityAt, nil
 }
