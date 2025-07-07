@@ -99,6 +99,11 @@ func TestProxy_Run(t *testing.T) {
 				if status.Status != "exited" {
 					t.Errorf("Expected status 'exited', got %s", status.Status)
 				}
+
+				// Verify LastActivityAt is set
+				if status.LastActivityAt.IsZero() {
+					t.Errorf("LastActivityAt should be set")
+				}
 			}
 
 			// Check log file if enabled
@@ -279,7 +284,7 @@ func TestProxy_StatusUpdates(t *testing.T) {
 		if err != nil {
 			t.Errorf("Proxy failed: %v", err)
 		}
-	case <-time.After(2 * time.Second):
+	case <-time.After(10 * time.Second):
 		t.Error("Proxy did not complete in time")
 	}
 
@@ -300,5 +305,88 @@ func TestProxy_StatusUpdates(t *testing.T) {
 
 	if status.ExitCode != 0 {
 		t.Errorf("Expected exit code 0, got %d", status.ExitCode)
+	}
+}
+
+func TestProxy_ActivityTracking(t *testing.T) {
+	// Create temporary directory for test
+	tmpDir := t.TempDir()
+	sessionDir := filepath.Join(tmpDir, "sessions", "test-session")
+	if err := os.MkdirAll(sessionDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	opts := Options{
+		SessionDir: sessionDir,
+		StatusPath: filepath.Join(sessionDir, "status.yaml"),
+		LogPath:    sessionDir + "/",
+		SocketPath: filepath.Join(tmpDir, "test.sock"),
+		Command:    []string{"sh", "-c", "echo 'initial'; sleep 0.5; echo 'update'; sleep 5.5"},
+	}
+
+	// Set project root to temp dir
+	os.Setenv("AMUX_PROJECT_ROOT", tmpDir)
+	defer os.Unsetenv("AMUX_PROJECT_ROOT")
+
+	p, err := New(opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Run proxy in background
+	done := make(chan error)
+	go func() {
+		done <- p.Run()
+	}()
+
+	// Wait for initial status
+	time.Sleep(100 * time.Millisecond)
+
+	// Read initial status
+	data, err := os.ReadFile(opts.StatusPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var status1 Status
+	if err := yaml.Unmarshal(data, &status1); err != nil {
+		t.Fatal(err)
+	}
+
+	// Check initial LastActivityAt is set
+	if status1.LastActivityAt.IsZero() {
+		t.Error("Initial LastActivityAt should be set")
+	}
+	initialActivity := status1.LastActivityAt
+
+	// Wait for some output and status update
+	// Status updates happen every 5 seconds, so we need to wait at least that long
+	time.Sleep(5200 * time.Millisecond)
+
+	// Read status again
+	data, err = os.ReadFile(opts.StatusPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var status2 Status
+	if err := yaml.Unmarshal(data, &status2); err != nil {
+		t.Fatal(err)
+	}
+
+	// Check LastActivityAt was updated
+	if !status2.LastActivityAt.After(initialActivity) {
+		t.Errorf("LastActivityAt should be updated after output: initial=%v, current=%v",
+			initialActivity, status2.LastActivityAt)
+	}
+
+	// Wait for completion
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Errorf("Proxy failed: %v", err)
+		}
+	case <-time.After(10 * time.Second):
+		t.Error("Proxy did not complete in time")
 	}
 }

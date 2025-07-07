@@ -312,24 +312,27 @@ func (m *manager) List(ctx context.Context, workspaceID string) ([]*Session, err
 	}
 
 	// Update with in-memory sessions
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
 	sessionMap := make(map[string]*Session)
 	for _, s := range sessions {
 		sessionMap[s.ID] = s
 	}
 
 	// Override with in-memory sessions (more up-to-date)
+	m.mu.RLock()
 	for _, s := range m.sessions {
 		if workspaceID == "" || s.WorkspaceID == workspaceID {
 			sessionMap[s.ID] = s
 		}
 	}
+	m.mu.RUnlock()
 
 	// Convert back to slice
 	result := make([]*Session, 0, len(sessionMap))
 	for _, s := range sessionMap {
+		// Update session information from runtime
+		if s.Status == StatusRunning {
+			m.updateSessionFromRuntime(ctx, s)
+		}
 		result = append(result, s)
 	}
 
@@ -522,4 +525,86 @@ func (r *simpleLogReader) Close() error {
 		return closer.Close()
 	}
 	return nil
+}
+
+// updateSessionFromRuntime updates session information from runtime
+func (m *manager) updateSessionFromRuntime(ctx context.Context, session *Session) {
+	// Get runtime
+	rt, ok := m.runtimes[session.Runtime]
+	if !ok {
+		return
+	}
+
+	// Find the process
+	proc, err := rt.Find(ctx, session.ID)
+	if err != nil {
+		// Process not found, mark session as stopped
+		session.Status = StatusStopped
+		if session.StoppedAt == nil {
+			now := time.Now()
+			session.StoppedAt = &now
+		}
+		// Update in memory
+		m.mu.Lock()
+		m.sessions[session.ID] = session
+		m.mu.Unlock()
+		// Save to disk
+		_ = m.store.Save(ctx, session)
+		return
+	}
+
+	// Update process state
+	state := proc.State()
+	switch state {
+	case runtime.StateStopped:
+		session.Status = StatusStopped
+		if session.StoppedAt == nil {
+			now := time.Now()
+			session.StoppedAt = &now
+		}
+		// Try to get exit code
+		if metadata := proc.Metadata(); metadata != nil {
+			if metaMap := metadata.ToMap(); metaMap != nil {
+				if exitCode, ok := metaMap["exit_code"].(int); ok {
+					session.ExitCode = &exitCode
+				}
+			}
+		}
+	case runtime.StateFailed:
+		session.Status = StatusFailed
+		if session.StoppedAt == nil {
+			now := time.Now()
+			session.StoppedAt = &now
+		}
+		// Try to get exit code
+		if metadata := proc.Metadata(); metadata != nil {
+			if metaMap := metadata.ToMap(); metaMap != nil {
+				if exitCode, ok := metaMap["exit_code"].(int); ok {
+					session.ExitCode = &exitCode
+				}
+			}
+		}
+	case runtime.StateRunning:
+		// Still running, update activity information
+		if monitor, ok := proc.(runtime.ActivityMonitor); ok {
+			lastActivity, err := monitor.GetLastActivityAt()
+			if err == nil && !lastActivity.IsZero() {
+				session.LastActivityAt = lastActivity
+			}
+		}
+	case runtime.StateStarting:
+		// Session is still starting, keep current status
+		session.Status = StatusStarting
+	case runtime.StateUnknown:
+		// Cannot determine state, keep current status
+		// This might happen if runtime doesn't support state tracking
+	}
+
+	// Update in memory and save if status changed
+	if state != runtime.StateRunning {
+		m.mu.Lock()
+		m.sessions[session.ID] = session
+		m.mu.Unlock()
+		_ = m.store.Save(ctx, session)
+	}
 }
