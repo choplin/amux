@@ -7,12 +7,15 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
+	"gopkg.in/yaml.v3"
 
 	amuxruntime "github.com/aki/amux/internal/runtime"
+	"github.com/aki/amux/internal/runtime/proxy"
 )
 
 // baseRuntime provides common functionality for local runtime implementations
@@ -27,6 +30,21 @@ func (r *baseRuntime) Find(ctx context.Context, id string) (amuxruntime.Process,
 		return proc.(*Process), nil
 	}
 	return nil, amuxruntime.ErrProcessNotFound
+}
+
+// FindBySessionID locates a process by session ID
+func (r *baseRuntime) FindBySessionID(ctx context.Context, sessionID string) (amuxruntime.Process, error) {
+	processID, ok := r.sessions.Load(sessionID)
+	if !ok {
+		return nil, amuxruntime.ErrProcessNotFound
+	}
+
+	proc, ok := r.processes.Load(processID)
+	if !ok {
+		return nil, amuxruntime.ErrProcessNotFound
+	}
+
+	return proc.(*Process), nil
 }
 
 // List returns all processes managed by this runtime
@@ -280,4 +298,41 @@ func createProcess(spec amuxruntime.ExecutionSpec) *Process {
 		startTime: time.Now(),
 		done:      make(chan struct{}),
 	}
+}
+
+// GetLastActivityAt returns the last time activity was detected
+func (p *Process) GetLastActivityAt() (time.Time, error) {
+	// Get session ID from spec
+	sessionID := p.spec.SessionID
+	if sessionID == "" {
+		sessionID = p.id
+	}
+
+	// Determine paths based on session ID
+	amuxDir := os.Getenv("AMUX_DIR")
+	if amuxDir == "" {
+		// Try to get from current working directory
+		if cwd, err := os.Getwd(); err == nil {
+			amuxDir = filepath.Join(cwd, ".amux")
+		} else {
+			amuxDir = ".amux"
+		}
+	}
+
+	// Status file path
+	statusPath := filepath.Join(amuxDir, "sessions", sessionID, "status.yaml")
+
+	// Read status file
+	data, err := os.ReadFile(statusPath)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("failed to read status file: %w", err)
+	}
+
+	// Parse status
+	var status proxy.Status
+	if err := yaml.Unmarshal(data, &status); err != nil {
+		return time.Time{}, fmt.Errorf("failed to parse status: %w", err)
+	}
+
+	return status.LastActivityAt, nil
 }

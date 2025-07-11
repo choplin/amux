@@ -15,6 +15,7 @@ func NewProxyCommand() *cobra.Command {
 		logPath    string
 		socketPath string
 		sessionDir string
+		foreground bool
 	)
 
 	cmd := &cobra.Command{
@@ -40,6 +41,7 @@ func NewProxyCommand() *cobra.Command {
 				LogPath:    logPath,
 				SocketPath: socketPath,
 				Command:    args,
+				Foreground: foreground,
 			}
 
 			p, err := proxy.New(opts)
@@ -55,6 +57,7 @@ func NewProxyCommand() *cobra.Command {
 	cmd.Flags().StringVar(&logPath, "log-path", "", "Path to log file (optional)")
 	cmd.Flags().StringVar(&socketPath, "socket-path", "", "Path to Unix socket for output streaming")
 	cmd.Flags().StringVar(&sessionDir, "session-dir", "", "Session directory for storing run data")
+	cmd.Flags().BoolVar(&foreground, "foreground", false, "Run in foreground mode (direct I/O)")
 	_ = cmd.MarkFlagRequired("status-path")
 	_ = cmd.MarkFlagRequired("socket-path")
 	_ = cmd.MarkFlagRequired("session-dir")

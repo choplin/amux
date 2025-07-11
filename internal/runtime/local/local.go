@@ -4,9 +4,7 @@ package local
 import (
 	"context"
 	"fmt"
-	"os"
 	"os/exec"
-	"time"
 
 	amuxruntime "github.com/aki/amux/internal/runtime"
 	"github.com/aki/amux/internal/runtime/proxy"
@@ -54,7 +52,8 @@ func (r *Runtime) Execute(ctx context.Context, spec amuxruntime.ExecutionSpec) (
 		command = spec.Command
 	}
 
-	args, err := proxy.BuildProxyCommand(sessionID, command, spec.EnableLog)
+	// Use foreground mode for local runtime
+	args, err := proxy.BuildProxyCommandWithOptions(sessionID, command, spec.EnableLog, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build proxy command: %w", err)
 	}
@@ -77,9 +76,7 @@ func (r *Runtime) Execute(ctx context.Context, spec amuxruntime.ExecutionSpec) (
 
 	proc.cmd = proxyCmd
 
-	// For foreground processes, inherit stdout/stderr for real-time output
-	proxyCmd.Stdout = os.Stdout
-	proxyCmd.Stderr = os.Stderr
+	// Don't set stdin/stdout/stderr here - the proxy command will handle all I/O
 
 	// Start the process
 	if err := proxyCmd.Start(); err != nil {
@@ -110,17 +107,11 @@ func (r *Runtime) Execute(ctx context.Context, spec amuxruntime.ExecutionSpec) (
 	// Monitor process completion
 	go proc.monitor()
 
-	// Handle context cancellation
-	go func() {
-		select {
-		case <-ctx.Done():
-			// Create a new context with timeout for cleanup
-			stopCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
-			defer cancel()
-			_ = proc.Stop(stopCtx)
-		case <-proc.done:
-		}
-	}()
+	// For foreground execution, wait for the process to complete
+	waitErr := proc.Wait(ctx)
+	if waitErr != nil {
+		return nil, waitErr
+	}
 
 	return proc, nil
 }

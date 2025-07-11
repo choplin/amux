@@ -3,14 +3,20 @@ package session
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/aki/amux/internal/config"
+	"github.com/aki/amux/internal/idmap"
 	"github.com/aki/amux/internal/runtime"
+	"github.com/aki/amux/internal/runtime/proxy"
 	"github.com/aki/amux/internal/task"
 	"github.com/aki/amux/internal/workspace"
 )
@@ -39,6 +45,7 @@ const (
 // Session represents an active runtime session
 type Session struct {
 	ID          string                 `json:"id" yaml:"id"`
+	ShortID     string                 `json:"short_id,omitempty" yaml:"short_id,omitempty"`
 	Name        string                 `json:"name,omitempty" yaml:"name,omitempty"`
 	Description string                 `json:"description,omitempty" yaml:"description,omitempty"`
 	WorkspaceID string                 `json:"workspace_id" yaml:"workspace_id"`
@@ -129,11 +136,23 @@ type manager struct {
 	tasks            *task.Manager
 	workspaceManager WorkspaceManager
 	configManager    *config.Manager
-	idCounter        int
+	idMapper         *idmap.Mapper[idmap.SessionID]
 }
 
 // NewManager creates a new session manager
 func NewManager(store Store, runtimes map[string]runtime.Runtime, tasks *task.Manager, workspaceManager WorkspaceManager, configManager *config.Manager) Manager {
+	// Initialize session ID mapper if config manager is available
+	var idMapper *idmap.Mapper[idmap.SessionID]
+	if configManager != nil {
+		mapper, err := idmap.NewSessionIDMapper(configManager.GetAmuxDir())
+		if err != nil {
+			// Log error but continue - sessions will use fallback ID generation
+			// This is to maintain backward compatibility
+			mapper = nil
+		}
+		idMapper = mapper
+	}
+
 	return &manager{
 		sessions:         make(map[string]*Session),
 		store:            store,
@@ -141,17 +160,38 @@ func NewManager(store Store, runtimes map[string]runtime.Runtime, tasks *task.Ma
 		tasks:            tasks,
 		workspaceManager: workspaceManager,
 		configManager:    configManager,
-		idCounter:        0,
+		idMapper:         idMapper,
 	}
 }
 
 // Create starts a new session
 func (m *manager) Create(ctx context.Context, opts CreateOptions) (*Session, error) {
 	// Generate session ID first to use in workspace name
-	m.mu.Lock()
-	sessionID := fmt.Sprintf("session-%d", m.idCounter+1)
-	m.idCounter++
-	m.mu.Unlock()
+	var sessionID string
+	var shortID string
+
+	if m.idMapper != nil {
+		// Use ID mapper to get persistent short ID
+		fullID := fmt.Sprintf("session-%s-%d-%s",
+			opts.Name,
+			time.Now().Unix(),
+			generateRandomSuffix())
+
+		index, err := m.idMapper.Add(idmap.SessionID(fullID))
+		if err != nil {
+			return nil, fmt.Errorf("failed to acquire session ID: %w", err)
+		}
+
+		sessionID = fullID
+		shortID = index
+	} else {
+		// Fallback to simple counter-based ID
+		m.mu.Lock()
+		counter := len(m.sessions) + 1
+		m.mu.Unlock()
+		sessionID = fmt.Sprintf("session-%d", counter)
+		shortID = fmt.Sprintf("%d", counter)
+	}
 
 	// Handle auto workspace creation
 	if opts.AutoCreateWorkspace && opts.WorkspaceID == "" {
@@ -227,11 +267,6 @@ func (m *manager) Create(ctx context.Context, opts CreateOptions) (*Session, err
 		return nil, fmt.Errorf("either task name or command must be specified")
 	}
 
-	// Start the process
-	if _, err := rt.Execute(ctx, spec); err != nil {
-		return nil, fmt.Errorf("failed to execute: %w", err)
-	}
-
 	// Use provided metadata
 	metadata := opts.Metadata
 
@@ -244,6 +279,7 @@ func (m *manager) Create(ctx context.Context, opts CreateOptions) (*Session, err
 
 	session := &Session{
 		ID:             sessionID,
+		ShortID:        shortID,
 		Name:           opts.Name,
 		Description:    opts.Description,
 		WorkspaceID:    opts.WorkspaceID,
@@ -260,7 +296,7 @@ func (m *manager) Create(ctx context.Context, opts CreateOptions) (*Session, err
 		SocketPath:     socketPath,
 	}
 
-	// Store session
+	// Store session BEFORE starting the process
 	m.mu.Lock()
 	m.sessions[session.ID] = session
 	m.mu.Unlock()
@@ -271,18 +307,26 @@ func (m *manager) Create(ctx context.Context, opts CreateOptions) (*Session, err
 		m.mu.Lock()
 		delete(m.sessions, session.ID)
 		m.mu.Unlock()
-		// Try to kill the process through runtime
-		if killer, ok := rt.(runtime.KillableRuntime); ok {
-			_ = killer.Kill(ctx, session.ID)
-		}
 		return nil, fmt.Errorf("failed to save session: %w", err)
+	}
+
+	// Start the process AFTER saving the session
+	_, err := rt.Execute(ctx, spec)
+	if err != nil {
+		// Clean up the session
+		m.mu.Lock()
+		delete(m.sessions, session.ID)
+		m.mu.Unlock()
+		_ = m.store.Remove(ctx, session.ID)
+		return nil, fmt.Errorf("failed to execute: %w", err)
 	}
 
 	return session, nil
 }
 
-// Get retrieves a session by ID
+// Get retrieves a session by ID (either short ID or full ID)
 func (m *manager) Get(ctx context.Context, id string) (*Session, error) {
+	// First try direct lookup
 	m.mu.RLock()
 	session, ok := m.sessions[id]
 	m.mu.RUnlock()
@@ -291,8 +335,25 @@ func (m *manager) Get(ctx context.Context, id string) (*Session, error) {
 		return session, nil
 	}
 
+	// If using ID mapper, try to resolve short ID to full ID
+	fullID := id
+	if m.idMapper != nil {
+		if resolvedID, found := m.idMapper.GetFull(id); found {
+			fullID = string(resolvedID)
+
+			// Try memory lookup again with full ID
+			m.mu.RLock()
+			session, ok = m.sessions[fullID]
+			m.mu.RUnlock()
+
+			if ok {
+				return session, nil
+			}
+		}
+	}
+
 	// Try to load from store
-	session, err := m.store.Load(ctx, id)
+	session, err := m.store.Load(ctx, fullID)
 	if err != nil {
 		return nil, fmt.Errorf("session not found: %s", id)
 	}
@@ -312,24 +373,35 @@ func (m *manager) List(ctx context.Context, workspaceID string) ([]*Session, err
 	}
 
 	// Update with in-memory sessions
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
 	sessionMap := make(map[string]*Session)
 	for _, s := range sessions {
 		sessionMap[s.ID] = s
 	}
 
 	// Override with in-memory sessions (more up-to-date)
+	m.mu.RLock()
 	for _, s := range m.sessions {
 		if workspaceID == "" || s.WorkspaceID == workspaceID {
 			sessionMap[s.ID] = s
 		}
 	}
+	m.mu.RUnlock()
 
 	// Convert back to slice
 	result := make([]*Session, 0, len(sessionMap))
 	for _, s := range sessionMap {
+		// Update session information from runtime
+		if s.Status == StatusRunning || s.Status == StatusStarting {
+			m.updateSessionFromRuntime(ctx, s)
+		}
+
+		// Set short ID if using ID mapper
+		if m.idMapper != nil && s.ShortID == "" {
+			if idx, found := m.idMapper.GetIndex(idmap.SessionID(s.ID)); found {
+				s.ShortID = idx
+			}
+		}
+
 		result = append(result, s)
 	}
 
@@ -451,6 +523,12 @@ func (m *manager) Remove(ctx context.Context, id string) error {
 		return fmt.Errorf("cannot remove running session")
 	}
 
+	// Release ID back to pool if using ID mapper
+	if m.idMapper != nil {
+		_ = m.idMapper.Remove(idmap.SessionID(session.ID))
+		// ID cleanup is not critical for session removal
+	}
+
 	// Remove from memory
 	m.mu.Lock()
 	delete(m.sessions, id)
@@ -522,4 +600,143 @@ func (r *simpleLogReader) Close() error {
 		return closer.Close()
 	}
 	return nil
+}
+
+// updateSessionFromRuntime updates session information from runtime
+func (m *manager) updateSessionFromRuntime(ctx context.Context, session *Session) {
+	// For local and local-detached runtimes, read status from the proxy status file
+	if session.Runtime == "local" || session.Runtime == "local-detached" {
+		// Use config manager to get the correct amux directory
+		if m.configManager == nil {
+			// In tests, configManager might be nil
+			return
+		}
+		amuxDir := m.configManager.GetAmuxDir()
+		statusPath := filepath.Join(amuxDir, "sessions", session.ID, "status.yaml")
+		// Read status file if it exists
+		if data, err := os.ReadFile(statusPath); err == nil {
+			var status proxy.Status
+			if err := yaml.Unmarshal(data, &status); err == nil {
+				// Update session based on proxy status
+				switch status.Status {
+				case "running":
+					session.Status = StatusRunning
+					session.LastActivityAt = status.LastActivityAt
+				case "exited":
+					session.Status = StatusStopped
+					if session.StoppedAt == nil {
+						session.StoppedAt = &status.EndedAt
+					}
+					session.ExitCode = &status.ExitCode
+				default:
+					// Unknown status, keep current
+				}
+
+				// Update in memory and save if status changed
+				m.mu.Lock()
+				m.sessions[session.ID] = session
+				m.mu.Unlock()
+				_ = m.store.Save(ctx, session)
+				return
+			}
+		}
+
+		// If no status file or can't read it, mark as stopped
+		session.Status = StatusStopped
+		if session.StoppedAt == nil {
+			now := time.Now()
+			session.StoppedAt = &now
+		}
+		// Update in memory
+		m.mu.Lock()
+		m.sessions[session.ID] = session
+		m.mu.Unlock()
+		// Save to disk
+		_ = m.store.Save(ctx, session)
+		return
+	}
+
+	// For other runtimes (e.g., tmux), use runtime-specific logic
+	rt, ok := m.runtimes[session.Runtime]
+	if !ok {
+		return
+	}
+
+	// Try to find the process by session ID
+	proc, err := rt.Find(ctx, session.ID)
+	if err != nil {
+		// Process not found, mark session as stopped
+		session.Status = StatusStopped
+		if session.StoppedAt == nil {
+			now := time.Now()
+			session.StoppedAt = &now
+		}
+		// Update in memory
+		m.mu.Lock()
+		m.sessions[session.ID] = session
+		m.mu.Unlock()
+		// Save to disk
+		_ = m.store.Save(ctx, session)
+		return
+	}
+
+	// Update process state
+	state := proc.State()
+	switch state {
+	case runtime.StateStopped:
+		session.Status = StatusStopped
+		if session.StoppedAt == nil {
+			now := time.Now()
+			session.StoppedAt = &now
+		}
+		// Try to get exit code
+		if metadata := proc.Metadata(); metadata != nil {
+			if metaMap := metadata.ToMap(); metaMap != nil {
+				if exitCode, ok := metaMap["exit_code"].(int); ok {
+					session.ExitCode = &exitCode
+				}
+			}
+		}
+	case runtime.StateFailed:
+		session.Status = StatusFailed
+		if session.StoppedAt == nil {
+			now := time.Now()
+			session.StoppedAt = &now
+		}
+		// Try to get exit code
+		if metadata := proc.Metadata(); metadata != nil {
+			if metaMap := metadata.ToMap(); metaMap != nil {
+				if exitCode, ok := metaMap["exit_code"].(int); ok {
+					session.ExitCode = &exitCode
+				}
+			}
+		}
+	case runtime.StateRunning:
+		// Still running, keep current status
+		session.Status = StatusRunning
+	case runtime.StateStarting:
+		// Session is still starting, keep current status
+		session.Status = StatusStarting
+	case runtime.StateUnknown:
+		// Cannot determine state, keep current status
+		// This might happen if runtime doesn't support state tracking
+	}
+
+	// Update in memory and save if status changed
+	if state != runtime.StateRunning {
+		m.mu.Lock()
+		m.sessions[session.ID] = session
+		m.mu.Unlock()
+		_ = m.store.Save(ctx, session)
+	}
+}
+
+// generateRandomSuffix generates a random 8-character hex string
+func generateRandomSuffix() string {
+	bytes := make([]byte, 4)
+	if _, err := rand.Read(bytes); err != nil {
+		// Fallback to timestamp if random fails
+		return fmt.Sprintf("%d", time.Now().UnixNano())
+	}
+	return hex.EncodeToString(bytes)
 }

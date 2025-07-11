@@ -43,12 +43,14 @@ func (r *mockRuntime) Execute(ctx context.Context, spec runtime.ExecutionSpec) (
 	defer r.mu.Unlock()
 
 	processID := fmt.Sprintf("mock-process-%d", len(r.processes)+1)
+	now := time.Now()
 	process := &mockProcess{
-		id:        processID,
-		spec:      spec,
-		state:     runtime.StateRunning,
-		startTime: time.Now(),
-		exitCh:    make(chan struct{}),
+		id:             processID,
+		spec:           spec,
+		state:          runtime.StateRunning,
+		startTime:      now,
+		exitCh:         make(chan struct{}),
+		lastActivityAt: now,
 	}
 
 	r.processes[processID] = process
@@ -129,13 +131,14 @@ func (r *mockRuntime) SendInput(ctx context.Context, sessionID string, input str
 
 // mockProcess implements runtime.Process for testing
 type mockProcess struct {
-	mu        sync.RWMutex
-	id        string
-	spec      runtime.ExecutionSpec
-	state     runtime.ProcessState
-	startTime time.Time
-	exitCode  int
-	exitCh    chan struct{}
+	mu             sync.RWMutex
+	id             string
+	spec           runtime.ExecutionSpec
+	state          runtime.ProcessState
+	startTime      time.Time
+	exitCode       int
+	exitCh         chan struct{}
+	lastActivityAt time.Time
 }
 
 func (p *mockProcess) ID() string {
@@ -210,6 +213,16 @@ func (p *mockProcess) Output() (stdout, stderr io.Reader) {
 
 func (p *mockProcess) Metadata() runtime.Metadata {
 	return nil
+}
+
+// GetLastActivityAt implements runtime.ActivityMonitor for testing
+func (p *mockProcess) GetLastActivityAt() (time.Time, error) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	if p.lastActivityAt.IsZero() {
+		return p.startTime, nil
+	}
+	return p.lastActivityAt, nil
 }
 
 // mockInputSenderProcess implements both runtime.Process and runtime.InputSender for testing

@@ -3,7 +3,6 @@ package session
 import (
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/aki/amux/internal/cli/ui"
 	"github.com/aki/amux/internal/runtime"
@@ -137,6 +136,9 @@ func RunSession(cmd *cobra.Command, args []string) error {
 	var runtimeOptions runtime.RuntimeOptions
 	// Currently, no runtime-specific options are needed
 
+	// For local runtime, show minimal messages
+	showDetailedInfo := runOpts.runtime != "local"
+
 	// Create session
 	sess, err := sessionMgr.Create(ctx, session.CreateOptions{
 		WorkspaceID:         workspaceID,
@@ -155,65 +157,44 @@ func RunSession(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create session: %w", err)
 	}
 
-	ui.Success("Session started: %s", sess.ID)
-	if sess.Name != "" {
-		ui.Info("Name: %s", sess.Name)
-	}
-	if sess.Description != "" {
-		ui.Info("Description: %s", sess.Description)
-	}
-	ui.Info("Runtime: %s", sess.Runtime)
-	if sess.TaskName != "" {
-		ui.Info("Task: %s", sess.TaskName)
-	}
-	if sess.WorkspaceID != "" {
-		// Check if workspace was auto-created
-		if autoCreateWorkspace {
-			// Get workspace manager to resolve the workspace name
-			wsMgr, err := workspace.SetupManager(configMgr.GetProjectRoot())
-			if err == nil {
-				ws, err := wsMgr.Get(ctx, workspace.ID(sess.WorkspaceID))
-				if err == nil && ws.AutoCreated {
-					ui.Success("Workspace created: %s", ws.Name)
-				}
+	// Show workspace creation message if applicable
+	if autoCreateWorkspace && sess.WorkspaceID != "" {
+		// Get workspace manager to resolve the workspace name
+		wsMgr, err := workspace.SetupManager(configMgr.GetProjectRoot())
+		if err == nil {
+			ws, err := wsMgr.Get(ctx, workspace.ID(sess.WorkspaceID))
+			if err == nil && ws.AutoCreated {
+				ui.Success("Workspace created: %s", ws.Name)
 			}
 		}
-		ui.Info("Workspace: %s", sess.WorkspaceID)
+	}
+
+	// Display session information based on runtime type
+	ui.Success("Session started: %s", sess.ID)
+
+	if showDetailedInfo {
+		// For detached runtimes, show full session information
+		if sess.Name != "" {
+			ui.Info("Name: %s", sess.Name)
+		}
+		if sess.Description != "" {
+			ui.Info("Description: %s", sess.Description)
+		}
+		ui.Info("Runtime: %s", sess.Runtime)
+		if sess.TaskName != "" {
+			ui.Info("Task: %s", sess.TaskName)
+		}
+		if sess.WorkspaceID != "" {
+			ui.Info("Workspace: %s", sess.WorkspaceID)
+		}
 	}
 
 	// Provide appropriate feedback based on runtime
-	if runOpts.runtime == "local-detached" {
+	if runOpts.runtime == "local-detached" || runOpts.runtime == "tmux" {
 		ui.OutputLine("")
 		ui.OutputLine("Running in detached mode")
 		ui.OutputLine("Use 'amux session ps' to view status")
 		ui.OutputLine("Use 'amux session attach %s' to attach", sess.ID)
-	} else if runOpts.runtime == "local" {
-		// For foreground mode, wait for the session to complete
-		// Get the session to access the process
-		updatedSess, err := sessionMgr.Get(ctx, sess.ID)
-		if err != nil {
-			return fmt.Errorf("failed to get session: %w", err)
-		}
-
-		// Wait for the process to complete
-		if updatedSess.Status == session.StatusRunning {
-			// Note: We need a way to wait for the process
-			// For now, we'll use a simple polling approach
-			for {
-				time.Sleep(100 * time.Millisecond)
-				s, err := sessionMgr.Get(ctx, sess.ID)
-				if err != nil {
-					return fmt.Errorf("failed to get session status: %w", err)
-				}
-				if s.Status != session.StatusRunning {
-					// Process completed
-					if s.ExitCode != nil && *s.ExitCode != 0 {
-						return fmt.Errorf("process exited with code %d", *s.ExitCode)
-					}
-					break
-				}
-			}
-		}
 	}
 
 	return nil

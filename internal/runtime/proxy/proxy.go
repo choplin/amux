@@ -23,12 +23,13 @@ import (
 
 // Status represents the status information that is periodically written
 type Status struct {
-	RunID     int       `yaml:"run_id"`
-	PID       int       `yaml:"pid"`
-	Status    string    `yaml:"status"`
-	ExitCode  int       `yaml:"exit_code,omitempty"`
-	StartedAt time.Time `yaml:"started_at"`
-	EndedAt   time.Time `yaml:"ended_at,omitempty"`
+	RunID          int       `yaml:"run_id"`
+	PID            int       `yaml:"pid"`
+	Status         string    `yaml:"status"`
+	ExitCode       int       `yaml:"exit_code"`
+	StartedAt      time.Time `yaml:"started_at"`
+	EndedAt        time.Time `yaml:"ended_at,omitempty"`
+	LastActivityAt time.Time `yaml:"last_activity_at,omitempty"`
 }
 
 // Options configures the proxy behavior
@@ -38,25 +39,43 @@ type Options struct {
 	LogPath    string   // Path to log file (empty if logging disabled)
 	SocketPath string   // Unix socket path for output streaming
 	Command    []string // Command to execute
+	Foreground bool     // If true, run in foreground mode (direct I/O, no pipes)
 }
 
 // BuildProxyCommand builds command arguments for running amux proxy
 // Returns the arguments to pass to exec.Command (without the binary path)
 func BuildProxyCommand(sessionID string, command []string, enableLog bool) ([]string, error) {
+	return BuildProxyCommandWithOptions(sessionID, command, enableLog, false)
+}
+
+// BuildProxyCommandWithOptions builds command arguments for running amux proxy with options
+// Returns the arguments to pass to exec.Command (without the binary path)
+func BuildProxyCommandWithOptions(sessionID string, command []string, enableLog bool, foreground bool) ([]string, error) {
 	// Find amux binary
 	amuxBin, err := findAmuxBinary()
 	if err != nil {
 		return nil, fmt.Errorf("failed to find amux binary: %w", err)
 	}
 
-	// Determine paths based on session ID
+	// Determine paths based on environment variable or find project root
 	amuxDir := os.Getenv("AMUX_DIR")
 	if amuxDir == "" {
-		// Try to get from current working directory
-		if cwd, err := os.Getwd(); err == nil {
-			amuxDir = filepath.Join(cwd, ".amux")
-		} else {
-			amuxDir = ".amux"
+		// If AMUX_DIR is not set, find project root and .amux directory
+		// This happens when BuildProxyCommand is called before environment is set
+		cwd, _ := os.Getwd()
+		dir := cwd
+		for {
+			configPath := filepath.Join(dir, ".amux", "config.yaml")
+			if _, err := os.Stat(configPath); err == nil {
+				amuxDir = filepath.Join(dir, ".amux")
+				break
+			}
+
+			parent := filepath.Dir(dir)
+			if parent == dir {
+				return nil, fmt.Errorf("could not find .amux directory")
+			}
+			dir = parent
 		}
 	}
 
@@ -87,6 +106,11 @@ func BuildProxyCommand(sessionID string, command []string, enableLog bool) ([]st
 		// Pass directory, proxy will create run-specific log files
 		logPath := sessionDir + "/"
 		args = append(args, "--log-path", logPath)
+	}
+
+	// Add foreground flag if requested
+	if foreground {
+		args = append(args, "--foreground")
 	}
 
 	args = append(args, "--")
@@ -130,6 +154,7 @@ func findAmuxBinary() (string, error) {
 type Proxy struct {
 	opts       Options
 	status     *Status
+	statusMu   sync.RWMutex
 	ringBuffer *ring.Ring
 	bufferMu   sync.RWMutex
 	clients    map[net.Conn]struct{}
@@ -228,7 +253,10 @@ func (p *Proxy) Run() error {
 			return fmt.Errorf("failed to create unix socket: %w", err)
 		}
 		p.listener = listener
-		defer func() { _ = listener.Close() }()
+		defer func() {
+			_ = listener.Close()
+			_ = os.Remove(p.opts.SocketPath)
+		}()
 
 		// Start accepting connections
 		go p.acceptConnections()
@@ -243,29 +271,55 @@ func (p *Proxy) Run() error {
 	// Inherit environment and working directory
 	cmd.Env = os.Environ()
 
-	// Set up stdout/stderr capture
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return fmt.Errorf("failed to create stdout pipe: %w", err)
-	}
+	var stdout, stderr io.Reader
+	var ioGroup *sync.WaitGroup
 
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		return fmt.Errorf("failed to create stderr pipe: %w", err)
-	}
+	if p.opts.Foreground {
+		// In foreground mode, connect directly to stdout/stderr
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
 
-	// Start the command
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("failed to start command: %w", err)
+		// Start the command
+		if err := cmd.Start(); err != nil {
+			return fmt.Errorf("failed to start command: %w", err)
+		}
+
+		// No I/O copying needed
+		ioGroup = &sync.WaitGroup{}
+	} else {
+		// Set up stdout/stderr capture for background/logging modes
+		var err error
+		stdout, err = cmd.StdoutPipe()
+		if err != nil {
+			return fmt.Errorf("failed to create stdout pipe: %w", err)
+		}
+
+		stderr, err = cmd.StderrPipe()
+		if err != nil {
+			return fmt.Errorf("failed to create stderr pipe: %w", err)
+		}
+
+		// Start the command
+		if err := cmd.Start(); err != nil {
+			return fmt.Errorf("failed to start command: %w", err)
+		}
+
+		// Start I/O copying
+		ioGroup = p.startIOCopying(stdout, stderr, logFile)
 	}
 
 	// Initialize status
+	now := time.Now()
+	p.statusMu.Lock()
 	p.status = &Status{
-		RunID:     nextRunID,
-		PID:       cmd.Process.Pid,
-		Status:    "running",
-		StartedAt: time.Now(),
+		RunID:          nextRunID,
+		PID:            cmd.Process.Pid,
+		Status:         "running",
+		ExitCode:       -1, // Initialize with -1 for running process
+		StartedAt:      now,
+		LastActivityAt: now,
 	}
+	p.statusMu.Unlock()
 
 	// Write initial status
 	if err := p.writeStatus(); err != nil {
@@ -275,66 +329,111 @@ func (p *Proxy) Run() error {
 	// Set up signal handling
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(sigChan)
 
-	// Start I/O copying
+	// Start background tasks
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Start status updates
+	statusDone := p.startStatusUpdates(ctx)
+
+	// Handle signals in background
+	go p.handleSignals(ctx, sigChan, cmd)
+
+	// Create a channel to signal when cmd.Wait() completes
+	waitDone := make(chan error, 1)
+	go func() {
+		// Wait for I/O to complete first
+		ioGroup.Wait()
+		// Then call Wait
+		waitDone <- cmd.Wait()
+	}()
+
+	// Wait for completion (no timeout in foreground mode)
+	err := <-waitDone
+
+	// Stop background tasks
+	cancel()
+
+	// Wait for status updates to stop
+	<-statusDone
+
+	// Write final status
+	p.updateFinalStatus(err)
+
+	if err != nil {
+		return fmt.Errorf("command failed: %w", err)
+	}
+	return nil
+}
+
+// startIOCopying starts goroutines to copy stdout and stderr
+func (p *Proxy) startIOCopying(stdout, stderr io.Reader, logFile *os.File) *sync.WaitGroup {
 	var wg sync.WaitGroup
 	wg.Add(2)
 
-	// Copy stdout
 	go func() {
 		defer wg.Done()
 		p.copyOutput(os.Stdout, stdout, logFile)
 	}()
 
-	// Copy stderr
 	go func() {
 		defer wg.Done()
 		p.copyOutput(os.Stderr, stderr, logFile)
 	}()
 
-	// Status update ticker
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
+	return &wg
+}
 
-	// Monitor loop
-	done := make(chan error, 1)
+// startStatusUpdates starts periodic status updates
+func (p *Proxy) startStatusUpdates(ctx context.Context) <-chan struct{} {
+	done := make(chan struct{})
 	go func() {
-		done <- cmd.Wait()
-	}()
+		defer close(done)
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
 
+		for {
+			select {
+			case <-ticker.C:
+				p.updateStatus()
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+	return done
+}
+
+// handleSignals forwards signals to the child process
+func (p *Proxy) handleSignals(ctx context.Context, sigChan <-chan os.Signal, cmd *exec.Cmd) {
 	for {
 		select {
-		case <-ticker.C:
-			p.updateStatus()
-
 		case sig := <-sigChan:
-			// Forward signal to child process
 			if cmd.Process != nil {
 				_ = cmd.Process.Signal(sig)
 			}
-
-		case err := <-done:
-			// Process exited
-			wg.Wait() // Wait for I/O to finish
-
-			// Update final status
-			p.status.Status = "exited"
-			p.status.EndedAt = time.Now()
-			if exitErr, ok := err.(*exec.ExitError); ok {
-				p.status.ExitCode = exitErr.ExitCode()
-			} else if err == nil {
-				p.status.ExitCode = 0
-			} else {
-				p.status.ExitCode = -1
-			}
-			_ = p.writeStatus()
-
-			if err != nil {
-				return fmt.Errorf("command failed: %w", err)
-			}
-			return nil
+		case <-ctx.Done():
+			return
 		}
 	}
+}
+
+// updateFinalStatus updates and writes the final status
+func (p *Proxy) updateFinalStatus(err error) {
+	p.statusMu.Lock()
+	p.status.Status = "exited"
+	p.status.EndedAt = time.Now()
+	if exitErr, ok := err.(*exec.ExitError); ok {
+		p.status.ExitCode = exitErr.ExitCode()
+	} else if err == nil {
+		p.status.ExitCode = 0
+	} else {
+		p.status.ExitCode = -1
+	}
+	p.statusMu.Unlock()
+	_ = p.writeStatus()
 }
 
 func (p *Proxy) copyOutput(dst io.Writer, src io.Reader, logFile *os.File) {
@@ -349,6 +448,11 @@ func (p *Proxy) copyOutput(dst io.Writer, src io.Reader, logFile *os.File) {
 		if n > 0 {
 			data := buf[:n]
 
+			// Update last activity time
+			p.statusMu.Lock()
+			p.status.LastActivityAt = time.Now()
+			p.statusMu.Unlock()
+
 			// Write to destination (stdout/stderr)
 			_, _ = dst.Write(data)
 
@@ -361,10 +465,12 @@ func (p *Proxy) copyOutput(dst io.Writer, src io.Reader, logFile *os.File) {
 			p.processDataForBuffer(data, &lineBuffer)
 		}
 
+		// Check for EOF or other errors
+		if err == io.EOF {
+			break
+		}
 		if err != nil {
-			if err != io.EOF {
-				fmt.Fprintf(os.Stderr, "Warning: read error: %v\n", err)
-			}
+			fmt.Fprintf(os.Stderr, "Warning: read error: %v\n", err)
 			break
 		}
 	}
@@ -377,6 +483,13 @@ func (p *Proxy) copyOutput(dst io.Writer, src io.Reader, logFile *os.File) {
 }
 
 func (p *Proxy) updateStatus() {
+	// Update last activity time in foreground mode
+	if p.opts.Foreground {
+		p.statusMu.Lock()
+		p.status.LastActivityAt = time.Now()
+		p.statusMu.Unlock()
+	}
+
 	// Just write the current status
 	if err := p.writeStatus(); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: failed to update status: %v\n", err)
@@ -384,7 +497,12 @@ func (p *Proxy) updateStatus() {
 }
 
 func (p *Proxy) writeStatus() error {
-	data, err := yaml.Marshal(p.status)
+	p.statusMu.RLock()
+	// Create a copy to avoid race conditions during marshaling
+	statusCopy := *p.status
+	p.statusMu.RUnlock()
+
+	data, err := yaml.Marshal(&statusCopy)
 	if err != nil {
 		return fmt.Errorf("failed to marshal status: %w", err)
 	}

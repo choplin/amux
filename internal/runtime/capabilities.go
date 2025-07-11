@@ -41,3 +41,10 @@ type InputSender interface {
 	// SendInput sends input to the process stdin
 	SendInput(input string) error
 }
+
+// ActivityMonitor provides activity monitoring capabilities
+type ActivityMonitor interface {
+	Process
+	// GetLastActivityAt returns the last time activity was detected
+	GetLastActivityAt() (time.Time, error)
+}

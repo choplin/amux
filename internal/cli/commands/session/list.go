@@ -120,23 +120,20 @@ func ListSessions(cmd *cobra.Command, args []string) error {
 // displaySessions shows sessions in a table format
 func displaySessions(sessions []*session.Session) {
 	// Prepare table data
-	headers := []string{"SESSION", "NAME", "STATUS", "RUNTIME", "WORKSPACE", "TASK", "DURATION"}
+	headers := []string{"ID", "NAME", "STATUS", "LAST OUTPUT", "RUNTIME", "WORKSPACE", "DURATION"}
 
 	var rows [][]string
 	for _, s := range sessions {
 		// Format status with exit code if available
 		status := formatStatus(s.Status, s.ExitCode)
 
+		// Format last output time
+		lastOutput := formatLastOutput(s.LastActivityAt, s.Status)
+
 		// Runtime information
 		runtime := s.Runtime
 		if runtime == "" {
 			runtime = "local"
-		}
-
-		// Task information
-		task := s.TaskName
-		if task == "" {
-			task = "-"
 		}
 
 		// Workspace - show just the name part if it's a full ID
@@ -156,13 +153,23 @@ func displaySessions(sessions []*session.Session) {
 			name = s.ID
 		}
 
+		// Short ID - display short ID if available, otherwise first 8 chars of ID
+		shortID := s.ShortID
+		if shortID == "" {
+			if len(s.ID) > 8 {
+				shortID = s.ID[:8]
+			} else {
+				shortID = s.ID
+			}
+		}
+
 		rows = append(rows, []string{
-			s.ID,
+			shortID,
 			name,
 			status,
+			lastOutput,
 			runtime,
 			workspace,
-			task,
 			duration,
 		})
 	}
@@ -174,7 +181,12 @@ func displaySessions(sessions []*session.Session) {
 	}
 	tbl := ui.NewTable(headerInterfaces...)
 	for _, row := range rows {
-		tbl.AddRow(row[0], row[1], row[2], row[3], row[4], row[5], row[6])
+		// Convert row slice to interface slice for AddRow
+		rowInterfaces := make([]interface{}, len(row))
+		for i, v := range row {
+			rowInterfaces[i] = v
+		}
+		tbl.AddRow(rowInterfaces...)
 	}
 	tbl.Print()
 }
@@ -182,12 +194,15 @@ func displaySessions(sessions []*session.Session) {
 // displaySessionsWide shows sessions with more details
 func displaySessionsWide(sessions []*session.Session) {
 	// Prepare table data
-	headers := []string{"SESSION", "NAME", "DESCRIPTION", "STATUS", "RUNTIME", "WORKSPACE", "TASK", "STARTED", "DURATION", "COMMAND"}
+	headers := []string{"SESSION", "NAME", "DESCRIPTION", "STATUS", "LAST OUTPUT", "RUNTIME", "WORKSPACE", "TASK", "STARTED", "DURATION", "COMMAND"}
 
 	var rows [][]string
 	for _, s := range sessions {
 		// Format status with color coding
 		status := formatStatus(s.Status, s.ExitCode)
+
+		// Format last output time
+		lastOutput := formatLastOutput(s.LastActivityAt, s.Status)
 
 		// Runtime information
 		runtime := s.Runtime
@@ -242,6 +257,7 @@ func displaySessionsWide(sessions []*session.Session) {
 			name,
 			description,
 			status,
+			lastOutput,
 			runtime,
 			workspace,
 			task,
@@ -258,8 +274,12 @@ func displaySessionsWide(sessions []*session.Session) {
 	}
 	tbl := ui.NewTable(headerInterfaces...)
 	for _, row := range rows {
-		// Add all columns for wide format (10 columns total)
-		tbl.AddRow(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9])
+		// Convert row slice to interface slice for AddRow
+		rowInterfaces := make([]interface{}, len(row))
+		for i, v := range row {
+			rowInterfaces[i] = v
+		}
+		tbl.AddRow(rowInterfaces...)
 	}
 	tbl.Print()
 }
@@ -320,4 +340,38 @@ func formatWorkspaceName(workspaceID string) string {
 	}
 
 	return workspaceID
+}
+
+// formatLastOutput formats the time elapsed since last output
+func formatLastOutput(lastActivityAt time.Time, status session.Status) string {
+	// If session is not running, return "-"
+	if status != session.StatusRunning {
+		return ui.DimStyle.Render("-")
+	}
+
+	// If lastActivityAt is zero (never had output), return "never"
+	if lastActivityAt.IsZero() {
+		return ui.DimStyle.Render("never")
+	}
+
+	// Calculate elapsed time
+	elapsed := time.Since(lastActivityAt)
+
+	// Format the duration in a human-readable way
+	var formatted string
+	switch {
+	case elapsed < time.Second:
+		formatted = "now"
+	case elapsed < time.Minute:
+		formatted = fmt.Sprintf("%ds", int(elapsed.Seconds()))
+	case elapsed < time.Hour:
+		formatted = fmt.Sprintf("%dm", int(elapsed.Minutes()))
+	case elapsed < 24*time.Hour:
+		formatted = fmt.Sprintf("%dh", int(elapsed.Hours()))
+	default:
+		formatted = fmt.Sprintf("%dd", int(elapsed.Hours()/24))
+	}
+
+	// Return without any color styling
+	return formatted
 }
